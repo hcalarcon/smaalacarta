@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Café Delicias - Pedidos Online</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="app" id="app">
+      <!-- Hero Section -->
+      <section class="hero">
+        <div class="hero-content">
+          <div class="hero-badges">
+            <span class="status-badge" id="statusBadge"></span>
+            <div class="delivery-badges">
+              <span class="delivery-badge">🛍️ Para Llevar</span>
+              <span class="delivery-badge">🚚 Delivery</span>
+            </div>
+          </div>
+          <h1 class="hero-title">Café Delicias</h1>
+          <p class="hero-description">
+            Disfruta de los mejores sabores preparados con amor y dedicación
+          </p>
+          <button class="hero-button" onclick="scrollToMenu()">Ver Menú</button>
+        </div>
+        <div class="hero-overlay"></div>
+      </section>
+
+      <!-- Categories -->
+      <section class="categories-section" id="menu">
+        <div class="container">
+          <h2 class="section-title">Nuestro Menú</h2>
+          <div class="categories" id="categories"></div>
+        </div>
+      </section>
+
+      <!-- Menu Items -->
+      <section class="menu-section">
+        <div class="container">
+          <div class="menu-grid" id="menuGrid"></div>
+        </div>
+      </section>
+
+      <!-- Floating Cart Button -->
+      <button
+        class="cart-float"
+        id="cartFloat"
+        style="display: none"
+        onclick="openCheckout()"
+      >
+        <span class="cart-icon">🛒</span>
+        <span class="cart-count" id="cartCount">0</span>
+        <span class="cart-total" id="cartTotal">$0</span>
+      </button>
+
+      <!-- Checkout Modal -->
+      <div
+        class="checkout-overlay"
+        id="checkoutOverlay"
+        style="display: none"
+        onclick="closeCheckout()"
+      >
+        <div class="checkout-modal" onclick="event.stopPropagation()">
+          <div class="checkout-header">
+            <h2>Tu Pedido</h2>
+            <button class="close-btn" onclick="closeCheckout()">✕</button>
+          </div>
+
+          <div class="checkout-content">
+            <div id="checkoutItems"></div>
+
+            <div
+              class="checkout-total"
+              id="checkoutTotal"
+              style="display: none"
+            >
+              <span>Total:</span>
+              <span class="total-amount" id="totalAmount">$0</span>
+            </div>
+
+            <div id="checkoutForm" style="display: none">
+              <div class="checkout-form">
+                <h3>Datos de Contacto</h3>
+                <input
+                  type="text"
+                  placeholder="Nombre *"
+                  class="form-input"
+                  id="customerName"
+                  required
+                />
+              </div>
+
+              <div class="checkout-delivery">
+                <h3>Tipo de Entrega</h3>
+                <div class="delivery-options">
+                  <label>
+                    <input
+                      type="radio"
+                      name="deliveryType"
+                      value="takeaway"
+                      checked
+                    />
+                    <span>🛍️ Para llevar</span>
+                  </label>
+                  <label>
+                    <input type="radio" name="deliveryType" value="delivery" />
+                    <span>🚚 Entrega a domicilio</span>
+                  </label>
+                </div>
+              </div>
+
+              <div class="checkout-pickup">
+                <h3>Hora de Recogida</h3>
+                <div class="pickup-options">
+                  <label>
+                    <input
+                      type="radio"
+                      name="pickupTime"
+                      value="now"
+                      checked
+                      onchange="toggleScheduledTime()"
+                    />
+                    <span>⚡ Ahora</span>
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="pickupTime"
+                      value="scheduled"
+                      onchange="toggleScheduledTime()"
+                    />
+                    <span>🕐 Programada</span>
+                  </label>
+                </div>
+                <input
+                  type="time"
+                  class="form-input"
+                  id="scheduledTime"
+                  style="margin-top: 12px; display: none"
+                />
+              </div>
+
+              <div class="checkout-payment">
+                <h3>Método de Pago</h3>
+                <div class="payment-options">
+                  <label>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="efectivo"
+                      checked
+                    />
+                    <span>💵 Efectivo</span>
+                  </label>
+                  <label>
+                    <input type="radio" name="paymentMethod" value="qr" />
+                    <span>📱 QR</span>
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="paymentMethod"
+                      value="transferencia"
+                    />
+                    <span>🏦 Transferencia</span>
+                  </label>
+                </div>
+              </div>
+
+              <button class="whatsapp-btn" onclick="sendOrder()">
+                <span class="whatsapp-icon">📱</span>
+                Enviar Pedido por WhatsApp
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <div class="container">
+          <p>© 2025 Café Delicias. Hecho con ❤️ para nuestros clientes.</p>
+        </div>
+      </footer>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
