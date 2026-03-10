@@ -5,8 +5,9 @@
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen",
-    "Ubuntu", "Cantarell", sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Roboto", "Oxygen", "Ubuntu",
+    "Cantarell", sans-serif;
   background: #fafafa;
   color: #2d3748;
   line-height: 1.6;
@@ -21,7 +22,8 @@ body {
   position: relative;
   height: 500px;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  background-image: url("https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1200"),
+  background-image:
+    url("https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1200"),
     linear-gradient(
       135deg,
       rgba(102, 126, 234, 0.9) 0%,
@@ -810,12 +812,22 @@ body {
   }
 
   .categories {
-    flex-direction: column;
-    align-items: stretch;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    justify-content: flex-start;
+    padding: 0 20px;
+    margin: 0 -20px;
+    /* Ocultar scrollbar */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .categories::-webkit-scrollbar {
+    display: none;
   }
 
   .category-btn {
-    justify-content: center;
+    flex-shrink: 0;
   }
 }
 
