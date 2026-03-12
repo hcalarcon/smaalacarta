@@ -29,6 +29,18 @@
         }
       ],
       "destination": "/carrito/minimalist/$1"
+    },
+    {
+      "source": "/moderno",
+      "destination": "/menu-html/modern"
+    },
+    {
+      "source": "/clasico",
+      "destination": "/menu-html/classic"
+    },
+    {
+      "source": "/minimal",
+      "destination": "/menu-html/minimalist"
     }
   ]
 }
