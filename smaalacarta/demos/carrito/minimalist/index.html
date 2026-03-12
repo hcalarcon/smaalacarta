@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Café Delicias - Pedidos Online</title>
+    <title>Heladería - Pedidos Online</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
@@ -14,23 +14,22 @@
           <div class="hero-badges">
             <span class="status-badge" id="statusBadge"></span>
             <div class="delivery-badges">
-              <span class="delivery-badge">🛍️ Para Llevar</span>
-              <span class="delivery-badge">🚚 Delivery</span>
+              <span class="delivery-badge">Para llevar</span>
+              <span class="delivery-badge">Delivery</span>
             </div>
           </div>
-          <h1 class="hero-title">Café Delicias</h1>
+          <h1 class="hero-title">Heladería</h1>
           <p class="hero-description">
-            Disfruta de los mejores sabores preparados con amor y dedicación
+            Helado artesanal que endulza cada momento
           </p>
-          <button class="hero-button" onclick="scrollToMenu()">Ver Menú</button>
+          <button class="hero-button" onclick="scrollToMenu()">Menú</button>
         </div>
-        <div class="hero-overlay"></div>
       </section>
 
       <!-- Categories -->
       <section class="categories-section" id="menu">
         <div class="container">
-          <h2 class="section-title">Nuestro Menú</h2>
+          <h2 class="section-title">Nuestros sabores</h2>
           <div class="categories" id="categories"></div>
         </div>
       </section>
@@ -63,7 +62,7 @@
       >
         <div class="checkout-modal" onclick="event.stopPropagation()">
           <div class="checkout-header">
-            <h2>Tu Pedido</h2>
+            <h2>Tu pedido</h2>
             <button class="close-btn" onclick="closeCheckout()">✕</button>
           </div>
 
@@ -176,15 +175,9 @@
           </div>
         </div>
       </div>
-
-      <!-- Footer -->
-      <footer class="footer">
-        <div class="container">
-          <p>© 2025 Café Delicias. Hecho con ❤️ para nuestros clientes.</p>
-        </div>
-      </footer>
     </div>
 
+    <script src="./cart.js"></script>
     <script src="./app.js"></script>
   </body>
 </html>

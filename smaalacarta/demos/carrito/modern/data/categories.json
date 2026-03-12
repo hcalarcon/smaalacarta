@@ -1,0 +1,27 @@
+[
+  {
+    "id": "todos",
+    "name": "Todos",
+    "icon": "🍽️"
+  },
+  {
+    "id": "cafes",
+    "name": "Cafés",
+    "icon": "☕"
+  },
+  {
+    "id": "comidas",
+    "name": "Comidas",
+    "icon": "🍔"
+  },
+  {
+    "id": "postres",
+    "name": "Postres",
+    "icon": "🍰"
+  },
+  {
+    "id": "bebidas",
+    "name": "Bebidas",
+    "icon": "🥤"
+  }
+]

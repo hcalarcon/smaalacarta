@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
@@ -31,7 +31,7 @@
           <a href="#contacto" class="nav-link">Contacto</a>
         </nav>
 
-        <button class="btn btn-primary btn-sm">Ver Demo</button>
+        <button id="demosBtn" class="btn btn-demo">Ver Demo</button>
 
         <!-- Mobile menu button -->
         <button class="mobile-menu-btn" id="mobileMenuBtn">
@@ -63,9 +63,9 @@
               Menús digitales para restaurantes y negocios. Sin apps, sin
               comisiones, pedidos directos a tu WhatsApp.
             </p>
-            <button class="btn btn-primary btn-lg hero-cta">
+            <a href="#contacto" class="btn btn-primary btn-lg hero-cta">
               Solicitá tu sitio ahora
-            </button>
+            </a>
           </div>
         </div>
       </section>
@@ -404,7 +404,7 @@
                   </a>
                   <a
                     href="mailto:ventas@smaalacarta.online"
-                    class="btn btn-outline btn-lg contact-btn"
+                    class="btn contact-btn secondary"
                   >
                     Enviar Email
                   </a>
@@ -475,10 +475,9 @@
           <div class="footer-links">
             <h3>Servicios</h3>
             <ul>
-              <li><a href="#">Menú Digital</a></li>
-              <li><a href="#">QR + PDF</a></li>
-              <li><a href="#">Sitio Web</a></li>
-              <li><a href="#">WhatsApp Business</a></li>
+              <li><a href="#planes">Menú Digital</a></li>
+              <li><a href="#planes">QR + PDF</a></li>
+              <li><a href="#planes">Sitio Web</a></li>
             </ul>
           </div>
 
@@ -488,7 +487,13 @@
             <ul>
               <li>San Martín de los Andes</li>
               <li>Neuquén, Argentina</li>
-              <li>+54 9 3644277105</li>
+              <li>
+                <a
+                  href="tel:+5493644277105"
+                  style="text-decoration: none; color: white"
+                  >+54 9 3644277105</a
+                >
+              </li>
               <li>ventas@smaalacarta.online</li>
             </ul>
           </div>
@@ -509,6 +514,52 @@
         </div>
       </div>
     </footer>
+
+    <!-- Demos Modal -->
+    <div class="modal-overlay" id="demosModal">
+      <div class="modal-content">
+        <!-- Subdominio Completo Section -->
+        <section class="demo-section">
+          <h2 class="section-heading">Subdominio Completo</h2>
+          <div class="cards-container">
+            <a href="https://modern.smaalacarta.com.ar/" class="card-link">
+              <!-- Aquí va la imagen -->
+            </a>
+            <a href="../demos/modern/index.html" class="card-link">
+              <!-- Aquí va la imagen -->
+            </a>
+            <a href="#" class="card-link">
+              <!-- Aquí va la imagen -->
+            </a>
+          </div>
+        </section>
+
+        <!-- Menu Web Section -->
+        <section class="demo-section">
+          <h2 class="section-heading">Menu Web</h2>
+          <div class="cards-container">
+            <a href="../demos/menu-html/modern/index.html" class="card-link">
+              <!-- Aquí va la imagen -->
+            </a>
+            <a href="#" class="card-link">
+              <!-- Aquí va la imagen -->
+            </a>
+            <a href="#" class="card-link">
+              <!-- Aquí va la imagen -->
+            </a>
+          </div>
+        </section>
+
+        <!-- QR+PDF Section -->
+        <section class="demo-section">
+          <h2 class="section-heading">QR+PDF</h2>
+          <div class="qr-pdf-container">
+            <img src="" alt="PDF" class="pdf-image" />
+            <img src="" alt="QR Code" class="qr-image" />
+          </div>
+        </section>
+      </div>
+    </div>
 
     <script src="./landing.js"></script>
   </body>

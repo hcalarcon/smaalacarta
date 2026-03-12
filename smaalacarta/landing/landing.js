@@ -36,7 +36,7 @@ const observer = new IntersectionObserver(function (entries) {
 
 // Observe elements for animation
 const animateElements = document.querySelectorAll(
-  ".step, .benefit-card, .plan-card, .contact-method"
+  ".step, .benefit-card, .plan-card, .contact-method",
 );
 
 animateElements.forEach((el) => {
@@ -57,6 +57,47 @@ cards.forEach((card) => {
   card.addEventListener("mouseleave", function () {
     this.style.transform = "translateY(0)";
   });
+});
+
+// =====================================================
+// DEMOS MODAL FUNCTIONALITY
+// =====================================================
+
+// Get modal elements
+const demosBtn = document.getElementById("demosBtn");
+const demosModal = document.getElementById("demosModal");
+
+// Open modal function
+function openDemosModal() {
+  demosModal.style.display = "flex";
+  document.body.style.overflow = "hidden";
+}
+
+// Close modal function
+function closeDemosModal() {
+  demosModal.style.display = "none";
+  document.body.style.overflow = "auto";
+}
+
+// Open modal on button click
+if (demosBtn) {
+  demosBtn.addEventListener("click", openDemosModal);
+}
+
+// Close modal when clicking outside (on the overlay)
+if (demosModal) {
+  demosModal.addEventListener("click", function (event) {
+    if (event.target === this) {
+      closeDemosModal();
+    }
+  });
+}
+
+// Close modal when pressing ESC
+document.addEventListener("keydown", function (event) {
+  if (event.key === "Escape") {
+    closeDemosModal();
+  }
 });
 
 // Add pulse effect to CTA buttons

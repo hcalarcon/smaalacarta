@@ -1,0 +1,164 @@
+body {
+  margin: 0;
+  font-family: system-ui;
+  background: #fafafa;
+  color: #111;
+  scroll-behavior: smooth;
+}
+
+/* HERO */
+
+.hero {
+  position: relative;
+  text-align: center;
+  padding: 50px 20px 30px;
+  border-bottom: 1px solid #e6e6e6;
+  background: white;
+}
+
+.hero h1 {
+  margin: 0;
+  font-size: 2rem;
+}
+
+.hero p {
+  margin-top: 6px;
+  color: #666;
+}
+
+.status-badge {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  color: #777;
+}
+
+/* BOTON VOLVER */
+
+.back-btn {
+  position: absolute;
+  left: 16px;
+  top: 16px;
+  text-decoration: none;
+  font-size: 0.9rem;
+  color: #555;
+}
+
+/* CATEGORIAS */
+
+.category-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: white;
+  display: flex;
+  gap: 22px;
+  overflow-x: auto;
+  padding: 14px 20px;
+  border-bottom: 1px solid #e6e6e6;
+}
+
+.chip {
+  text-decoration: none;
+  color: #666;
+  font-size: 0.9rem;
+  padding-bottom: 6px;
+  border-bottom: 2px solid transparent;
+}
+
+.chip.active {
+  color: black;
+  border-bottom: 2px solid #ff9100ec;
+}
+
+/* CONTENEDOR */
+
+.menu-container {
+  max-width: 620px;
+  margin: auto;
+}
+
+/* SECCIONES */
+
+.menu-section {
+  padding: 30px 20px;
+}
+
+.menu-section h2 {
+  margin-bottom: 20px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #222;
+}
+
+/* ITEMS */
+
+.menu-row {
+  display: flex;
+  justify-content: space-between;
+  padding: 14px 0;
+  border-bottom: 1px solid #eee;
+  font-size: 0.95rem;
+}
+
+.menu-row span:last-child {
+  color: #444;
+}
+
+/* CTA */
+
+.cta {
+  text-align: center;
+  padding: 50px 20px;
+  border-top: 1px solid #e6e6e6;
+}
+
+.cta h2 {
+  font-size: 1.1rem;
+  margin-bottom: 20px;
+}
+
+.cta-btn {
+  display: inline-block;
+  padding: 10px 22px;
+  border: 1px solid #111;
+  text-decoration: none;
+  color: #111;
+  border-radius: 22px;
+  font-size: 0.9rem;
+  transition: 0.2s;
+}
+
+.cta-btn:hover {
+  background: #111;
+  color: white;
+}
+
+/* FOOTER */
+
+.footer {
+  text-align: center;
+  padding: 30px;
+  color: #777;
+  font-size: 0.85rem;
+}
+
+/* ANIMACION */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition: 0.45s;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* DESKTOP */
+
+@media (min-width: 768px) {
+  .hero h1 {
+    font-size: 2.3rem;
+  }
+}
