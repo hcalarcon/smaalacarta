@@ -13,9 +13,34 @@
       href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
       rel="stylesheet"
     />
+    <link
+      rel="icon"
+      type="image/png"
+      href="https://smaalacarta.com.ar/assets/favicon-96x96.png"
+      sizes="96x96"
+    />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      href="https://smaalacarta.com.ar/assets/favicon.svg"
+    />
+    <link
+      rel="shortcut icon"
+      href="https://smaalacarta.com.ar/assets/favicon.ico"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="https://smaalacarta.com.ar/assets/apple-touch-icon.png"
+    />
+    <link
+      rel="manifest"
+      href="https://smaalacarta.com.ar/assets/site.webmanifest"
+    />
   </head>
   <body>
     <!-- Header -->
+    <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
     <header class="header">
       <div class="container header-content">
         <div class="logo">
@@ -246,9 +271,7 @@
                 <p class="plan-description">
                   Ideal para empezar sin complicaciones
                 </p>
-                <div class="plan-price">
-                  $10.000 <span class="price-period">/ mes</span>
-                </div>
+                <div class="plan-price">Gratis</div>
               </div>
 
               <ul class="plan-features">
@@ -259,11 +282,18 @@
                 <li>Soporte técnico</li>
               </ul>
 
-              <button class="plan-btn secondary">Quiero mi QR con PDF</button>
+              <a
+                class="plan-btn secondary"
+                href="https://api.whatsapp.com/send?phone=5493644277105&text=Hola%20quiero%20el%20plan%20Men%C3%BA%20QR%20%2B%20PDF%20gratis.%20%20Por%20favor%20me%20asesor%C3%ADas?"
+                target="_blank"
+                rel="noopener"
+                >Quiero mi QR con PDF</a
+              >
             </div>
 
             <!-- PLAN 2 - DESTACADO -->
             <div class="plan-card">
+              <span class="plan-badge">1er mes gratis</span>
               <div class="plan-header">
                 <h3 class="plan-name">Menú Web</h3>
                 <p class="plan-description">
@@ -283,12 +313,18 @@
                 <li>Actualizaciones a pedido</li>
               </ul>
 
-              <button class="plan-btn secondary">Quiero mi menú web</button>
+              <a
+                class="plan-btn secondary"
+                href="https://api.whatsapp.com/send?phone=5493644277105&text=Hola%20quiero%20el%20plan%20Men%C3%BA%20Web%20con%20primer%20mes%20gratis.%20%20Podr%C3%ADas%20enviarme%20detalle%3F"
+                target="_blank"
+                rel="noopener"
+                >Quiero mi menú web</a
+              >
             </div>
 
             <!-- PLAN 3 -->
             <div class="plan-card featured">
-              <span class="plan-badge">Más elegido</span>
+              <span class="plan-badge">1er mes gratis</span>
               <div class="plan-header">
                 <h3 class="plan-name">Subdominio Completo</h3>
                 <p class="plan-description">
@@ -307,7 +343,13 @@
                 <li>Escalable a nuevas funciones</li>
               </ul>
 
-              <button class="plan-btn primary">Quiero mi sitio completo</button>
+              <a
+                class="plan-btn primary"
+                href="https://api.whatsapp.com/send?phone=5493644277105&text=Hola%20quiero%20el%20plan%20Subdominio%20Completo%20con%20primer%20mes%20gratis.%20%20Qu%C3%A9%20incluye%20y%20c%C3%B3mo%20inicio?"
+                target="_blank"
+                rel="noopener"
+                >Quiero mi sitio completo</a
+              >
             </div>
           </div>
         </div>
@@ -522,14 +564,15 @@
         <section class="demo-section">
           <h2 class="section-heading">Subdominio Completo</h2>
           <div class="cards-container">
-            <a href="https://modern.smaalacarta.com.ar/" class="card-link">
-              <!-- Aquí va la imagen -->
+            <a href="https://moderno.smaalacarta.com.ar/" class="card-link">
+              <img src="./assets/moderno.jpeg" alt="" />
+              <span class="card-label">Moderno</span>
             </a>
             <a href="../demos/modern/index.html" class="card-link">
-              <!-- Aquí va la imagen -->
+              <span class="card-label">Demo Modern</span>
             </a>
             <a href="#" class="card-link">
-              <!-- Aquí va la imagen -->
+              <span class="card-label">Próximamente</span>
             </a>
           </div>
         </section>
@@ -538,14 +581,17 @@
         <section class="demo-section">
           <h2 class="section-heading">Menu Web</h2>
           <div class="cards-container">
-            <a href="../demos/menu-html/modern/index.html" class="card-link">
-              <!-- Aquí va la imagen -->
+            <a href="https://demo.smaalacarta.com.ar/moderno" class="card-link">
+              <img src="./assets/menu-moderno.jpeg" alt="" />
+              <span class="card-label">Menú moderno</span>
             </a>
-            <a href="#" class="card-link">
-              <!-- Aquí va la imagen -->
+            <a href="https://demo.smaalacarta.com.ar/clasico" class="card-link">
+              <img src="./assets/menu-clasico.jpeg" alt="" />
+              <span class="card-label">Menú clásico</span>
             </a>
-            <a href="#" class="card-link">
-              <!-- Aquí va la imagen -->
+            <a href="https://demo.smaalacarta.com.ar/minimal" class="card-link">
+              <img src="./assets/menu-minimal.jpeg" alt="" />
+              <span class="card-label">Menú minimalista</span>
             </a>
           </div>
         </section>

@@ -3,21 +3,65 @@ const header = document.querySelector(".header");
 window.addEventListener("scroll", () => {
   if (window.scrollY > 50) {
     header.classList.add("scrolled");
+    if (mobileMenuBtn) mobileMenuBtn.classList.add("scrolled");
   } else {
     header.classList.remove("scrolled");
+    if (mobileMenuBtn) mobileMenuBtn.classList.remove("scrolled");
   }
 });
 
 // Handle mobile menu
+const body = document.body;
 const mobileMenuBtn = document.getElementById("mobileMenuBtn");
 const nav = document.querySelector(".nav");
+const mobileNavOverlay = document.getElementById("mobileNavOverlay");
+const navLinks = document.querySelectorAll(".nav-link");
+
+function closeMobileMenu() {
+  const scrollY = body.style.top;
+
+  body.style.position = "";
+  body.style.top = "";
+  body.style.left = "";
+  body.style.right = "";
+
+  window.scrollTo(0, parseInt(scrollY || "0") * -1);
+  if (nav) nav.classList.remove("mobile-nav-open");
+  if (mobileMenuBtn) mobileMenuBtn.classList.remove("mobile-menu-active");
+  if (mobileNavOverlay) mobileNavOverlay.classList.remove("show");
+  body.classList.remove("menu-open");
+}
+
+function openMobileMenu() {
+  const scrollY = window.scrollY;
+
+  body.style.position = "fixed";
+  body.style.top = `-${scrollY}px`;
+  body.style.left = "0";
+  body.style.right = "0";
+  if (nav) nav.classList.add("mobile-nav-open");
+  if (mobileMenuBtn) mobileMenuBtn.classList.add("mobile-menu-active");
+  if (mobileNavOverlay) mobileNavOverlay.classList.add("show");
+  body.classList.add("menu-open");
+}
 
 if (mobileMenuBtn && nav) {
   mobileMenuBtn.addEventListener("click", function () {
-    nav.classList.toggle("mobile-nav-open");
-    this.classList.toggle("mobile-menu-active");
+    if (nav.classList.contains("mobile-nav-open")) {
+      closeMobileMenu();
+    } else {
+      openMobileMenu();
+    }
   });
 }
+
+if (mobileNavOverlay) {
+  mobileNavOverlay.addEventListener("click", closeMobileMenu);
+}
+
+navLinks.forEach((link) => {
+  link.addEventListener("click", closeMobileMenu);
+});
 
 // Animate elements on scroll
 const observerOptions = {
