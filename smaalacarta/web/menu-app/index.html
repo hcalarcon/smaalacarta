@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Menú</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link rel="stylesheet" href="./styles/base.css" />
+  </head>
+  <body class="loading">
+    <!-- LOADER -->
+    <div id="loader" class="loader">
+      <div class="spinner"></div>
+    </div>
+
+    <!-- HEADER -->
+    <header class="header sticky-header">
+      <div class="header-top">
+        <a href="https://smaalacarta.com.ar" class="btn-volver">← Volver</a>
+        <span class="badge-estado">
+          <span class="dot"></span>
+          <span id="estado-texto">Abierto</span>
+        </span>
+      </div>
+      <h1 id="nombre-negocio">...</h1>
+      <p id="descripcion-negocio"></p>
+
+      <!-- BUSCADOR -->
+      <input id="buscador" placeholder="Buscar..." />
+    </header>
+
+    <!-- CATEGORÍAS -->
+    <nav id="categorias" class="categorias sticky-categorias"></nav>
+
+    <!-- MENÚ -->
+    <main id="menu" class="menu-container"></main>
+
+    <!-- CTA FINAL -->
+    <section class="cta-section">
+      <h2>¿Querés este menú en tu negocio?</h2>
+      <p>Solicita información sobre nuestro servicio de menú digital</p>
+      <a
+        href="https://wa.me/5493644277105?text=Hola,%20me%20interesa%20saber%20más%20sobre%20el%20menú%20digital"
+        target="_blank"
+        class="btn-cta"
+      >
+        Solicitar información
+      </a>
+    </section>
+
+    <!-- BOTÓN CARRITO -->
+    <button id="btn-carrito" class="btn-carrito">
+      🛒 <span id="carrito-count">0</span>
+    </button>
+
+    <!-- CARRITO -->
+    <div id="carrito-panel" class="carrito-panel">
+      <div class="carrito-header">
+        <h2>Tu pedido</h2>
+        <button id="cerrar-carrito">✕</button>
+      </div>
+
+      <div id="carrito-items"></div>
+
+      <div class="carrito-footer">
+        <p>Total: <span id="carrito-total">$0</span></p>
+        <button id="btn-finalizar">Enviar pedido</button>
+      </div>
+    </div>
+
+    <div id="overlay" class="overlay"></div>
+
+    <!-- CHECKOUT -->
+    <div id="checkout" class="checkout">
+      <div class="checkout-header">
+        <h2>Finalizar pedido</h2>
+        <button id="cerrar-checkout">✕</button>
+      </div>
+
+      <form id="form-pedido">
+        <input name="nombre" placeholder="Nombre" required />
+        <input name="apellido" placeholder="Apellido" required />
+        <select name="entrega">
+          <option disabled selected>-- Tipo de entrega --</option>
+          <option value="delivery">Delivery</option>
+          <option value="takeawey">takeawey</option>
+        </select>
+        <label> <input type="checkbox" name="ahora" /> Ahora mismo </label>
+        <input name="horario" type="time" />
+        <select name="pago">
+          <option disabled selected>-- Tipo de pago --</option>
+          <option value="efectivo">Efectivo</option>
+          <option value="transferencia">Transferencia</option>
+          <option value="tarjeta">Credito o debito</option>
+        </select>
+        <textarea name="notas" placeholder="Notas"></textarea>
+        <button type="submit">Enviar por WhatsApp</button>
+      </form>
+    </div>
+
+    <script src="./app/app.js"></script>
+  </body>
+</html>

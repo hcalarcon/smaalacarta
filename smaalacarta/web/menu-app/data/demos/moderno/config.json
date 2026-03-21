@@ -1,0 +1,24 @@
+{
+  "nombre": "Demo Moderno",
+  "descripcion": "Ejemplo de menú digital moderno",
+  "template": "moderno",
+  "tipo": "demo",
+  "telefono": "5493644277105",
+  "abierto": true,
+  "colores": {
+    "primary": "#463AE5",
+    "secondary": "#9A6CE0"
+  },
+  "header": {
+    "imagen": "https://images.unsplash.com/photo-1550547660-d9450f859349"
+  },
+  "horarios": {
+    "lunes": ["12:00-15:00", "20:00-23:30"],
+    "martes": ["12:00-15:00", "20:00-23:30"],
+    "miercoles": ["12:00-15:00"],
+    "jueves": ["12:00-15:00", "20:00-23:30"],
+    "viernes": ["12:00-15:00", "20:00-01:00"],
+    "sabado": ["20:00-02:00"],
+    "domingo": []
+  }
+}

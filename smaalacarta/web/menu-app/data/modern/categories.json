@@ -1,8 +1,0 @@
-[
-  { "id": "todos", "name": "Todo", "icon": "🍽️" },
-  { "id": "cafe", "name": "Café", "icon": "☕" },
-  { "id": "desayunos", "name": "Desayunos", "icon": "🥐" },
-  { "id": "tostados", "name": "Tostados", "icon": "🥪" },
-  { "id": "dulce", "name": "Dulce", "icon": "🍰" },
-  { "id": "bebidas", "name": "Bebidas frías", "icon": "🥤" }
-]

@@ -1,0 +1,116 @@
+{
+  "categorias": [
+    {
+      "nombre": "Pizzas",
+      "descripcion": "Nuestras especialidades",
+      "items": [
+        {
+          "nombre": "Muzzarella",
+          "descripcion": "Clásica con queso",
+          "precio": 5000,
+          "imagen": "https://images.unsplash.com/photo-1594007654729-407eedc4be65",
+          "destacado": true
+        },
+        {
+          "nombre": "Napolitana",
+          "descripcion": "Tomate, ajo y perejil",
+          "precio": 5500,
+          "precioAnterior": 6500,
+          "promo": "20% OFF",
+          "imagen": "https://images.unsplash.com/photo-1594007654729-407eedc4be65"
+        },
+        {
+          "nombre": "Especial",
+          "descripcion": "Jamón, morrón y aceitunas",
+          "precio": 6000,
+          "imagen": "https://images.unsplash.com/photo-1594007654729-407eedc4be65"
+        }
+      ]
+    },
+    {
+      "nombre": "Hamburguesas",
+      "items": [
+        {
+          "nombre": "Clásica",
+          "descripcion": "Carne, lechuga y tomate",
+          "precio": 7000,
+          "imagen": "https://images.unsplash.com/photo-1550547660-d9450f859349"
+        },
+        {
+          "nombre": "Doble Cheddar",
+          "descripcion": "Doble carne con cheddar",
+          "precio": 8500,
+          "destacado": true,
+          "imagen": "https://images.unsplash.com/photo-1568901346375-23c9450c58cd"
+        }
+      ]
+    },
+    {
+      "nombre": "Parrilla",
+      "items": [
+        {
+          "nombre": "Asado",
+          "descripcion": "Porción para compartir",
+          "precio": 12000,
+          "imagen": "https://images.unsplash.com/photo-1558030006-450675393462"
+        },
+        {
+          "nombre": "Vacío",
+          "descripcion": "Con guarnición",
+          "precio": 11000,
+          "imagen": "https://images.unsplash.com/photo-1600891964599-f61ba0e24092"
+        }
+      ]
+    },
+    {
+      "nombre": "Ensaladas",
+      "items": [
+        {
+          "nombre": "César",
+          "descripcion": "Pollo, lechuga y aderezo",
+          "precio": 6000,
+          "imagen": "https://images.unsplash.com/photo-1546069901-ba9599a7e63c"
+        },
+        {
+          "nombre": "Mixta",
+          "descripcion": "Lechuga, tomate y cebolla",
+          "precio": 4500,
+          "imagen": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd"
+        }
+      ]
+    },
+    {
+      "nombre": "Postres",
+      "items": [
+        {
+          "nombre": "Torta de chocolate",
+          "descripcion": "Porción individual",
+          "precio": 4000,
+          "destacado": true,
+          "imagen": "https://images.unsplash.com/photo-1551024601-bec78aea704b"
+        },
+        {
+          "nombre": "Helado",
+          "descripcion": "2 bochas",
+          "precio": 3000,
+          "imagen": "https://images.unsplash.com/photo-1563805042-7684c019e1cb"
+        }
+      ]
+    },
+    {
+      "nombre": "Bebidas",
+      "items": [
+        {
+          "nombre": "Coca Cola",
+          "descripcion": "500ml",
+          "precio": 2000
+        },
+        {
+          "nombre": "Cerveza",
+          "descripcion": "Quilmes 1L",
+          "precio": 3000
+        }
+      ]
+    }
+  ]
+}

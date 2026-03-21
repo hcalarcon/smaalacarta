@@ -1,0 +1,44 @@
+{
+  "categorias": [
+    {
+      "nombre": "Entradas",
+      "items": [
+        {
+          "nombre": "Empanadas de carne",
+          "descripcion": "Horno o fritas",
+          "precio": 2500
+        }
+      ]
+    },
+    {
+      "nombre": "Parrilla",
+      "items": [
+        {
+          "nombre": "Asado",
+          "descripcion": "Porción para compartir",
+          "precio": 12000
+        },
+        {
+          "nombre": "Vacío",
+          "descripcion": "Con guarnición",
+          "precio": 11000
+        }
+      ]
+    },
+    {
+      "nombre": "Bebidas",
+      "items": [
+        {
+          "nombre": "Agua",
+          "descripcion": "500ml",
+          "precio": 1500
+        },
+        {
+          "nombre": "Cerveza",
+          "descripcion": "Quilmes 1L",
+          "precio": 3000
+        }
+      ]
+    }
+  ]
+}
