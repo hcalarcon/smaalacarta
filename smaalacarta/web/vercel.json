@@ -8,20 +8,20 @@
           "value": "^(?!demo|www)(.*)\\.smaalacarta\\.com\\.ar$"
         }
       ],
-      "destination": "/menu-app/$1"
+      "destination": "/apps/menu-app/$1"
     },
 
     {
       "source": "/moderno",
-      "destination": "/menu-html/modern"
+      "destination": "/apps/menu-html/modern"
     },
     {
       "source": "/clasico",
-      "destination": "/menu-html/classic"
+      "destination": "/apps/menu-html/classic"
     },
     {
       "source": "/minimal",
-      "destination": "/menu-html/minimalist"
+      "destination": "/apps/menu-html/minimalist"
     }
   ]
 }
