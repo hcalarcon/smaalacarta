@@ -5,31 +5,12 @@
       "has": [
         {
           "type": "host",
-          "value": "moderno.smaalacarta.com.ar"
+          "value": "^(?!demo|www)(.*)\\.smaalacarta\\.com\\.ar$"
         }
       ],
-      "destination": "/carrito/modern/$1"
+      "destination": "/menu-app/$1"
     },
-    {
-      "source": "/(.*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "clasico.smaalacarta.com.ar"
-        }
-      ],
-      "destination": "/carrito/classic/$1"
-    },
-    {
-      "source": "/(.*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "minimal.smaalacarta.com.ar"
-        }
-      ],
-      "destination": "/carrito/minimalist/$1"
-    },
+
     {
       "source": "/moderno",
       "destination": "/menu-html/modern"
