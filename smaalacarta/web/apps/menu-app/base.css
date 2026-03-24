@@ -1,0 +1,52 @@
+/* RESET BÁSICO */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* BASE GLOBAL */
+body {
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
+}
+
+/* UTILIDADES */
+.hidden {
+  display: none !important;
+}
+
+/* MEDIA DEFAULT (evita bugs) */
+img {
+  max-width: 100%;
+  display: block;
+}
+
+/* BOTONES RESET */
+button {
+  font: inherit;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+/* INPUTS RESET */
+input,
+select,
+textarea {
+  font: inherit;
+  border: none;
+  outline: none;
+}
+
+body.loading {
+  overflow: hidden;
+}
+
+body.loading #menu,
+body.loading #categorias,
+body.loading .header {
+  visibility: hidden;
+}
