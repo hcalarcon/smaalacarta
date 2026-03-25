@@ -1,0 +1,44 @@
+body {
+  font-family: system-ui, sans-serif;
+  background: #ffffff;
+  color: #111;
+}
+
+.header {
+  padding: 20px;
+  background: white !important;
+  color: black;
+}
+
+.categoria-titulo {
+  font-size: 14px;
+  text-transform: uppercase;
+  color: #888;
+  margin-bottom: 10px;
+}
+
+.producto {
+  padding: 15px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.producto img {
+  display: none; /* minimal no usa imágenes */
+}
+
+.producto-info h3 {
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.producto-precio {
+  font-size: 14px;
+  color: #000;
+}
+
+.btn-add {
+  border: 1px solid #ccc;
+  border-radius: 50%;
+  width: 28px;
+  height: 28px;
+}

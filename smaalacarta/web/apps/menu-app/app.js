@@ -17,6 +17,61 @@ async function fetchJSON(path) {
   }
 }
 
+//nueva funcion hardcodeada
+function resolveAppConfig() {
+  const params = new URLSearchParams(window.location.search);
+  const host = window.location.hostname;
+
+  /*
+  ========================================
+  1. PRIORIDAD: QUERY (DEV)
+  ========================================
+  Ej:
+  ?demo=moderno
+  ?cliente=don-juan
+  */
+  if (params.get("demo")) {
+    return {
+      slug: params.get("demo"),
+      type: "demo",
+    };
+  }
+
+  if (params.get("cliente")) {
+    return {
+      slug: params.get("cliente"),
+      type: "cliente",
+    };
+  }
+
+  /*
+  ========================================
+  2. PRODUCCIÓN: DOMINIOS HARDCODEADOS
+  ========================================
+  */
+  const DOMAINS = {
+    "moderno.smaalacarta.com.ar": { type: "demo", slug: "moderno" },
+    "clasico.smaalacarta.com.ar": { type: "demo", slug: "clasico" },
+    "minimalista.smaalacarta.com.ar": { type: "demo", slug: "moderno" }, // podés cambiar slug si tenés otro
+  };
+
+  if (DOMAINS[host]) {
+    return DOMAINS[host];
+  }
+
+  /*
+  ========================================
+  3. FALLBACK (MVP)
+  ========================================
+  */
+  console.warn("Dominio no reconocido:", host, "→ fallback a demo moderno");
+
+  return {
+    slug: "moderno",
+    type: "demo",
+  };
+}
+
 function getSlug() {
   const params = new URLSearchParams(window.location.search);
 
@@ -51,7 +106,7 @@ function getSlug() {
 // INIT
 async function init() {
   try {
-    const result = getSlug();
+    const result = resolveAppConfig();
     if (!result) {
       console.error("No se encontró slug en la URL");
       return;
@@ -59,8 +114,7 @@ async function init() {
 
     const { slug, type } = result;
 
-    const basePath =
-      type === "cliente" ? "./data/clientes" : "/data/demos";
+    const basePath = type === "cliente" ? "/data/clientes" : "/data/demos";
 
     // 1 solo fetch 👇
     const config = await fetchJSON(`${basePath}/${slug}/config.json`);
@@ -421,6 +475,7 @@ function updateCart() {
   const itemsContainer = document.querySelector("#carrito-items");
   const totalEl = document.querySelector("#carrito-total");
   const countEl = document.querySelector("#carrito-count");
+  const btnCarrito = document.querySelector("#btn-carrito");
 
   if (!itemsContainer || !totalEl || !countEl) return;
 
@@ -480,6 +535,17 @@ function updateCart() {
 
   // 🔥 IMPORTANTE: persistencia SIEMPRE actualizada
   saveCart();
+
+  if (btnCarrito) {
+    btnCarrito.style.display = count > 0 ? "flex" : "none";
+  }
+
+  const btnFinalizar = document.querySelector("#btn-finalizar");
+  if (btnFinalizar) {
+    btnFinalizar.disabled = count === 0;
+    btnFinalizar.style.opacity = count === 0 ? "0.5" : "1";
+    btnFinalizar.style.pointerEvents = count === 0 ? "none" : "auto";
+  }
 }
 
 // PERSISTENCIA

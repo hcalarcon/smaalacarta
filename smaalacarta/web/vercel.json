@@ -2,13 +2,7 @@
   "rewrites": [
     {
       "source": "/(.*)",
-      "has": [
-        {
-          "type": "host",
-          "value": "^(?!demo|www)(.*)\\.smaalacarta\\.com\\.ar$"
-        }
-      ],
-      "destination": "/apps/menu-app/$1"
+      "destination": "/apps/menu-app/index.html"
     },
 
     {

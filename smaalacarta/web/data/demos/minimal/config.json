@@ -1,0 +1,15 @@
+{
+  "nombre": "Demo Minimal",
+  "descripcion": "Menú simple y limpio",
+  "template": "minimal",
+  "tipo": "demo",
+  "telefono": "5493644277105",
+  "abierto": true,
+  "colores": {
+    "primary": "#111111",
+    "secondary": "#666666"
+  },
+  "header": {
+    "imagen": "https://images.unsplash.com/photo-1512621776951-a57141f2eefd"
+  }
+}

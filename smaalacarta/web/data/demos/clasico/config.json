@@ -1,0 +1,15 @@
+{
+  "nombre": "Demo Clásico",
+  "descripcion": "Menú estilo tradicional",
+  "template": "clasico",
+  "tipo": "demo",
+  "telefono": "5493644277105",
+  "abierto": true,
+  "colores": {
+    "primary": "#7c2d12",
+    "secondary": "#b45309"
+  },
+  "header": {
+    "imagen": "https://images.unsplash.com/photo-1600891964599-f61ba0e24092"
+  }
+}
