@@ -1,10 +1,6 @@
 {
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/apps/menu-app/index.html"
-    },
-
+ 
     {
       "source": "/moderno",
       "destination": "/apps/menu-html/modern"
@@ -16,6 +12,12 @@
     {
       "source": "/minimal",
       "destination": "/apps/menu-html/minimalist"
+    },
+
+   
+    {
+      "source": "/((?!apps|data|templates|.*\\..*).*)",
+      "destination": "/apps/menu-app/index.html"
     }
   ]
 }
