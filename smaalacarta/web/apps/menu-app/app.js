@@ -52,7 +52,7 @@ function resolveAppConfig() {
   const DOMAINS = {
     "moderno.smaalacarta.com.ar": { type: "demo", slug: "moderno" },
     "clasico.smaalacarta.com.ar": { type: "demo", slug: "clasico" },
-    "minimalista.smaalacarta.com.ar": { type: "demo", slug: "moderno" }, // podés cambiar slug si tenés otro
+    "minimal.smaalacarta.com.ar": { type: "demo", slug: "minimal" }, // podés cambiar slug si tenés otro
   };
 
   if (DOMAINS[host]) {
@@ -459,24 +459,24 @@ function renderMenu(menu) {
         <button class="btn-add">+</button>
       `;
 
-     const btn = d.querySelector(".btn-add");
+      const btn = d.querySelector(".btn-add");
 
-btn.onclick = () => {
-  addToCart(p);
+      btn.onclick = () => {
+        addToCart(p);
 
-  // 🎯 animación producto
-  d.classList.add("adding");
-  setTimeout(() => d.classList.remove("adding"), 350);
+        // 🎯 animación producto
+        d.classList.add("adding");
+        setTimeout(() => d.classList.remove("adding"), 350);
 
-  // 🎯 animación botón
-  btn.classList.add("added");
-  btn.textContent = "✓";
+        // 🎯 animación botón
+        btn.classList.add("added");
+        btn.textContent = "✓";
 
-  setTimeout(() => {
-    btn.classList.remove("added");
-    btn.textContent = "+";
-  }, 600);
-};
+        setTimeout(() => {
+          btn.classList.remove("added");
+          btn.textContent = "+";
+        }, 600);
+      };
 
       grid.appendChild(d); // 👈 clave
     });
