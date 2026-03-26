@@ -537,7 +537,11 @@ function updateCart() {
   saveCart();
 
   if (btnCarrito) {
-    btnCarrito.style.display = count > 0 ? "flex" : "none";
+    if (count > 0) {
+      btnCarrito.classList.add("visible");
+    } else {
+      btnCarrito.classList.remove("visible");
+    }
   }
 
   const btnFinalizar = document.querySelector("#btn-finalizar");

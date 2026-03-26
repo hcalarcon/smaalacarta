@@ -435,6 +435,23 @@ body {
   font-weight: 700;
 }
 
+#btn-carrito {
+  opacity: 0;
+  transform: translateY(20px) scale(0.9);
+  pointer-events: none;
+
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
+}
+
+/* estado visible */
+#btn-carrito.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+
 /* MENSAJE SIN RESULTADOS */
 .no-results {
   text-align: center;

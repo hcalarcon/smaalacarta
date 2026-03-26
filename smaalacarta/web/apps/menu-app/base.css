@@ -60,3 +60,18 @@ body.loading > *:not(#loader) {
 body > * {
   transition: opacity 0.2s ease;
 }
+
+.carrito-panel,
+.checkout,
+.overlay {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+}
+
+.carrito-panel.active,
+.checkout.active,
+.overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
