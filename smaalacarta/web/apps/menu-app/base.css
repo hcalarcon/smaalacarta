@@ -45,8 +45,18 @@ body.loading {
   overflow: hidden;
 }
 
-body.loading #menu,
-body.loading #categorias,
-body.loading .header {
+body.loading main,
+body.loading nav,
+body.loading header,
+body.loading .cta-section,
+body.loading #btn-carrito {
   visibility: hidden;
+}
+
+body.loading > *:not(#loader) {
+  visibility: hidden;
+}
+
+body > * {
+  transition: opacity 0.2s ease;
 }
