@@ -1,6 +1,5 @@
 {
   "rewrites": [
- 
     {
       "source": "/moderno",
       "destination": "/apps/menu-html/modern"
@@ -14,7 +13,17 @@
       "destination": "/apps/menu-html/minimalist"
     },
 
-   
+    {
+      "source": "/:cliente/pdf",
+      "destination": "/apps/pdf/index.html"
+    },
+
+    {
+      "source": "/pdf",
+      "has": [{ "type": "host", "value": "demo.smaalacarta.com" }],
+      "destination": "/apps/pdf/index.html"
+    },
+
     {
       "source": "/((?!apps|data|templates|.*\\..*).*)",
       "destination": "/apps/menu-app/index.html"
