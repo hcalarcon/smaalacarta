@@ -794,6 +794,7 @@ body {
   .categoria-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    justify-content: center;
     gap: 20px;
   }
   /* CARD MÁS "APP" */

@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Cargando menú...</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      body,
+      html {
+        margin: 0;
+        height: 100%;
+      }
+      iframe {
+        width: 100%;
+        height: 100%;
+        border: none;
+      }
+    </style>
+  </head>
+  <body>
+    <iframe id="pdfViewer"></iframe>
+
+    <script>
+      const pathParts = window.location.pathname.split("/").filter(Boolean);
+      const cliente = pathParts[0] || "demo";
+
+      let pdfPath = "";
+      let title = "Menú";
+
+      if (cliente === "demo") {
+        pdfPath = "/data/demos/demomenu.pdf";
+        title = "Menú Demo";
+
+        document.title = title;
+        document.getElementById("pdfViewer").src = pdfPath;
+      } else {
+        const basePath = `/data/clientes/${cliente}`;
+
+        fetch(`${basePath}/config.json`)
+          .then((res) => res.json())
+          .then((config) => {
+            pdfPath = `${basePath}/${config.pdf.file}`;
+
+            document.title = `Menú - ${config.name}`;
+            document.getElementById("pdfViewer").src = pdfPath;
+          })
+          .catch(() => {
+            document.body.innerHTML = "<h1>Cliente no encontrado</h1>";
+          });
+      }
+    </script>
+  </body>
+</html>
