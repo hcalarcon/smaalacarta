@@ -1,5 +1,5 @@
 {
-  "nombre": "Santa Juli Resto",
+  "nombre": "Santa Julia Resto",
   "descripcion": "Ejemplo de menú digital moderno",
   "template": "moderno",
   "tipo": "cliente",
@@ -20,5 +20,9 @@
     "viernes": ["12:00-15:00", "20:00-01:00"],
     "sabado": ["20:00-02:00"],
     "domingo": []
+  },
+
+  "pdf": {
+    "file": "assets/menu.pdf"
   }
 }
