@@ -20,7 +20,7 @@
 
     {
       "source": "/pdf",
-      "has": [{ "type": "host", "value": "demo.smaalacarta.com" }],
+      "has": [{ "type": "host", "value": "demo.*" }],
       "destination": "/apps/pdf/index.html"
     },
 
