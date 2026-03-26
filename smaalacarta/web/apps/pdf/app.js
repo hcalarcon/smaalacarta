@@ -20,7 +20,7 @@ const view = hostname.startsWith("demo.")
 let pdfPath = "";
 
 if (cliente === "demo") {
-  pdfPath = "/data/demo/demomenu.pdf";
+  pdfPath = "/data/demos/demomenu.pdf";
   document.title = "Menú Demo";
   document.getElementById("pdfViewer").src = pdfPath;
 } else {
