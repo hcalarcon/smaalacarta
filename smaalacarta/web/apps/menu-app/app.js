@@ -145,10 +145,15 @@ async function init() {
       return;
     }
 
+    const enhancedMenu = buildEnhancedMenu(menu);
+
+    MENU_GLOBAL = enhancedMenu;
+    renderMenu(enhancedMenu);
+
     renderHeader(config);
-    renderCategorias(menu);
-    MENU_GLOBAL = menu;
-    renderMenu(menu);
+    renderCategorias(enhancedMenu);
+
+    //renderMenu(menu);
     initSearch();
     loadCart();
 
@@ -363,6 +368,53 @@ function renderCategorias(menu) {
   });
 }
 
+function buildEnhancedMenu(menu) {
+  if (!menu?.categorias) return menu;
+
+  const destacados = [];
+  const ofertas = [];
+
+  menu.categorias.forEach((cat) => {
+    (cat.items || []).forEach((item) => {
+      if (item.destacado) {
+        destacados.push(item);
+      }
+
+      if (item.precioAnterior || item.promo) {
+        ofertas.push(item);
+      }
+    });
+  });
+
+  const nuevasCategorias = [];
+
+  // ⭐ Destacados
+  if (destacados.length > 0) {
+    nuevasCategorias.push({
+      nombre: "Destacados",
+      tipo: "destacados",
+      items: destacados,
+    });
+  }
+
+  // 💸 Ofertas
+  if (ofertas.length > 0) {
+    nuevasCategorias.push({
+      nombre: "Ofertas",
+      tipo: "ofertas",
+      items: ofertas,
+    });
+  }
+
+  // 👇 después agregamos las originales
+  nuevasCategorias.push(...menu.categorias);
+
+  return {
+    ...menu,
+    categorias: nuevasCategorias,
+  };
+}
+
 function renderMenu(menu) {
   const menuContainer = document.getElementById("menu");
   menuContainer.innerHTML = "";
@@ -370,6 +422,12 @@ function renderMenu(menu) {
   menu.categorias.forEach((cat) => {
     const sec = document.createElement("div");
     sec.className = "categoria";
+
+    sec.className = "categoria";
+
+    if (cat.tipo) {
+      sec.classList.add(`categoria-${cat.tipo}`);
+    }
 
     const id = cat.nombre.toLowerCase().replace(/\s+/g, "-");
     sec.id = id;
@@ -386,6 +444,10 @@ function renderMenu(menu) {
       const d = document.createElement("div");
       d.className = "producto";
 
+      if (p.promo) {
+        d.setAttribute("data-promo", p.promo);
+      }
+
       d.innerHTML = `
         ${p.imagen ? `<img src="${p.imagen}">` : ""}
         <div class="producto-info">
@@ -397,7 +459,24 @@ function renderMenu(menu) {
         <button class="btn-add">+</button>
       `;
 
-      d.querySelector(".btn-add").onclick = () => addToCart(p);
+     const btn = d.querySelector(".btn-add");
+
+btn.onclick = () => {
+  addToCart(p);
+
+  // 🎯 animación producto
+  d.classList.add("adding");
+  setTimeout(() => d.classList.remove("adding"), 350);
+
+  // 🎯 animación botón
+  btn.classList.add("added");
+  btn.textContent = "✓";
+
+  setTimeout(() => {
+    btn.classList.remove("added");
+    btn.textContent = "+";
+  }, 600);
+};
 
       grid.appendChild(d); // 👈 clave
     });
@@ -448,7 +527,7 @@ function initSearch() {
 
     if (filtrado.categorias.length === 0) {
       menuContainer.innerHTML =
-        '<div class="no-results">No se encontraron productos o categorías.</div>';
+        '<div class="no-results"> <div class="no-results-icon">🔍</div>  No se encontraron productos o categorías.</div>';
     } else {
       renderMenu(filtrado);
     }
@@ -497,10 +576,22 @@ function updateCart() {
         <span class="item-precio">$${i.precio}</span>
       </div>
       <div class="item-controls">
-        <button class="btn-minus">-</button>
+        <button class="btn-minus"><svg width="16" height="16" viewBox="0 0 24 24">
+  <path d="M5 12h14" stroke="currentColor" stroke-width="2"/>
+</svg></button>
         <span class="item-cantidad">${i.cantidad}</span>
-        <button class="btn-plus">+</button>
-        <button class="btn-remove">🗑️</button>
+        <button class="btn-plus">
+        <svg width="16" height="16" viewBox="0 0 24 24">
+          <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2"/>
+        </svg>
+        </button>
+        <button class="btn-remove">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M3 6h18" stroke="currentColor" stroke-width="2"/>
+            <path d="M8 6V4h8v2" stroke="currentColor" stroke-width="2"/>
+            <path d="M6 6l1 14h10l1-14" stroke="currentColor" stroke-width="2"/>
+          </svg>
+        </button>
       </div>
     `;
 
