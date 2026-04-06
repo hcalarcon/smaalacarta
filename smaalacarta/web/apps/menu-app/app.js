@@ -53,6 +53,10 @@ function resolveAppConfig() {
     "moderno.smaalacarta.com.ar": { type: "demo", slug: "moderno" },
     "clasico.smaalacarta.com.ar": { type: "demo", slug: "clasico" },
     "minimal.smaalacarta.com.ar": { type: "demo", slug: "minimal" }, // podés cambiar slug si tenés otro
+    "santa-julia-resto.smaalacarta.com.ar": {
+      type: "cliente",
+      slug: "santa-julia-resto",
+    },
   };
 
   if (DOMAINS[host]) {
@@ -687,28 +691,47 @@ $("#form-pedido")?.addEventListener("submit", (e) => {
 
   const f = new FormData(e.target);
 
-  let msg = `Pedido de ${f.get("nombre")} ${f.get("apellido")}\n`;
-  msg += `Entrega: ${f.get("entrega")}\n`;
+  const formatPrice = (n) => n.toLocaleString("es-AR");
+
+  let total = 0;
+
+  let msg = `🍔 *Nuevo pedido*\n\n`;
+
+  msg += `👤 Cliente: ${f.get("nombre")}\n`;
+  msg += `🚚 Entrega: ${f.get("entrega")}\n`;
 
   const ahora = f.get("ahora");
   const horario = f.get("horario");
 
   if (ahora) {
-    msg += `Horario: Ahora mismo\n`;
+    msg += `⏰ Horario: Ahora mismo\n`;
   } else if (horario) {
-    msg += `Horario: ${horario}\n`;
+    msg += `⏰ Horario: ${horario}\n`;
   }
 
-  msg += `Pago: ${f.get("pago")}\n`;
+  msg += `💳 Pago: ${f.get("pago")}\n`;
 
   const notas = f.get("notas");
-  if (notas) msg += `Notas: ${notas}\n`;
+  if (notas) msg += `📝 Notas: ${notas}\n`;
 
-  msg += `\nProductos:\n`;
-  cart.forEach((i) => (msg += `${i.nombre} x${i.cantidad}\n`));
+  msg += `\n🧾 *Detalle del pedido:*\n\n`;
+
+  cart.forEach((i) => {
+    const precio = i.precio || 0; // importante si algún item no lo tiene
+    const subtotal = precio * i.cantidad;
+
+    total += subtotal;
+
+    msg += `• ${i.nombre} x${i.cantidad}\n`;
+    msg += `  $${formatPrice(precio)} c/u → $${formatPrice(subtotal)}\n\n`;
+  });
+
+  msg += `━━━━━━━━━━━━━━\n`;
+  msg += `💰 *TOTAL: $${formatPrice(total)}*\n\n`;
+  msg += `📲 SMA a la Carta`;
 
   window.open(
-    `https://wa.me/${CONFIG.telefono}?text=${encodeURIComponent(msg)}`,
+    `https://api.whatsapp.com/send?phone=${CONFIG.telefono}&text=${encodeURIComponent(msg)}`,
   );
 
   cart = [];
