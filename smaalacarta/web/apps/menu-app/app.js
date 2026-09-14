@@ -52,7 +52,7 @@ function resolveAppConfig() {
   const DOMAINS = {
     "moderno.smaalacarta.com.ar": { type: "demo", slug: "moderno" },
     "clasico.smaalacarta.com.ar": { type: "demo", slug: "clasico" },
-    "minimal.smaalacarta.com.ar": { type: "demo", slug: "minimal" }, // podés cambiar slug si tenés otro
+    "minimal.smaalacarta.com.ar": { type: "demo", slug: "minimal" },
     "santa-julia-resto.smaalacarta.com.ar": {
       type: "cliente",
       slug: "santa-julia-resto",
