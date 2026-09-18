@@ -97,10 +97,17 @@ _Sin requisitos todavía._
 
 ## ADMIN-AUTH — Acceso y negocio actual
 
-*Aplicado por `src/lib/get-current-business.ts`, `app/login`. Cubierto por:
-pendiente.*
+*Aplicado por `src/lib/get-current-business.ts`, `app/login` y las políticas de
+RLS en `supabase/migrations/`. Cubierto por: pendiente (ver Brechas conocidas).*
 
-_Sin requisitos todavía._
+- **ADMIN-AUTH-1** Al registrarse un usuario se le crea un perfil con su email.
+  Nadie ve ni edita el perfil de otro.
+- **ADMIN-AUTH-2** Un usuario solo puede ver, crear, editar y borrar categorías,
+  productos, promociones y pedidos de los negocios de los que es miembro, y no
+  puede mover una fila a un negocio del que no es miembro.
+- **ADMIN-AUTH-3** Un usuario solo ve los negocios de los que es miembro y sus
+  propias membresías. Crear negocios y asignar miembros no se hace desde el
+  admin.
 
 ## ADMIN-MENU — Categorías y productos
 
@@ -148,6 +155,10 @@ se resuelve en su propia rama `fix/`.
   pasa un argumento de tipo donde supabase-js espera dos. Mientras tanto, lint y
   build del admin no bloquean CI. Se resuelve en `fix/admin-productos`, que
   además vuelve a hacerlos obligatorios.
+- **Las políticas de RLS no tienen tests.** ADMIN-AUTH-1 a 3 viven en la base.
+  Testearlas pide `supabase test db` (pgTAP) sobre una base local, y eso
+  necesita Docker, que no está en la máquina de desarrollo. Hasta entonces se
+  verifican a mano contra el proyecto de desarrollo.
 - **Landing: texto del botón principal** dice "Solicitá tu sitio ahoras".
 - **Landing: imagen para compartir.** `twitter:image` apunta a
   `assets/og-image.jpg`, que no existe, y `og:image` usa `favicon.svg` (2,5 MB).

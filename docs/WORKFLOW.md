@@ -56,7 +56,7 @@ Consecuencias que conviene decir en voz alta:
 - **Después de una migración**, regenerar los tipos: `npm run db:types` en
   `admin/`, y commitear `src/types/database.ts` junto con la migración.
 - **Nunca se commitea un `.env`.** El admin lee `NEXT_PUBLIC_SUPABASE_URL` y
-  `NEXT_PUBLIC_SUPABASE_ANON_KEY` del entorno.
+  `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` del entorno.
 - **Antes de tocar APIs de Next en el admin**, leer la guía correspondiente en
   `admin/node_modules/next/dist/docs/`: esta versión cambia convenciones (ver
   `admin/AGENTS.md`).

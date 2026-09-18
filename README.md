@@ -41,7 +41,7 @@ npm install && npm test
 ```
 
 Admin, desde `smaalacarta/admin` (necesita `NEXT_PUBLIC_SUPABASE_URL` y
-`NEXT_PUBLIC_SUPABASE_ANON_KEY` en `.env.local`):
+`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en `.env.local`):
 
 ```bash
 npm install && npm run dev
