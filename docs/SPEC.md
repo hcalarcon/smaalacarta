@@ -56,6 +56,32 @@ pendiente.*
 
 _Sin requisitos todavía._
 
+## PUBLICO — El menú desde Supabase
+
+*Aplicado por `supabase/migrations/*_configuracion_y_menu_publico.sql` (función
+`public_menu`) y `web/apps/menu-app/lib/public-menu.js`. Cubierto por:
+`src/lib/db/public-menu.test.ts` (admin, contra Postgres real: PUBLICO-1 a 5) y
+`web/apps/menu-app/lib/public-menu.test.js` (PUBLICO-6 y 7).*
+
+El menú público pide a Supabase el negocio por su slug, sin sesión, y recibe el
+mismo formato que hoy leen los JSON (`config` y `menu`).
+
+- **PUBLICO-1** Un negocio que no existe o no está publicado no devuelve nada.
+- **PUBLICO-2** Solo se entregan las categorías y los productos activos del negocio,
+  en el orden que definió, sin categorías vacías y sin nada de otros negocios.
+- **PUBLICO-3** Las promociones activas, con todos sus productos activos, van en una
+  categoría "Ofertas" al principio, con su precio final y el precio anterior
+  (ADMIN-PROMOS-4); el precio anterior se omite si no hay ahorro.
+- **PUBLICO-4** La configuración llega con el formato del menú actual (nombre,
+  descripción, plantilla, teléfono, colores, cabecera y horarios); lo que el negocio
+  no cargó no aparece. Sin horarios, el menú se muestra siempre abierto.
+- **PUBLICO-5** Quien no tiene sesión puede pedir el menú de un negocio publicado,
+  pero no puede leer ninguna tabla del negocio.
+- **PUBLICO-6** El menú web pide el negocio a Supabase; si Supabase no está
+  configurado, no lo tiene o falla, usa los JSON locales como hasta ahora.
+- **PUBLICO-7** Lo que llega de Supabase se completa con valores por defecto para
+  que el menú nunca reciba categorías o ítems sin lista.
+
 ## BUSQUEDA — Buscador
 
 *Aplicado por: pendiente. Cubierto por: pendiente.*
@@ -187,6 +213,24 @@ Cubierto por: `src/lib/menu/product-fields.test.ts` (ADMIN-MENU-1 y 2),
   dentro de su lista: las categorías del negocio, o los productos de una categoría.
 - **ADMIN-MENU-5** Un negocio no puede reordenar ni modificar las categorías o los
   productos de otro.
+
+## ADMIN-CONFIG — Configuración del negocio
+
+*Aplicado por `supabase/migrations/*_configuracion_y_menu_publico.sql`,
+`src/lib/settings/`, `src/lib/db/settings.ts` y `app/dashboard/settings`. Cubierto
+por: `src/lib/db/settings.test.ts` (ADMIN-CONFIG-1, 3 y 4, contra Postgres real) y
+`src/lib/settings/*.test.ts` (ADMIN-CONFIG-2).*
+
+- **ADMIN-CONFIG-1** Cada negocio tiene una configuración propia (plantilla, colores,
+  imagen de cabecera, descripción, horarios y si el menú es público); solo sus
+  miembros la ven y la editan.
+- **ADMIN-CONFIG-2** La plantilla es `moderno`, `clasico` o `minimal`; los colores son
+  `#rrggbb`; la imagen es una dirección `https`; los horarios son rangos
+  `HH:MM-HH:MM` por día (de `lunes` a `domingo`), que pueden cruzar la medianoche,
+  sin ser de duración cero ni superponerse dentro de un día.
+- **ADMIN-CONFIG-3** Guardar la configuración y el WhatsApp del negocio es atómico.
+- **ADMIN-CONFIG-4** Un negocio nuevo no es público: su menú solo se ve desde
+  Supabase cuando su dueño lo publica.
 
 ## ADMIN-PEDIDOS — Pedidos
 
