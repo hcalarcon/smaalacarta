@@ -169,6 +169,9 @@ se resuelve en su propia rama `fix/`.
 - **Admin: un usuario con varios negocios no puede entrar.** El esquema permite
   varias membresías por usuario, pero `getCurrentBusiness()` usa
   `.maybeSingle()`: con más de una falla, devuelve `null` y manda a `/login`.
+- **Admin: alta de negocios y membresías a mano.** Como el admin no los crea
+  (ADMIN-AUTH-3), cada negocio nuevo y su primer miembro se cargan con SQL
+  desde el panel de Supabase. Falta un flujo de alta.
 - **Admin: `category_id` de producto puede ser nulo.** Al borrar una categoría
   sus productos quedan con `category_id` en `null`, pero el tipo `Product` de
   `src/lib/db/products.ts` lo declara `string`.
