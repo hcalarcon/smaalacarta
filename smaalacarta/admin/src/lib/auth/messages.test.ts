@@ -34,6 +34,12 @@ describe("authErrorMessage — ADMIN-AUTH-4", () => {
     expect(authErrorMessage({ code: "weak_password" })).toMatch(/contraseña/i);
   });
 
+  it("explica que falta configurar la clave de servicio", () => {
+    expect(authErrorMessage({ code: "service_key_missing" })).toMatch(
+      /clave de servicio/i,
+    );
+  });
+
   it("nunca muestra el texto en inglés de Supabase", () => {
     const message = authErrorMessage({
       code: "algo_raro",

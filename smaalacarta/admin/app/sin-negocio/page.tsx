@@ -3,20 +3,15 @@ import { redirect } from "next/navigation";
 
 import Logo from "@/components/brand/Logo";
 import { signOutAction } from "../(auth)/actions";
-import { accessState } from "@/lib/auth/access";
-import { getCurrentBusiness } from "@/lib/get-current-business";
+import { resolveAccess } from "@/lib/get-current-business";
 
 export const metadata: Metadata = { title: "Cuenta sin negocio" };
 
 export default async function NoBusinessPage() {
-  const current = await getCurrentBusiness();
-
-  const state = accessState({
-    user: current?.user ?? null,
-    business: current?.business ?? null,
-  });
+  const { current, state } = await resolveAccess();
 
   if (state === "login") redirect("/login");
+  if (state === "superadmin") redirect("/superadmin");
   if (state === "ok") redirect("/dashboard");
 
   return (

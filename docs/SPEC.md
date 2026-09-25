@@ -99,8 +99,9 @@ _Sin requisitos todavía._
 
 *Aplicado por `src/lib/get-current-business.ts`, `src/lib/auth/`, `proxy.ts`,
 `app/(auth)` y las políticas de RLS en `supabase/migrations/`. Cubierto por:
-`src/lib/auth/*.test.ts` (ADMIN-AUTH-4 a 8); las políticas de RLS y el resto del
-flujo, pendiente (ver Brechas conocidas).*
+`src/lib/auth/*.test.ts` (ADMIN-AUTH-4 a 8) y `src/lib/db/policies.test.ts`
+(ADMIN-AUTH-1 a 3, contra Postgres real). El envío de mails y el flujo completo de
+recuperación se prueban a mano.*
 
 - **ADMIN-AUTH-1** Al registrarse un usuario se le crea un perfil con su email.
   Nadie ve ni edita el perfil de otro.
@@ -109,29 +110,67 @@ flujo, pendiente (ver Brechas conocidas).*
   puede mover una fila a un negocio del que no es miembro. Un producto solo
   puede pertenecer a una categoría de su mismo negocio.
 - **ADMIN-AUTH-3** Un usuario solo ve los negocios de los que es miembro y sus
-  propias membresías. Crear negocios y asignar miembros no se hace desde el
-  admin.
+  propias membresías. Crear negocios y asignar miembros solo lo hace un
+  superadmin (ADMIN-SUPER).
 - **ADMIN-AUTH-4** Iniciar sesión pide un email con formato válido y una
   contraseña; si Supabase rechaza las credenciales el usuario ve un mensaje en
   español que no dice cuál de los dos datos falló.
-- **ADMIN-AUTH-5** Una contraseña nueva (registro o restablecimiento) tiene al
-  menos 8 caracteres y coincide con su confirmación.
+- **ADMIN-AUTH-5** Una contraseña nueva (al restablecerla) tiene al menos 8
+  caracteres y coincide con su confirmación.
 - **ADMIN-AUTH-6** Después de iniciar sesión el usuario vuelve a la página del
   panel que había pedido; una dirección que no sea una ruta interna del panel se
   ignora y va a `/dashboard`.
 - **ADMIN-AUTH-7** Sin sesión, las rutas del panel llevan a `/login`; con
-  sesión, `/login`, `/registro` y `/recuperar` llevan a `/dashboard`.
+  sesión, `/login` y `/recuperar` llevan a `/dashboard`. No hay registro
+  público: las cuentas las crea el equipo de SMA a la Carta.
 - **ADMIN-AUTH-8** Un usuario con sesión pero sin negocio no vuelve a `/login`:
   ve un aviso de que su cuenta no tiene negocio asignado y puede cerrar sesión.
 - **ADMIN-AUTH-9** Pedir recuperar la contraseña muestra el mismo mensaje
   exista o no una cuenta con ese email.
 
+## ADMIN-SUPER — Superadmin y alta de cuentas
+
+*Aplicado por `supabase/migrations/*_superadmin.sql`, `src/lib/auth/superadmin.ts`,
+`src/lib/superadmin/`, `app/superadmin` y `app/auth/confirm`. Cubierto por:
+`src/lib/db/superadmin.test.ts` (ADMIN-SUPER-1 a 4, contra Postgres real) y por los
+tests de `src/lib/superadmin/` y `src/lib/auth/` (el resto).*
+
+No hay registro público: las cuentas y los negocios los crea el equipo de SMA a la
+Carta desde `/superadmin`.
+
+- **ADMIN-SUPER-1** Un superadmin es un usuario registrado en `super_admins`.
+  Ningún usuario, ni siquiera un superadmin, puede agregar ni quitar filas de esa
+  tabla desde la app: solo se modifica con SQL o con la clave de servicio.
+- **ADMIN-SUPER-2** Un superadmin ve todos los negocios, todos sus miembros y todos
+  los perfiles; un usuario común sigue viendo solo lo suyo.
+- **ADMIN-SUPER-3** Solo un superadmin puede crear un negocio, y lo crea junto con
+  su primer miembro, dueño, en un solo paso: si algo falla no queda un negocio sin
+  dueño.
+- **ADMIN-SUPER-4** Solo un superadmin puede asignar y quitar miembros de un
+  negocio.
+- **ADMIN-SUPER-5** El slug de un negocio es único y solo tiene minúsculas,
+  números y guiones; se propone a partir del nombre, sin tildes.
+- **ADMIN-SUPER-6** Dar de alta a un dueño con un email nuevo le envía una
+  invitación; si ese email ya tiene cuenta se reutiliza y no se invita de nuevo.
+- **ADMIN-SUPER-7** Sin sesión, `/superadmin` lleva a `/login`; un usuario que no
+  es superadmin va a su panel y no ve nada de `/superadmin`.
+- **ADMIN-SUPER-8** La clave de servicio de Supabase solo se usa después de
+  comprobar que quien pide la acción es superadmin.
+- **ADMIN-SUPER-9** Un superadmin sin negocio entra a `/superadmin`, no a
+  `/sin-negocio`.
+- **ADMIN-SUPER-10** El link de invitación o de recuperación abre una sesión y
+  lleva a elegir la contraseña; solo se aceptan los tipos `invite` y `recovery`.
+
 ## ADMIN-MENU — Categorías y productos
 
 *Aplicado por `src/lib/db/categories.ts`, `src/lib/db/products.ts`,
-`app/dashboard/menu`. Cubierto por: pendiente.*
+`src/lib/menu/product-fields.ts`, `app/dashboard/menu`. Cubierto por:
+`src/lib/menu/product-fields.test.ts` (ADMIN-MENU-1 y 2).*
 
-_Sin requisitos todavía._
+- **ADMIN-MENU-1** Un producto se crea siempre dentro de una categoría; la
+  descripción vacía se guarda como nula y un producto nuevo nace activo.
+- **ADMIN-MENU-2** Editar un producto conserva su categoría, salvo que se indique
+  otra de forma explícita.
 
 ## ADMIN-PEDIDOS — Pedidos
 
@@ -164,18 +203,6 @@ se resuelve en su propia rama `fix/`.
 
 - **Protección de ramas.** El repositorio privado en plan gratuito no permite
   rulesets: las reglas de [BRANCHING.md](BRANCHING.md) se cumplen por acuerdo.
-- **Admin no compila.** `main` tiene 2 errores de lint
-  (`react-hooks/set-state-in-effect` en `CategoryDialog` y `ProductDialog`) y 7
-  de TypeScript: el agregado de `category_id` a productos quedó a medias
-  (`MenuClient` no le pasa `categoryId` a `ProductDialog`, la edición no envía
-  `category_id`, `products/page.tsx` usa la firma vieja) y `src/lib/db/resources.ts`
-  pasa un argumento de tipo donde supabase-js espera dos. Mientras tanto, lint y
-  build del admin no bloquean CI. Se resuelve en `fix/admin-productos`, que
-  además vuelve a hacerlos obligatorios.
-- **Las políticas de RLS no tienen tests.** ADMIN-AUTH-1 a 3 viven en la base.
-  Testearlas pide `supabase test db` (pgTAP) sobre una base local, y eso
-  necesita Docker, que no está en la máquina de desarrollo. Hasta entonces se
-  verifican a mano contra el proyecto de desarrollo.
 - **Admin: `role` no limita nada.** Cualquier miembro de un negocio puede
   editar `businesses`, incluido el `slug`, sea cual sea su `role` en
   `business_users`. Falta definir qué puede hacer cada rol.
@@ -185,12 +212,15 @@ se resuelve en su propia rama `fix/`.
 - **Admin: un usuario con varios negocios no puede entrar.** El esquema permite
   varias membresías por usuario, pero `getCurrentBusiness()` usa
   `.maybeSingle()`: con más de una falla, devuelve `null` y manda a `/login`.
-- **Admin: alta de negocios y membresías a mano.** Como el admin no los crea
-  (ADMIN-AUTH-3), cada negocio nuevo y su primer miembro se cargan con SQL
-  desde el panel de Supabase. Falta un flujo de alta.
-- **Admin: `category_id` de producto puede ser nulo.** Al borrar una categoría
-  sus productos quedan con `category_id` en `null`, pero el tipo `Product` de
-  `src/lib/db/products.ts` lo declara `string`.
+- **Superadmin: pasos manuales en Supabase.** (1) Apagar el registro público
+  (`Allow new users to sign up`): con la clave pública, cualquiera puede crear
+  cuentas llamando a la API aunque el admin no tenga pantalla para eso. (2) Cargar
+  el primer superadmin con SQL. (3) Poner en la plantilla de mail "Invite user" el
+  link `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/restablecer`:
+  las invitaciones no soportan PKCE, así que no sirven con el link por defecto.
+  Ver [PLAN.md](PLAN.md).
+- **Superadmin: roles sin efecto.** Un miembro puede ser `owner` o `staff`, pero
+  ninguna política distingue uno de otro. Ver "`role` no limita nada".
 - **Landing: texto del botón principal** dice "Solicitá tu sitio ahoras".
 - **Landing: imagen para compartir.** `twitter:image` apunta a
   `assets/og-image.jpg`, que no existe, y `og:image` usa `favicon.svg` (2,5 MB).

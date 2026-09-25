@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { Product } from "@/lib/db/products";
 
@@ -9,9 +9,10 @@ type ProductDialogProps = {
   initialData?: Product;
   mode: "create" | "edit";
   onClose: () => void;
-  categoryId: string;
+  // Categoría donde se crea un producto nuevo; al editar no se usa.
+  categoryId: string | null;
   onSubmit: (data: {
-    category_id: string;
+    category_id: string | null;
     name: string;
     description?: string;
     price: number;
@@ -19,38 +20,22 @@ type ProductDialogProps = {
   }) => Promise<void>;
 };
 
-export default function ProductDialog({
-  open,
+function ProductDialogForm({
   initialData,
   mode,
   onClose,
   categoryId,
   onSubmit,
 }: ProductDialogProps) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("");
-  const [active, setActive] = useState(true);
+  const editing = mode === "edit" && initialData;
+
+  const [name, setName] = useState(editing ? initialData.name : "");
+  const [description, setDescription] = useState(
+    editing ? (initialData.description ?? "") : "",
+  );
+  const [price, setPrice] = useState(editing ? String(initialData.price) : "");
+  const [active, setActive] = useState(editing ? initialData.active : true);
   const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    if (!open) {
-      setName("");
-      setDescription("");
-      setPrice("");
-      setActive(true);
-      return;
-    }
-
-    if (mode === "edit" && initialData) {
-      setName(initialData.name);
-      setDescription(initialData.description ?? "");
-      setPrice(String(initialData.price));
-      setActive(initialData.active);
-    }
-  }, [open, mode, initialData]);
-
-  if (!open) return null;
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -163,4 +148,12 @@ export default function ProductDialog({
       </div>
     </div>
   );
+}
+
+// El formulario se monta al abrir y se desmonta al cerrar, así que su estado
+// arranca siempre desde `initialData` sin copiarlo desde un efecto.
+export default function ProductDialog(props: ProductDialogProps) {
+  if (!props.open) return null;
+
+  return <ProductDialogForm key={props.initialData?.id ?? "nuevo"} {...props} />;
 }

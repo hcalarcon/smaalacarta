@@ -17,6 +17,17 @@ describe("safeNextPath — ADMIN-AUTH-6", () => {
     expect(safeNextPath("/dashboard")).toBe("/dashboard");
   });
 
+  it("acepta las rutas de /superadmin", () => {
+    expect(safeNextPath("/superadmin")).toBe("/superadmin");
+    expect(safeNextPath("/superadmin/negocios/nuevo")).toBe(
+      "/superadmin/negocios/nuevo",
+    );
+  });
+
+  it("no acepta un prefijo parecido a /superadmin", () => {
+    expect(safeNextPath("/superadminx")).toBe("/dashboard");
+  });
+
   it.each([
     ["nada", null],
     ["undefined", undefined],

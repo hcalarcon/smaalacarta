@@ -51,14 +51,9 @@ export default function LoginForm({ next }: { next?: string }) {
 
       <SubmitButton pendingLabel="Ingresando…">Ingresar</SubmitButton>
 
-      <p className="text-center text-sm text-stone-600">
-        ¿No tenés cuenta?{" "}
-        <Link
-          href="/registro"
-          className="font-medium text-accent hover:text-accent-hover"
-        >
-          Registrate
-        </Link>
+      <p className="text-center text-sm text-stone-500">
+        Las cuentas las crea el equipo de SMA a la Carta. Si todavía no tenés
+        una, pedísela a quien te dio de alta.
       </p>
     </form>
   );

@@ -19,7 +19,8 @@ export async function updateProductAction(
   businessId: string,
   id: string,
   data: {
-    category_id: string;
+    // Si no se indica, el producto conserva su categoría (ADMIN-MENU-2).
+    category_id?: string;
     name: string;
     description?: string;
     price: number;

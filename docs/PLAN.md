@@ -33,7 +33,7 @@ tomes una tarea de otro (ver [`CLAUDE.md`](../CLAUDE.md)).
 ## Etapa 1 — Migraciones
 
 - [x] Consolidar las migraciones según las decisiones 1 y 2
-- [x] Anotar en `docs/SPEC.md` los pendientes técnicos (Etapa 6)
+- [x] Anotar en `docs/SPEC.md` los pendientes técnicos (Etapa 7)
 - [x] Scripts `db:link`, `db:push` y `db:types` que cargan `.env.supabase` (con `dotenv-cli`)
 - [ ] [herni] Avisar a Fede que las migraciones cambiaron y que ahora cada uno usa su propio proyecto de Supabase
 
@@ -47,41 +47,78 @@ Desde `smaalacarta/admin/`. Cada uno lo hace con su proyecto de Supabase.
 - [x] [herni] Registrarse, iniciar sesión y crear una categoría desde el panel
 - [ ] [fede] Crear su proyecto de Supabase y repetir: `.env.supabase`, `db:link`, `db:push`, `db:types`, `.env.local`
 - [ ] [herni] En Supabase, **Authentication → URL Configuration**: Site URL `http://localhost:3000` y en Redirect URLs `http://localhost:3000/auth/callback` (sin esto los links de los mails de confirmación y de recuperación no vuelven a la app). Al publicar el admin, agregar también su dominio
-- [ ] [herni] Decidir si se exige confirmar el email al registrarse (**Authentication → Providers → Email → Confirm email**). Con la confirmación activa, el mail de Supabase por defecto tiene un límite de envíos muy bajo por hora
-- [ ] [herni] Un usuario recién registrado (sin negocio) ve `/sin-negocio` y puede cerrar sesión
+- [ ] [herni] Revisar el envío de mails de recuperación: el servicio de mail por defecto de Supabase tiene un límite muy bajo por hora; si no alcanza, configurar un SMTP propio (**Authentication → Emails → SMTP Settings**)
+- [ ] [herni] Un usuario sin negocio (creado desde **Authentication → Users**) ve `/sin-negocio` y puede cerrar sesión
 - [ ] [herni] Recuperar la contraseña desde `/recuperar`: llega el mail, el link abre `/restablecer` y la contraseña nueva funciona
 - [ ] [herni] Con un segundo usuario de otro negocio: confirmar que no ve ni puede modificar datos del primero
-- [ ] [herni] Probar el CRUD de productos (hoy tiene errores conocidos, ver Etapa 4)
+- [ ] [herni] Probar el CRUD de productos (hoy tiene errores conocidos, ver Etapa 5)
 
 Si algo falla al aplicar una migración: vaciar la base propia, corregir la migración y repetir.
 
 ## Etapa 3 — Ordenar las ramas y activar las reglas
 
-- [ ] [herni] Commitear el trabajo pendiente (autenticación, estética del admin, contrato y documentos) en una rama y pushearla
-- [ ] [herni] Crear `dev-herni` y `dev-fede` desde ese mismo punto y pushearlas
-- [ ] [herni] PR `dev-herni` → `main`, mergeado con merge commit. Como el repo todavía no tiene reglas activas, este es el último PR sin ellas. Fede lo puede mirar, pero no lo bloquea
-- [ ] [herni] Aplicar los rulesets (`.github/rulesets/main.json` y `dev.json`) y verificar (ver `BRANCHING.md`)
+- [x] [herni] Commitear el trabajo pendiente (autenticación, estética del admin, contrato y documentos) en una rama y pushearla
+- [x] [herni] Crear `dev-herni` y `dev-fede` desde ese mismo punto y pushearlas
+- [x] [herni] PR `dev-herni` → `main`, mergeado con merge commit. Como el repo todavía no tiene reglas activas, este es el último PR sin ellas. Fede lo puede mirar, pero no lo bloquea
+- [x] [herni] Aplicar los rulesets (`.github/rulesets/main.json` y `dev.json`) y verificar (ver `BRANCHING.md`)
 - [ ] [herni] Borrar las ramas viejas: `development`, `feat/supabase-esquema`, `feat/admin-auth-estetica` y `docs/flujo-de-trabajo`
 - [ ] [fede] `git fetch`, cambiarse a `dev-fede` y traer `main`
-- [ ] [herni] Opcional: instalar GitHub CLI (`winget install GitHub.cli` y `gh auth login`) para que Claude Code maneje los PRs
+- [x] [herni] Opcional: instalar GitHub CLI (`winget install GitHub.cli` y `gh auth login`) para que Claude Code maneje los PRs
 
-## Etapa 4 — Que el admin compile
+## Etapa 4 — Superadmin y alta de cuentas
 
-- [ ] [por asignar] Terminar lo de `category_id` en productos (hoy hay 7 errores de TypeScript y 2 de lint)
-- [ ] [por asignar] Tipar `Product.category_id` como nullable (se pone en null al borrar la categoría)
-- [ ] [por asignar] `npm run lint` y `npm run build` en verde
-- [ ] [por asignar] Quitar los `continue-on-error` del CI para lint y build del admin
-- [ ] [por asignar] PR hacia `main`
+**Modelo.** No hay registro público: las cuentas y los negocios los crea el equipo de SMA a la Carta (el superadmin) desde `/superadmin`, y el resto de los usuarios solo puede entrar y recuperar su contraseña.
 
-## Etapa 5 — Roadmap del producto
+**Diseño elegido.** Tabla `super_admins` (un usuario que no pertenece a ningún negocio), sección `/superadmin` dentro de este admin, y cuentas creadas por invitación por mail. El superadmin usa RLS para ver y gestionar miembros; crear un negocio solo se puede con la función atómica `create_business_with_owner`. La clave de servicio se usa en un único lugar (invitar cuentas), solo después de comprobar que quien pide es superadmin. Requisitos en `docs/SPEC.md` (ADMIN-SUPER-1 a 10).
+
+Hecho en el código:
+
+- [x] [herni] Sacar el registro público del admin (`/registro`)
+- [x] [herni] Decidir el diseño del superadmin (ver arriba)
+- [x] [herni] Requisitos `ADMIN-SUPER-*` en `docs/SPEC.md`
+- [x] [herni] Migración `20260925120000_superadmin.sql`, probada en Postgres real (PGlite) con `src/lib/db/superadmin.test.ts`
+- [x] [herni] Pantallas: listado de negocios, alta de negocio con su cuenta dueña y detalle con alta y baja de miembros (`/superadmin`)
+- [x] [herni] Ruta `/auth/confirm` para los links de invitación y de recuperación
+
+**Para dejarlo andando (pasos manuales de Herni, en este orden):**
+
+1. [ ] [herni] **Apagar el registro público en Supabase** (**Authentication → Sign In / Providers → "Allow new users to sign up"**). Imprescindible: la clave pública viaja en el navegador y, con el registro encendido, cualquiera podría crear cuentas llamando a la API aunque el admin no tenga pantalla para eso. Las invitaciones del superadmin funcionan igual con el registro apagado
+2. [ ] [herni] Aplicar la migración: `npm run db:push -- --dry-run`, revisar y `npm run db:push`. Después `npm run db:types` y commitear `src/types/database.ts`
+3. [ ] [herni] Cargar el primer superadmin. En Supabase, **Authentication → Users → Add user** (tu email, con "Auto Confirm User"), y en el **SQL Editor**:
+   ```sql
+   insert into public.super_admins (user_id)
+   select id from public.profiles where email = 'tu@email.com';
+   ```
+4. [ ] [herni] Agregar `SUPABASE_SERVICE_ROLE_KEY` a `admin/.env.local` (**Project Settings → API Keys → secret key**). Sin ella `/superadmin` funciona, pero al invitar a una cuenta nueva muestra "Falta configurar la clave de servicio". Nunca se commitea ni se comparte
+5. [ ] [herni] **Plantillas de mail** (**Authentication → Emails → Templates**). Las invitaciones no soportan PKCE, así que el link por defecto no sirve. En **Invite user**, cambiar el link por:
+   ```html
+   <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/restablecer">Aceptar la invitación</a>
+   ```
+   y en **Reset password**:
+   ```html
+   <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/restablecer">Elegir una contraseña nueva</a>
+   ```
+   Con la **Site URL** ya configurada (Etapa 2)
+6. [ ] [herni] **Probar a mano**: entrar como superadmin (debe llevarte a `/superadmin`), crear un negocio con un email tuyo alternativo, abrir la invitación, elegir la contraseña, entrar como dueño y ver su panel; agregar y quitar un miembro; y con un usuario común comprobar que `/superadmin` lo manda a `/dashboard`
+7. [ ] [herni] Confirmar que `/recuperar` solo sirve a cuentas ya creadas y no revela si un email existe (ADMIN-AUTH-9)
+
+## Etapa 5 — Que el admin compile
+
+- [x] [herni] Terminar lo de `category_id` en productos (eran 7 errores de TypeScript y 2 de lint). De paso se borró `/dashboard/products`, una pantalla vieja fuera del menú que creaba productos sin categoría
+- [x] [herni] Tipar `Product.category_id` como nullable (se pone en null al borrar la categoría)
+- [x] [herni] `npm run lint` y `npm run build` en verde
+- [x] [herni] Quitar los `continue-on-error` del CI para lint y build del admin
+- [ ] [herni] PR hacia `main`
+
+## Etapa 6 — Roadmap del producto
 
 - [ ] [por asignar] Revisar las "brechas conocidas" de `docs/SPEC.md` y priorizarlas
 - [ ] [por asignar] **Diseñar la conexión admin ↔ menús públicos** (`web/` hoy lee JSON estáticos). Es una decisión de arquitectura: diseñarla antes de escribir código. Incluye las políticas `anon` de lectura
 - [ ] [por asignar] Plan de migración de los clientes actuales (`data/clientes/*`) a Supabase
 
-## Etapa 6 — Pendientes técnicos (backlog)
+## Etapa 7 — Pendientes técnicos (backlog)
 
 - [ ] [por asignar] Permisos por `role` en `businesses`: hoy cualquier miembro puede editar el negocio, incluido el `slug`
-- [ ] [por asignar] Políticas RLS para `anon` (lectura del menú público), junto con la Etapa 5
+- [ ] [por asignar] Políticas RLS para `anon` (lectura del menú público), junto con la Etapa 6
 - [ ] [por asignar] `getCurrentBusiness()` con varios negocios por usuario: hoy `.maybeSingle()` falla y redirige a `/login`
-- [ ] [por asignar] Flujo de alta de negocios y membresías desde el admin (hoy se hace a mano con SQL)
+- [x] Flujo de alta de negocios y membresías desde el admin: resuelto en la Etapa 4 (superadmin)

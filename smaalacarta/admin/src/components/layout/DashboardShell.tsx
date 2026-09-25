@@ -1,20 +1,31 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import DashboardNav from "./DashboardNav";
+import type { NavLink } from "./nav-links";
 import Logo from "@/components/brand/Logo";
 import { signOutAction } from "../../../app/(auth)/actions";
 
 type DashboardShellProps = {
-  businessName: string;
+  title: string;
+  subtitle: string;
+  sidebarSubtitle: string;
   userEmail: string;
+  links: NavLink[];
+  // Enlace para pasar entre el panel de un negocio y /superadmin.
+  switchLink?: { href: string; label: string };
   children: React.ReactNode;
 };
 
 export default function DashboardShell({
-  businessName,
+  title,
+  subtitle,
+  sidebarSubtitle,
   userEmail,
+  links,
+  switchLink,
   children,
 }: DashboardShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -37,11 +48,11 @@ export default function DashboardShell({
       <aside className="fixed inset-y-0 left-0 hidden w-72 flex-col border-r border-line bg-white lg:flex">
         <div className="border-b border-line p-6">
           <Logo />
-          <p className="mt-2 text-sm text-stone-500">Panel administrador</p>
+          <p className="mt-2 text-sm text-stone-500">{sidebarSubtitle}</p>
         </div>
 
         <div className="flex-1 overflow-y-auto p-4">
-          <DashboardNav />
+          <DashboardNav links={links} />
         </div>
       </aside>
 
@@ -69,7 +80,7 @@ export default function DashboardShell({
             </div>
 
             <div className="flex-1 overflow-y-auto p-4">
-              <DashboardNav onNavigate={() => setMenuOpen(false)} />
+              <DashboardNav links={links} onNavigate={() => setMenuOpen(false)} />
             </div>
           </aside>
         </div>
@@ -101,10 +112,10 @@ export default function DashboardShell({
 
               <div className="min-w-0">
                 <h2 className="truncate text-lg font-semibold text-brand">
-                  {businessName}
+                  {title}
                 </h2>
                 <p className="hidden text-sm text-stone-500 sm:block">
-                  Administración del negocio
+                  {subtitle}
                 </p>
               </div>
             </div>
@@ -113,6 +124,15 @@ export default function DashboardShell({
               <span className="hidden max-w-[16rem] truncate text-sm text-stone-600 md:block">
                 {userEmail}
               </span>
+
+              {switchLink ? (
+                <Link
+                  href={switchLink.href}
+                  className="rounded-xl bg-brand-soft px-4 py-2 text-sm font-medium text-brand transition hover:bg-line"
+                >
+                  {switchLink.label}
+                </Link>
+              ) : null}
 
               <form action={signOutAction}>
                 <button
