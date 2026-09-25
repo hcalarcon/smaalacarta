@@ -108,11 +108,21 @@ Hecho en el código (migración `20260926000000_orden_y_promociones.sql`, ya apl
 - [ ] [por asignar] Imagen de producto (Supabase Storage entra en el plan gratuito) y `featured`
 - [ ] [por asignar] Vigencia de las promociones (fechas o días de la semana) y otros tipos (2x1)
 
-## Etapa 6 — Roadmap del producto
+## Etapa 6 — Menú público desde el admin
 
-- [ ] [por asignar] Revisar las "brechas conocidas" de `docs/SPEC.md` y priorizarlas
-- [ ] [por asignar] **Diseñar la conexión admin ↔ menús públicos** (`web/` hoy lee JSON estáticos). Es una decisión de arquitectura: diseñarla antes de escribir código. Incluye las políticas `anon` de lectura
-- [ ] [por asignar] Plan de migración de los clientes actuales (`data/clientes/*`) a Supabase
+**Diseño.** La función `public_menu(slug)` de Supabase entrega el menú publicado con el mismo formato que los JSON de `web/`; el menú público la pide sin sesión (`web/apps/menu-app/lib/public-menu.js`) y, si no está o falla, usa los JSON como hasta ahora. La configuración (plantilla, colores, cabecera, horarios, WhatsApp, si es público) vive en `business_settings` y se edita en `/dashboard/settings`. Las promociones salen como la categoría "Ofertas". Requisitos en `docs/SPEC.md` (ADMIN-CONFIG y PUBLICO).
+
+Hecho en el código (migración `20260927000000_configuracion_y_menu_publico.sql`, ya aplicada a la base de Herni):
+
+- [x] [herni] Tabla `business_settings` y pantalla de Configuración (publicar, plantilla, colores, cabecera, descripción, horarios por día con turnos y cierre, WhatsApp)
+- [x] [herni] Función `public_menu` y adaptador en `web/`, con fallback a los JSON
+- [ ] [herni] En `web/apps/menu-app/supabase-config.js`, completar `url` y `key` (Supabase → Project Settings → API; son públicas por diseño: la publishable key, **nunca** la secret). Vacío, el menú usa solo los JSON
+- [ ] [herni] **Probar a mano**: en Configuración, completar y publicar; abrir el menú con `?cliente=<slug>` (servidor estático sobre `web/`) y ver colores, cabecera, horarios, productos en su orden y las promociones en "Ofertas"; despublicar y ver que vuelve a los JSON
+- [ ] [por asignar] Dominios: hoy están escritos a mano en `app.js` (`DOMAINS`); pasar a un dominio por negocio en la base
+- [ ] [por asignar] Migrar los clientes de `data/clientes/*` a Supabase, uno por uno
+- [ ] [por asignar] Subir imágenes (cabecera y productos) con Supabase Storage, en vez de pegar una dirección
+- [ ] [por asignar] Más datos del negocio para el menú: dirección, Instagram u otras redes, envío o retiro, pedido mínimo, cierre temporal (vacaciones)
+- [ ] [por asignar] Pausa de proyectos gratuitos de Supabase (una semana sin actividad): evaluar un chequeo periódico o el plan pago cuando haya clientes reales
 
 ## Etapa 7 — Pendientes técnicos (backlog)
 

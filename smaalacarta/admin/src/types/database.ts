@@ -39,6 +39,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      business_settings: {
+        Row: {
+          business_id: string
+          created_at: string
+          header_image_url: string | null
+          primary_color: string
+          published: boolean
+          schedule: Json
+          secondary_color: string
+          tagline: string | null
+          template: string
+          updated_at: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          header_image_url?: string | null
+          primary_color?: string
+          published?: boolean
+          schedule?: Json
+          secondary_color?: string
+          tagline?: string | null
+          template?: string
+          updated_at?: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          header_image_url?: string | null
+          primary_color?: string
+          published?: boolean
+          schedule?: Json
+          secondary_color?: string
+          tagline?: string | null
+          template?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_users: {
         Row: {
           business_id: string
@@ -398,6 +445,22 @@ export type Database = {
         Returns: string
       }
       is_super_admin: { Args: never; Returns: boolean }
+      is_valid_schedule: { Args: { p_schedule: Json }; Returns: boolean }
+      public_menu: { Args: { p_slug: string }; Returns: Json }
+      save_business_settings: {
+        Args: {
+          p_business_id: string
+          p_header_image_url: string
+          p_primary_color: string
+          p_published: boolean
+          p_schedule: Json
+          p_secondary_color: string
+          p_tagline: string
+          p_template: string
+          p_whatsapp: string
+        }
+        Returns: undefined
+      }
       save_promotion: {
         Args: {
           p_active: boolean

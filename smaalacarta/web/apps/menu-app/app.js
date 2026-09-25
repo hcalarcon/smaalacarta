@@ -107,6 +107,25 @@ function getSlug() {
   return { slug: subdomain, type: "cliente" };
 }
 
+// Menú publicado desde el admin (PUBLICO-6). Devuelve null si Supabase no está
+// configurado, el negocio no está publicado o algo falla: entonces se usan los JSON.
+async function loadFromSupabase(slug) {
+  try {
+    const [{ fetchPublicMenu, isSupabaseConfigured }, { SUPABASE }] =
+      await Promise.all([
+        import("/apps/menu-app/lib/public-menu.js"),
+        import("/apps/menu-app/supabase-config.js"),
+      ]);
+
+    if (!isSupabaseConfigured(SUPABASE)) return null;
+
+    return await fetchPublicMenu({ ...SUPABASE, slug });
+  } catch (err) {
+    console.error("No se pudo cargar el menú desde Supabase:", err);
+    return null;
+  }
+}
+
 // INIT
 async function init() {
   try {
@@ -120,12 +139,26 @@ async function init() {
 
     const basePath = type === "cliente" ? "/data/clientes" : "/data/demos";
 
-    // 1 solo fetch 👇
-    const config = await fetchJSON(`${basePath}/${slug}/config.json`);
-    if (!config) return;
+    // Los negocios que cargaron su menú en el admin vienen de Supabase; los demás
+    // (y las demos) siguen en los JSON de /data.
+    let config = null;
+    let menu = null;
 
-    const menu = await fetchJSON(`${basePath}/${slug}/menu.json`);
-    if (!menu) return;
+    if (type === "cliente") {
+      const remote = await loadFromSupabase(slug);
+      if (remote) {
+        config = remote.config;
+        menu = remote.menu;
+      }
+    }
+
+    if (!config || !menu) {
+      config = await fetchJSON(`${basePath}/${slug}/config.json`);
+      if (!config) return;
+
+      menu = await fetchJSON(`${basePath}/${slug}/menu.json`);
+      if (!menu) return;
+    }
 
     window.CONFIG = config;
 
@@ -401,8 +434,11 @@ function buildEnhancedMenu(menu) {
     });
   }
 
-  // 💸 Ofertas
-  if (ofertas.length > 0) {
+  // 💸 Ofertas (si el menú ya trae su categoría de ofertas, como las promociones
+  // del admin, no se arma otra)
+  const yaTieneOfertas = menu.categorias.some((cat) => cat.tipo === "ofertas");
+
+  if (ofertas.length > 0 && !yaTieneOfertas) {
     nuevasCategorias.push({
       nombre: "Ofertas",
       tipo: "ofertas",

@@ -154,6 +154,13 @@ Todo el código vive bajo `smaalacarta/`, en tres proyectos sin build compartido
   `save_promotion()` (atómica, con los permisos de quien la llama). El arrastrar y
   soltar usa `@dnd-kit` (`components/menu/Sortable.tsx` y el editor de promociones).
   Las acciones nuevas toman el negocio de `requireBusiness()`, no del navegador.
+- **Configuración y menú público**: `business_settings` (una fila por negocio; se
+  guarda con `save_business_settings()`, atómica junto con el WhatsApp) y
+  `public_menu(slug)`, que cualquiera puede llamar sin sesión y solo entrega lo
+  publicado y activo. Reglas puras de horarios y datos en `src/lib/settings/`. En
+  `web/`, `apps/menu-app/lib/public-menu.js` la consume con fallback a los JSON, y
+  `supabase-config.js` lleva la dirección y la publishable key (públicas; la clave de
+  servicio nunca va en `web/`).
 - **Multi-negocio**: `getCurrentBusiness()` resuelve usuario → `business_users`
   (con `role`) → `businesses`; las páginas del panel usan `requireBusiness()`.
   Toda tabla de recursos (`categories`, `products`, `promotions`, `orders`) se filtra
