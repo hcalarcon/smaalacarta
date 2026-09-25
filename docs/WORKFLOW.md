@@ -55,8 +55,10 @@ Consecuencias que conviene decir en voz alta:
   la base tenga RLS.
 - **Después de una migración**, regenerar los tipos: `npm run db:types` en
   `admin/`, y commitear `src/types/database.ts` junto con la migración.
-- **Nunca se commitea un `.env`.** El admin lee `NEXT_PUBLIC_SUPABASE_URL` y
-  `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` del entorno.
+- **Nunca se commitea un `.env`**, solo las plantillas `.env*.example`. El
+  admin lee `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`
+  de `.env.local`; la CLI de Supabase lee su token y la contraseña de la base de
+  `.env.supabase`, a través de los scripts `db:*`.
 - **Antes de tocar APIs de Next en el admin**, leer la guía correspondiente en
   `admin/node_modules/next/dist/docs/`: esta versión cambia convenciones (ver
   `admin/AGENTS.md`).

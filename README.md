@@ -40,11 +40,22 @@ Tests de `web/` y `landing/`, desde la raíz:
 npm install && npm test
 ```
 
-Admin, desde `smaalacarta/admin` (necesita `NEXT_PUBLIC_SUPABASE_URL` y
-`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` en `.env.local`):
+Admin, desde `smaalacarta/admin`. Copiar `.env.example` a `.env.local` y
+completar `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`:
 
 ```bash
 npm install && npm run dev
+```
+
+Para migraciones y tipos, copiar `.env.supabase.example` a `.env.supabase` con
+tu access token de la cuenta del proyecto y la contraseña de la base. Los
+scripts `db:*` lo cargan, así que no hace falta cambiar de cuenta en la CLI:
+
+```bash
+npm run db:link -- --project-ref <REF>   # una sola vez
+npm run db:push -- --dry-run             # ver qué migraciones se aplicarían
+npm run db:push
+npm run db:types                         # regenera src/types/database.ts
 ```
 
 La landing y los menús son archivos estáticos: cualquier servidor estático sirve

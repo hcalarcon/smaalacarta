@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "db:types": "npx supabase gen types typescript --linked > src/types/database.ts",
+    "db:link": "dotenv -e .env.supabase -- supabase link",
+    "db:push": "dotenv -e .env.supabase -- supabase db push",
+    "db:types": "dotenv -e .env.supabase -- supabase gen types typescript --linked > src/types/database.ts",
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
@@ -26,6 +28,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.1.1",
+    "dotenv-cli": "^11.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "jsdom": "^30.0.1",
