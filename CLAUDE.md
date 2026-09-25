@@ -132,14 +132,18 @@ Todo el código vive bajo `smaalacarta/`, en tres proyectos sin build compartido
   recuperar, restablecer) y sus Server Actions en `app/(auth)/actions.ts`. Un
   usuario sin negocio va a `/sin-negocio`, nunca en bucle a `/login`.
 - **Superadmin** (`/superadmin`): el equipo de SMA a la Carta crea los negocios y sus
-  cuentas; no hay registro público. `super_admins` (tabla sin escritura desde la
-  app) + `is_super_admin()` y `create_business_with_owner()` en la migración
-  `*_superadmin.sql`. Las reglas de alta están en `src/lib/superadmin/accounts.ts`
-  con dependencias inyectadas, y `src/lib/superadmin/deps.ts` las conecta a Supabase.
-  `SUPABASE_SERVICE_ROLE_KEY` (solo servidor, `src/lib/supabase-admin.ts` con
-  `server-only`) se usa **únicamente** para invitar cuentas y después de comprobar
-  que quien pide es superadmin. Los links de invitación y de recuperación entran por
-  `/auth/confirm` (`token_hash`), no por `/auth/callback`.
+  cuentas; no hay registro público ni se envían mails. `super_admins` (tabla sin
+  escritura desde la app) + `is_super_admin()` y `create_business_with_owner()` en la
+  migración `*_superadmin.sql`. Las reglas de alta y de restablecimiento están en
+  `src/lib/superadmin/accounts.ts` con dependencias inyectadas, y
+  `src/lib/superadmin/deps.ts` las conecta a Supabase. Cada cuenta nace con una
+  contraseña temporal (`password.ts`) que se muestra **una sola vez**; la marca
+  `must_change_password` vive en `app_metadata` (solo la escribe el servidor) y
+  `proxy.ts` deja a esa cuenta solo en `/cambiar-contrasena` hasta que elija una
+  propia (`src/lib/auth/change-password.ts`). `SUPABASE_SERVICE_ROLE_KEY` (solo
+  servidor, `src/lib/supabase-admin.ts` con `server-only`) se usa **únicamente** para
+  crear cuentas, restablecer contraseñas y borrar la marca de temporal, y siempre
+  después de comprobar quién pide la acción.
 - **Tests contra Postgres real**: `src/test/db.ts` levanta PGlite con los stubs de
   Supabase y aplica las migraciones; `src/lib/db/*.test.ts` prueban el RLS. Toda
   migración con políticas nuevas se prueba ahí.

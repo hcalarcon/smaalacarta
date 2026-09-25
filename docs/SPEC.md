@@ -131,12 +131,14 @@ recuperación se prueban a mano.*
 ## ADMIN-SUPER — Superadmin y alta de cuentas
 
 *Aplicado por `supabase/migrations/*_superadmin.sql`, `src/lib/auth/superadmin.ts`,
-`src/lib/superadmin/`, `app/superadmin` y `app/auth/confirm`. Cubierto por:
+`src/lib/superadmin/`, `app/superadmin` y `app/(auth)/cambiar-contrasena`. Cubierto por:
 `src/lib/db/superadmin.test.ts` (ADMIN-SUPER-1 a 4, contra Postgres real) y por los
 tests de `src/lib/superadmin/` y `src/lib/auth/` (el resto).*
 
 No hay registro público: las cuentas y los negocios los crea el equipo de SMA a la
-Carta desde `/superadmin`.
+Carta desde `/superadmin`. No se envían mails: cada cuenta nueva nace con una
+contraseña temporal que el superadmin le pasa a la persona, y que ella cambia en su
+primer ingreso.
 
 - **ADMIN-SUPER-1** Un superadmin es un usuario registrado en `super_admins`.
   Ningún usuario, ni siquiera un superadmin, puede agregar ni quitar filas de esa
@@ -150,16 +152,22 @@ Carta desde `/superadmin`.
   negocio.
 - **ADMIN-SUPER-5** El slug de un negocio es único y solo tiene minúsculas,
   números y guiones; se propone a partir del nombre, sin tildes.
-- **ADMIN-SUPER-6** Dar de alta a un dueño con un email nuevo le envía una
-  invitación; si ese email ya tiene cuenta se reutiliza y no se invita de nuevo.
+- **ADMIN-SUPER-6** Dar de alta a un dueño con un email nuevo crea su cuenta con
+  una contraseña temporal generada al azar, que se muestra una sola vez; si ese
+  email ya tiene cuenta se reutiliza y no se genera ninguna contraseña.
 - **ADMIN-SUPER-7** Sin sesión, `/superadmin` lleva a `/login`; un usuario que no
   es superadmin va a su panel y no ve nada de `/superadmin`.
 - **ADMIN-SUPER-8** La clave de servicio de Supabase solo se usa después de
   comprobar que quien pide la acción es superadmin.
 - **ADMIN-SUPER-9** Un superadmin sin negocio entra a `/superadmin`, no a
   `/sin-negocio`.
-- **ADMIN-SUPER-10** El link de invitación o de recuperación abre una sesión y
-  lleva a elegir la contraseña; solo se aceptan los tipos `invite` y `recovery`.
+- **ADMIN-SUPER-10** Una cuenta con contraseña temporal solo puede llegar a la
+  pantalla de cambio de contraseña, hasta que elija una propia; con la nueva, la
+  marca de temporal se borra.
+- **ADMIN-SUPER-11** Un superadmin puede restablecer la contraseña de un miembro
+  de un negocio: se genera una temporal nueva, se muestra una sola vez y la
+  persona vuelve a quedar obligada a cambiarla. No puede hacerlo con otro
+  superadmin ni con quien no es miembro de ese negocio.
 
 ## ADMIN-MENU — Categorías y productos
 
@@ -215,10 +223,14 @@ se resuelve en su propia rama `fix/`.
 - **Superadmin: pasos manuales en Supabase.** (1) Apagar el registro público
   (`Allow new users to sign up`): con la clave pública, cualquiera puede crear
   cuentas llamando a la API aunque el admin no tenga pantalla para eso. (2) Cargar
-  el primer superadmin con SQL. (3) Poner en la plantilla de mail "Invite user" el
-  link `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/restablecer`:
-  las invitaciones no soportan PKCE, así que no sirven con el link por defecto.
-  Ver [PLAN.md](PLAN.md).
+  el primer superadmin con SQL. (3) Poner `SUPABASE_SERVICE_ROLE_KEY` en el
+  servidor. Ver [PLAN.md](PLAN.md).
+- **Recuperar la contraseña por mail no llega a los clientes.** El mail por defecto
+  de Supabase solo entrega a miembros del equipo del proyecto y permite 2 por hora;
+  sin un SMTP propio, `/recuperar` no le sirve a un cliente. Por eso el
+  restablecimiento lo hace el superadmin (ADMIN-SUPER-11). La marca de "contraseña
+  temporal" la respeta la app, no la base: quien use la API con su sesión puede
+  saltearla, pero solo para su propia cuenta.
 - **Superadmin: roles sin efecto.** Un miembro puede ser `owner` o `staff`, pero
   ninguna política distingue uno de otro. Ver "`role` no limita nada".
 - **Landing: texto del botón principal** dice "Solicitá tu sitio ahoras".

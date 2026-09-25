@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   addMemberByEmail,
   createBusinessWithOwner,
+  resetMemberPassword,
   type AccountDeps,
 } from "./accounts";
 
@@ -11,9 +12,13 @@ function makeDeps(overrides: Partial<AccountDeps> = {}) {
     isSuperAdmin: vi.fn(async () => true),
     findProfileIdByEmail: vi.fn(async () => null as string | null),
     slugExists: vi.fn(async () => false),
-    inviteUser: vi.fn(async () => ({ id: "nuevo-usuario" })),
+    createAccount: vi.fn(async () => ({ id: "nuevo-usuario" })),
     createBusiness: vi.fn(async () => ({ id: "nuevo-negocio" })),
     addMember: vi.fn(async () => ({})),
+    getMemberEmail: vi.fn(async () => "miembro@x.com" as string | null),
+    isSuperAdminUser: vi.fn(async () => false),
+    setTemporaryPassword: vi.fn(async () => ({})),
+    generatePassword: vi.fn(() => "Clave-Temporal-1"),
     ...overrides,
   };
   return deps as typeof deps & AccountDeps;
@@ -31,9 +36,13 @@ function nothingWasCalled(deps: ReturnType<typeof makeDeps>) {
   for (const fn of [
     deps.findProfileIdByEmail,
     deps.slugExists,
-    deps.inviteUser,
+    deps.createAccount,
     deps.createBusiness,
     deps.addMember,
+    deps.getMemberEmail,
+    deps.isSuperAdminUser,
+    deps.setTemporaryPassword,
+    deps.generatePassword,
   ]) {
     expect(fn).not.toHaveBeenCalled();
   }
@@ -71,7 +80,7 @@ describe("createBusinessWithOwner", () => {
     nothingWasCalled(deps);
   });
 
-  it("ADMIN-SUPER-6: con un email nuevo invita al dueño y crea el negocio", async () => {
+  it("ADMIN-SUPER-6: con un email nuevo crea la cuenta con una contraseña temporal y la devuelve", async () => {
     const deps = makeDeps();
 
     const result = await createBusinessWithOwner(deps, negocio);
@@ -79,10 +88,14 @@ describe("createBusinessWithOwner", () => {
     expect(result).toEqual({
       ok: true,
       businessId: "nuevo-negocio",
-      invited: true,
+      credentials: { email: "dueno@negocio.com", password: "Clave-Temporal-1" },
     });
-    expect(deps.inviteUser).toHaveBeenCalledTimes(1);
-    expect(deps.inviteUser).toHaveBeenCalledWith("dueno@negocio.com", "Ana");
+    expect(deps.createAccount).toHaveBeenCalledTimes(1);
+    expect(deps.createAccount).toHaveBeenCalledWith(
+      "dueno@negocio.com",
+      "Ana",
+      "Clave-Temporal-1",
+    );
     expect(deps.createBusiness).toHaveBeenCalledWith({
       name: "Panadería",
       slug: "panaderia",
@@ -91,7 +104,7 @@ describe("createBusinessWithOwner", () => {
     });
   });
 
-  it("ADMIN-SUPER-6: si el email ya tiene cuenta la reutiliza y no invita", async () => {
+  it("ADMIN-SUPER-6: si el email ya tiene cuenta la reutiliza y no genera contraseña", async () => {
     const deps = makeDeps({
       findProfileIdByEmail: vi.fn(async () => "usuario-existente"),
     });
@@ -101,9 +114,10 @@ describe("createBusinessWithOwner", () => {
     expect(result).toEqual({
       ok: true,
       businessId: "nuevo-negocio",
-      invited: false,
+      credentials: null,
     });
-    expect(deps.inviteUser).not.toHaveBeenCalled();
+    expect(deps.createAccount).not.toHaveBeenCalled();
+    expect(deps.generatePassword).not.toHaveBeenCalled();
     expect(deps.createBusiness).toHaveBeenCalledWith(
       expect.objectContaining({ ownerId: "usuario-existente" }),
     );
@@ -115,20 +129,20 @@ describe("createBusinessWithOwner", () => {
     expect(deps.findProfileIdByEmail).toHaveBeenCalledWith("dueno@negocio.com");
   });
 
-  it("si el slug ya existe avisa en el campo y no envía la invitación", async () => {
+  it("si el slug ya existe avisa en el campo y no crea la cuenta", async () => {
     const deps = makeDeps({ slugExists: vi.fn(async () => true) });
 
     const result = await createBusinessWithOwner(deps, negocio);
 
     expect(!result.ok && result.fieldErrors?.slug).toMatch(/slug/i);
-    expect(deps.inviteUser).not.toHaveBeenCalled();
+    expect(deps.createAccount).not.toHaveBeenCalled();
     expect(deps.createBusiness).not.toHaveBeenCalled();
   });
 
-  it("si la invitación falla no crea el negocio", async () => {
+  it("si crear la cuenta falla no crea el negocio", async () => {
     const deps = makeDeps({
-      inviteUser: vi.fn(async () => ({
-        error: { code: "over_email_send_rate_limit", message: "rate" },
+      createAccount: vi.fn(async () => ({
+        error: { code: "email_exists", message: "exists" },
       })),
     });
 
@@ -138,7 +152,7 @@ describe("createBusinessWithOwner", () => {
     expect(deps.createBusiness).not.toHaveBeenCalled();
   });
 
-  it("si la base rechaza el negocio devuelve un mensaje en español", async () => {
+  it("si la base rechaza el negocio devuelve un mensaje en español, sin mostrar la contraseña", async () => {
     const deps = makeDeps({
       createBusiness: vi.fn(async () => ({
         error: {
@@ -151,6 +165,7 @@ describe("createBusinessWithOwner", () => {
     const result = await createBusinessWithOwner(deps, negocio);
 
     expect(!result.ok && result.error).toMatch(/slug/i);
+    expect(JSON.stringify(result)).not.toContain("Clave-Temporal-1");
   });
 });
 
@@ -166,13 +181,13 @@ describe("addMemberByEmail — ADMIN-SUPER-4", () => {
     nothingWasCalled(deps);
   });
 
-  it("con una cuenta existente la asigna sin invitar", async () => {
+  it("con una cuenta existente la asigna sin crear otra ni generar contraseña", async () => {
     const deps = makeDeps({ findProfileIdByEmail: vi.fn(async () => "u1") });
 
     const result = await addMemberByEmail(deps, miembro);
 
-    expect(result).toEqual({ ok: true, invited: false });
-    expect(deps.inviteUser).not.toHaveBeenCalled();
+    expect(result).toEqual({ ok: true, credentials: null });
+    expect(deps.createAccount).not.toHaveBeenCalled();
     expect(deps.addMember).toHaveBeenCalledWith({
       businessId: "n1",
       userId: "u1",
@@ -180,13 +195,20 @@ describe("addMemberByEmail — ADMIN-SUPER-4", () => {
     });
   });
 
-  it("con un email nuevo invita y después asigna", async () => {
+  it("con un email nuevo crea la cuenta con contraseña temporal y después asigna", async () => {
     const deps = makeDeps();
 
     const result = await addMemberByEmail(deps, miembro);
 
-    expect(result).toEqual({ ok: true, invited: true });
-    expect(deps.inviteUser).toHaveBeenCalledWith("ana@x.com", "");
+    expect(result).toEqual({
+      ok: true,
+      credentials: { email: "ana@x.com", password: "Clave-Temporal-1" },
+    });
+    expect(deps.createAccount).toHaveBeenCalledWith(
+      "ana@x.com",
+      "",
+      "Clave-Temporal-1",
+    );
     expect(deps.addMember).toHaveBeenCalledWith({
       businessId: "n1",
       userId: "nuevo-usuario",
@@ -217,5 +239,66 @@ describe("addMemberByEmail — ADMIN-SUPER-4", () => {
     const result = await addMemberByEmail(deps, miembro);
 
     expect(!result.ok && result.error).toMatch(/ya es miembro/i);
+  });
+});
+
+describe("resetMemberPassword — ADMIN-SUPER-11", () => {
+  const objetivo = { businessId: "n1", userId: "u1" };
+
+  it("ADMIN-SUPER-8: sin ser superadmin no se toca nada", async () => {
+    const deps = makeDeps({ isSuperAdmin: vi.fn(async () => false) });
+
+    const result = await resetMemberPassword(deps, objetivo);
+
+    expect(result).toMatchObject({ ok: false });
+    nothingWasCalled(deps);
+  });
+
+  it("genera una contraseña temporal nueva y la devuelve una vez", async () => {
+    const deps = makeDeps();
+
+    const result = await resetMemberPassword(deps, objetivo);
+
+    expect(result).toEqual({
+      ok: true,
+      credentials: { email: "miembro@x.com", password: "Clave-Temporal-1" },
+    });
+    expect(deps.setTemporaryPassword).toHaveBeenCalledWith(
+      "u1",
+      "Clave-Temporal-1",
+    );
+  });
+
+  it("no restablece a quien no es miembro de ese negocio", async () => {
+    const deps = makeDeps({ getMemberEmail: vi.fn(async () => null) });
+
+    const result = await resetMemberPassword(deps, objetivo);
+
+    expect(result).toMatchObject({ ok: false });
+    expect(deps.getMemberEmail).toHaveBeenCalledWith("n1", "u1");
+    expect(deps.setTemporaryPassword).not.toHaveBeenCalled();
+    expect(deps.generatePassword).not.toHaveBeenCalled();
+  });
+
+  it("no restablece la contraseña de otro superadmin", async () => {
+    const deps = makeDeps({ isSuperAdminUser: vi.fn(async () => true) });
+
+    const result = await resetMemberPassword(deps, objetivo);
+
+    expect(!result.ok && result.error).toMatch(/superadmin/i);
+    expect(deps.setTemporaryPassword).not.toHaveBeenCalled();
+  });
+
+  it("si Supabase falla devuelve un mensaje en español, sin la contraseña", async () => {
+    const deps = makeDeps({
+      setTemporaryPassword: vi.fn(async () => ({
+        error: { code: "service_key_missing" },
+      })),
+    });
+
+    const result = await resetMemberPassword(deps, objetivo);
+
+    expect(!result.ok && result.error).toMatch(/clave de servicio/i);
+    expect(JSON.stringify(result)).not.toContain("Clave-Temporal-1");
   });
 });

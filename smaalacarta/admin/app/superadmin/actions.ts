@@ -1,11 +1,15 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 
 import { requireSuperAdmin } from "@/lib/auth/superadmin";
 import { removeMember } from "@/lib/db/superadmin";
-import { addMemberByEmail, createBusinessWithOwner } from "@/lib/superadmin/accounts";
+import {
+  addMemberByEmail,
+  createBusinessWithOwner,
+  resetMemberPassword,
+  type Credentials,
+} from "@/lib/superadmin/accounts";
 import { buildAccountDeps } from "@/lib/superadmin/deps";
 
 export type SuperAdminFormState = {
@@ -14,6 +18,11 @@ export type SuperAdminFormState = {
   fieldErrors?: Partial<Record<string, string>>;
   // Para no vaciar el formulario si el envío falla.
   values?: Record<string, string>;
+  // Contraseña temporal recién generada. Se muestra una sola vez: no se guarda en
+  // ningún lado, solo viaja en esta respuesta.
+  credentials?: Credentials | null;
+  // Negocio recién creado.
+  businessId?: string;
 };
 
 function text(formData: FormData, name: string) {
@@ -39,9 +48,7 @@ export async function createBusinessAction(
     return { error: result.error, fieldErrors: result.fieldErrors, values };
   }
 
-  redirect(
-    `/superadmin/negocios/${result.businessId}?created=1${result.invited ? "&invited=1" : ""}`,
-  );
+  return { businessId: result.businessId, credentials: result.credentials };
 }
 
 export async function addMemberAction(
@@ -63,9 +70,29 @@ export async function addMemberAction(
   revalidatePath(`/superadmin/negocios/${businessId}`);
 
   return {
-    message: result.invited
-      ? "Le enviamos una invitación por mail y quedó asignada al negocio."
+    message: result.credentials
+      ? "Cuenta creada y asignada al negocio. Pasale estos datos a la persona:"
       : "La cuenta ya existía y quedó asignada al negocio.",
+    credentials: result.credentials,
+  };
+}
+
+export async function resetPasswordAction(
+  _prev: SuperAdminFormState,
+  formData: FormData,
+): Promise<SuperAdminFormState> {
+  const result = await resetMemberPassword(await buildAccountDeps(), {
+    businessId: text(formData, "businessId"),
+    userId: text(formData, "userId"),
+  });
+
+  if (!result.ok) {
+    return { error: result.error };
+  }
+
+  return {
+    message: "Contraseña restablecida. Pasale estos datos a la persona:",
+    credentials: result.credentials,
   };
 }
 

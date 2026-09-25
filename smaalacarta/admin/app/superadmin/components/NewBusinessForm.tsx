@@ -1,7 +1,9 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 
+import CredentialsCard from "./CredentialsCard";
 import { createBusinessAction, type SuperAdminFormState } from "../actions";
 import Field from "@/components/ui/Field";
 import FormAlert from "@/components/ui/FormAlert";
@@ -13,10 +15,39 @@ const initialState: SuperAdminFormState = {};
 export default function NewBusinessForm() {
   const [state, formAction] = useActionState(createBusinessAction, initialState);
 
-  const [name, setName] = useState(state.values?.name ?? "");
-  const [slug, setSlug] = useState(state.values?.slug ?? "");
+  const [name, setName] = useState("");
+  const [slug, setSlug] = useState("");
   // Mientras nadie edite el slug a mano, sigue al nombre.
   const [slugEdited, setSlugEdited] = useState(false);
+
+  // Negocio creado: se muestran los datos de acceso, que no se vuelven a ver.
+  if (state.businessId) {
+    return (
+      <div className="space-y-5">
+        <FormAlert tone="success">Negocio creado.</FormAlert>
+
+        {state.credentials ? (
+          <>
+            <p className="text-sm text-stone-600">
+              Creamos la cuenta del dueño. Pasale estos datos:
+            </p>
+            <CredentialsCard credentials={state.credentials} />
+          </>
+        ) : (
+          <p className="text-sm text-stone-600">
+            La cuenta del dueño ya existía y quedó asignada al negocio.
+          </p>
+        )}
+
+        <Link
+          href={`/superadmin/negocios/${state.businessId}`}
+          className="inline-block rounded-xl bg-brand px-5 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover"
+        >
+          Ver el negocio
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <form action={formAction} noValidate className="space-y-5">
@@ -76,6 +107,7 @@ export default function NewBusinessForm() {
         autoComplete="off"
         defaultValue={state.values?.ownerEmail}
         error={state.fieldErrors?.ownerEmail}
+        hint="Es su usuario para entrar. No se le envía ningún mail."
         placeholder="dueno@negocio.com"
         required
       />

@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import AddMemberForm from "../../components/AddMemberForm";
 import RemoveMemberButton from "../../components/RemoveMemberButton";
-import FormAlert from "@/components/ui/FormAlert";
+import ResetPasswordButton from "../../components/ResetPasswordButton";
 import { getBusinessWithMembers } from "@/lib/db/superadmin";
 
 export const metadata: Metadata = { title: "Negocio" };
@@ -16,13 +16,10 @@ const ROLE_LABELS: Record<string, string> = {
 
 export default async function BusinessDetailPage({
   params,
-  searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ created?: string; invited?: string }>;
 }) {
   const { id } = await params;
-  const { created, invited } = await searchParams;
 
   // Un id que no es un UUID haría fallar la consulta: se trata como inexistente.
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
@@ -40,15 +37,6 @@ export default async function BusinessDetailPage({
           ← Todos los negocios
         </Link>
       </div>
-
-      {created ? (
-        <FormAlert tone="success">
-          Negocio creado.{" "}
-          {invited
-            ? "Le enviamos una invitación por mail al dueño para que elija su contraseña."
-            : "La cuenta del dueño ya existía y quedó asignada."}
-        </FormAlert>
-      ) : null}
 
       <section>
         <h1 className="text-3xl font-bold text-brand">{business.name}</h1>
@@ -71,23 +59,28 @@ export default async function BusinessDetailPage({
               const label = member.profiles?.email ?? member.user_id;
 
               return (
-                <li
-                  key={member.user_id}
-                  className="flex items-center justify-between gap-4 py-3"
-                >
-                  <div className="min-w-0">
-                    <p className="truncate font-medium text-stone-900">
-                      {label}
-                    </p>
-                    <p className="text-sm text-stone-500">
-                      {member.profiles?.full_name
-                        ? `${member.profiles.full_name} · `
-                        : ""}
-                      {ROLE_LABELS[member.role] ?? member.role}
-                    </p>
+                <li key={member.user_id} className="space-y-2 py-3">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium text-stone-900">
+                        {label}
+                      </p>
+                      <p className="text-sm text-stone-500">
+                        {member.profiles?.full_name
+                          ? `${member.profiles.full_name} · `
+                          : ""}
+                        {ROLE_LABELS[member.role] ?? member.role}
+                      </p>
+                    </div>
+
+                    <RemoveMemberButton
+                      businessId={business.id}
+                      userId={member.user_id}
+                      label={label}
+                    />
                   </div>
 
-                  <RemoveMemberButton
+                  <ResetPasswordButton
                     businessId={business.id}
                     userId={member.user_id}
                     label={label}

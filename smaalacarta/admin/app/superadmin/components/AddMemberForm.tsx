@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 
+import CredentialsCard from "./CredentialsCard";
 import { addMemberAction, type SuperAdminFormState } from "../actions";
 import Field from "@/components/ui/Field";
 import FormAlert from "@/components/ui/FormAlert";
@@ -24,6 +25,9 @@ export default function AddMemberForm({ businessId }: { businessId: string }) {
       {state.message ? (
         <FormAlert tone="success">{state.message}</FormAlert>
       ) : null}
+      {state.credentials ? (
+        <CredentialsCard credentials={state.credentials} />
+      ) : null}
 
       <input type="hidden" name="businessId" value={businessId} />
 
@@ -35,7 +39,7 @@ export default function AddMemberForm({ businessId }: { businessId: string }) {
         autoComplete="off"
         defaultValue={state.values?.email}
         error={state.fieldErrors?.email}
-        hint="Si no tiene cuenta, le enviamos una invitación."
+        hint="Si no tiene cuenta, se la creamos con una contraseña temporal."
         required
       />
 

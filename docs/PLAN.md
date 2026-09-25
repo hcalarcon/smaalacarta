@@ -69,38 +69,25 @@ Si algo falla al aplicar una migración: vaciar la base propia, corregir la migr
 
 **Modelo.** No hay registro público: las cuentas y los negocios los crea el equipo de SMA a la Carta (el superadmin) desde `/superadmin`, y el resto de los usuarios solo puede entrar y recuperar su contraseña.
 
-**Diseño elegido.** Tabla `super_admins` (un usuario que no pertenece a ningún negocio), sección `/superadmin` dentro de este admin, y cuentas creadas por invitación por mail. El superadmin usa RLS para ver y gestionar miembros; crear un negocio solo se puede con la función atómica `create_business_with_owner`. La clave de servicio se usa en un único lugar (invitar cuentas), solo después de comprobar que quien pide es superadmin. Requisitos en `docs/SPEC.md` (ADMIN-SUPER-1 a 10).
+**Diseño elegido.** Tabla `super_admins` (un usuario que no pertenece a ningún negocio) y sección `/superadmin` dentro de este admin. **Sin mails**: como el mail por defecto de Supabase solo entrega a miembros del equipo del proyecto y permite 2 por hora, las cuentas se crean con una **contraseña temporal** que el superadmin ve una sola vez y le pasa a la persona; en su primer ingreso solo puede llegar a "Cambiar contraseña" y elige una propia. Si la olvida, el superadmin le restablece una temporal nueva. El superadmin usa RLS para ver y gestionar miembros; crear un negocio solo se puede con la función atómica `create_business_with_owner`. La clave de servicio se usa solo para crear cuentas y cambiar contraseñas, después de comprobar quién pide la acción. Requisitos en `docs/SPEC.md` (ADMIN-SUPER-1 a 11).
 
 Hecho en el código:
 
 - [x] [herni] Sacar el registro público del admin (`/registro`)
 - [x] [herni] Decidir el diseño del superadmin (ver arriba)
 - [x] [herni] Requisitos `ADMIN-SUPER-*` en `docs/SPEC.md`
-- [x] [herni] Migración `20260925120000_superadmin.sql`, probada en Postgres real (PGlite) con `src/lib/db/superadmin.test.ts`
-- [x] [herni] Pantallas: listado de negocios, alta de negocio con su cuenta dueña y detalle con alta y baja de miembros (`/superadmin`)
-- [x] [herni] Ruta `/auth/confirm` para los links de invitación y de recuperación
+- [x] [herni] Migración `20260925120000_superadmin.sql`, aplicada y probada en Postgres real (PGlite) con `src/lib/db/superadmin.test.ts`
+- [x] [herni] Pantallas: listado de negocios, alta de negocio con su cuenta dueña, y detalle con alta, baja y restablecimiento de contraseña de miembros (`/superadmin`)
+- [x] [herni] Contraseña temporal y cambio obligatorio en el primer ingreso (`/cambiar-contrasena`)
 
-**Para dejarlo andando (pasos manuales de Herni, en este orden):**
+Pasos de Supabase:
 
-1. [ ] [herni] **Apagar el registro público en Supabase** (**Authentication → Sign In / Providers → "Allow new users to sign up"**). Imprescindible: la clave pública viaja en el navegador y, con el registro encendido, cualquiera podría crear cuentas llamando a la API aunque el admin no tenga pantalla para eso. Las invitaciones del superadmin funcionan igual con el registro apagado
-2. [ ] [herni] Aplicar la migración: `npm run db:push -- --dry-run`, revisar y `npm run db:push`. Después `npm run db:types` y commitear `src/types/database.ts`
-3. [ ] [herni] Cargar el primer superadmin. En Supabase, **Authentication → Users → Add user** (tu email, con "Auto Confirm User"), y en el **SQL Editor**:
-   ```sql
-   insert into public.super_admins (user_id)
-   select id from public.profiles where email = 'tu@email.com';
-   ```
-4. [ ] [herni] Agregar `SUPABASE_SERVICE_ROLE_KEY` a `admin/.env.local` (**Project Settings → API Keys → secret key**). Sin ella `/superadmin` funciona, pero al invitar a una cuenta nueva muestra "Falta configurar la clave de servicio". Nunca se commitea ni se comparte
-5. [ ] [herni] **Plantillas de mail** (**Authentication → Emails → Templates**). Las invitaciones no soportan PKCE, así que el link por defecto no sirve. En **Invite user**, cambiar el link por:
-   ```html
-   <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/restablecer">Aceptar la invitación</a>
-   ```
-   y en **Reset password**:
-   ```html
-   <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/restablecer">Elegir una contraseña nueva</a>
-   ```
-   Con la **Site URL** ya configurada (Etapa 2)
-6. [ ] [herni] **Probar a mano**: entrar como superadmin (debe llevarte a `/superadmin`), crear un negocio con un email tuyo alternativo, abrir la invitación, elegir la contraseña, entrar como dueño y ver su panel; agregar y quitar un miembro; y con un usuario común comprobar que `/superadmin` lo manda a `/dashboard`
-7. [ ] [herni] Confirmar que `/recuperar` solo sirve a cuentas ya creadas y no revela si un email existe (ADMIN-AUTH-9)
+- [x] [herni] Apagar el registro público (**Authentication → Sign In / Providers → "Allow new users to sign up"**)
+- [x] [herni] Redirect URL `http://localhost:3000/auth/callback`
+- [x] [herni] Cargar el primer superadmin (SQL en el encabezado de la migración)
+- [x] [herni] `SUPABASE_SERVICE_ROLE_KEY` en `admin/.env.local`
+- [ ] [herni] **Probar a mano**: entrar como superadmin (debe llevarte a `/superadmin` o mostrar el botón "Superadmin"), crear un negocio con un email alternativo, copiar la contraseña temporal, entrar en una ventana privada con esa cuenta (debe llevarte a "Elegí tu contraseña"), elegir una propia y ver su panel; restablecer su contraseña desde el detalle del negocio; y con un usuario común comprobar que `/superadmin` lo manda a `/dashboard`
+- [ ] [herni] Cuando haya un SMTP propio (plan pago o proveedor externo): reevaluar `/recuperar` para clientes y las plantillas de mail. Hasta entonces, la recuperación la hace el superadmin
 
 ## Etapa 5 — Que el admin compile
 
