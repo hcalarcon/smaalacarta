@@ -45,14 +45,8 @@ jobs:
         working-directory: smaalacarta/admin
         run: npm ci
 
-      # TEMPORAL: `main` ya llegó con 2 errores de lint y 7 de TypeScript en el
-      # admin (el cambio a medias de `category_id` en productos). Lint y build
-      # del admin no bloquean hasta que `fix/admin-productos` los arregle; esa
-      # rama borra los dos `continue-on-error`. Ver "Brechas conocidas" en
-      # docs/SPEC.md. Los fallos siguen apareciendo en el log de cada corrida.
       - name: Lint (admin)
         working-directory: smaalacarta/admin
-        continue-on-error: true
         run: npm run lint
 
       - name: Test (admin)
@@ -63,7 +57,6 @@ jobs:
       # cargar el módulo, así que el build necesita valores aunque no se conecte.
       - name: Build (admin)
         working-directory: smaalacarta/admin
-        continue-on-error: true
         env:
           NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
           NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder

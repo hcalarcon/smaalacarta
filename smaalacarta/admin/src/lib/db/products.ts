@@ -5,11 +5,17 @@ import {
   updateRecord,
   deleteRecord,
 } from "@/lib/db/resources";
+import {
+  toProductInsert,
+  toProductUpdate,
+  type ProductInput,
+} from "@/lib/menu/product-fields";
 
 export type Product = {
   id: string;
   business_id: string;
-  category_id: string;
+  // Nulo cuando se borra la categoría del producto (ON DELETE SET NULL).
+  category_id: string | null;
   name: string;
   description: string | null;
   price: number;
@@ -28,42 +34,17 @@ export async function getProduct(businessId: string, id: string) {
 
 export async function createProduct(
   businessId: string,
-  payload: {
-    category_id: string;
-    name: string;
-    description?: string;
-    price: number;
-    active?: boolean;
-  },
+  payload: ProductInput & { category_id: string },
 ) {
-  await insertRecord("products", {
-    business_id: businessId,
-    category_id: payload.category_id,
-    name: payload.name,
-    description: payload.description || null,
-    price: payload.price,
-    active: payload.active ?? true,
-  });
+  await insertRecord("products", toProductInsert(businessId, payload));
 }
 
 export async function updateProduct(
   businessId: string,
   id: string,
-  payload: {
-    category_id: string;
-    name: string;
-    description?: string;
-    price: number;
-    active?: boolean;
-  },
+  payload: ProductInput & { category_id?: string },
 ) {
-  await updateRecord("products", id, businessId, {
-    category_id: payload.category_id,
-    name: payload.name,
-    description: payload.description || null,
-    price: payload.price,
-    active: payload.active ?? true,
-  });
+  await updateRecord("products", id, businessId, toProductUpdate(payload));
 }
 
 export async function deleteProduct(businessId: string, id: string) {

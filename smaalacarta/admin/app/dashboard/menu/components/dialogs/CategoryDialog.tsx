@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 type CategoryDialogProps = {
   open: boolean;
@@ -23,31 +23,17 @@ type CategoryDialogProps = {
   }) => Promise<void>;
 };
 
-export default function CategoryDialog({
-  open,
+function CategoryDialogForm({
   onClose,
   mode,
   initialData,
   onSubmit,
 }: CategoryDialogProps) {
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [active, setActive] = useState(true);
-
-  useEffect(() => {
-    if (initialData) {
-      setName(initialData.name);
-      setDescription(initialData.description ?? "");
-      setActive(initialData.active ?? true);
-    } else {
-      setName("");
-      setDescription("");
-      setActive(true);
-    }
-  }, [initialData, open]);
-
-  if (!open) return null;
-
+  const [name, setName] = useState(initialData?.name ?? "");
+  const [description, setDescription] = useState(
+    initialData?.description ?? "",
+  );
+  const [active, setActive] = useState(initialData?.active ?? true);
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
@@ -135,5 +121,15 @@ export default function CategoryDialog({
         </form>
       </div>
     </div>
+  );
+}
+
+// El formulario se monta al abrir y se desmonta al cerrar, así que su estado
+// arranca siempre desde `initialData` sin copiarlo desde un efecto.
+export default function CategoryDialog(props: CategoryDialogProps) {
+  if (!props.open) return null;
+
+  return (
+    <CategoryDialogForm key={props.initialData?.id ?? "nueva"} {...props} />
   );
 }

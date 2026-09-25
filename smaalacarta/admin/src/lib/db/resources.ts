@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase-server";
 export async function getRecords<T>(table: string, businessId: string) {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from<T>(table)
+    .from(table)
     .select("*")
     .eq("business_id", businessId)
     .order("created_at", { ascending: false });
@@ -12,7 +12,7 @@ export async function getRecords<T>(table: string, businessId: string) {
     throw new Error(error.message);
   }
 
-  return data ?? [];
+  return (data ?? []) as T[];
 }
 
 export async function getRecord<T>(
@@ -22,7 +22,7 @@ export async function getRecord<T>(
 ) {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from<T>(table)
+    .from(table)
     .select("*")
     .eq("business_id", businessId)
     .eq("id", id)
@@ -32,7 +32,7 @@ export async function getRecord<T>(
     throw new Error(error.message);
   }
 
-  return data;
+  return data as T | null;
 }
 
 export async function insertRecord(

@@ -130,9 +130,13 @@ flujo, pendiente (ver Brechas conocidas).*
 ## ADMIN-MENU — Categorías y productos
 
 *Aplicado por `src/lib/db/categories.ts`, `src/lib/db/products.ts`,
-`app/dashboard/menu`. Cubierto por: pendiente.*
+`src/lib/menu/product-fields.ts`, `app/dashboard/menu`. Cubierto por:
+`src/lib/menu/product-fields.test.ts` (ADMIN-MENU-1 y 2).*
 
-_Sin requisitos todavía._
+- **ADMIN-MENU-1** Un producto se crea siempre dentro de una categoría; la
+  descripción vacía se guarda como nula y un producto nuevo nace activo.
+- **ADMIN-MENU-2** Editar un producto conserva su categoría, salvo que se indique
+  otra de forma explícita.
 
 ## ADMIN-PEDIDOS — Pedidos
 
@@ -165,14 +169,6 @@ se resuelve en su propia rama `fix/`.
 
 - **Protección de ramas.** El repositorio privado en plan gratuito no permite
   rulesets: las reglas de [BRANCHING.md](BRANCHING.md) se cumplen por acuerdo.
-- **Admin no compila.** `main` tiene 2 errores de lint
-  (`react-hooks/set-state-in-effect` en `CategoryDialog` y `ProductDialog`) y 7
-  de TypeScript: el agregado de `category_id` a productos quedó a medias
-  (`MenuClient` no le pasa `categoryId` a `ProductDialog`, la edición no envía
-  `category_id`, `products/page.tsx` usa la firma vieja) y `src/lib/db/resources.ts`
-  pasa un argumento de tipo donde supabase-js espera dos. Mientras tanto, lint y
-  build del admin no bloquean CI. Se resuelve en `fix/admin-productos`, que
-  además vuelve a hacerlos obligatorios.
 - **Las políticas de RLS no tienen tests.** ADMIN-AUTH-1 a 3 viven en la base.
   Testearlas pide `supabase test db` (pgTAP) sobre una base local, y eso
   necesita Docker, que no está en la máquina de desarrollo. Hasta entonces se
@@ -192,9 +188,6 @@ se resuelve en su propia rama `fix/`.
   público de Supabase (`Allow new users to sign up`) hay que apagarlo a mano: con
   la clave pública, cualquiera puede crear cuentas aunque el admin no tenga
   pantalla para eso. Ver Etapa 4 de [PLAN.md](PLAN.md).
-- **Admin: `category_id` de producto puede ser nulo.** Al borrar una categoría
-  sus productos quedan con `category_id` en `null`, pero el tipo `Product` de
-  `src/lib/db/products.ts` lo declara `string`.
 - **Landing: texto del botón principal** dice "Solicitá tu sitio ahoras".
 - **Landing: imagen para compartir.** `twitter:image` apunta a
   `assets/og-image.jpg`, que no existe, y `og:image` usa `favicon.svg` (2,5 MB).

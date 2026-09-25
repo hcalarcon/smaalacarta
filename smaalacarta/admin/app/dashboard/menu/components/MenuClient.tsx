@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import CategoryDialog from "./dialogs/CategoryDialog";
 import CategorySection from "@/components/menu/CategorySection";
@@ -140,7 +140,7 @@ export default function MenuClient({
 
   async function handleProductSubmit(data: {
     id?: string;
-    category_id: string;
+    category_id: string | null;
     name: string;
     description?: string;
     price: number;
@@ -160,6 +160,9 @@ export default function MenuClient({
       return;
     }
 
+    // Un producto nuevo siempre nace dentro de una categoría (ADMIN-MENU-1).
+    if (!data.category_id) return;
+
     await createProductAction(businessId, {
       category_id: data.category_id,
       name: data.name,
@@ -174,7 +177,6 @@ export default function MenuClient({
 
   function handleEditProduct(product: Product) {
     setEditingProduct(product);
-    console.log(editingProduct, product);
     setProductDialogOpen(true);
   }
 
@@ -240,6 +242,7 @@ export default function MenuClient({
         }}
         mode={editingProduct ? "edit" : "create"}
         initialData={editingProduct ?? undefined}
+        categoryId={selectedCategoryId}
         onSubmit={handleProductSubmit}
       />
     </>

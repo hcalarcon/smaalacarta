@@ -83,11 +83,11 @@ Si algo falla al aplicar una migración: vaciar la base propia, corregir la migr
 
 ## Etapa 5 — Que el admin compile
 
-- [ ] [por asignar] Terminar lo de `category_id` en productos (hoy hay 7 errores de TypeScript y 2 de lint)
-- [ ] [por asignar] Tipar `Product.category_id` como nullable (se pone en null al borrar la categoría)
-- [ ] [por asignar] `npm run lint` y `npm run build` en verde
-- [ ] [por asignar] Quitar los `continue-on-error` del CI para lint y build del admin
-- [ ] [por asignar] PR hacia `main`
+- [x] [herni] Terminar lo de `category_id` en productos (eran 7 errores de TypeScript y 2 de lint). De paso se borró `/dashboard/products`, una pantalla vieja fuera del menú que creaba productos sin categoría
+- [x] [herni] Tipar `Product.category_id` como nullable (se pone en null al borrar la categoría)
+- [x] [herni] `npm run lint` y `npm run build` en verde
+- [x] [herni] Quitar los `continue-on-error` del CI para lint y build del admin
+- [ ] [herni] PR hacia `main`
 
 ## Etapa 6 — Roadmap del producto
 
