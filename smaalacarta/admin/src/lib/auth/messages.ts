@@ -17,6 +17,9 @@ const BY_CODE: Record<string, string> = {
   same_password: "La contraseña nueva tiene que ser distinta de la actual.",
   otp_expired: "El link venció. Pedí uno nuevo.",
   session_not_found: "Tu sesión venció. Volvé a iniciar sesión.",
+  // No es un código de Supabase: lo produce nuestro cliente de servicio.
+  service_key_missing:
+    "Falta configurar la clave de servicio del servidor. Avisale a quien administra el sistema.",
 };
 
 export function authErrorMessage(error: { code?: string; message?: string }) {

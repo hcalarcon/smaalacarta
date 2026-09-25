@@ -131,6 +131,18 @@ Todo el código vive bajo `smaalacarta/`, en tres proyectos sin build compartido
   `src/lib/auth/access.ts`. Las pantallas están en `app/(auth)/` (login, registro,
   recuperar, restablecer) y sus Server Actions en `app/(auth)/actions.ts`. Un
   usuario sin negocio va a `/sin-negocio`, nunca en bucle a `/login`.
+- **Superadmin** (`/superadmin`): el equipo de SMA a la Carta crea los negocios y sus
+  cuentas; no hay registro público. `super_admins` (tabla sin escritura desde la
+  app) + `is_super_admin()` y `create_business_with_owner()` en la migración
+  `*_superadmin.sql`. Las reglas de alta están en `src/lib/superadmin/accounts.ts`
+  con dependencias inyectadas, y `src/lib/superadmin/deps.ts` las conecta a Supabase.
+  `SUPABASE_SERVICE_ROLE_KEY` (solo servidor, `src/lib/supabase-admin.ts` con
+  `server-only`) se usa **únicamente** para invitar cuentas y después de comprobar
+  que quien pide es superadmin. Los links de invitación y de recuperación entran por
+  `/auth/confirm` (`token_hash`), no por `/auth/callback`.
+- **Tests contra Postgres real**: `src/test/db.ts` levanta PGlite con los stubs de
+  Supabase y aplica las migraciones; `src/lib/db/*.test.ts` prueban el RLS. Toda
+  migración con políticas nuevas se prueba ahí.
 - **Multi-negocio**: `getCurrentBusiness()` resuelve usuario → `business_users`
   (con `role`) → `businesses`; las páginas del panel usan `requireBusiness()`.
   Toda tabla de recursos (`categories`, `products`, `promotions`, `orders`) se filtra

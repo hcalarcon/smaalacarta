@@ -1,6 +1,5 @@
 "use server";
 
-import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
 import { authErrorMessage } from "@/lib/auth/messages";
@@ -10,6 +9,7 @@ import {
   validateLogin,
   validateNewPassword,
 } from "@/lib/auth/validation";
+import { siteOrigin } from "@/lib/site-origin";
 import { createClient } from "@/lib/supabase-server";
 
 export type AuthFormState = {
@@ -23,17 +23,6 @@ export type AuthFormState = {
 function text(formData: FormData, name: string) {
   const value = formData.get(name);
   return typeof value === "string" ? value : "";
-}
-
-// Los links de los mails vuelven a esta app; el origen sale del request.
-async function siteOrigin() {
-  const requestHeaders = await headers();
-  const origin = requestHeaders.get("origin");
-  if (origin) return origin;
-
-  const host = requestHeaders.get("host");
-  const protocol = host?.startsWith("localhost") ? "http" : "https";
-  return `${protocol}://${host}`;
 }
 
 export async function loginAction(

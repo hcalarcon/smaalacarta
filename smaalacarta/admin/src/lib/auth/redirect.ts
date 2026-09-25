@@ -8,12 +8,14 @@ export function safeNextPath(next: string | null | undefined) {
   // Un salto de línea o una barra invertida permiten colar otro destino.
   if (/[\r\n\\]/.test(next)) return DEFAULT_PATH;
 
-  const isPanelPath =
-    next === "/dashboard" ||
-    next.startsWith("/dashboard/") ||
-    next.startsWith("/dashboard?");
+  const isAllowedPath = ["/dashboard", "/superadmin"].some(
+    (prefix) =>
+      next === prefix ||
+      next.startsWith(`${prefix}/`) ||
+      next.startsWith(`${prefix}?`),
+  );
 
-  return isPanelPath ? next : DEFAULT_PATH;
+  return isAllowedPath ? next : DEFAULT_PATH;
 }
 
 // Destino después de abrir el link de un mail (confirmar cuenta o recuperar
