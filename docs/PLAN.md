@@ -57,13 +57,13 @@ Si algo falla al aplicar una migración: vaciar la base propia, corregir la migr
 
 ## Etapa 3 — Ordenar las ramas y activar las reglas
 
-- [ ] [herni] Commitear el trabajo pendiente (autenticación, estética del admin, contrato y documentos) en una rama y pushearla
-- [ ] [herni] Crear `dev-herni` y `dev-fede` desde ese mismo punto y pushearlas
-- [ ] [herni] PR `dev-herni` → `main`, mergeado con merge commit. Como el repo todavía no tiene reglas activas, este es el último PR sin ellas. Fede lo puede mirar, pero no lo bloquea
-- [ ] [herni] Aplicar los rulesets (`.github/rulesets/main.json` y `dev.json`) y verificar (ver `BRANCHING.md`)
+- [x] [herni] Commitear el trabajo pendiente (autenticación, estética del admin, contrato y documentos) en una rama y pushearla
+- [x] [herni] Crear `dev-herni` y `dev-fede` desde ese mismo punto y pushearlas
+- [x] [herni] PR `dev-herni` → `main`, mergeado con merge commit. Como el repo todavía no tiene reglas activas, este es el último PR sin ellas. Fede lo puede mirar, pero no lo bloquea
+- [x] [herni] Aplicar los rulesets (`.github/rulesets/main.json` y `dev.json`) y verificar (ver `BRANCHING.md`)
 - [ ] [herni] Borrar las ramas viejas: `development`, `feat/supabase-esquema`, `feat/admin-auth-estetica` y `docs/flujo-de-trabajo`
 - [ ] [fede] `git fetch`, cambiarse a `dev-fede` y traer `main`
-- [ ] [herni] Opcional: instalar GitHub CLI (`winget install GitHub.cli` y `gh auth login`) para que Claude Code maneje los PRs
+- [x] [herni] Opcional: instalar GitHub CLI (`winget install GitHub.cli` y `gh auth login`) para que Claude Code maneje los PRs
 
 ## Etapa 4 — Que el admin compile
 
