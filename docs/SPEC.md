@@ -172,13 +172,21 @@ primer ingreso.
 ## ADMIN-MENU — Categorías y productos
 
 *Aplicado por `src/lib/db/categories.ts`, `src/lib/db/products.ts`,
-`src/lib/menu/product-fields.ts`, `app/dashboard/menu`. Cubierto por:
-`src/lib/menu/product-fields.test.ts` (ADMIN-MENU-1 y 2).*
+`src/lib/menu/product-fields.ts`, `src/lib/menu/ordering.ts`, `app/dashboard/menu`.
+Cubierto por: `src/lib/menu/product-fields.test.ts` (ADMIN-MENU-1 y 2),
+`src/lib/menu/ordering.test.ts` y `src/lib/db/ordering.test.ts` (ADMIN-MENU-3 a 5).*
 
 - **ADMIN-MENU-1** Un producto se crea siempre dentro de una categoría; la
   descripción vacía se guarda como nula y un producto nuevo nace activo.
 - **ADMIN-MENU-2** Editar un producto conserva su categoría, salvo que se indique
   otra de forma explícita.
+- **ADMIN-MENU-3** Las categorías y, dentro de cada una, los productos se muestran
+  en el orden que definió el negocio; los que todavía no tienen orden van al final,
+  del más viejo al más nuevo.
+- **ADMIN-MENU-4** Reordenar guarda la posición de cada elemento (0, 1, 2…) solo
+  dentro de su lista: las categorías del negocio, o los productos de una categoría.
+- **ADMIN-MENU-5** Un negocio no puede reordenar ni modificar las categorías o los
+  productos de otro.
 
 ## ADMIN-PEDIDOS — Pedidos
 
@@ -189,10 +197,24 @@ _Sin requisitos todavía._
 
 ## ADMIN-PROMOS — Promociones
 
-*Aplicado por `src/lib/db/promotions.ts`, `app/dashboard/promotions`. Cubierto
-por: pendiente.*
+*Aplicado por `supabase/migrations/*_orden_y_promociones.sql`,
+`src/lib/promotions/`, `src/lib/db/promotions.ts`, `app/dashboard/promotions`.
+Cubierto por: `src/lib/db/promotions.test.ts` (ADMIN-PROMOS-2, 3, 5 y 6) y
+`src/lib/promotions/*.test.ts` (ADMIN-PROMOS-1 y 4).*
 
-_Sin requisitos todavía._
+- **ADMIN-PROMOS-1** Una promoción es de tipo `percent` (descuento del 1 al 100 %
+  sobre cada producto) o `combo` (precio fijo mayor a 0 por el conjunto), tiene un
+  nombre y lleva al menos un producto.
+- **ADMIN-PROMOS-2** Los productos de una promoción se guardan en el orden elegido
+  y solo pueden ser del mismo negocio que la promoción.
+- **ADMIN-PROMOS-3** Guardar una promoción con sus productos es atómico: si algo
+  falla no queda una promoción a medias ni con productos de menos.
+- **ADMIN-PROMOS-4** El precio final de una promoción es la suma de sus productos
+  menos el descuento (`percent`) o el precio fijo (`combo`); el ahorro nunca es
+  negativo.
+- **ADMIN-PROMOS-5** Un negocio solo ve, edita y borra sus propias promociones.
+- **ADMIN-PROMOS-6** Borrar un producto lo saca de sus promociones; borrar una
+  promoción no borra sus productos.
 
 ---
 
