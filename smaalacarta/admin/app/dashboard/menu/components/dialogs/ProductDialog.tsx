@@ -76,11 +76,11 @@ export default function ProductDialog({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
         <div className="mb-6">
-          <h2 className="text-xl font-semibold text-slate-900">
+          <h2 className="text-xl font-semibold text-brand">
             {mode === "edit" ? "Editar producto" : "Nuevo producto"}
           </h2>
 
-          <p className="mt-1 text-sm text-slate-500">
+          <p className="mt-1 text-sm text-stone-500">
             {mode === "edit"
               ? "Modifica la información del producto."
               : "Completa los datos del producto."}
@@ -94,7 +94,7 @@ export default function ProductDialog({
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-2xl border border-slate-300 px-4 py-3"
+              className="w-full rounded-2xl border border-line-strong px-4 py-3"
               placeholder="Ej. Coca Cola"
               required
             />
@@ -108,7 +108,7 @@ export default function ProductDialog({
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-2xl border border-slate-300 px-4 py-3"
+              className="w-full rounded-2xl border border-line-strong px-4 py-3"
               rows={3}
               placeholder="Descripción opcional"
             />
@@ -123,7 +123,7 @@ export default function ProductDialog({
               step="0.01"
               value={price}
               onChange={(e) => setPrice(e.target.value)}
-              className="w-full rounded-2xl border border-slate-300 px-4 py-3"
+              className="w-full rounded-2xl border border-line-strong px-4 py-3"
               placeholder="3500"
               required
             />
@@ -142,7 +142,7 @@ export default function ProductDialog({
             <button
               type="button"
               onClick={onClose}
-              className="rounded-2xl border border-slate-300 px-4 py-2"
+              className="rounded-2xl border border-line-strong px-4 py-2"
             >
               Cancelar
             </button>
@@ -150,7 +150,7 @@ export default function ProductDialog({
             <button
               type="submit"
               disabled={loading}
-              className="rounded-2xl bg-slate-900 px-4 py-2 text-white disabled:opacity-50"
+              className="rounded-2xl bg-brand px-4 py-2 text-white disabled:opacity-50"
             >
               {loading
                 ? "Guardando..."

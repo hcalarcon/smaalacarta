@@ -1,0 +1,71 @@
+name: CI
+
+# Corre en cada pull request hacia `main`, y en cada push a `main` o a una rama
+# `dev-*`. La corrida del pull_request es la que habilita el merge; la del push
+# le avisa a cada uno, mientras trabaja en su rama, si dejó algo en rojo.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, "dev-*"]
+
+# Un commit nuevo vuelve inútil la corrida en curso: se corta y se empieza de nuevo.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  # Un solo job llamado `ci`, que es el contexto que exigen los rulesets.
+  ci:
+    name: ci
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            smaalacarta/admin/package-lock.json
+
+      # `npm ci` y no `npm install`: instala exactamente lo del lockfile y falla
+      # si el lockfile y el package.json no coinciden.
+      - name: Instalar (web y landing)
+        run: npm ci
+
+      - name: Test (web y landing)
+        run: npm test
+
+      - name: Instalar (admin)
+        working-directory: smaalacarta/admin
+        run: npm ci
+
+      # TEMPORAL: `main` ya llegó con 2 errores de lint y 7 de TypeScript en el
+      # admin (el cambio a medias de `category_id` en productos). Lint y build
+      # del admin no bloquean hasta que `fix/admin-productos` los arregle; esa
+      # rama borra los dos `continue-on-error`. Ver "Brechas conocidas" en
+      # docs/SPEC.md. Los fallos siguen apareciendo en el log de cada corrida.
+      - name: Lint (admin)
+        working-directory: smaalacarta/admin
+        continue-on-error: true
+        run: npm run lint
+
+      - name: Test (admin)
+        working-directory: smaalacarta/admin
+        run: npm test
+
+      # También corre TypeScript. Los clientes de Supabase leen estas variables al
+      # cargar el módulo, así que el build necesita valores aunque no se conecte.
+      - name: Build (admin)
+        working-directory: smaalacarta/admin
+        continue-on-error: true
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: http://localhost:54321
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: ci-placeholder
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: npm run build

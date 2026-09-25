@@ -29,11 +29,11 @@ export default function CategorySection({
   return (
     <details
       open
-      className="group rounded-3xl border border-slate-200 bg-slate-50/60 p-4"
+      className="group rounded-3xl border border-line bg-cream/60 p-4"
     >
       <summary className="flex cursor-pointer list-none items-center justify-between rounded-2xl px-2 py-2 transition hover:bg-white">
         <div>
-          <h2 className="text-2xl font-bold text-slate-900">{category.name}</h2>
+          <h2 className="text-2xl font-bold text-brand">{category.name}</h2>
 
           {category.products?.length === 0
             ? "Sin productos"
@@ -43,20 +43,20 @@ export default function CategorySection({
         <div className="flex items-center gap-2">
           <button
             onClick={onCreateProduct}
-            className="rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
+            className="rounded-2xl bg-brand px-4 py-2 text-sm font-medium text-white transition hover:opacity-90"
           >
             + Producto
           </button>
 
           <details className="relative">
-            <summary className="cursor-pointer list-none rounded-xl px-3 py-2 text-slate-500 transition hover:bg-slate-200">
+            <summary className="cursor-pointer list-none rounded-xl px-3 py-2 text-stone-500 transition hover:bg-line">
               ⋮
             </summary>
 
-            <div className="absolute right-0 top-12 z-10 w-44 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">
+            <div className="absolute right-0 top-12 z-10 w-44 rounded-2xl border border-line bg-white p-2 shadow-xl">
               <button
                 onClick={onEdit}
-                className="w-full rounded-xl px-3 py-2 text-left text-sm transition hover:bg-slate-100"
+                className="w-full rounded-xl px-3 py-2 text-left text-sm transition hover:bg-brand-soft"
               >
                 Editar
               </button>
@@ -84,7 +84,7 @@ export default function CategorySection({
           ))}
         </div>
       ) : (
-        <div className="mt-4 rounded-2xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+        <div className="mt-4 rounded-2xl border border-dashed border-line-strong p-6 text-center text-sm text-stone-500">
           No hay productos cargados en esta categoría.
         </div>
       )}

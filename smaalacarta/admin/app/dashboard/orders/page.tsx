@@ -2,12 +2,12 @@ export default function OrdersPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Pedidos</h1>
+        <h1 className="text-3xl font-bold text-brand">Pedidos</h1>
 
-        <p className="mt-2 text-slate-500">Administración de pedidos.</p>
+        <p className="mt-2 text-stone-500">Administración de pedidos.</p>
       </div>
 
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-3xl border border-line bg-white p-6 shadow-sm">
         Próximamente tablero de pedidos.
       </div>
     </div>
@@ -131,9 +131,9 @@ export default function OrdersPage() {
 
 //   return (
 //     <div className="space-y-6 px-4 py-6 sm:px-8">
-//       <div className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm shadow-slate-200/40 backdrop-blur-lg">
-//         <h1 className="text-2xl font-semibold text-slate-900">Órdenes</h1>
-//         <p className="mt-2 text-sm text-slate-600">
+//       <div className="rounded-3xl border border-line bg-white/90 p-6 shadow-sm shadow-stone-200/40 backdrop-blur-lg">
+//         <h1 className="text-2xl font-semibold text-brand">Órdenes</h1>
+//         <p className="mt-2 text-sm text-stone-600">
 //           Administra el flujo de pedidos para tu negocio.
 //         </p>
 //       </div>

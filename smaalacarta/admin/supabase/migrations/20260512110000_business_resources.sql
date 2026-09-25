@@ -1,4 +1,6 @@
--- Migration: create business-scoped tables and RLS policies for admin resources.
+-- Tablas de cada negocio (categorías, productos, promociones, pedidos) y sus
+-- políticas de RLS: un usuario solo lee y escribe filas de los negocios de los
+-- que es miembro (ADMIN-AUTH-2).
 
 -- Categories table
 CREATE TABLE IF NOT EXISTS public.categories (
@@ -8,12 +10,12 @@ CREATE TABLE IF NOT EXISTS public.categories (
   description text,
   active boolean NOT NULL DEFAULT true,
   slug text,
+  sort_order integer,
   created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  -- Destino de la FK compuesta de products.
+  UNIQUE (id, business_id)
 );
-
-ALTER TABLE public.categories
-  ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 
 CREATE INDEX IF NOT EXISTS categories_business_id_idx ON public.categories(business_id);
 
@@ -25,15 +27,22 @@ CREATE TABLE IF NOT EXISTS public.products (
   description text,
   price numeric(10,2) NOT NULL DEFAULT 0,
   active boolean NOT NULL DEFAULT true,
-  category_id uuid references public.categories(id) on delete set null,
+  featured boolean DEFAULT false,
+  image_url text,
+  category_id uuid,
   created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  -- La categoría tiene que ser del mismo negocio que el producto. Las FK no
+  -- pasan por RLS, así que sin esto un producto podría apuntar a una categoría
+  -- ajena. Al borrar la categoría solo se anula category_id.
+  CONSTRAINT products_category_id_fkey
+    FOREIGN KEY (category_id, business_id)
+    REFERENCES public.categories(id, business_id)
+    ON DELETE SET NULL (category_id)
 );
 
-ALTER TABLE public.products
-  ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
-
 CREATE INDEX IF NOT EXISTS products_business_id_idx ON public.products(business_id);
+CREATE INDEX IF NOT EXISTS products_category_id_idx ON public.products(category_id);
 
 -- Promotions table
 CREATE TABLE IF NOT EXISTS public.promotions (
@@ -47,9 +56,6 @@ CREATE TABLE IF NOT EXISTS public.promotions (
   created_at timestamptz NOT NULL DEFAULT now(),
   updated_at timestamptz NOT NULL DEFAULT now()
 );
-
-ALTER TABLE public.promotions
-  ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
 
 CREATE INDEX IF NOT EXISTS promotions_business_id_idx ON public.promotions(business_id);
 
@@ -66,9 +72,6 @@ CREATE TABLE IF NOT EXISTS public.orders (
   updated_at timestamptz NOT NULL DEFAULT now()
 );
 
-ALTER TABLE public.orders
-  ADD COLUMN IF NOT EXISTS updated_at timestamptz NOT NULL DEFAULT now();
-
 CREATE INDEX IF NOT EXISTS orders_business_id_idx ON public.orders(business_id);
 
 -- Enable Row Level Security on each resource table.
@@ -77,7 +80,11 @@ ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.promotions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.orders ENABLE ROW LEVEL SECURITY;
 
--- Policies for categories
+-- Políticas. La fila se nombra siempre por su tabla (`categories.business_id`):
+-- un `business_id` suelto dentro de la subconsulta se resolvería contra `bu` y
+-- la condición sería siempre verdadera.
+
+-- Categories
 DROP POLICY IF EXISTS categories_select ON public.categories;
 CREATE POLICY categories_select
 ON public.categories
@@ -86,8 +93,8 @@ USING (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
-      AND bu.business_id = public.categories.business_id
+    WHERE bu.user_id = (select auth.uid())
+      AND bu.business_id = categories.business_id
   )
 );
 
@@ -99,8 +106,8 @@ WITH CHECK (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
-      AND bu.business_id = business_id
+    WHERE bu.user_id = (select auth.uid())
+      AND bu.business_id = categories.business_id
   )
 );
 
@@ -112,16 +119,16 @@ USING (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
-      AND bu.business_id = public.categories.business_id
+    WHERE bu.user_id = (select auth.uid())
+      AND bu.business_id = categories.business_id
   )
 )
 WITH CHECK (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
-      AND bu.business_id = business_id
+    WHERE bu.user_id = (select auth.uid())
+      AND bu.business_id = categories.business_id
   )
 );
 
@@ -133,13 +140,12 @@ USING (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
-      AND bu.business_id = public.categories.business_id
+    WHERE bu.user_id = (select auth.uid())
+      AND bu.business_id = categories.business_id
   )
 );
 
--- Products policies
-
+-- Products
 DROP POLICY IF EXISTS products_select ON public.products;
 CREATE POLICY products_select
 ON public.products
@@ -148,8 +154,8 @@ USING (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
-      AND bu.business_id = public.products.business_id
+    WHERE bu.user_id = (select auth.uid())
+      AND bu.business_id = products.business_id
   )
 );
 
@@ -161,8 +167,8 @@ WITH CHECK (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
-      AND bu.business_id = business_id
+    WHERE bu.user_id = (select auth.uid())
+      AND bu.business_id = products.business_id
   )
 );
 
@@ -174,16 +180,16 @@ USING (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
-      AND bu.business_id = public.products.business_id
+    WHERE bu.user_id = (select auth.uid())
+      AND bu.business_id = products.business_id
   )
 )
 WITH CHECK (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
-      AND bu.business_id = business_id
+    WHERE bu.user_id = (select auth.uid())
+      AND bu.business_id = products.business_id
   )
 );
 
@@ -195,13 +201,12 @@ USING (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
-      AND bu.business_id = public.products.business_id
+    WHERE bu.user_id = (select auth.uid())
+      AND bu.business_id = products.business_id
   )
 );
 
--- Promotions policies
-
+-- Promotions
 DROP POLICY IF EXISTS promotions_select ON public.promotions;
 CREATE POLICY promotions_select
 ON public.promotions
@@ -210,8 +215,8 @@ USING (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
-      AND bu.business_id = public.promotions.business_id
+    WHERE bu.user_id = (select auth.uid())
+      AND bu.business_id = promotions.business_id
   )
 );
 
@@ -223,8 +228,8 @@ WITH CHECK (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
-      AND bu.business_id = business_id
+    WHERE bu.user_id = (select auth.uid())
+      AND bu.business_id = promotions.business_id
   )
 );
 
@@ -236,16 +241,16 @@ USING (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
-      AND bu.business_id = public.promotions.business_id
+    WHERE bu.user_id = (select auth.uid())
+      AND bu.business_id = promotions.business_id
   )
 )
 WITH CHECK (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
-      AND bu.business_id = business_id
+    WHERE bu.user_id = (select auth.uid())
+      AND bu.business_id = promotions.business_id
   )
 );
 
@@ -257,13 +262,12 @@ USING (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
-      AND bu.business_id = public.promotions.business_id
+    WHERE bu.user_id = (select auth.uid())
+      AND bu.business_id = promotions.business_id
   )
 );
 
--- Orders policies
-
+-- Orders
 DROP POLICY IF EXISTS orders_select ON public.orders;
 CREATE POLICY orders_select
 ON public.orders
@@ -272,8 +276,8 @@ USING (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
-      AND bu.business_id = public.orders.business_id
+    WHERE bu.user_id = (select auth.uid())
+      AND bu.business_id = orders.business_id
   )
 );
 
@@ -285,8 +289,8 @@ WITH CHECK (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
-      AND bu.business_id = business_id
+    WHERE bu.user_id = (select auth.uid())
+      AND bu.business_id = orders.business_id
   )
 );
 
@@ -298,16 +302,16 @@ USING (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
-      AND bu.business_id = public.orders.business_id
+    WHERE bu.user_id = (select auth.uid())
+      AND bu.business_id = orders.business_id
   )
 )
 WITH CHECK (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
-      AND bu.business_id = business_id
+    WHERE bu.user_id = (select auth.uid())
+      AND bu.business_id = orders.business_id
   )
 );
 
@@ -319,7 +323,7 @@ USING (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
-      AND bu.business_id = public.orders.business_id
+    WHERE bu.user_id = (select auth.uid())
+      AND bu.business_id = orders.business_id
   )
 );

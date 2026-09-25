@@ -1,22 +1,30 @@
-import DashboardSidebar from "@/components/layout/DashboardSidebar";
-import DashboardHeader from "@/components/layout/DashboardHeader";
+import { redirect } from "next/navigation";
 
-export default function DashboardLayout({
+import DashboardShell from "@/components/layout/DashboardShell";
+import { accessState } from "@/lib/auth/access";
+import { getCurrentBusiness } from "@/lib/get-current-business";
+
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const current = await getCurrentBusiness();
+
+  const state = accessState({
+    user: current?.user ?? null,
+    business: current?.business ?? null,
+  });
+
+  if (state === "login") redirect("/login");
+  if (state === "sin-negocio") redirect("/sin-negocio");
+
   return (
-    <div className="min-h-screen bg-slate-100 text-slate-900">
-      <div className="flex min-h-screen">
-        <DashboardSidebar />
-
-        <main className="flex-1">
-          <DashboardHeader />
-
-          <div className="p-4 md:p-6 lg:p-8">{children}</div>
-        </main>
-      </div>
-    </div>
+    <DashboardShell
+      businessName={current!.business!.name}
+      userEmail={current!.user.email ?? ""}
+    >
+      {children}
+    </DashboardShell>
   );
 }
