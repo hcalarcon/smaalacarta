@@ -86,7 +86,7 @@ Pasos de Supabase:
 - [x] [herni] Redirect URL `http://localhost:3000/auth/callback`
 - [x] [herni] Cargar el primer superadmin (SQL en el encabezado de la migración)
 - [x] [herni] `SUPABASE_SERVICE_ROLE_KEY` en `admin/.env.local`
-- [ ] [herni] **Probar a mano**: entrar como superadmin (debe llevarte a `/superadmin` o mostrar el botón "Superadmin"), crear un negocio con un email alternativo, copiar la contraseña temporal, entrar en una ventana privada con esa cuenta (debe llevarte a "Elegí tu contraseña"), elegir una propia y ver su panel; restablecer su contraseña desde el detalle del negocio; y con un usuario común comprobar que `/superadmin` lo manda a `/dashboard`
+- [x] [herni] **Probar a mano** (hecho: alta con contraseña temporal, ingreso y cambio de contraseña): entrar como superadmin (debe llevarte a `/superadmin` o mostrar el botón "Superadmin"), crear un negocio con un email alternativo, copiar la contraseña temporal, entrar en una ventana privada con esa cuenta (debe llevarte a "Elegí tu contraseña"), elegir una propia y ver su panel; restablecer su contraseña desde el detalle del negocio; y con un usuario común comprobar que `/superadmin` lo manda a `/dashboard`
 - [ ] [herni] Cuando haya un SMTP propio (plan pago o proveedor externo): reevaluar `/recuperar` para clientes y las plantillas de mail. Hasta entonces, la recuperación la hace el superadmin
 
 ## Etapa 5 — Que el admin compile
