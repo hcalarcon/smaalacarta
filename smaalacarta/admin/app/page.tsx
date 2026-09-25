@@ -1,9 +1,7 @@
-import { supabase } from "@/lib/supabase";
+import { redirect } from "next/navigation";
 
-export default async function Home() {
-  const { data, error } = await supabase.from("businesses").select("*");
-
-  console.log(data, error);
-
-  return <div>conexión lista</div>;
+// La raíz no muestra nada propio: el proxy manda a /login a quien no tiene
+// sesión, y con sesión el panel decide si hay negocio o no.
+export default function Home() {
+  redirect("/dashboard");
 }

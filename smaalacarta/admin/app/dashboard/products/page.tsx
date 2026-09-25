@@ -4,7 +4,7 @@ import ResourceForm, {
   FieldDefinition,
 } from "../../../src/components/resource/ResourceForm";
 import ResourceList from "../../../src/components/resource/ResourceList";
-import { getCurrentBusiness } from "@/lib/get-current-business";
+import { requireBusiness } from "@/lib/get-current-business";
 import {
   createProduct,
   deleteProduct,
@@ -18,10 +18,7 @@ export default async function ProductsPage({
 }: {
   searchParams: { edit?: string | string[] };
 }) {
-  const current = await getCurrentBusiness();
-  if (!current) {
-    redirect("/login");
-  }
+  const current = await requireBusiness();
 
   const businessId = current.business.id;
   const products = await getProducts(businessId);
@@ -94,9 +91,9 @@ export default async function ProductsPage({
 
   return (
     <div className="space-y-6 px-4 py-6 sm:px-8">
-      <div className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm shadow-slate-200/40 backdrop-blur-lg">
-        <h1 className="text-2xl font-semibold text-slate-900">Productos</h1>
-        <p className="mt-2 text-sm text-slate-600">
+      <div className="rounded-3xl border border-line bg-white/90 p-6 shadow-sm shadow-stone-200/40 backdrop-blur-lg">
+        <h1 className="text-2xl font-semibold text-brand">Productos</h1>
+        <p className="mt-2 text-sm text-stone-600">
           Gestiona el catálogo de productos de tu negocio.
         </p>
       </div>

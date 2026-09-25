@@ -1,26 +1,41 @@
 @import "tailwindcss";
 
+/*
+ * Paleta de la landing (smaalacarta/landing/landing.css) para que el admin se
+ * vea de la misma marca. Sin modo oscuro: la landing tampoco lo tiene.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #faf8f3;
+  --foreground: #1f2937;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --font-sans: var(--font-inter), system-ui, -apple-system, "Segoe UI", sans-serif;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Marca */
+  --color-brand: #5a4a3a;
+  --color-brand-hover: #4a3d30;
+  --color-brand-soft: #f3ece3;
+  --color-accent: #d97706;
+  --color-accent-hover: #b45309;
+  --color-accent-soft: #fef3e2;
+
+  /* Superficies y bordes cálidos */
+  --color-cream: #faf8f3;
+  --color-line: #e5d4c1;
+  --color-line-strong: #cdb79f;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+}
+
+/* Foco visible y consistente en todo el admin. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
 }

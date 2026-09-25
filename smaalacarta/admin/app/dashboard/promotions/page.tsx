@@ -2,12 +2,12 @@ export default function PromotionsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-slate-900">Promociones</h1>
+        <h1 className="text-3xl font-bold text-brand">Promociones</h1>
 
-        <p className="mt-2 text-slate-500">Gestión de promociones.</p>
+        <p className="mt-2 text-stone-500">Gestión de promociones.</p>
       </div>
 
-      <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-3xl border border-line bg-white p-6 shadow-sm">
         Próximamente promociones.
       </div>
     </div>
@@ -120,9 +120,9 @@ export default function PromotionsPage() {
 
 //   return (
 //     <div className="space-y-6 px-4 py-6 sm:px-8">
-//       <div className="rounded-3xl border border-slate-200 bg-white/90 p-6 shadow-sm shadow-slate-200/40 backdrop-blur-lg">
-//         <h1 className="text-2xl font-semibold text-slate-900">Promociones</h1>
-//         <p className="mt-2 text-sm text-slate-600">
+//       <div className="rounded-3xl border border-line bg-white/90 p-6 shadow-sm shadow-stone-200/40 backdrop-blur-lg">
+//         <h1 className="text-2xl font-semibold text-brand">Promociones</h1>
+//         <p className="mt-2 text-sm text-stone-600">
 //           Controla descuentos y campañas activas para tu negocio.
 //         </p>
 //       </div>

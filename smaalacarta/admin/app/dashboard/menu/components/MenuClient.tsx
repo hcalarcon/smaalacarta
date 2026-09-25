@@ -183,9 +183,9 @@ export default function MenuClient({
       <div className="space-y-10">
         <section className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-slate-900">Menú</h1>
+            <h1 className="text-3xl font-bold text-brand">Menú</h1>
 
-            <p className="mt-2 text-slate-500">
+            <p className="mt-2 text-stone-500">
               Administra productos y categorías.
             </p>
           </div>
