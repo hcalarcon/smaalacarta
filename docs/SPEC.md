@@ -38,10 +38,15 @@ comportamiento que ya existe, una app por rama:
 
 ## RUTAS — Qué negocio y qué vista abre cada URL
 
-*Aplicado por `web/vercel.json` y la resolución de negocio de
-`web/apps/menu-app`. Cubierto por: pendiente.*
+*Aplicado por `web/vercel.json`, `web/apps/menu-app/app.js` y
+`web/apps/menu-app/lib/hostname.js`. Cubierto por: `lib/hostname.test.js`
+(RUTAS-1 y 2).*
 
-_Sin requisitos todavía._
+- **RUTAS-1** Un negocio se abre desde `<slug>.smaalacarta.com.ar` (o
+  `.smaalacarta.online`) sin declararlo en el código: el subdominio es su slug. El
+  parámetro `?cliente=<slug>` sigue sirviendo para desarrollo.
+- **RUTAS-2** Los subdominios reservados (`www`, `admin`, `app`, `api`, `demo`…) no
+  son negocios; los de las demos (`moderno`, `clasico`, `minimal`) abren su demo.
 
 ## HORARIO — Abierto o cerrado
 
@@ -81,6 +86,11 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   configurado, no lo tiene o falla, usa los JSON locales como hasta ahora.
 - **PUBLICO-7** Lo que llega de Supabase se completa con valores por defecto para
   que el menú nunca reciba categorías o ítems sin lista.
+- **PUBLICO-8** La dirección y las redes llegan como `direccion` y `redes`; un cierre
+  temporal vigente llega como `cierre`, con su mensaje y la fecha de reapertura. Un
+  cierre cuya fecha de reapertura ya llegó no se entrega.
+- **PUBLICO-9** El menú muestra la dirección y las redes, y si el negocio está
+  cerrado temporalmente lo dice con su mensaje y no deja enviar pedidos.
 
 ## BUSQUEDA — Buscador
 
@@ -194,6 +204,9 @@ primer ingreso.
   de un negocio: se genera una temporal nueva, se muestra una sola vez y la
   persona vuelve a quedar obligada a cambiarla. No puede hacerlo con otro
   superadmin ni con quien no es miembro de ese negocio.
+- **ADMIN-SUPER-12** Un negocio no puede llamarse con un slug reservado (`www`,
+  `admin`, `app`, `api`, `demo`, `moderno`, `clasico`, `minimal`…): serían
+  subdominios que no abren un negocio.
 
 ## ADMIN-MENU — Categorías y productos
 
@@ -213,6 +226,8 @@ Cubierto por: `src/lib/menu/product-fields.test.ts` (ADMIN-MENU-1 y 2),
   dentro de su lista: las categorías del negocio, o los productos de una categoría.
 - **ADMIN-MENU-5** Un negocio no puede reordenar ni modificar las categorías o los
   productos de otro.
+- **ADMIN-MENU-6** Un producto puede tener una imagen; quitarla la deja en blanco, y
+  editar el producto sin tocar la imagen la conserva.
 
 ## ADMIN-CONFIG — Configuración del negocio
 
@@ -231,6 +246,15 @@ por: `src/lib/db/settings.test.ts` (ADMIN-CONFIG-1, 3 y 4, contra Postgres real)
 - **ADMIN-CONFIG-3** Guardar la configuración y el WhatsApp del negocio es atómico.
 - **ADMIN-CONFIG-4** Un negocio nuevo no es público: su menú solo se ve desde
   Supabase cuando su dueño lo publica.
+- **ADMIN-CONFIG-5** La dirección (hasta 200 caracteres), el Instagram y el Facebook
+  son opcionales. Las redes se guardan como direcciones `https` de esas redes; se
+  acepta escribir `@usuario` o el usuario a secas y se convierte.
+- **ADMIN-CONFIG-6** Un negocio puede cerrar temporalmente, con un mensaje opcional
+  (hasta 200 caracteres) y una fecha de reapertura opcional. Con fecha, el cierre
+  termina solo al llegar ese día.
+- **ADMIN-CONFIG-7** Solo los miembros de un negocio suben, cambian y borran archivos
+  de su carpeta del bucket de imágenes; solo se aceptan JPG, PNG y WebP de hasta
+  2 MB. Nadie puede escribir fuera de la carpeta de su negocio.
 
 ## ADMIN-PEDIDOS — Pedidos
 

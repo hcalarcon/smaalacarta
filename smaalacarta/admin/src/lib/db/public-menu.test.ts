@@ -58,6 +58,12 @@ beforeAll(async () => {
       ('${NEG_BETO}', true, 'moderno', null, '#5a4a3a', '#d97706', null, '{}'),
       ('${NEG_PRIVADO}', false, 'moderno', null, '#5a4a3a', '#d97706', null, '{}');
 
+    update business_settings
+    set address = 'Calle 123, Córdoba',
+        instagram_url = 'https://www.instagram.com/ana_resto',
+        facebook_url = 'https://www.facebook.com/anaresto'
+    where business_id = '${NEG_ANA}';
+
     -- Ana: "Comidas" va antes que "Bebidas" por su orden; "Vacía" y "Oculta" no salen.
     insert into categories (id, business_id, name, description, active, sort_order, created_at) values
       ('c1000000-0000-0000-0000-000000000001', '${NEG_ANA}', 'Bebidas', 'Frías y calientes', true, 1, '2026-01-01'),
@@ -249,6 +255,11 @@ describe("configuración — PUBLICO-4", () => {
       colores: { primary: "#112233", secondary: "#445566" },
       header: { imagen: "https://ejemplo.com/cabecera.jpg" },
       horarios: { lunes: ["12:00-15:00"], domingo: [] },
+      direccion: "Calle 123, Córdoba",
+      redes: {
+        instagram: "https://www.instagram.com/ana_resto",
+        facebook: "https://www.facebook.com/anaresto",
+      },
     });
   });
 
@@ -259,6 +270,60 @@ describe("configuración — PUBLICO-4", () => {
     expect(menu!.config).not.toHaveProperty("header");
     expect(menu!.config).not.toHaveProperty("descripcion");
     expect(menu!.config.template).toBe("moderno");
+  });
+});
+
+describe("dirección, redes y cierre temporal — PUBLICO-8", () => {
+  const TODAY = "(now() at time zone 'America/Argentina/Buenos_Aires')::date";
+
+  async function set(assignments: string) {
+    await db.exec(`update business_settings set ${assignments} where business_id = '${NEG_BETO}'`);
+    return (await publicMenu("beto"))!.config as Record<string, unknown>;
+  }
+
+  it("sin dirección ni redes esas claves no aparecen", async () => {
+    const config = await set(
+      "address = null, instagram_url = null, facebook_url = null, temporarily_closed = false, closed_message = null, reopens_on = null",
+    );
+
+    expect(config).not.toHaveProperty("direccion");
+    expect(config).not.toHaveProperty("redes");
+    expect(config).not.toHaveProperty("cierre");
+  });
+
+  it("con una sola red, solo esa aparece", async () => {
+    const config = await set("instagram_url = 'https://www.instagram.com/beto'");
+    expect(config.redes).toEqual({ instagram: "https://www.instagram.com/beto" });
+  });
+
+  it("un cierre temporal llega con su mensaje y la fecha de reapertura", async () => {
+    const config = await set(
+      `temporarily_closed = true, closed_message = 'Vacaciones', reopens_on = ${TODAY} + 5`,
+    );
+    const cierre = config.cierre as { mensaje: string; hasta: string };
+
+    expect(cierre.mensaje).toBe("Vacaciones");
+    expect(cierre.hasta).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+  });
+
+  it("sin mensaje ni fecha, el cierre llega igual (vacío)", async () => {
+    const config = await set("temporarily_closed = true, closed_message = null, reopens_on = null");
+    expect(config.cierre).toEqual({});
+  });
+
+  it("el día de la reapertura ya no está cerrado", async () => {
+    const config = await set(`temporarily_closed = true, closed_message = 'x', reopens_on = ${TODAY}`);
+    expect(config).not.toHaveProperty("cierre");
+  });
+
+  it("un cierre con fecha pasada no se entrega", async () => {
+    const config = await set(`temporarily_closed = true, closed_message = 'x', reopens_on = ${TODAY} - 3`);
+    expect(config).not.toHaveProperty("cierre");
+  });
+
+  it("sin cerrar no hay cierre aunque haya mensaje y fecha", async () => {
+    const config = await set(`temporarily_closed = false, closed_message = 'x', reopens_on = ${TODAY} + 5`);
+    expect(config).not.toHaveProperty("cierre");
   });
 });
 

@@ -21,6 +21,17 @@ type Settings = {
   header?: string | null;
   schedule?: unknown;
   whatsapp?: string;
+  address?: string;
+  instagram?: string | null;
+  facebook?: string | null;
+  closed?: boolean;
+  closedMessage?: string;
+  reopensOn?: string | null;
+};
+
+const sqlText = (value: string | null | undefined, fallback: string | null) => {
+  const v = value === undefined ? fallback : value;
+  return v === null ? "null" : "'" + v.replace(/'/g, "''") + "'";
 };
 
 // Llama a la función que guarda la configuración, como lo haría la app.
@@ -38,7 +49,13 @@ function save(user: string | null, s: Settings = {}) {
        '${s.secondary ?? "#9A6CE0"}',
        ${header === null ? "null" : `'${header}'`},
        '${JSON.stringify(s.schedule ?? { lunes: ["12:00-15:00", "20:00-01:00"], domingo: [] })}'::jsonb,
-       '${s.whatsapp ?? "5493510000000"}')`,
+       '${s.whatsapp ?? "5493510000000"}',
+       ${sqlText(s.address, "Calle 123")},
+       ${sqlText(s.instagram, "https://www.instagram.com/casa_resto")},
+       ${sqlText(s.facebook, "https://www.facebook.com/casaresto")},
+       ${s.closed ?? false},
+       ${sqlText(s.closedMessage, "")},
+       ${sqlText(s.reopensOn, null)}::date)`,
   );
 }
 
@@ -173,6 +190,90 @@ describe("formato de los datos — ADMIN-CONFIG-2", () => {
   it("acepta no tener imagen de cabecera ni horarios", async () => {
     const r = await save(ANA, { header: null, schedule: {} });
     expect(r.ok).toBe(true);
+  });
+});
+
+describe("dirección y redes — ADMIN-CONFIG-5", () => {
+  it("se guardan la dirección y las redes", async () => {
+    const r = await save(ANA, {
+      address: "San Martín 100",
+      instagram: "https://www.instagram.com/mi.negocio",
+      facebook: "https://www.facebook.com/minegocio",
+    });
+    expect(r.ok).toBe(true);
+
+    const s = await db.query<{ address: string; instagram_url: string; facebook_url: string }>(
+      `select address, instagram_url, facebook_url from business_settings where business_id = '${NEG_ANA}'`,
+    );
+    expect(s.rows[0]).toEqual({
+      address: "San Martín 100",
+      instagram_url: "https://www.instagram.com/mi.negocio",
+      facebook_url: "https://www.facebook.com/minegocio",
+    });
+  });
+
+  it("son opcionales", async () => {
+    expect((await save(ANA, { address: "", instagram: null, facebook: null })).ok).toBe(true);
+    const s = await db.query<{ address: string | null; instagram_url: string | null }>(
+      `select address, instagram_url from business_settings where business_id = '${NEG_ANA}'`,
+    );
+    expect(s.rows[0]).toEqual({ address: null, instagram_url: null });
+  });
+
+  it.each([
+    ["dirección de más de 200 caracteres", { address: "a".repeat(201) }],
+    ["Instagram sin https", { instagram: "http://www.instagram.com/x" }],
+    ["Instagram de otro sitio", { instagram: "https://evil.com/instagram.com/x" }],
+    ["Instagram con caracteres inválidos", { instagram: "https://www.instagram.com/a b" }],
+    ["Facebook de otro sitio", { facebook: "https://instagram.com/x" }],
+    ["Facebook con comillas", { facebook: "https://www.facebook.com/x\"y" }],
+  ])("rechaza %s", async (_caso, extra) => {
+    const r = await save(ANA, extra);
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.code).toBe("23514");
+  });
+});
+
+describe("cierre temporal — ADMIN-CONFIG-6", () => {
+  it("por defecto el negocio no está cerrado", async () => {
+    const otro = "a5a5a5a5-0000-0000-0000-000000000005";
+    await db.exec(`insert into businesses (id, name, slug) values ('${otro}', 'Otro5', 'otro5')`);
+    await db.exec(`insert into business_settings (business_id) values ('${otro}')`);
+
+    const s = await db.query<{ temporarily_closed: boolean; closed_message: string | null; reopens_on: string | null }>(
+      `select temporarily_closed, closed_message, reopens_on from business_settings where business_id = '${otro}'`,
+    );
+    expect(s.rows[0]).toEqual({ temporarily_closed: false, closed_message: null, reopens_on: null });
+  });
+
+  it("se guarda con mensaje y fecha de reapertura", async () => {
+    const r = await save(ANA, { closed: true, closedMessage: "Vacaciones", reopensOn: "2030-01-15" });
+    expect(r.ok).toBe(true);
+
+    const s = await db.query<{ temporarily_closed: boolean; closed_message: string }>(
+      `select temporarily_closed, closed_message from business_settings where business_id = '${NEG_ANA}'`,
+    );
+    expect(s.rows[0]).toEqual({ temporarily_closed: true, closed_message: "Vacaciones" });
+  });
+
+  it("el mensaje y la fecha son opcionales", async () => {
+    expect((await save(ANA, { closed: true, closedMessage: "", reopensOn: null })).ok).toBe(true);
+  });
+
+  it("el mensaje tiene un máximo de 200 caracteres", async () => {
+    const r = await save(ANA, { closed: true, closedMessage: "a".repeat(201) });
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.code).toBe("23514");
+  });
+
+  it("reabrir deja el negocio abierto", async () => {
+    await save(ANA, { closed: true, closedMessage: "Cerrado", reopensOn: "2030-01-15" });
+    await save(ANA, { closed: false });
+
+    const s = await db.query<{ temporarily_closed: boolean }>(
+      `select temporarily_closed from business_settings where business_id = '${NEG_ANA}'`,
+    );
+    expect(s.rows[0].temporarily_closed).toBe(false);
   });
 });
 
