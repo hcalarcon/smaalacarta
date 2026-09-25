@@ -164,7 +164,7 @@ estado a texto y color.
 **4 — Cubrir el resto.** HORARIO-8 en el mismo archivo, con una hora pasada la
 medianoche.
 
-**5 — Verificar.** `npm test` en la raíz, y abrir el PR a `development`.
+**5 — Verificar.** `npm test` en la raíz, y abrir el PR a `main` desde tu rama `dev-*`.
 
 ## Antes de abrir un pull request
 

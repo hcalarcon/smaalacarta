@@ -11,7 +11,7 @@ pedido y le llega al negocio por WhatsApp.
 - **[docs/WORKFLOW.md](docs/WORKFLOW.md)** — cómo agregar o cambiar
   comportamiento: primero la spec, después el test que falla, después el código.
 - **[docs/BRANCHING.md](docs/BRANCHING.md)** — el modelo de ramas
-  (`rama → development → main`) y qué protege a `main`, que es producción.
+  (`dev-herni` y `dev-fede` → `main`) y qué protege a `main`, que es producción.
 
 ## Qué hay en el repo
 

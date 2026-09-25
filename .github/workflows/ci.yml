@@ -1,13 +1,13 @@
 name: CI
 
-# Corre en cada pull request hacia una rama protegida, y de nuevo sobre la rama
-# después de un merge. La corrida del pull_request es la que habilita el merge;
-# la del push confirma que la rama sigue en verde una vez que algo entró.
+# Corre en cada pull request hacia `main`, y en cada push a `main` o a una rama
+# `dev-*`. La corrida del pull_request es la que habilita el merge; la del push
+# le avisa a cada uno, mientras trabaja en su rama, si dejó algo en rojo.
 on:
   pull_request:
-    branches: [main, development]
+    branches: [main]
   push:
-    branches: [main, development]
+    branches: [main, "dev-*"]
 
 # Un commit nuevo vuelve inútil la corrida en curso: se corta y se empieza de nuevo.
 concurrency:
