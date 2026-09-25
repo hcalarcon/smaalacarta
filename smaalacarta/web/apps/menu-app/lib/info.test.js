@@ -1,0 +1,85 @@
+import { describe, expect, it } from "vitest";
+
+import { closedNotice, mapsUrl, reopenText, socialLinks } from "./info.js";
+
+describe("closedNotice — PUBLICO-9", () => {
+  it("sin cierre no hay aviso", () => {
+    expect(closedNotice({ nombre: "X" })).toBeNull();
+    expect(closedNotice(null)).toBeNull();
+    expect(closedNotice(undefined)).toBeNull();
+  });
+
+  it("con cierre, el aviso lleva el mensaje y la fecha", () => {
+    expect(closedNotice({ cierre: { mensaje: "Vacaciones", hasta: "2030-01-15" } })).toEqual({
+      message: "Vacaciones",
+      reopensOn: "2030-01-15",
+    });
+  });
+
+  it("un cierre vacío también es un aviso", () => {
+    expect(closedNotice({ cierre: {} })).toEqual({ message: "", reopensOn: null });
+  });
+});
+
+describe("reopenText — PUBLICO-9", () => {
+  it("da la fecha en formato día/mes", () => {
+    expect(reopenText("2030-01-15")).toBe("Reabrimos el 15/01");
+    expect(reopenText("2030-12-05")).toBe("Reabrimos el 05/12");
+  });
+
+  it.each([null, undefined, "", "mañana", "15/01/2030", "2030-13-40"])("con %j no dice nada", (v) => {
+    expect(reopenText(v)).toBe("");
+  });
+});
+
+describe("socialLinks — PUBLICO-9", () => {
+  it("arma los enlaces de las redes cargadas", () => {
+    expect(
+      socialLinks({
+        redes: {
+          instagram: "https://www.instagram.com/casa",
+          facebook: "https://www.facebook.com/casa",
+        },
+      }),
+    ).toEqual([
+      { name: "Instagram", url: "https://www.instagram.com/casa" },
+      { name: "Facebook", url: "https://www.facebook.com/casa" },
+    ]);
+  });
+
+  it("solo con una red, solo esa", () => {
+    expect(socialLinks({ redes: { instagram: "https://www.instagram.com/casa" } })).toEqual([
+      { name: "Instagram", url: "https://www.instagram.com/casa" },
+    ]);
+  });
+
+  it("sin redes, nada", () => {
+    expect(socialLinks({})).toEqual([]);
+    expect(socialLinks({ redes: {} })).toEqual([]);
+    expect(socialLinks(null)).toEqual([]);
+  });
+
+  it("descarta lo que no es una dirección https de esa red", () => {
+    expect(
+      socialLinks({
+        redes: {
+          instagram: "javascript:alert(1)",
+          facebook: "https://evil.com/casa",
+        },
+      }),
+    ).toEqual([]);
+  });
+});
+
+describe("mapsUrl", () => {
+  it("busca la dirección en el mapa, codificada", () => {
+    expect(mapsUrl("San Martín 100, Córdoba")).toBe(
+      "https://www.google.com/maps/search/?api=1&query=San%20Mart%C3%ADn%20100%2C%20C%C3%B3rdoba",
+    );
+  });
+
+  it("sin dirección no hay enlace", () => {
+    expect(mapsUrl("")).toBe("");
+    expect(mapsUrl(undefined)).toBe("");
+  });
+});

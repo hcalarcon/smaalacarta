@@ -188,6 +188,7 @@ export default function MenuClient({
     description?: string;
     price: number;
     active: boolean;
+    image_url: string | null;
   }) {
     if (data.id) {
       await updateProductAction(businessId, data.id, {
@@ -195,6 +196,7 @@ export default function MenuClient({
         description: data.description,
         price: data.price,
         active: data.active,
+        image_url: data.image_url,
       });
     } else {
       // Un producto nuevo siempre nace dentro de una categoría (ADMIN-MENU-1).
@@ -206,6 +208,7 @@ export default function MenuClient({
         description: data.description,
         price: data.price,
         active: data.active,
+        image_url: data.image_url,
       });
     }
 
@@ -360,6 +363,7 @@ export default function MenuClient({
         mode={editingProduct ? "edit" : "create"}
         initialData={editingProduct ?? undefined}
         categoryId={selectedCategoryId}
+        businessId={businessId}
         onSubmit={handleProductSubmit}
       />
     </>

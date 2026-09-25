@@ -118,11 +118,23 @@ Hecho en el código (migración `20260927000000_configuracion_y_menu_publico.sql
 - [x] [herni] Función `public_menu` y adaptador en `web/`, con fallback a los JSON
 - [ ] [herni] En `web/apps/menu-app/supabase-config.js`, completar `url` y `key` (Supabase → Project Settings → API; son públicas por diseño: la publishable key, **nunca** la secret). Vacío, el menú usa solo los JSON
 - [ ] [herni] **Probar a mano**: en Configuración, completar y publicar; abrir el menú con `?cliente=<slug>` (servidor estático sobre `web/`) y ver colores, cabecera, horarios, productos en su orden y las promociones en "Ofertas"; despublicar y ver que vuelve a los JSON
-- [ ] [por asignar] Dominios: hoy están escritos a mano en `app.js` (`DOMAINS`); pasar a un dominio por negocio en la base
+- [x] [herni] Dirección, Instagram y Facebook, y **cierre temporal** (con mensaje y fecha de reapertura que termina sola), en Configuración y en el menú público
+- [x] [herni] **Imágenes por bucket** de Supabase Storage (`business-images`, 2 MB, JPG/PNG/WebP, cada negocio en su carpeta): cabecera del menú e imagen de cada producto
+- [x] [herni] **Subdominio = slug** en el código (`web/apps/menu-app/lib/hostname.js`): `<slug>.smaalacarta.com.ar` abre el negocio sin declararlo en `app.js`; los slugs reservados (`www`, `admin`, `app`, `api`, `demo`, `moderno`…) no se pueden usar
+- [x] [herni] Se escapan todos los textos del negocio antes de mostrarlos en el menú público (`lib/html.js`): un nombre con HTML ya no puede ejecutar código en el navegador de los clientes
+- [ ] [herni] **Comodín de Vercel** (`*.smaalacarta.com.ar`). El motivo habitual de que no funcione: Vercel solo emite el certificado de un comodín si **el dominio usa sus nameservers** (`ns1.vercel-dns.com` y `ns2.vercel-dns.com`). En orden:
+  1. En Vercel → **Domains**, agregar `smaalacarta.com.ar` y, en el proyecto de los menús, `*.smaalacarta.com.ar`. Vercel muestra los nameservers que pide.
+  2. **Antes de cambiar nada en NIC**, cargar en Vercel → Domains → **DNS Records** todos los registros que hoy tiene el dominio (apex y `www` hacia la landing, y sobre todo los del **mail**: `MX`, `TXT`/SPF/DKIM). Al delegar, los registros del proveedor actual dejan de valer.
+  3. En **nic.ar**, cambiar la delegación del dominio a `ns1.vercel-dns.com` y `ns2.vercel-dns.com`. Puede tardar horas.
+  4. Asignar cada dominio a su proyecto: apex y `www` → landing; `*` → menús. Un subdominio puntual (por ejemplo `www`) tiene prioridad sobre el comodín.
+  5. Repetir para `smaalacarta.online` si se va a usar.
+  6. Probar con un negocio publicado: `https://<slug>.smaalacarta.com.ar`.
+- [ ] [por asignar] Dominio propio por negocio (por ejemplo `menu.minegocio.com`): columna en la base y una consulta por host; se evalúa después del comodín
 - [ ] [por asignar] Migrar los clientes de `data/clientes/*` a Supabase, uno por uno
-- [ ] [por asignar] Subir imágenes (cabecera y productos) con Supabase Storage, en vez de pegar una dirección
-- [ ] [por asignar] Más datos del negocio para el menú: dirección, Instagram u otras redes, envío o retiro, pedido mínimo, cierre temporal (vacaciones)
+- [ ] [por asignar] Limpiar del bucket las imágenes que quedaron sin uso al reemplazarlas (hoy quedan huérfanas, ocupan espacio)
 - [ ] [por asignar] Pausa de proyectos gratuitos de Supabase (una semana sin actividad): evaluar un chequeo periódico o el plan pago cuando haya clientes reales
+
+**Decisión:** el envío y el retiro **no** se gestionan en el sistema; se arreglan con cada cliente por WhatsApp.
 
 ## Etapa 7 — Pendientes técnicos (backlog)
 

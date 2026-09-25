@@ -161,6 +161,15 @@ Todo el código vive bajo `smaalacarta/`, en tres proyectos sin build compartido
   `web/`, `apps/menu-app/lib/public-menu.js` la consume con fallback a los JSON, y
   `supabase-config.js` lleva la dirección y la publishable key (públicas; la clave de
   servicio nunca va en `web/`).
+- **Extras del negocio e imágenes**: dirección, Instagram, Facebook y cierre temporal
+  viven en `business_settings` (`src/lib/settings/social.ts` normaliza `@usuario` a
+  dirección https). Las imágenes van al bucket `business-images`, en la carpeta
+  `<business_id>/` (`src/lib/storage/images.ts`, `components/ui/ImageUploader.tsx`, que
+  sube con la sesión del usuario: lo limita el RLS de Storage). En `web/`, los textos de
+  cada negocio se **escapan siempre** antes de armar HTML (`lib/html.js`), y el negocio
+  sale del subdominio (`lib/hostname.js`). La lista de slugs reservados está en tres
+  lugares que deben coincidir (migración, `superadmin/validation.ts` y `hostname.js`),
+  con tests que lo comprueban.
 - **Multi-negocio**: `getCurrentBusiness()` resuelve usuario → `business_users`
   (con `role`) → `businesses`; las páginas del panel usan `requireBusiness()`.
   Toda tabla de recursos (`categories`, `products`, `promotions`, `orders`) se filtra

@@ -5,6 +5,13 @@ import { isValidEmail, type ValidationResult } from "@/lib/auth/validation";
 export const MEMBER_ROLES = ["owner", "staff"] as const;
 export type MemberRole = (typeof MEMBER_ROLES)[number];
 
+// Nombres que ya usa la plataforma como subdominio (<slug>.smaalacarta.com.ar). La
+// base tiene la misma lista como restricción (ADMIN-SUPER-12).
+export const RESERVED_SLUGS = [
+  "www", "app", "admin", "api", "demo", "demos", "moderno", "clasico", "minimal",
+  "mail", "static", "assets", "cdn", "dev", "staging", "panel", "login", "landing",
+] as const;
+
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 const SLUG_MAX = 40;
 
@@ -48,6 +55,10 @@ export function validateNewBusiness(input: {
   ) {
     errors.slug =
       "Usá entre 2 y 40 caracteres: minúsculas, números y guiones, sin empezar ni terminar con guion.";
+  }
+
+  if ((RESERVED_SLUGS as readonly string[]).includes(input.slug)) {
+    errors.slug = "Ese nombre está reservado por la plataforma. Elegí otro.";
   }
 
   // Vacío es válido. Si hay algo, tiene que parecer un teléfono.

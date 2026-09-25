@@ -2,12 +2,14 @@
 
 import { useState } from "react";
 
+import ImageUploader from "@/components/ui/ImageUploader";
 import { Product } from "@/lib/db/products";
 
 type ProductDialogProps = {
   open: boolean;
   initialData?: Product;
   mode: "create" | "edit";
+  businessId: string;
   onClose: () => void;
   // Categoría donde se crea un producto nuevo; al editar no se usa.
   categoryId: string | null;
@@ -17,12 +19,14 @@ type ProductDialogProps = {
     description?: string;
     price: number;
     active: boolean;
+    image_url: string | null;
   }) => Promise<void>;
 };
 
 function ProductDialogForm({
   initialData,
   mode,
+  businessId,
   onClose,
   categoryId,
   onSubmit,
@@ -35,6 +39,9 @@ function ProductDialogForm({
   );
   const [price, setPrice] = useState(editing ? String(initialData.price) : "");
   const [active, setActive] = useState(editing ? initialData.active : true);
+  const [imageUrl, setImageUrl] = useState(
+    editing ? (initialData.image_url ?? "") : "",
+  );
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -51,6 +58,7 @@ function ProductDialogForm({
         description: description.trim() || undefined,
         price: Number(price || 0),
         active,
+        image_url: imageUrl || null,
       });
     } finally {
       setLoading(false);
@@ -113,6 +121,13 @@ function ProductDialogForm({
               required
             />
           </div>
+
+          <ImageUploader
+            businessId={businessId}
+            label="Imagen (opcional)"
+            value={imageUrl}
+            onChange={setImageUrl}
+          />
 
           <label className="flex items-center gap-2 text-sm">
             <input

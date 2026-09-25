@@ -19,7 +19,11 @@ export default async function SettingsPage() {
         </p>
       </section>
 
-      <SettingsForm slug={business.slug} initial={settings} />
+      <SettingsForm
+        businessId={business.id}
+        slug={business.slug}
+        initial={settings}
+      />
     </div>
   );
 }

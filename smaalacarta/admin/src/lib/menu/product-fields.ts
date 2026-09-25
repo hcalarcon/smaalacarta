@@ -3,6 +3,8 @@ export type ProductInput = {
   description?: string;
   price: number;
   active?: boolean;
+  // Dirección de la imagen. Vacía o nula, el producto queda sin imagen.
+  image_url?: string | null;
 };
 
 // Fila para crear un producto. Siempre lleva categoría (ADMIN-MENU-1).
@@ -17,6 +19,7 @@ export function toProductInsert(
     description: input.description || null,
     price: input.price,
     active: input.active ?? true,
+    image_url: input.image_url || null,
   };
 }
 
@@ -29,5 +32,7 @@ export function toProductUpdate(input: ProductInput & { category_id?: string }) 
     description: input.description || null,
     price: input.price,
     ...(input.active !== undefined && { active: input.active }),
+    // Sin indicarla se conserva; con nula o vacía se quita (ADMIN-MENU-6).
+    ...(input.image_url !== undefined && { image_url: input.image_url || null }),
   };
 }

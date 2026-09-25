@@ -28,7 +28,16 @@ export default function ProductCard({
         {handle}
 
         {/* Imagen / Placeholder */}
-        <div className="h-14 w-14 shrink-0 rounded-xl bg-line" />
+        {product.image_url ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={product.image_url}
+            alt=""
+            className="h-14 w-14 shrink-0 rounded-xl object-cover"
+          />
+        ) : (
+          <div className="h-14 w-14 shrink-0 rounded-xl bg-line" />
+        )}
 
         {/* Info */}
         <div className="min-w-0 flex-1">

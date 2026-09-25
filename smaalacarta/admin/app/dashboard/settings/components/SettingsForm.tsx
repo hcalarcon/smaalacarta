@@ -6,6 +6,7 @@ import { useState } from "react";
 import { saveSettingsAction } from "../actions";
 import Field from "@/components/ui/Field";
 import FormAlert from "@/components/ui/FormAlert";
+import ImageUploader from "@/components/ui/ImageUploader";
 import {
   DAYS,
   parseRange,
@@ -118,9 +119,11 @@ function ColorField({
 }
 
 export default function SettingsForm({
+  businessId,
   slug,
   initial,
 }: {
+  businessId: string;
   slug: string;
   initial: SettingsInput;
 }) {
@@ -133,6 +136,12 @@ export default function SettingsForm({
   const [secondaryColor, setSecondaryColor] = useState(initial.secondaryColor);
   const [headerImageUrl, setHeaderImageUrl] = useState(initial.headerImageUrl);
   const [whatsapp, setWhatsapp] = useState(initial.whatsapp);
+  const [address, setAddress] = useState(initial.address);
+  const [instagram, setInstagram] = useState(initial.instagram);
+  const [facebook, setFacebook] = useState(initial.facebook);
+  const [temporarilyClosed, setTemporarilyClosed] = useState(initial.temporarilyClosed);
+  const [closedMessage, setClosedMessage] = useState(initial.closedMessage);
+  const [reopensOn, setReopensOn] = useState(initial.reopensOn);
 
   const hasInitialSchedule = Object.keys(initial.schedule).length > 0;
   const [scheduleEnabled, setScheduleEnabled] = useState(hasInitialSchedule);
@@ -180,6 +189,12 @@ export default function SettingsForm({
         headerImageUrl,
         schedule: toSchedule(days, scheduleEnabled),
         whatsapp,
+        address,
+        instagram,
+        facebook,
+        temporarilyClosed,
+        closedMessage,
+        reopensOn,
       });
 
       if (!result.ok) {
@@ -261,15 +276,25 @@ export default function SettingsForm({
           />
         </div>
 
-        <Field
+        <ImageUploader
+          businessId={businessId}
           label="Imagen de cabecera (opcional)"
+          value={headerImageUrl}
+          onChange={(url) => {
+            setHeaderImageUrl(url);
+            setImageBroken(false);
+          }}
+        />
+
+        <Field
+          label="…o pegá la dirección de una imagen"
           value={headerImageUrl}
           onChange={(event) => {
             setHeaderImageUrl(event.target.value);
             setImageBroken(false);
           }}
           placeholder="https://…/cabecera.jpg"
-          hint="Dirección de una imagen (https). La subida de archivos llega más adelante."
+          hint="Dirección de una imagen (https)."
           error={fieldErrors.headerImageUrl}
           inputMode="url"
           autoCapitalize="none"
@@ -470,8 +495,61 @@ export default function SettingsForm({
       </Section>
 
       <Section
+        title="Cierre temporal"
+        description="Para vacaciones u otros cierres: el menú muestra que estás cerrado y no deja enviar pedidos."
+      >
+        <label className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={temporarilyClosed}
+            onChange={(event) => setTemporarilyClosed(event.target.checked)}
+            className="h-5 w-5"
+          />
+          <span className="text-sm font-medium text-stone-900">
+            Cerrado temporalmente
+          </span>
+        </label>
+
+        {temporarilyClosed ? (
+          <div className="space-y-5">
+            <Field
+              label="Mensaje (opcional)"
+              value={closedMessage}
+              onChange={(event) => setClosedMessage(event.target.value)}
+              placeholder="Estamos de vacaciones, ¡volvemos pronto!"
+              error={fieldErrors.closedMessage}
+              maxLength={220}
+            />
+
+            <div>
+              <label
+                htmlFor="reopens-on"
+                className="mb-1.5 block text-sm font-medium text-brand"
+              >
+                Reabrimos el (opcional)
+              </label>
+              <input
+                id="reopens-on"
+                type="date"
+                value={reopensOn}
+                onChange={(event) => setReopensOn(event.target.value)}
+                className={inputClass}
+              />
+              <p className="mt-1.5 text-sm text-stone-500">
+                Con fecha, el cierre termina solo ese día. Sin fecha, seguís cerrado
+                hasta que lo apagues.
+              </p>
+              {fieldErrors.reopensOn ? (
+                <p className="mt-1.5 text-sm text-red-600">{fieldErrors.reopensOn}</p>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
+      </Section>
+
+      <Section
         title="Contacto"
-        description="A este número llegan los pedidos por WhatsApp."
+        description="Los pedidos, el envío y el retiro se arreglan con tus clientes por WhatsApp."
       >
         <Field
           label="WhatsApp"
@@ -482,6 +560,35 @@ export default function SettingsForm({
           hint="Con código de país, sin +, espacios ni guiones."
           error={fieldErrors.whatsapp}
         />
+
+        <Field
+          label="Dirección (opcional)"
+          value={address}
+          onChange={(event) => setAddress(event.target.value)}
+          placeholder="San Martín 100, Córdoba"
+          error={fieldErrors.address}
+        />
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field
+            label="Instagram (opcional)"
+            value={instagram}
+            onChange={(event) => setInstagram(event.target.value)}
+            placeholder="@tunegocio"
+            hint="Tu usuario o la dirección de tu perfil."
+            error={fieldErrors.instagram}
+            autoCapitalize="none"
+          />
+          <Field
+            label="Facebook (opcional)"
+            value={facebook}
+            onChange={(event) => setFacebook(event.target.value)}
+            placeholder="tunegocio"
+            hint="El nombre o la dirección de tu página."
+            error={fieldErrors.facebook}
+            autoCapitalize="none"
+          />
+        </div>
       </Section>
 
       <div className="flex items-center justify-end gap-4">

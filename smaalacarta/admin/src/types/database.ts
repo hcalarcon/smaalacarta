@@ -41,39 +41,57 @@ export type Database = {
     Tables: {
       business_settings: {
         Row: {
+          address: string | null
           business_id: string
+          closed_message: string | null
           created_at: string
+          facebook_url: string | null
           header_image_url: string | null
+          instagram_url: string | null
           primary_color: string
           published: boolean
+          reopens_on: string | null
           schedule: Json
           secondary_color: string
           tagline: string | null
           template: string
+          temporarily_closed: boolean
           updated_at: string
         }
         Insert: {
+          address?: string | null
           business_id: string
+          closed_message?: string | null
           created_at?: string
+          facebook_url?: string | null
           header_image_url?: string | null
+          instagram_url?: string | null
           primary_color?: string
           published?: boolean
+          reopens_on?: string | null
           schedule?: Json
           secondary_color?: string
           tagline?: string | null
           template?: string
+          temporarily_closed?: boolean
           updated_at?: string
         }
         Update: {
+          address?: string | null
           business_id?: string
+          closed_message?: string | null
           created_at?: string
+          facebook_url?: string | null
           header_image_url?: string | null
+          instagram_url?: string | null
           primary_color?: string
           published?: boolean
+          reopens_on?: string | null
           schedule?: Json
           secondary_color?: string
           tagline?: string | null
           template?: string
+          temporarily_closed?: boolean
           updated_at?: string
         }
         Relationships: [
@@ -449,14 +467,20 @@ export type Database = {
       public_menu: { Args: { p_slug: string }; Returns: Json }
       save_business_settings: {
         Args: {
+          p_address: string
           p_business_id: string
+          p_closed_message: string
+          p_facebook_url: string
           p_header_image_url: string
+          p_instagram_url: string
           p_primary_color: string
           p_published: boolean
+          p_reopens_on: string
           p_schedule: Json
           p_secondary_color: string
           p_tagline: string
           p_template: string
+          p_temporarily_closed: boolean
           p_whatsapp: string
         }
         Returns: undefined

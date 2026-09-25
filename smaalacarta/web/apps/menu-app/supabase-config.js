@@ -5,6 +5,6 @@
 // Se completan en Supabase → Project Settings → API. Vacío, el menú usa solo los
 // JSON de `data/clientes/` como hasta ahora.
 export const SUPABASE = {
-  url: "",
-  key: "",
+  url: "https://aroxfzrjzvppkzmxfjjk.supabase.co",
+  key: "sb_publishable_MXnsFfgbX3KRlagXJYzwtQ_bJxwiHWU",
 };

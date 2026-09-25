@@ -1,6 +1,10 @@
 let cart = [];
 let MENU_GLOBAL = null;
 
+// Módulos de /lib, cargados en init(): escape de HTML y datos del negocio.
+let HTML = null;
+let INFO = null;
+
 async function fetchJSON(path) {
   try {
     const res = await fetch(path);
@@ -18,7 +22,7 @@ async function fetchJSON(path) {
 }
 
 //nueva funcion hardcodeada
-function resolveAppConfig() {
+function resolveAppConfig(resolveHost) {
   const params = new URLSearchParams(window.location.search);
   const host = window.location.hostname;
 
@@ -46,21 +50,15 @@ function resolveAppConfig() {
 
   /*
   ========================================
-  2. PRODUCCIÓN: DOMINIOS HARDCODEADOS
+  2. PRODUCCIÓN: SUBDOMINIO = SLUG DEL NEGOCIO
   ========================================
+  <slug>.smaalacarta.com.ar abre el negocio con ese slug, sin declararlo acá.
+  Las reglas están en lib/hostname.js (con tests).
   */
-  const DOMAINS = {
-    "moderno.smaalacarta.com.ar": { type: "demo", slug: "moderno" },
-    "clasico.smaalacarta.com.ar": { type: "demo", slug: "clasico" },
-    "minimal.smaalacarta.com.ar": { type: "demo", slug: "minimal" },
-    "santa-julia-resto.smaalacarta.com.ar": {
-      type: "cliente",
-      slug: "santa-julia-resto",
-    },
-  };
+  const fromHost = resolveHost ? resolveHost(host) : null;
 
-  if (DOMAINS[host]) {
-    return DOMAINS[host];
+  if (fromHost) {
+    return fromHost;
   }
 
   /*
@@ -129,7 +127,15 @@ async function loadFromSupabase(slug) {
 // INIT
 async function init() {
   try {
-    const result = resolveAppConfig();
+    const [{ resolveBusinessFromHost }, html, info] = await Promise.all([
+      import("/apps/menu-app/lib/hostname.js"),
+      import("/apps/menu-app/lib/html.js"),
+      import("/apps/menu-app/lib/info.js"),
+    ]);
+    HTML = html;
+    INFO = info;
+
+    const result = resolveAppConfig(resolveBusinessFromHost);
     if (!result) {
       console.error("No se encontró slug en la URL");
       return;
@@ -329,7 +335,7 @@ function renderHeader(c) {
 
   if (header && c.header?.imagen) {
     header.style.backgroundImage = `
-      url("${c.header.imagen}"),
+      ${HTML.cssUrl(c.header.imagen)},
       linear-gradient(
         135deg,
         var(--color-primary, #463AE5),
@@ -338,7 +344,10 @@ function renderHeader(c) {
     `;
   }
 
-  const abierto = isAbiertoAhora(c);
+  const cierre = INFO.closedNotice(c);
+  const abierto = !cierre && isAbiertoAhora(c);
+
+  renderInfo(c, cierre);
 
   if (estadoEl) {
     estadoEl.textContent = abierto ? "Abierto" : "Cerrado";
@@ -346,6 +355,71 @@ function renderHeader(c) {
 
   if (dot) {
     dot.style.background = abierto ? "#4ade80" : "#ef4444";
+  }
+}
+
+// Aviso de cierre temporal, dirección y redes, debajo del encabezado. Todo se arma
+// con textContent y atributos: lo que escribe el negocio nunca se interpreta como HTML.
+function renderInfo(c, cierre) {
+  document.querySelectorAll("#aviso-cierre, #info-negocio").forEach((el) => el.remove());
+
+  const header = document.querySelector(".header");
+  if (!header) return;
+
+  const bloques = [];
+
+  if (cierre) {
+    const aviso = document.createElement("div");
+    aviso.id = "aviso-cierre";
+    aviso.className = "cierre-temporal";
+    aviso.setAttribute("role", "status");
+    aviso.textContent = [
+      "Cerrado temporalmente",
+      cierre.message,
+      INFO.reopenText(cierre.reopensOn),
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    bloques.push(aviso);
+  }
+
+  const links = INFO.socialLinks(c);
+  const mapa = INFO.mapsUrl(c.direccion);
+
+  if (mapa || links.length > 0) {
+    const info = document.createElement("div");
+    info.id = "info-negocio";
+    info.className = "info-negocio";
+
+    if (mapa) {
+      const a = document.createElement("a");
+      a.href = mapa;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = "📍 " + c.direccion;
+      info.appendChild(a);
+    }
+
+    links.forEach((link) => {
+      const a = document.createElement("a");
+      a.href = link.url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = link.name;
+      info.appendChild(a);
+    });
+
+    bloques.push(info);
+  }
+
+  // Orden final: aviso de cierre y después la info (cada uno va "después del header").
+  bloques.reverse().forEach((el) => header.insertAdjacentElement("afterend", el));
+
+  // Cerrado: no se pueden enviar pedidos.
+  const enviar = document.querySelector("#form-pedido button[type='submit']");
+  if (enviar) {
+    enviar.disabled = Boolean(cierre);
+    if (cierre) enviar.textContent = "Cerrado temporalmente";
   }
 }
 
@@ -474,7 +548,7 @@ function renderMenu(menu) {
 
     // 🔥 ESTRUCTURA CORRECTA
     sec.innerHTML = `
-      <h2 class="categoria-titulo">${cat.nombre}</h2>
+      <h2 class="categoria-titulo">${HTML.escapeHtml(cat.nombre)}</h2>
       <div class="categoria-grid"></div>
     `;
 
@@ -488,13 +562,15 @@ function renderMenu(menu) {
         d.setAttribute("data-promo", p.promo);
       }
 
+      const imagen = HTML.safeHttpUrl(p.imagen);
+
       d.innerHTML = `
-        ${p.imagen ? `<img src="${p.imagen}">` : ""}
+        ${imagen ? `<img src="${HTML.escapeHtml(imagen)}" alt="">` : ""}
         <div class="producto-info">
-          <h3>${p.nombre}</h3>
-          <p>${p.descripcion || ""}</p>
-          ${p.precioAnterior ? `<span class="precio-anterior">$${p.precioAnterior}</span>` : ""}
-          <div class="producto-precio">$${p.precio}</div>
+          <h3>${HTML.escapeHtml(p.nombre)}</h3>
+          <p>${HTML.escapeHtml(p.descripcion || "")}</p>
+          ${p.precioAnterior ? `<span class="precio-anterior">$${HTML.escapeHtml(p.precioAnterior)}</span>` : ""}
+          <div class="producto-precio">$${HTML.escapeHtml(p.precio)}</div>
         </div>
         <button class="btn-add">+</button>
       `;
@@ -612,14 +688,14 @@ function updateCart() {
 
     d.innerHTML = `
       <div class="item-info">
-        <h4>${i.nombre || ""}</h4>
-        <span class="item-precio">$${i.precio}</span>
+        <h4>${HTML.escapeHtml(i.nombre || "")}</h4>
+        <span class="item-precio">$${HTML.escapeHtml(i.precio)}</span>
       </div>
       <div class="item-controls">
         <button class="btn-minus"><svg width="16" height="16" viewBox="0 0 24 24">
   <path d="M5 12h14" stroke="currentColor" stroke-width="2"/>
 </svg></button>
-        <span class="item-cantidad">${i.cantidad}</span>
+        <span class="item-cantidad">${HTML.escapeHtml(i.cantidad)}</span>
         <button class="btn-plus">
         <svg width="16" height="16" viewBox="0 0 24 24">
           <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2"/>
@@ -724,6 +800,11 @@ $("#cerrar-checkout")?.addEventListener("click", closeAll);
 // WHATSAPP
 $("#form-pedido")?.addEventListener("submit", (e) => {
   e.preventDefault();
+
+  if (INFO?.closedNotice(window.CONFIG)) {
+    alert("Estamos cerrados temporalmente: por ahora no podemos tomar pedidos.");
+    return;
+  }
 
   const f = new FormData(e.target);
 

@@ -6,7 +6,11 @@ import { saveSettings } from "@/lib/db/settings";
 import { requireBusiness } from "@/lib/get-current-business";
 import { normalizeSchedule } from "@/lib/settings/schedule";
 import { settingsErrorMessage } from "@/lib/settings/messages";
-import { validateSettings, type SettingsInput } from "@/lib/settings/validation";
+import {
+  normalizeSettingsText,
+  validateSettings,
+  type SettingsInput,
+} from "@/lib/settings/validation";
 import { normalizeWhatsapp } from "@/lib/superadmin/validation";
 
 export type SaveSettingsResult =
@@ -24,13 +28,13 @@ export async function saveSettingsAction(
 ): Promise<SaveSettingsResult> {
   const { business } = await requireBusiness();
 
-  const settings: SettingsInput = {
+  const settings: SettingsInput = normalizeSettingsText({
     ...input,
     tagline: input.tagline.trim(),
     headerImageUrl: input.headerImageUrl.trim(),
     schedule: normalizeSchedule(input.schedule),
     whatsapp: input.whatsapp.trim(),
-  };
+  });
 
   const validation = validateSettings(settings);
   if (!validation.ok) {

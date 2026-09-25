@@ -64,9 +64,9 @@ _Sin requisitos todavía._
 ## PUBLICO — El menú desde Supabase
 
 *Aplicado por `supabase/migrations/*_configuracion_y_menu_publico.sql` (función
-`public_menu`) y `web/apps/menu-app/lib/public-menu.js`. Cubierto por:
-`src/lib/db/public-menu.test.ts` (admin, contra Postgres real: PUBLICO-1 a 5) y
-`web/apps/menu-app/lib/public-menu.test.js` (PUBLICO-6 y 7).*
+`public_menu`) y `web/apps/menu-app/lib/` (`public-menu.js`, `info.js` y `html.js`). Cubierto por:
+`src/lib/db/public-menu.test.ts` (admin, contra Postgres real: PUBLICO-1 a 5 y 8) y
+`web/apps/menu-app/lib/*.test.js` (PUBLICO-6, 7 y 9).*
 
 El menú público pide a Supabase el negocio por su slug, sin sesión, y recibe el
 mismo formato que hoy leen los JSON (`config` y `menu`).
@@ -233,8 +233,9 @@ Cubierto por: `src/lib/menu/product-fields.test.ts` (ADMIN-MENU-1 y 2),
 
 *Aplicado por `supabase/migrations/*_configuracion_y_menu_publico.sql`,
 `src/lib/settings/`, `src/lib/db/settings.ts` y `app/dashboard/settings`. Cubierto
-por: `src/lib/db/settings.test.ts` (ADMIN-CONFIG-1, 3 y 4, contra Postgres real) y
-`src/lib/settings/*.test.ts` (ADMIN-CONFIG-2).*
+por: `src/lib/db/settings.test.ts` (ADMIN-CONFIG-1 a 6, contra Postgres real),
+`src/lib/db/storage.test.ts` (ADMIN-CONFIG-7), `src/lib/settings/*.test.ts` (formatos
+y redes) y `src/lib/storage/images.test.ts`.*
 
 - **ADMIN-CONFIG-1** Cada negocio tiene una configuración propia (plantilla, colores,
   imagen de cabecera, descripción, horarios y si el menú es público); solo sus

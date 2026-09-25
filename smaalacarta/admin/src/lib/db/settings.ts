@@ -36,6 +36,12 @@ export async function getSettings(
     headerImageUrl: data.header_image_url ?? "",
     schedule: (data.schedule ?? {}) as Schedule,
     whatsapp: whatsapp ?? "",
+    address: data.address ?? "",
+    instagram: data.instagram_url ?? "",
+    facebook: data.facebook_url ?? "",
+    temporarilyClosed: data.temporarily_closed,
+    closedMessage: data.closed_message ?? "",
+    reopensOn: data.reopens_on ?? "",
   };
 }
 
@@ -56,6 +62,13 @@ export async function saveSettings(
     p_header_image_url: input.headerImageUrl,
     p_schedule: input.schedule,
     p_whatsapp: input.whatsapp,
+    p_address: input.address,
+    p_instagram_url: input.instagram,
+    p_facebook_url: input.facebook,
+    p_temporarily_closed: input.temporarilyClosed,
+    p_closed_message: input.closedMessage,
+    // La base espera una fecha o nulo, no un texto vacío.
+    p_reopens_on: (input.reopensOn || null) as string,
   });
 
   return error ? { error: { code: error.code, message: error.message } } : {};

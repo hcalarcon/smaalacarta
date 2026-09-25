@@ -9,6 +9,12 @@ const valid = {
   headerImageUrl: "https://ejemplo.com/cabecera.jpg",
   schedule: { lunes: ["12:00-15:00"], domingo: [] },
   whatsapp: "5493510000000",
+  address: "Calle 123",
+  instagram: "@casa_resto",
+  facebook: "facebook.com/casaresto",
+  temporarilyClosed: false,
+  closedMessage: "",
+  reopensOn: "",
 };
 
 describe("validateSettings — ADMIN-CONFIG-2", () => {
@@ -70,5 +76,71 @@ describe("validateSettings — ADMIN-CONFIG-2", () => {
   it("el WhatsApp es opcional y acepta símbolos", () => {
     expect(validateSettings({ ...valid, whatsapp: "" })).toEqual({ ok: true });
     expect(validateSettings({ ...valid, whatsapp: "+54 9 351 000-0000" })).toEqual({ ok: true });
+  });
+});
+
+describe("dirección y redes — ADMIN-CONFIG-5", () => {
+  it("son opcionales", () => {
+    expect(
+      validateSettings({ ...valid, address: "", instagram: "", facebook: "" }),
+    ).toEqual({ ok: true });
+  });
+
+  it("la dirección tiene un máximo de 200 caracteres", () => {
+    expect(validateSettings({ ...valid, address: "a".repeat(200) })).toEqual({ ok: true });
+    const r = validateSettings({ ...valid, address: "a".repeat(201) });
+    expect(r.ok === false && r.errors.address).toBeTruthy();
+  });
+
+  it("acepta @usuario y direcciones de la red", () => {
+    expect(
+      validateSettings({ ...valid, instagram: "https://instagram.com/casa_resto", facebook: "@casaresto" }),
+    ).toEqual({ ok: true });
+  });
+
+  it("rechaza redes de otros sitios o con formato inválido", () => {
+    const r = validateSettings({
+      ...valid,
+      instagram: "https://evil.com/x",
+      facebook: "a b",
+    });
+    expect(r.ok === false && r.errors.instagram).toBeTruthy();
+    expect(r.ok === false && r.errors.facebook).toBeTruthy();
+  });
+});
+
+describe("cierre temporal — ADMIN-CONFIG-6", () => {
+  it("cerrado, con mensaje y fecha", () => {
+    expect(
+      validateSettings({
+        ...valid,
+        temporarilyClosed: true,
+        closedMessage: "Vacaciones",
+        reopensOn: "2030-01-15",
+      }),
+    ).toEqual({ ok: true });
+  });
+
+  it("el mensaje y la fecha son opcionales", () => {
+    expect(validateSettings({ ...valid, temporarilyClosed: true })).toEqual({ ok: true });
+  });
+
+  it("el mensaje tiene un máximo de 200 caracteres", () => {
+    const r = validateSettings({ ...valid, closedMessage: "a".repeat(201) });
+    expect(r.ok === false && r.errors.closedMessage).toBeTruthy();
+  });
+
+  it.each(["15/01/2030", "2030-1-5", "2030-13-01", "2030-02-30", "mañana", "2030-01-15T10:00"])(
+    "rechaza la fecha %j",
+    (reopensOn) => {
+      const r = validateSettings({ ...valid, reopensOn });
+      expect(r.ok === false && r.errors.reopensOn).toBeTruthy();
+    },
+  );
+
+  it("acepta un 29 de febrero de año bisiesto y rechaza el de un año común", () => {
+    expect(validateSettings({ ...valid, reopensOn: "2028-02-29" })).toEqual({ ok: true });
+    const r = validateSettings({ ...valid, reopensOn: "2027-02-29" });
+    expect(r.ok === false && r.errors.reopensOn).toBeTruthy();
   });
 });
