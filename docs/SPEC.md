@@ -97,8 +97,10 @@ _Sin requisitos todavía._
 
 ## ADMIN-AUTH — Acceso y negocio actual
 
-*Aplicado por `src/lib/get-current-business.ts`, `app/login` y las políticas de
-RLS en `supabase/migrations/`. Cubierto por: pendiente (ver Brechas conocidas).*
+*Aplicado por `src/lib/get-current-business.ts`, `src/lib/auth/`, `proxy.ts`,
+`app/(auth)` y las políticas de RLS en `supabase/migrations/`. Cubierto por:
+`src/lib/auth/*.test.ts` (ADMIN-AUTH-4 a 8); las políticas de RLS y el resto del
+flujo, pendiente (ver Brechas conocidas).*
 
 - **ADMIN-AUTH-1** Al registrarse un usuario se le crea un perfil con su email.
   Nadie ve ni edita el perfil de otro.
@@ -109,6 +111,20 @@ RLS en `supabase/migrations/`. Cubierto por: pendiente (ver Brechas conocidas).*
 - **ADMIN-AUTH-3** Un usuario solo ve los negocios de los que es miembro y sus
   propias membresías. Crear negocios y asignar miembros no se hace desde el
   admin.
+- **ADMIN-AUTH-4** Iniciar sesión pide un email con formato válido y una
+  contraseña; si Supabase rechaza las credenciales el usuario ve un mensaje en
+  español que no dice cuál de los dos datos falló.
+- **ADMIN-AUTH-5** Una contraseña nueva (registro o restablecimiento) tiene al
+  menos 8 caracteres y coincide con su confirmación.
+- **ADMIN-AUTH-6** Después de iniciar sesión el usuario vuelve a la página del
+  panel que había pedido; una dirección que no sea una ruta interna del panel se
+  ignora y va a `/dashboard`.
+- **ADMIN-AUTH-7** Sin sesión, las rutas del panel llevan a `/login`; con
+  sesión, `/login`, `/registro` y `/recuperar` llevan a `/dashboard`.
+- **ADMIN-AUTH-8** Un usuario con sesión pero sin negocio no vuelve a `/login`:
+  ve un aviso de que su cuenta no tiene negocio asignado y puede cerrar sesión.
+- **ADMIN-AUTH-9** Pedir recuperar la contraseña muestra el mismo mensaje
+  exista o no una cuenta con ese email.
 
 ## ADMIN-MENU — Categorías y productos
 
