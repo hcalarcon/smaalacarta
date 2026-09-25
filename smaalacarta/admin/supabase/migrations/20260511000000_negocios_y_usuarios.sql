@@ -67,14 +67,14 @@ DROP POLICY IF EXISTS profiles_select_own ON public.profiles;
 CREATE POLICY profiles_select_own
 ON public.profiles
 FOR SELECT
-USING (id = auth.uid());
+USING (id = (select auth.uid()));
 
 DROP POLICY IF EXISTS profiles_update_own ON public.profiles;
 CREATE POLICY profiles_update_own
 ON public.profiles
 FOR UPDATE
-USING (id = auth.uid())
-WITH CHECK (id = auth.uid());
+USING (id = (select auth.uid()))
+WITH CHECK (id = (select auth.uid()));
 
 -- Cada usuario ve solo sus propias membresías. Sin esta política las
 -- subconsultas de las demás tablas no encontrarían ninguna fila.
@@ -82,7 +82,7 @@ DROP POLICY IF EXISTS business_users_select_own ON public.business_users;
 CREATE POLICY business_users_select_own
 ON public.business_users
 FOR SELECT
-USING (user_id = auth.uid());
+USING (user_id = (select auth.uid()));
 
 -- Un miembro ve y edita los datos de su negocio (ADMIN-AUTH-3). Crear
 -- negocios y asignar miembros queda fuera del admin por ahora: se hace desde
@@ -95,7 +95,7 @@ USING (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
+    WHERE bu.user_id = (select auth.uid())
       AND bu.business_id = businesses.id
   )
 );
@@ -108,7 +108,7 @@ USING (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
+    WHERE bu.user_id = (select auth.uid())
       AND bu.business_id = businesses.id
   )
 )
@@ -116,7 +116,7 @@ WITH CHECK (
   EXISTS (
     SELECT 1
     FROM public.business_users bu
-    WHERE bu.user_id = auth.uid()
+    WHERE bu.user_id = (select auth.uid())
       AND bu.business_id = businesses.id
   )
 );
