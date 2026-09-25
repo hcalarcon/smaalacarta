@@ -17,19 +17,24 @@ describe("redirectForRoute — ADMIN-AUTH-7", () => {
     expect(redirectForRoute("/dashboard/menu", true)).toBeNull();
   });
 
-  it.each(["/login", "/registro", "/recuperar"])(
+  it.each(["/login", "/recuperar"])(
     "manda al panel a quien ya tiene sesión y entra a %s",
     (path) => {
       expect(redirectForRoute(path, true)).toBe("/dashboard");
     },
   );
 
-  it.each(["/login", "/registro", "/recuperar"])(
+  it.each(["/login", "/recuperar"])(
     "deja ver %s a quien no tiene sesión",
     (path) => {
       expect(redirectForRoute(path, false)).toBeNull();
     },
   );
+
+  it("no hay registro público: /registro no recibe trato especial", () => {
+    expect(redirectForRoute("/registro", true)).toBeNull();
+    expect(redirectForRoute("/registro", false)).toBeNull();
+  });
 
   it("no toca /restablecer: se entra con el link del mail, ya con sesión", () => {
     expect(redirectForRoute("/restablecer", true)).toBeNull();

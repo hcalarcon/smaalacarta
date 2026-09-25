@@ -1,5 +1,5 @@
 const PANEL_PREFIX = "/dashboard";
-const GUEST_ONLY = ["/login", "/registro", "/recuperar"];
+const GUEST_ONLY = ["/login", "/recuperar"];
 
 function isPanel(pathname: string) {
   return pathname === PANEL_PREFIX || pathname.startsWith(`${PANEL_PREFIX}/`);

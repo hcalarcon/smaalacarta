@@ -114,13 +114,14 @@ flujo, pendiente (ver Brechas conocidas).*
 - **ADMIN-AUTH-4** Iniciar sesión pide un email con formato válido y una
   contraseña; si Supabase rechaza las credenciales el usuario ve un mensaje en
   español que no dice cuál de los dos datos falló.
-- **ADMIN-AUTH-5** Una contraseña nueva (registro o restablecimiento) tiene al
-  menos 8 caracteres y coincide con su confirmación.
+- **ADMIN-AUTH-5** Una contraseña nueva (al restablecerla) tiene al menos 8
+  caracteres y coincide con su confirmación.
 - **ADMIN-AUTH-6** Después de iniciar sesión el usuario vuelve a la página del
   panel que había pedido; una dirección que no sea una ruta interna del panel se
   ignora y va a `/dashboard`.
 - **ADMIN-AUTH-7** Sin sesión, las rutas del panel llevan a `/login`; con
-  sesión, `/login`, `/registro` y `/recuperar` llevan a `/dashboard`.
+  sesión, `/login` y `/recuperar` llevan a `/dashboard`. No hay registro
+  público: las cuentas las crea el equipo de SMA a la Carta.
 - **ADMIN-AUTH-8** Un usuario con sesión pero sin negocio no vuelve a `/login`:
   ve un aviso de que su cuenta no tiene negocio asignado y puede cerrar sesión.
 - **ADMIN-AUTH-9** Pedir recuperar la contraseña muestra el mismo mensaje
@@ -185,9 +186,12 @@ se resuelve en su propia rama `fix/`.
 - **Admin: un usuario con varios negocios no puede entrar.** El esquema permite
   varias membresías por usuario, pero `getCurrentBusiness()` usa
   `.maybeSingle()`: con más de una falla, devuelve `null` y manda a `/login`.
-- **Admin: alta de negocios y membresías a mano.** Como el admin no los crea
-  (ADMIN-AUTH-3), cada negocio nuevo y su primer miembro se cargan con SQL
-  desde el panel de Supabase. Falta un flujo de alta.
+- **Admin: sin superadmin.** Las cuentas las crea el equipo de SMA a la Carta,
+  pero todavía no hay un superadmin: cada cuenta se crea a mano en el panel de
+  Supabase y cada negocio con su primer miembro, con SQL. Además, el registro
+  público de Supabase (`Allow new users to sign up`) hay que apagarlo a mano: con
+  la clave pública, cualquiera puede crear cuentas aunque el admin no tenga
+  pantalla para eso. Ver Etapa 4 de [PLAN.md](PLAN.md).
 - **Admin: `category_id` de producto puede ser nulo.** Al borrar una categoría
   sus productos quedan con `category_id` en `null`, pero el tipo `Product` de
   `src/lib/db/products.ts` lo declara `string`.
