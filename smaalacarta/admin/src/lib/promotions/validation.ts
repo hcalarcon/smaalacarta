@@ -46,3 +46,26 @@ export function validatePromotion(input: {
 
   return Object.keys(errors).length ? { ok: false, errors } : { ok: true };
 }
+
+// Deja la promoción lista para guardar: cada tipo conserva solo su propio dato
+// (un descuento no lleva precio y un combo no lleva porcentaje), que es lo que
+// exige la base.
+export function normalizePromotion(input: {
+  name: string;
+  description: string;
+  type: PromotionType;
+  discountPercent: number;
+  price: number | null;
+  productIds: string[];
+  active: boolean;
+}) {
+  return {
+    name: input.name.trim(),
+    description: input.description.trim(),
+    type: input.type,
+    discountPercent: input.type === "percent" ? input.discountPercent : 0,
+    price: input.type === "combo" ? input.price : null,
+    productIds: input.productIds,
+    active: input.active,
+  };
+}

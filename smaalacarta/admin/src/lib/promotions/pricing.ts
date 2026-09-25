@@ -27,3 +27,13 @@ export function promotionPricing(
     saving: round2(Math.max(0, original - final)),
   };
 }
+
+const money = new Intl.NumberFormat("es-AR", {
+  style: "currency",
+  currency: "ARS",
+  maximumFractionDigits: 2,
+});
+
+export function formatMoney(amount: number) {
+  return money.format(amount);
+}

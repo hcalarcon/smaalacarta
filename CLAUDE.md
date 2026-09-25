@@ -147,6 +147,13 @@ Todo el código vive bajo `smaalacarta/`, en tres proyectos sin build compartido
 - **Tests contra Postgres real**: `src/test/db.ts` levanta PGlite con los stubs de
   Supabase y aplica las migraciones; `src/lib/db/*.test.ts` prueban el RLS. Toda
   migración con políticas nuevas se prueba ahí.
+- **Orden y promociones**: `sort_order` en categorías y productos
+  (`src/lib/menu/ordering.ts`, lectura ordenada en `db/categories.ts`, guardado en
+  `db/ordering.ts`). Las promociones (`src/lib/promotions/`, `db/promotions.ts`) son
+  `percent` o `combo`, con sus productos en `promotion_items`; se guardan con
+  `save_promotion()` (atómica, con los permisos de quien la llama). El arrastrar y
+  soltar usa `@dnd-kit` (`components/menu/Sortable.tsx` y el editor de promociones).
+  Las acciones nuevas toman el negocio de `requireBusiness()`, no del navegador.
 - **Multi-negocio**: `getCurrentBusiness()` resuelve usuario → `business_users`
   (con `role`) → `businesses`; las páginas del panel usan `requireBusiness()`.
   Toda tabla de recursos (`categories`, `products`, `promotions`, `orders`) se filtra

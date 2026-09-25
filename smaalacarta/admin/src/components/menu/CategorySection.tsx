@@ -1,7 +1,8 @@
-// app/dashboard/menu/components/CategorySection.tsx
+"use client";
 
 import { Product } from "@/lib/db/products";
 import ProductCard from "./ProductCard";
+import { SortableItem, SortableList } from "./Sortable";
 
 type CategorySectionProps = {
   category: {
@@ -11,33 +12,50 @@ type CategorySectionProps = {
     active?: boolean;
     products?: Product[];
   };
+  // Asa para arrastrar la categoría (la arma <SortableItem>).
+  handle?: React.ReactNode;
   onEdit: () => void;
   onDelete: () => void;
   onCreateProduct: () => void;
   onEditProduct: (product: Product) => void;
+  onDeleteProduct: (product: Product) => void;
   onToggleProduct: (product: Product) => void;
+  onReorderProducts: (orderedIds: string[]) => void;
 };
 
 export default function CategorySection({
   category,
+  handle,
   onEdit,
   onDelete,
   onCreateProduct,
   onEditProduct,
+  onDeleteProduct,
   onToggleProduct,
+  onReorderProducts,
 }: CategorySectionProps) {
+  const products = category.products ?? [];
+
   return (
     <details
       open
       className="group rounded-3xl border border-line bg-cream/60 p-4"
     >
-      <summary className="flex cursor-pointer list-none items-center justify-between rounded-2xl px-2 py-2 transition hover:bg-white">
-        <div>
-          <h2 className="text-2xl font-bold text-brand">{category.name}</h2>
+      <summary className="flex cursor-pointer list-none items-center justify-between gap-2 rounded-2xl px-2 py-2 transition hover:bg-white">
+        <div className="flex min-w-0 items-center gap-2">
+          {handle}
 
-          {category.products?.length === 0
-            ? "Sin productos"
-            : `${category.products?.length ?? 0} productos`}
+          <div className="min-w-0">
+            <h2 className="truncate text-2xl font-bold text-brand">
+              {category.name}
+            </h2>
+
+            <p className="text-sm text-stone-500">
+              {products.length === 0
+                ? "Sin productos"
+                : `${products.length} productos`}
+            </p>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">
@@ -72,16 +90,26 @@ export default function CategorySection({
         </div>
       </summary>
 
-      {category.products && category.products.length > 0 ? (
-        <div className="mt-4 grid gap-4 ">
-          {category.products.map((product) => (
-            <ProductCard
-              key={product.id}
-              product={product}
-              onEdit={() => onEditProduct(product)}
-              onToggleActive={() => onToggleProduct(product)}
-            />
-          ))}
+      {products.length > 0 ? (
+        <div className="mt-4 grid gap-3">
+          <SortableList
+            ids={products.map((product) => product.id)}
+            onReorder={onReorderProducts}
+          >
+            {products.map((product) => (
+              <SortableItem key={product.id} id={product.id}>
+                {(productHandle) => (
+                  <ProductCard
+                    product={product}
+                    handle={productHandle}
+                    onEdit={() => onEditProduct(product)}
+                    onDelete={() => onDeleteProduct(product)}
+                    onToggleActive={() => onToggleProduct(product)}
+                  />
+                )}
+              </SortableItem>
+            ))}
+          </SortableList>
         </div>
       ) : (
         <div className="mt-4 rounded-2xl border border-dashed border-line-strong p-6 text-center text-sm text-stone-500">

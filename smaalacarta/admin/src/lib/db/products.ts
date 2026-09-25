@@ -47,6 +47,16 @@ export async function updateProduct(
   await updateRecord("products", id, businessId, toProductUpdate(payload));
 }
 
+// Activar o desactivar un producto sin tocar nada más (ADMIN-MENU-2 mantiene el
+// resto de sus datos).
+export async function setProductActive(
+  businessId: string,
+  id: string,
+  active: boolean,
+) {
+  await updateRecord("products", id, businessId, { active });
+}
+
 export async function deleteProduct(businessId: string, id: string) {
   await deleteRecord("products", businessId, id);
 }

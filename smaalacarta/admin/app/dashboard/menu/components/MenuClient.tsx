@@ -1,20 +1,29 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import CategoryDialog from "./dialogs/CategoryDialog";
 import CategorySection from "@/components/menu/CategorySection";
 import CreateCategoryButton from "@/components/menu/CreateCategoryButton";
+import { SortableItem, SortableList } from "@/components/menu/Sortable";
 
 import {
   createCategoryAction,
   updateCategoryAction,
   deleteCategoryAction,
+  reorderCategoriesAction,
 } from "../actions/categories";
 
 import ConfirmDeleteDialog from "../../components/ConfirmDeleteDialog";
 import { Product } from "@/lib/db/products";
-import { createProductAction, updateProductAction } from "../actions/products";
+import {
+  createProductAction,
+  deleteProductAction,
+  reorderProductsAction,
+  setProductActiveAction,
+  updateProductAction,
+} from "../actions/products";
 import ProductDialog from "./dialogs/ProductDialog";
 
 type Category = {
@@ -22,6 +31,7 @@ type Category = {
   name: string;
   description?: string | null;
   active?: boolean;
+  products?: Product[];
 };
 
 type MenuClientProps = {
@@ -33,14 +43,25 @@ export default function MenuClient({
   businessId,
   initialCategories,
 }: MenuClientProps) {
-  const [dialogOpen, setDialogOpen] = useState(false);
-
-  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const router = useRouter();
 
   const [categories, setCategories] = useState(initialCategories);
 
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  // Cuando el servidor manda datos nuevos (después de `router.refresh()`), se
+  // reemplaza el estado local. Se hace al renderizar y no en un efecto, que es
+  // como React pide sincronizar estado con props.
+  const [syncedFrom, setSyncedFrom] = useState(initialCategories);
+  if (syncedFrom !== initialCategories) {
+    setSyncedFrom(initialCategories);
+    setCategories(initialCategories);
+  }
 
+  const [error, setError] = useState<string | null>(null);
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<Category | null>(
     null,
   );
@@ -50,11 +71,40 @@ export default function MenuClient({
   );
   const [productDialogOpen, setProductDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
   const [isDeleting, setIsDeleting] = useState(false);
 
   const hasCategories = categories.length > 0;
 
+  // Ejecuta un cambio y, si falla, vuelve a pedir el menú al servidor para no
+  // dejar en pantalla algo que no se guardó.
+  async function run(change: () => Promise<void>) {
+    setError(null);
+
+    try {
+      await change();
+    } catch {
+      setError("No pudimos guardar el cambio. Volvimos a cargar el menú.");
+    }
+
+    router.refresh();
+  }
+
+  function updateProducts(
+    categoryId: string,
+    change: (products: Product[]) => Product[],
+  ) {
+    setCategories((prev) =>
+      prev.map((category) =>
+        category.id === categoryId
+          ? { ...category, products: change(category.products ?? []) }
+          : category,
+      ),
+    );
+  }
+
+  // Categorías
   function handleCreateCategory() {
     setEditingCategory(null);
     setDialogOpen(true);
@@ -77,34 +127,16 @@ export default function MenuClient({
         description: data.description,
         active: data.active,
       });
-
-      setCategories((prev) =>
-        prev.map((category) =>
-          category.id === data.id
-            ? {
-                ...category,
-                name: data.name,
-                description: data.description,
-                active: data.active,
-              }
-            : category,
-        ),
-      );
-
-      setDialogOpen(false);
-
-      return;
+    } else {
+      await createCategoryAction(businessId, {
+        name: data.name,
+        description: data.description,
+        active: data.active,
+      });
     }
 
-    await createCategoryAction(businessId, {
-      name: data.name,
-      description: data.description,
-      active: data.active,
-    });
-
     setDialogOpen(false);
-
-    location.reload();
+    router.refresh();
   }
 
   function handleDeleteCategory(category: Category) {
@@ -126,9 +158,20 @@ export default function MenuClient({
 
       setDeleteDialogOpen(false);
       setCategoryToDelete(null);
+      router.refresh();
     } finally {
       setIsDeleting(false);
     }
+  }
+
+  function handleReorderCategories(orderedIds: string[]) {
+    setCategories((prev) =>
+      orderedIds
+        .map((id) => prev.find((category) => category.id === id))
+        .filter((category): category is Category => !!category),
+    );
+
+    void run(() => reorderCategoriesAction(businessId, orderedIds));
   }
 
   // Productos
@@ -153,31 +196,71 @@ export default function MenuClient({
         price: data.price,
         active: data.active,
       });
+    } else {
+      // Un producto nuevo siempre nace dentro de una categoría (ADMIN-MENU-1).
+      if (!data.category_id) return;
 
-      setProductDialogOpen(false);
-      location.reload();
-
-      return;
+      await createProductAction(businessId, {
+        category_id: data.category_id,
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        active: data.active,
+      });
     }
 
-    // Un producto nuevo siempre nace dentro de una categoría (ADMIN-MENU-1).
-    if (!data.category_id) return;
-
-    await createProductAction(businessId, {
-      category_id: data.category_id,
-      name: data.name,
-      description: data.description,
-      price: data.price,
-      active: data.active,
-    });
-
     setProductDialogOpen(false);
-    location.reload();
+    router.refresh();
   }
 
   function handleEditProduct(product: Product) {
     setEditingProduct(product);
     setProductDialogOpen(true);
+  }
+
+  function handleToggleProduct(product: Product) {
+    const active = !product.active;
+
+    if (product.category_id) {
+      updateProducts(product.category_id, (products) =>
+        products.map((p) => (p.id === product.id ? { ...p, active } : p)),
+      );
+    }
+
+    void run(() => setProductActiveAction(businessId, product.id, active));
+  }
+
+  async function confirmDeleteProduct() {
+    if (!productToDelete) return;
+
+    const product = productToDelete;
+
+    try {
+      setIsDeleting(true);
+
+      await deleteProductAction(businessId, product.id);
+
+      if (product.category_id) {
+        updateProducts(product.category_id, (products) =>
+          products.filter((p) => p.id !== product.id),
+        );
+      }
+
+      setProductToDelete(null);
+      router.refresh();
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
+  function handleReorderProducts(categoryId: string, orderedIds: string[]) {
+    updateProducts(categoryId, (products) =>
+      orderedIds
+        .map((id) => products.find((p) => p.id === id))
+        .filter((p): p is Product => !!p),
+    );
+
+    void run(() => reorderProductsAction(businessId, orderedIds));
   }
 
   return (
@@ -188,24 +271,49 @@ export default function MenuClient({
             <h1 className="text-3xl font-bold text-brand">Menú</h1>
 
             <p className="mt-2 text-stone-500">
-              Administra productos y categorías.
+              Administrá productos y categorías. Arrastrá el asa ⠿ para
+              cambiar el orden.
             </p>
           </div>
         </section>
 
+        {error ? (
+          <div
+            role="alert"
+            className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800"
+          >
+            {error}
+          </div>
+        ) : null}
+
         {hasCategories ? (
           <>
-            {categories.map((category) => (
-              <CategorySection
-                key={category.id}
-                category={category}
-                onDelete={() => handleDeleteCategory(category)}
-                onEdit={() => handleEditCategory(category)}
-                onCreateProduct={() => handleCreateProduct(category.id)}
-                onEditProduct={handleEditProduct}
-                onToggleProduct={() => console.log("asd")}
-              />
-            ))}
+            <div className="space-y-6">
+              <SortableList
+                ids={categories.map((category) => category.id)}
+                onReorder={handleReorderCategories}
+              >
+                {categories.map((category) => (
+                  <SortableItem key={category.id} id={category.id}>
+                    {(categoryHandle) => (
+                      <CategorySection
+                        category={category}
+                        handle={categoryHandle}
+                        onDelete={() => handleDeleteCategory(category)}
+                        onEdit={() => handleEditCategory(category)}
+                        onCreateProduct={() => handleCreateProduct(category.id)}
+                        onEditProduct={handleEditProduct}
+                        onDeleteProduct={setProductToDelete}
+                        onToggleProduct={handleToggleProduct}
+                        onReorderProducts={(ids) =>
+                          handleReorderProducts(category.id, ids)
+                        }
+                      />
+                    )}
+                  </SortableItem>
+                ))}
+              </SortableList>
+            </div>
 
             <CreateCategoryButton onClick={handleCreateCategory} />
           </>
@@ -231,7 +339,16 @@ export default function MenuClient({
         onConfirm={confirmDeleteCategory}
         loading={isDeleting}
         title="Eliminar categoría"
-        description={`¿Seguro que deseas eliminar "${categoryToDelete?.name}"?`}
+        description={`¿Seguro que querés eliminar "${categoryToDelete?.name}"? Sus productos quedan sin categoría.`}
+      />
+
+      <ConfirmDeleteDialog
+        open={!!productToDelete}
+        onClose={() => setProductToDelete(null)}
+        onConfirm={confirmDeleteProduct}
+        loading={isDeleting}
+        title="Eliminar producto"
+        description={`¿Seguro que querés eliminar "${productToDelete?.name}"? También sale de las promociones que lo incluyen.`}
       />
 
       <ProductDialog

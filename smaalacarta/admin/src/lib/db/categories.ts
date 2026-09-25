@@ -7,6 +7,7 @@ import {
 } from "@/lib/db/resources";
 
 import { Database } from "@/types/database";
+import { sortByOrder } from "@/lib/menu/ordering";
 import { createClient } from "@/lib/supabase-server";
 
 type Category = Database["public"]["Tables"]["categories"]["Row"];
@@ -15,6 +16,7 @@ export async function getCategories(businessId: string) {
   return getRecords<Category>("categories", businessId);
 }
 
+// Categorías con sus productos, en el orden del negocio (ADMIN-MENU-3).
 export async function getCategoriesWithProducts(businessId: string) {
   const supabase = await createClient();
 
@@ -26,14 +28,16 @@ export async function getCategoriesWithProducts(businessId: string) {
       products (*)
     `,
     )
-    .eq("business_id", businessId)
-    .order("created_at", { ascending: false });
+    .eq("business_id", businessId);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return data ?? [];
+  return sortByOrder(data ?? []).map((category) => ({
+    ...category,
+    products: sortByOrder(category.products ?? []),
+  }));
 }
 
 export async function getCategory(businessId: string, id: string) {

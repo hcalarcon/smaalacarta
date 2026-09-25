@@ -97,6 +97,17 @@ Pasos de Supabase:
 - [x] [herni] Quitar los `continue-on-error` del CI para lint y build del admin
 - [ ] [herni] PR hacia `main`
 
+## Etapa 5b — Menú y promociones
+
+Hecho en el código (migración `20260926000000_orden_y_promociones.sql`, ya aplicada a la base de Herni):
+
+- [x] [herni] Borrar productos, activar/desactivar con un clic y sin recargar la página
+- [x] [herni] Ordenar categorías y productos arrastrando (`sort_order`), y guardar el orden
+- [x] [herni] Promociones: tipo **descuento %** o **combo a precio fijo**, armadas arrastrando productos del menú (`/dashboard/promotions`), con precio final y ahorro en vivo
+- [ ] [herni] **Probar a mano en el navegador** el arrastrar y soltar (categorías, productos y armado de promociones, con mouse y en el celular) y el borrado
+- [ ] [por asignar] Imagen de producto (Supabase Storage entra en el plan gratuito) y `featured`
+- [ ] [por asignar] Vigencia de las promociones (fechas o días de la semana) y otros tipos (2x1)
+
 ## Etapa 6 — Roadmap del producto
 
 - [ ] [por asignar] Revisar las "brechas conocidas" de `docs/SPEC.md` y priorizarlas

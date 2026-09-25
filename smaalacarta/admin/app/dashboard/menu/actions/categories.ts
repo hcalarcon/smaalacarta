@@ -5,6 +5,7 @@ import {
   updateCategory,
   deleteCategory,
 } from "@/lib/db/categories";
+import { saveOrder } from "@/lib/db/ordering";
 
 export async function createCategoryAction(
   businessId: string,
@@ -31,4 +32,11 @@ export async function updateCategoryAction(
 
 export async function deleteCategoryAction(businessId: string, id: string) {
   await deleteCategory(businessId, id);
+}
+
+export async function reorderCategoriesAction(
+  businessId: string,
+  orderedIds: string[],
+) {
+  await saveOrder("categories", businessId, orderedIds);
 }

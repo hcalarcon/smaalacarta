@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { validatePromotion } from "./validation";
+import { normalizePromotion, validatePromotion } from "./validation";
 
 const base = {
   name: "Combo café",
@@ -60,5 +60,37 @@ describe("validatePromotion — ADMIN-PROMOS-1", () => {
   it("no acepta el mismo producto dos veces", () => {
     const r = validatePromotion({ ...base, productIds: ["p1", "p1"] });
     expect(r.ok === false && r.errors.products).toBeTruthy();
+  });
+});
+
+describe("normalizePromotion", () => {
+  const input = {
+    name: "  Combo café ",
+    description: "  con medialuna ",
+    type: "percent" as const,
+    discountPercent: 20,
+    price: 999,
+    productIds: ["p1"],
+    active: true,
+  };
+
+  it("un porcentaje guarda el descuento y ningún precio", () => {
+    expect(normalizePromotion(input)).toMatchObject({
+      name: "Combo café",
+      description: "con medialuna",
+      type: "percent",
+      discountPercent: 20,
+      price: null,
+    });
+  });
+
+  it("un combo guarda el precio y descuento 0", () => {
+    expect(
+      normalizePromotion({ ...input, type: "combo", discountPercent: 55, price: 2500 }),
+    ).toMatchObject({ type: "combo", discountPercent: 0, price: 2500 });
+  });
+
+  it("la descripción vacía queda vacía, no nula (la base la guarda tal cual)", () => {
+    expect(normalizePromotion({ ...input, description: "   " }).description).toBe("");
   });
 });

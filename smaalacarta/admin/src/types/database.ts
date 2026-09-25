@@ -205,6 +205,7 @@ export type Database = {
           image_url: string | null
           name: string
           price: number
+          sort_order: number | null
           updated_at: string
         }
         Insert: {
@@ -218,6 +219,7 @@ export type Database = {
           image_url?: string | null
           name: string
           price?: number
+          sort_order?: number | null
           updated_at?: string
         }
         Update: {
@@ -231,6 +233,7 @@ export type Database = {
           image_url?: string | null
           name?: string
           price?: number
+          sort_order?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -271,6 +274,42 @@ export type Database = {
         }
         Relationships: []
       }
+      promotion_items: {
+        Row: {
+          business_id: string
+          product_id: string
+          promotion_id: string
+          sort_order: number
+        }
+        Insert: {
+          business_id: string
+          product_id: string
+          promotion_id: string
+          sort_order?: number
+        }
+        Update: {
+          business_id?: string
+          product_id?: string
+          promotion_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_items_product_id_business_id_fkey"
+            columns: ["product_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id", "business_id"]
+          },
+          {
+            foreignKeyName: "promotion_items_promotion_id_business_id_fkey"
+            columns: ["promotion_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id", "business_id"]
+          },
+        ]
+      }
       promotions: {
         Row: {
           active: boolean
@@ -280,7 +319,9 @@ export type Database = {
           discount_percent: number
           id: string
           name: string
+          price: number | null
           slug: string | null
+          type: string
           updated_at: string
         }
         Insert: {
@@ -291,7 +332,9 @@ export type Database = {
           discount_percent?: number
           id?: string
           name: string
+          price?: number | null
           slug?: string | null
+          type?: string
           updated_at?: string
         }
         Update: {
@@ -302,7 +345,9 @@ export type Database = {
           discount_percent?: number
           id?: string
           name?: string
+          price?: number | null
           slug?: string | null
+          type?: string
           updated_at?: string
         }
         Relationships: [
@@ -353,6 +398,20 @@ export type Database = {
         Returns: string
       }
       is_super_admin: { Args: never; Returns: boolean }
+      save_promotion: {
+        Args: {
+          p_active: boolean
+          p_business_id: string
+          p_description: string
+          p_discount_percent: number
+          p_id: string
+          p_name: string
+          p_price: number
+          p_product_ids: string[]
+          p_type: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never

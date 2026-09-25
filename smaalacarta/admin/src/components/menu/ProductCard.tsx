@@ -1,27 +1,32 @@
-// app/dashboard/menu/components/ProductCard.tsx
-
 import { Product } from "@/lib/db/products";
 
 type ProductCardProps = {
   product: Product;
+  // Asa para arrastrar (la arma <SortableItem>).
+  handle?: React.ReactNode;
   onEdit: () => void;
+  onDelete: () => void;
   onToggleActive: () => void;
 };
 
 export default function ProductCard({
   product,
+  handle,
   onEdit,
+  onDelete,
   onToggleActive,
 }: ProductCardProps) {
   return (
     <article
-      className={`w-[95%] rounded-2xl border px-3 py-2 transition ${
+      className={`rounded-2xl border px-3 py-2 transition ${
         product.active
           ? "border-line bg-white"
           : "border-line bg-cream opacity-60"
       }`}
     >
       <div className="flex items-center gap-3">
+        {handle}
+
         {/* Imagen / Placeholder */}
         <div className="h-14 w-14 shrink-0 rounded-xl bg-line" />
 
@@ -39,15 +44,19 @@ export default function ProductCard({
             </div>
 
             <div className="flex items-center gap-2">
-              <span
-                className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${
+              <button
+                type="button"
+                onClick={onToggleActive}
+                aria-pressed={product.active}
+                title={product.active ? "Desactivar" : "Activar"}
+                className={`rounded-full px-2 py-0.5 text-[11px] font-medium transition hover:opacity-80 ${
                   product.active
                     ? "bg-emerald-100 text-emerald-700"
                     : "bg-line text-stone-600"
                 }`}
               >
                 ● {product.active ? "Activo" : "Oculto"}
-              </span>
+              </button>
 
               <span className="whitespace-nowrap text-base font-bold text-brand">
                 ${product.price}
@@ -71,6 +80,13 @@ export default function ProductCard({
                     className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-brand-soft"
                   >
                     {product.active ? "Desactivar" : "Activar"}
+                  </button>
+
+                  <button
+                    onClick={onDelete}
+                    className="w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                  >
+                    Eliminar
                   </button>
                 </div>
               </details>
