@@ -49,6 +49,7 @@ export type Database = {
           header_image_url: string | null
           instagram_url: string | null
           logo_url: string | null
+          menu_pdf_url: string | null
           primary_color: string
           published: boolean
           reopens_on: string | null
@@ -68,6 +69,7 @@ export type Database = {
           header_image_url?: string | null
           instagram_url?: string | null
           logo_url?: string | null
+          menu_pdf_url?: string | null
           primary_color?: string
           published?: boolean
           reopens_on?: string | null
@@ -87,6 +89,7 @@ export type Database = {
           header_image_url?: string | null
           instagram_url?: string | null
           logo_url?: string | null
+          menu_pdf_url?: string | null
           primary_color?: string
           published?: boolean
           reopens_on?: string | null
@@ -636,6 +639,7 @@ export type Database = {
       is_valid_schedule: { Args: { p_schedule: Json }; Returns: boolean }
       new_tracking_code: { Args: never; Returns: string }
       next_order_number: { Args: { p_business_id: string }; Returns: number }
+      public_business_pdf: { Args: { p_slug: string }; Returns: Json }
       public_menu: { Args: { p_slug: string }; Returns: Json }
       public_order_tracking: { Args: { p_code: string }; Returns: Json }
       save_business_settings: {
@@ -647,6 +651,7 @@ export type Database = {
           p_header_image_url: string
           p_instagram_url: string
           p_logo_url: string
+          p_menu_pdf_url: string
           p_primary_color: string
           p_published: boolean
           p_reopens_on: string

@@ -28,6 +28,7 @@ type Settings = {
   closedMessage?: string;
   reopensOn?: string | null;
   logo?: string | null;
+  pdf?: string | null;
 };
 
 const sqlText = (value: string | null | undefined, fallback: string | null) => {
@@ -57,8 +58,15 @@ function save(user: string | null, s: Settings = {}) {
        ${s.closed ?? false},
        ${sqlText(s.closedMessage, "")},
        ${sqlText(s.reopensOn, null)}::date,
-       ${sqlText(s.logo, null)})`,
+       ${sqlText(s.logo, null)},
+       ${sqlText(s.pdf, null)})`,
   );
+}
+
+async function publicPdf(slug: string, user: string | null = null) {
+  const r = await asUser(db, user, `select public.public_business_pdf('${slug}') as pdf`);
+  if (!r.ok) throw new Error(r.error);
+  return r.rows[0].pdf as { nombre: string; pdf: string } | null;
 }
 
 beforeAll(async () => {
@@ -317,4 +325,45 @@ describe("logo — ADMIN-CONFIG-8", () => {
       expect((await save(ANA, { logo })).ok).toBe(false);
     },
   );
+});
+
+describe("PDF del menú — PDF-1", () => {
+  it("se guarda y se puede quitar", async () => {
+    expect((await save(ANA, { pdf: "https://cdn.example.com/menu.pdf" })).ok).toBe(true);
+    let s = await db.query<{ menu_pdf_url: string | null }>(
+      `select menu_pdf_url from business_settings where business_id = '${NEG_ANA}'`,
+    );
+    expect(s.rows[0].menu_pdf_url).toBe("https://cdn.example.com/menu.pdf");
+
+    expect((await save(ANA, { pdf: "" })).ok).toBe(true);
+    s = await db.query<{ menu_pdf_url: string | null }>(
+      `select menu_pdf_url from business_settings where business_id = '${NEG_ANA}'`,
+    );
+    expect(s.rows[0].menu_pdf_url).toBeNull();
+  });
+
+  it.each(["http://x.com/a.pdf", "javascript:alert(1)", "menu.pdf", 'https://x.com/a"b.pdf'])(
+    "la base rechaza %s",
+    async (pdf) => {
+      expect((await save(ANA, { pdf })).ok).toBe(false);
+    },
+  );
+
+  it("public_business_pdf lo devuelve exista o no el negocio publicado, sin sesión", async () => {
+    await save(ANA, { published: false, pdf: "https://cdn.example.com/menu.pdf" });
+
+    expect(await publicPdf("ana")).toEqual({
+      nombre: "Ana",
+      pdf: "https://cdn.example.com/menu.pdf",
+    });
+  });
+
+  it("no devuelve nada si el negocio no cargó un PDF", async () => {
+    await save(BETO, { business: NEG_BETO, pdf: null });
+    expect(await publicPdf("beto")).toBeNull();
+  });
+
+  it("no devuelve nada para un slug que no existe", async () => {
+    expect(await publicPdf("no-existe")).toBeNull();
+  });
 });

@@ -185,9 +185,17 @@ solo se prueban en una preview de Vercel.*
 
 ## PDF — Menú en PDF
 
-*Aplicado por `web/apps/pdf`. Cubierto por: pendiente.*
+*Aplicado por `supabase/migrations/20260930000400_menu_pdf.sql`. Cubierto por
+`src/lib/db/settings.test.ts` (PDF-1) y `src/lib/db/storage-pdfs.test.ts` (PDF-2),
+contra Postgres real. Todavía falta: subirlo desde el admin y que `web/apps/pdf`
+lo use (ver Etapa 6e en `docs/PLAN.md`).*
 
-_Sin requisitos todavía._
+- **PDF-1** Un negocio puede tener un PDF de menú (`menu_pdf_url`), independiente
+  de si publicó o no el menú digital: `public_business_pdf(slug)` lo devuelve
+  exista o no `published`, y no devuelve nada si no cargó ninguno.
+- **PDF-2** El PDF se sube a un bucket aparte (`business-pdfs`), con el mismo
+  aislamiento por negocio que las imágenes: cada negocio escribe solo en su
+  propia carpeta, y solo se aceptan PDF de hasta 10 MB.
 
 ---
 
