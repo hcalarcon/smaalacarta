@@ -103,6 +103,9 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   uno nocturno ("20:00-02:00") sigue en la madrugada del día siguiente. Un día sin
   rangos está cerrado; sin ningún horario cargado el negocio está siempre abierto.
 - **PUBLICO-13** El menú público entrega el logo del negocio en `logo`, solo si lo cargó.
+- **PUBLICO-14** En pantallas anchas (desde 1024 px) el menú se centra en una columna de hasta
+  1120 px y los productos van en una grilla de tarjetas de ancho parejo, en las tres
+  plantillas; en el celular no cambia nada. Solo se prueba mirándolo en el navegador.
 
 ## BUSQUEDA — Buscador
 

@@ -1,0 +1,80 @@
+/* MENÚ EN ESCRITORIO (PUBLICO-14). Se carga después de la plantilla, solo en pantallas
+   anchas: centra el contenido en una columna y acomoda los productos en una grilla, para
+   que no queden filas de 1400 px con el botón "+" a un costado. */
+
+.header,
+.categorias,
+.cierre-temporal,
+.menu-container,
+.pie-negocio,
+.cta-section {
+  width: 100%;
+  max-width: 1120px;
+  margin-left: auto;
+  margin-right: auto;
+  box-sizing: border-box;
+}
+
+.header {
+  border-radius: 0 0 20px 20px;
+}
+
+.cierre-temporal {
+  border-radius: 0 0 12px 12px;
+}
+
+.menu-container {
+  padding: 8px 16px 24px;
+}
+
+.categorias {
+  padding: 14px 16px;
+}
+
+/* Grilla de productos: tarjetas de ancho parejo, sin estirarse cuando hay pocas. En
+   `moderno`, "Destacados" tiene su propio diseño (tarjetas grandes con foto) y se respeta. */
+.categoria:not(.categoria-destacados) .categoria-grid,
+html[data-template="clasico"] .categoria-destacados .categoria-grid,
+html[data-template="minimal"] .categoria-destacados .categoria-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+  gap: 16px;
+  align-items: stretch;
+}
+
+.categoria:not(.categoria-destacados) .producto,
+html[data-template="clasico"] .categoria-destacados .producto,
+html[data-template="minimal"] .categoria-destacados .producto {
+  margin: 0;
+  height: 100%;
+  box-sizing: border-box;
+  border-radius: 16px;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.categoria:not(.categoria-destacados) .producto:hover,
+html[data-template="clasico"] .categoria-destacados .producto:hover,
+html[data-template="minimal"] .categoria-destacados .producto:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
+}
+
+/* En una fila de tarjetas verticales las imágenes quedan parejas */
+.categoria:not(.categoria-destacados) .producto img {
+  object-fit: cover;
+}
+
+.categoria-titulo {
+  margin: 20px 0 12px;
+}
+
+/* Las tarjetas destacadas de `moderno` arrancan a la izquierda, como el título */
+html[data-template="moderno"] .categoria-destacados .categoria-grid {
+  justify-content: flex-start;
+}
+
+.pie-negocio {
+  padding-bottom: 6rem;
+}

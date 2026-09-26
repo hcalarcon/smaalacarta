@@ -153,6 +153,7 @@ async function init() {
     }
 
     window.CONFIG = config;
+    document.documentElement.dataset.template = config.template || "";
 
     // App instalable: manifest, ícono y color del negocio (PWA-1 a 3).
     PWA.applyPwa(document, { type, slug, config });
@@ -220,11 +221,22 @@ function loadTemplate(template) {
     link.rel = "stylesheet";
     link.href = `/templates/carrito/${template}/styles.css`;
 
-    link.onload = () => resolve();
+    // Después de la plantilla, y solo en pantallas anchas, el ajuste de escritorio
+    // (PUBLICO-14). Si no carga, el menú se ve como antes.
+    const addDesktop = () => {
+      const desktop = document.createElement("link");
+      desktop.rel = "stylesheet";
+      desktop.href = "/apps/menu-app/desktop.css";
+      desktop.media = "(min-width: 1024px)";
+      desktop.onload = desktop.onerror = () => resolve();
+      document.head.appendChild(desktop);
+    };
+
+    link.onload = addDesktop;
 
     link.onerror = () => {
       console.error("Error cargando template:", template);
-      resolve(); // 👈 no rompemos la app
+      addDesktop(); // 👈 no rompemos la app
     };
 
     document.head.appendChild(link);
