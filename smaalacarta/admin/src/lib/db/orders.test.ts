@@ -1,7 +1,8 @@
 // @vitest-environment node
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { asUser, createTestDb, createUser, type TestDb } from "@/test/db";
+import { isOpenNow } from "../../../../web/apps/menu-app/lib/schedule.js";
 
 // ADMIN-PEDIDOS-1 a 5 y SEGUIMIENTO-1 a 6 contra Postgres real.
 const ANA = "aaaaaaaa-0000-0000-0000-000000000001";
@@ -379,13 +380,35 @@ describe("seguimiento por código — SEGUIMIENTO-5", () => {
 
     const t = await track(c.code);
 
-    expect(t!.negocio).toEqual({ nombre: "Ana Resto", telefono: "5493510000001", slug: "ana" });
+    expect(t!.negocio).toMatchObject({ nombre: "Ana Resto", telefono: "5493510000001", slug: "ana" });
     expect(t!.pedido).toMatchObject({ numero: String(c.number), estado: "pending", total: 3440 });
     expect(t!.items).toEqual([
       { nombre: "Café", cantidad: 2, precio: 1000 },
       { nombre: "Desayuno", cantidad: 1, precio: 1440 },
     ]);
     expect(t!.eventos.map((e) => e.estado)).toEqual(["pending"]);
+  });
+
+  it("lleva la estética del negocio: plantilla, colores e imagen de cabecera (SEGUIMIENTO-11)", async () => {
+    await db.exec(`update business_settings
+      set template = 'clasico', primary_color = '#112233', secondary_color = '#445566',
+          header_image_url = 'https://cdn.example.com/cabecera.jpg'
+      where business_id = '${NEG_ANA}'`);
+    const c = created(await order("ana", [{ id: CAFE }]))!;
+
+    const t = await track(c.code);
+
+    expect(t!.negocio).toMatchObject({
+      plantilla: "clasico",
+      colores: { primary: "#112233", secondary: "#445566" },
+      imagen: "https://cdn.example.com/cabecera.jpg",
+    });
+
+    await db.exec(`update business_settings set header_image_url = null where business_id = '${NEG_ANA}'`);
+    const sinImagen = await track(created(await order("ana", [{ id: CAFE }]))!.code);
+    expect(sinImagen!.negocio).not.toHaveProperty("imagen");
+
+    await db.exec(`update business_settings set template = 'moderno', primary_color = '#5a4a3a', secondary_color = '#d97706' where business_id = '${NEG_ANA}'`);
   });
 
   it("no incluye el nombre del cliente, las notas ni datos internos", async () => {
@@ -662,6 +685,93 @@ describe("historial — ADMIN-PEDIDOS-5", () => {
 
     for (const t of ["orders", "order_items", "order_events", "order_counters"]) {
       expect(await count(`select count(*) as n from ${t} where business_id = '${otro}'`)).toBe(0);
+    }
+  });
+});
+
+// SEGUIMIENTO-9 y PUBLICO-12: fuera del horario no se reciben pedidos.
+describe("horario de atención — SEGUIMIENTO-9", () => {
+  const SIEMPRE = JSON.stringify(
+    Object.fromEntries(
+      ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"].map((d) => [d, ["00:00-12:00", "12:00-00:00"]]),
+    ),
+  );
+  const NUNCA = JSON.stringify(
+    Object.fromEntries(
+      ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"].map((d) => [d, []]),
+    ),
+  );
+
+  const setSchedule = (json: string) =>
+    db.exec(`update business_settings set schedule = '${json}'::jsonb where business_id = '${NEG_BETO}'`);
+
+  afterAll(() => setSchedule("{}"));
+
+  it("un negocio sin horarios cargados recibe pedidos a cualquier hora", async () => {
+    await setSchedule("{}");
+    expect((await order("beto", [{ id: FERNET }])).ok).toBe(true);
+  });
+
+  it("con horario que cubre todo el día recibe pedidos", async () => {
+    await setSchedule(SIEMPRE);
+    expect((await order("beto", [{ id: FERNET }])).ok).toBe(true);
+  });
+
+  it("con todos los días cerrados rechaza el pedido con P0006 y no guarda nada", async () => {
+    await setSchedule(NUNCA);
+    const before = await count(`select count(*) as n from orders where business_id = '${NEG_BETO}'`);
+    const r = await order("beto", [{ id: FERNET }]);
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.code).toBe("P0006");
+    expect(await count(`select count(*) as n from orders where business_id = '${NEG_BETO}'`)).toBe(before);
+  });
+
+  it("is_open_now: inicio incluido, cierre excluido, hora de Argentina", async () => {
+    const open = async (schedule: object, utc: string) => {
+      const r = await db.query<{ v: boolean }>(
+        `select public.is_open_now('${JSON.stringify(schedule)}'::jsonb, '${utc}'::timestamptz) as v`,
+      );
+      return r.rows[0].v;
+    };
+    const lunes = { lunes: ["09:00-13:00"] };
+    // 5 de enero de 2026 es lunes; Argentina es UTC-3.
+    expect(await open(lunes, "2026-01-05T11:59:00Z")).toBe(false); // 08:59
+    expect(await open(lunes, "2026-01-05T12:00:00Z")).toBe(true); // 09:00
+    expect(await open(lunes, "2026-01-05T15:59:00Z")).toBe(true); // 12:59
+    expect(await open(lunes, "2026-01-05T16:00:00Z")).toBe(false); // 13:00
+    expect(await open({}, "2026-01-05T05:00:00Z")).toBe(true); // sin horarios: abierto
+  });
+
+  it("is_open_now: los rangos nocturnos siguen en la madrugada del día siguiente", async () => {
+    const open = async (utc: string) => {
+      const r = await db.query<{ v: boolean }>(
+        `select public.is_open_now('{"martes":["20:00-02:00"]}'::jsonb, '${utc}'::timestamptz) as v`,
+      );
+      return r.rows[0].v;
+    };
+    expect(await open("2026-01-06T22:59:00Z")).toBe(false); // martes 19:59
+    expect(await open("2026-01-06T23:00:00Z")).toBe(true); // martes 20:00
+    expect(await open("2026-01-07T04:59:00Z")).toBe(true); // miércoles 01:59
+    expect(await open("2026-01-07T05:00:00Z")).toBe(false); // miércoles 02:00
+    expect(await open("2026-01-06T04:00:00Z")).toBe(false); // martes 01:00: no es la madrugada de un lunes
+  });
+
+  it("la base y el menú web calculan igual (mismo resultado en una grilla de horas y días)", async () => {
+    const schedules = [
+      { lunes: ["09:00-13:00", "18:00-23:00"], martes: ["20:00-02:00"], jueves: ["10:00-14:00"] },
+      { domingo: ["12:00-00:00"], sabado: ["22:00-04:00"], viernes: [] },
+      { lunes: ["00:00-00:00", "basura"], miercoles: ["23:30-00:30"] },
+    ];
+    for (const schedule of schedules) {
+      for (let day = 0; day < 7; day++) {
+        for (let minute = 0; minute < 24 * 60; minute += 30) {
+          const at = new Date(Date.UTC(2026, 0, 4 + day, 3, minute));
+          const r = await db.query<{ v: boolean }>(
+            `select public.is_open_now('${JSON.stringify(schedule)}'::jsonb, '${at.toISOString()}'::timestamptz) as v`,
+          );
+          expect(isOpenNow(schedule, at), `${JSON.stringify(schedule)} ${at.toISOString()}`).toBe(r.rows[0].v);
+        }
+      }
     }
   });
 });

@@ -1,8 +1,10 @@
 // Página de seguimiento de un pedido (SEGUIMIENTO-8). Todo lo que viene de la base se
 // muestra con textContent: nunca se arma HTML con datos del pedido ni del negocio.
+import { markHandoffSent, pendingHandoff } from "/apps/menu-app/lib/orders.js";
 import { SUPABASE } from "/apps/menu-app/supabase-config.js";
 import {
   fetchTracking,
+  brandTheme,
   isFinalStatus,
   parseTrackingCode,
   statusView,
@@ -39,16 +41,58 @@ function showMessage(text) {
   app.replaceChildren(el("p", { className: "tracker-message", text }));
 }
 
+// Los colores y la cabecera del negocio (SEGUIMIENTO-11). Los valores ya vienen validados.
+function applyTheme(negocio) {
+  const theme = brandTheme(negocio);
+  const root = document.documentElement;
+
+  root.style.setProperty("--brand", theme.brand);
+  root.style.setProperty("--accent", theme.accent);
+  root.style.setProperty("--color-primary", theme.brand);
+  root.style.setProperty("--color-secondary", theme.accent);
+
+  document.querySelector('meta[name="theme-color"]')?.setAttribute("content", theme.brand);
+  return theme;
+}
+
 function render(data, { stale }) {
   const view = statusView(data.pedido.estado);
+  const theme = applyTheme(data.negocio);
   const nodes = [];
 
   if (stale) {
     nodes.push(el("p", { className: "notice", text: "No pudimos actualizar. Seguimos intentando…" }));
   }
 
-  nodes.push(el("p", { className: "tracker-business", text: data.negocio.nombre }));
-  nodes.push(el("p", { className: "tracker-number", text: `Pedido #${data.pedido.numero}` }));
+  const headerNode = el("header", { className: `tracker-header ${theme.plain ? "plain" : ""}`.trim() }, [
+    el("p", { className: "tracker-business", text: data.negocio.nombre }),
+    el("p", { className: "tracker-number", text: `Pedido #${data.pedido.numero}` }),
+  ]);
+  if (theme.header) headerNode.style.backgroundImage = theme.header;
+  nodes.push(headerNode);
+
+  // Si el cliente vino acá sin haber enviado el pedido por WhatsApp, se lo ofrecemos
+  // (SEGUIMIENTO-10). El link sale de su propio navegador y solo puede ser de WhatsApp.
+  const handoff = pendingHandoff(window.localStorage, code);
+  if (handoff) {
+    const send = el("a", {
+      className: "handoff-btn",
+      text: "Enviar por WhatsApp",
+      href: handoff.url,
+      attrs: { target: "_blank", rel: "noopener noreferrer" },
+    });
+    send.addEventListener("click", () => {
+      markHandoffSent(window.localStorage, code);
+      send.closest(".handoff")?.remove();
+    });
+    nodes.push(
+      el("section", { className: "card handoff" }, [
+        el("p", { className: "handoff-title", text: "Falta enviar tu pedido" }),
+        el("p", { className: "handoff-text", text: "El local lo recibe cuando lo mandás por WhatsApp." }),
+        send,
+      ]),
+    );
+  }
 
   // Estado actual y camino recorrido.
   const status = el("section", { className: `card ${view.cancelled ? "status-cancelled" : ""}` }, [

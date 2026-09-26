@@ -28,6 +28,7 @@ export function buildOrderItems(cart) {
 
 const REASONS = {
   P0005: "closed", // cerrado temporalmente
+  P0006: "outside_hours", // fuera del horario de atención
   P0003: "busy", // demasiados pedidos seguidos
   P0001: "unavailable", // un producto ya no está disponible
   P0002: "unavailable", // el negocio no existe o no está publicado
@@ -97,4 +98,55 @@ export function trackingLink(origin, code) {
 
 export function whatsappOrderUrl(phone, message) {
   return `https://api.whatsapp.com/send?phone=${String(phone ?? "").replace(/\D/g, "")}&text=${encodeURIComponent(message)}`;
+}
+
+// El mensaje de WhatsApp queda guardado en el navegador del cliente para poder mandarlo
+// desde la página de seguimiento si todavía no lo envió (SEGUIMIENTO-10). Solo se guardan
+// los últimos pedidos, y solo se devuelve un link de WhatsApp: nada más.
+const HANDOFF_PREFIX = "sma-wa:";
+const HANDOFF_KEEP = 5;
+const WHATSAPP_URL = /^https:\/\/api\.whatsapp\.com\/send\?/;
+
+function handoffKeys(storage) {
+  const keys = [];
+  for (let i = 0; i < storage.length; i++) {
+    const key = storage.key(i);
+    if (key && key.startsWith(HANDOFF_PREFIX)) keys.push(key);
+  }
+  return keys;
+}
+
+export function rememberHandoff(storage, code, url, now = Date.now()) {
+  try {
+    if (!CODE.test(code) || !WHATSAPP_URL.test(url)) return;
+
+    storage.setItem(HANDOFF_PREFIX + code, JSON.stringify({ url, sent: false, at: now }));
+
+    const all = handoffKeys(storage)
+      .map((key) => ({ key, at: Number(JSON.parse(storage.getItem(key) ?? "{}").at) || 0 }))
+      .sort((a, b) => b.at - a.at);
+    all.slice(HANDOFF_KEEP).forEach(({ key }) => storage.removeItem(key));
+  } catch {
+    // Sin almacenamiento (modo privado, cuota): el cliente sigue con el botón de la pantalla.
+  }
+}
+
+// El link de WhatsApp de ese pedido si todavía no se envió; si no, null.
+export function pendingHandoff(storage, code) {
+  try {
+    const saved = JSON.parse(storage.getItem(HANDOFF_PREFIX + code) ?? "null");
+    if (!saved || saved.sent || !WHATSAPP_URL.test(saved.url)) return null;
+    return { url: saved.url };
+  } catch {
+    return null;
+  }
+}
+
+export function markHandoffSent(storage, code) {
+  try {
+    const saved = JSON.parse(storage.getItem(HANDOFF_PREFIX + code) ?? "null");
+    if (saved) storage.setItem(HANDOFF_PREFIX + code, JSON.stringify({ ...saved, sent: true }));
+  } catch {
+    // ver arriba
+  }
 }

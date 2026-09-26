@@ -1,6 +1,9 @@
 // Página de seguimiento de un pedido (SEGUIMIENTO-8): qué muestra y cómo lo pide.
 // Solo lógica: el dibujo está en tracker.js y usa siempre textContent.
 
+import { cssUrl } from "../../menu-app/lib/html.js";
+import { headerBackground } from "../../menu-app/lib/info.js";
+
 const CODE = /^[0-9a-f]{20}$/;
 
 // El código sale de /pedido/<código> (producción) o de ?code= (desarrollo local).
@@ -96,4 +99,32 @@ export async function fetchTracking({ url, key, code, fetchImpl = globalThis.fet
   } catch {
     return { ok: false, reason: "error" };
   }
+}
+
+const DEFAULT_BRAND = "#5a4a3a";
+const DEFAULT_ACCENT = "#d97706";
+
+export function safeColor(value, fallback) {
+  return typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value) ? value : fallback;
+}
+
+// La estética del negocio para la página de seguimiento (SEGUIMIENTO-11): los dos colores,
+// el fondo de la cabecera (imagen sobre degradé, o nada) y si la cabecera es "plana"
+// (blanca, como la plantilla minimal sin imagen). Todo se valida: la base ya lo exige,
+// pero esta página no confía en lo que recibe.
+export function brandTheme(negocio) {
+  const colores = negocio?.colores ?? {};
+  const brand = safeColor(colores.primary, DEFAULT_BRAND);
+  const accent = safeColor(colores.secondary, DEFAULT_ACCENT);
+
+  const header = headerBackground(
+    {
+      template: negocio?.plantilla,
+      colores: { primary: brand, secondary: accent },
+      header: { imagen: negocio?.imagen },
+    },
+    cssUrl,
+  );
+
+  return { brand, accent, header, plain: header === "" };
 }

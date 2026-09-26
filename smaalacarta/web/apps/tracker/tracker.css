@@ -31,17 +31,35 @@ body {
   color: #6b7280;
 }
 
-.tracker-business {
+/* Cabecera con la estética del negocio: sus colores y, si la cargó, su imagen */
+.tracker-header {
+  margin: -1.25rem -1rem 1.25rem;
+  padding: 1.75rem 1rem 1.5rem;
   text-align: center;
+  color: #fff;
+  background-color: var(--brand);
+  background-size: cover;
+  background-position: center;
+  background-blend-mode: overlay;
+  border-radius: 0 0 1.5rem 1.5rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+.tracker-header.plain {
+  background: #fff;
   color: var(--brand);
-  font-weight: 600;
+  border-bottom: 1px solid var(--line);
+  box-shadow: none;
+}
+
+.tracker-business {
+  font-size: 1.35rem;
+  font-weight: 700;
 }
 
 .tracker-number {
-  text-align: center;
-  color: #6b7280;
+  opacity: 0.85;
   font-size: 0.95rem;
-  margin-bottom: 1rem;
 }
 
 .card {
@@ -100,7 +118,7 @@ body {
 }
 
 .step.done::before {
-  background: var(--ok);
+  background: var(--brand);
 }
 
 .step.current {
@@ -109,7 +127,7 @@ body {
 
 .step.current::before {
   background: var(--accent);
-  box-shadow: 0 0 0 4px rgba(217, 119, 6, 0.2);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent);
 }
 
 .card h2 {
@@ -160,6 +178,31 @@ body {
 
 .events time {
   color: #9ca3af;
+}
+
+.handoff {
+  border-color: var(--accent);
+  text-align: center;
+}
+
+.handoff-title {
+  font-weight: 700;
+  color: var(--brand);
+}
+
+.handoff-text {
+  color: #6b7280;
+  margin: 0.25rem 0 0.9rem;
+}
+
+.handoff-btn {
+  display: block;
+  background: #25d366;
+  color: #fff;
+  padding: 0.8rem 1rem;
+  border-radius: 0.75rem;
+  text-decoration: none;
+  font-weight: 600;
 }
 
 .contact {

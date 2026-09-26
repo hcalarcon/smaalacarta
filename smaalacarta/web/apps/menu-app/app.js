@@ -5,6 +5,7 @@ let MENU_GLOBAL = null;
 let HTML = null;
 let INFO = null;
 let ORDERS = null;
+let SCHEDULE = null;
 
 // De dónde vino el menú: si es de Supabase, el pedido también se guarda en el sistema.
 let MENU_SOURCE = null;
@@ -101,14 +102,16 @@ async function loadFromSupabase(slug) {
 // INIT
 async function init() {
   try {
-    const [{ resolveBusinessFromHost }, html, info, orders, supabaseConfig] =
+    const [{ resolveBusinessFromHost }, html, info, orders, supabaseConfig, schedule] =
       await Promise.all([
         import("/apps/menu-app/lib/hostname.js"),
         import("/apps/menu-app/lib/html.js"),
         import("/apps/menu-app/lib/info.js"),
         import("/apps/menu-app/lib/orders.js"),
         import("/apps/menu-app/supabase-config.js"),
+        import("/apps/menu-app/lib/schedule.js"),
       ]);
+    SCHEDULE = schedule;
     HTML = html;
     INFO = info;
     ORDERS = orders;
@@ -236,9 +239,10 @@ function renderHeader(c) {
   }
 
   const cierre = INFO.closedNotice(c);
-  const abierto = !cierre && isAbiertoAhora(c);
+  const fueraDeHorario = !cierre && !SCHEDULE.isOpenNow(c.horarios);
+  const abierto = !cierre && !fueraDeHorario;
 
-  renderInfo(c, cierre);
+  renderInfo(c, cierre, fueraDeHorario);
 
   if (estadoEl) {
     estadoEl.textContent = abierto ? "Abierto" : "Cerrado";
@@ -279,7 +283,7 @@ function externalLink(href) {
 // Aviso de cierre temporal (arriba, debajo del encabezado) y dirección y redes (al pie).
 // Todo se arma con textContent y atributos: lo que escribe el negocio nunca se
 // interpreta como HTML.
-function renderInfo(c, cierre) {
+function renderInfo(c, cierre, fueraDeHorario = false) {
   document.querySelectorAll("#aviso-cierre, #pie-negocio").forEach((el) => el.remove());
 
   const header = document.querySelector(".header");
@@ -294,6 +298,18 @@ function renderInfo(c, cierre) {
       "Cerrado temporalmente",
       cierre.message,
       INFO.reopenText(cierre.reopensOn),
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    header.insertAdjacentElement("afterend", aviso);
+  } else if (fueraDeHorario) {
+    const aviso = document.createElement("div");
+    aviso.id = "aviso-cierre";
+    aviso.className = "cierre-temporal";
+    aviso.setAttribute("role", "status");
+    aviso.textContent = [
+      "Cerrado ahora",
+      SCHEDULE.openingText(SCHEDULE.nextOpening(c.horarios)),
     ]
       .filter(Boolean)
       .join(" · ");
@@ -341,51 +357,10 @@ function renderInfo(c, cierre) {
   // Cerrado: no se pueden enviar pedidos.
   const enviar = document.querySelector("#form-pedido button[type='submit']");
   if (enviar) {
-    enviar.disabled = Boolean(cierre);
+    enviar.disabled = Boolean(cierre) || fueraDeHorario;
     if (cierre) enviar.textContent = "Cerrado temporalmente";
+    else if (fueraDeHorario) enviar.textContent = "Cerrado ahora";
   }
-}
-
-function isAbiertoAhora(config) {
-  if (!config?.horarios) return true;
-
-  const ahora = new Date();
-
-  const dias = [
-    "domingo",
-    "lunes",
-    "martes",
-    "miercoles",
-    "jueves",
-    "viernes",
-    "sabado",
-  ];
-
-  const dia = dias[ahora.getDay()];
-  const horaActual = ahora.getHours() * 60 + ahora.getMinutes();
-
-  const horariosHoy = config.horarios[dia];
-
-  if (!horariosHoy || horariosHoy.length === 0) return false;
-
-  return horariosHoy.some((rango) => {
-    if (!rango.includes("-")) return false;
-
-    const [inicio, fin] = rango.split("-");
-
-    const [h1, m1] = inicio.split(":").map(Number);
-    const [h2, m2] = fin.split(":").map(Number);
-
-    const inicioMin = h1 * 60 + m1;
-    let finMin = h2 * 60 + m2;
-
-    // Soporte horario nocturno
-    if (finMin < inicioMin) {
-      return horaActual >= inicioMin || horaActual <= finMin;
-    }
-
-    return horaActual >= inicioMin && horaActual <= finMin;
-  });
 }
 
 function renderCategorias(menu) {
@@ -726,8 +701,17 @@ $("#cerrar-checkout")?.addEventListener("click", closeAll);
 $("#form-pedido")?.addEventListener("submit", async (e) => {
   e.preventDefault();
 
+  // La página puede haber quedado abierta desde antes de que el negocio cerrara.
   if (INFO?.closedNotice(window.CONFIG)) {
     alert("Estamos cerrados temporalmente: por ahora no podemos tomar pedidos.");
+    return;
+  }
+  if (SCHEDULE && !SCHEDULE.isOpenNow(window.CONFIG?.horarios)) {
+    alert(
+      ["Estamos cerrados en este momento.", SCHEDULE.openingText(SCHEDULE.nextOpening(window.CONFIG?.horarios))]
+        .filter(Boolean)
+        .join(" "),
+    );
     return;
   }
 
@@ -806,6 +790,9 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     } else if (result.reason === "closed") {
       alert("Estamos cerrados temporalmente: por ahora no podemos tomar pedidos.");
       return;
+    } else if (result.reason === "outside_hours") {
+      alert("Estamos fuera de horario: por ahora no podemos tomar pedidos.");
+      return;
     } else if (result.reason === "busy") {
       alert("Estamos recibiendo muchos pedidos. Probá de nuevo en un minuto.");
       return;
@@ -819,7 +806,12 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
   const link = saved ? ORDERS.trackingLink(window.location.origin, saved.code) : "";
   if (link) msg += `\n\n🔎 Seguí tu pedido: ${link}`;
 
-  const whatsappUrl = `https://api.whatsapp.com/send?phone=${CONFIG.telefono}&text=${encodeURIComponent(msg)}`;
+  const whatsappUrl = ORDERS
+    ? ORDERS.whatsappOrderUrl(CONFIG.telefono, msg)
+    : `https://api.whatsapp.com/send?phone=${CONFIG.telefono}&text=${encodeURIComponent(msg)}`;
+
+  // Si el cliente sigue el pedido antes de enviarlo, el seguimiento se lo vuelve a ofrecer.
+  if (saved) ORDERS.rememberHandoff(window.localStorage, saved.code, whatsappUrl);
 
   cart = [];
   saveCart();
@@ -828,16 +820,18 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
   if (saved) {
     // El navegador puede bloquear una ventana abierta después de esperar: por eso se
     // muestra un botón, que sí cuenta como acción del cliente.
-    showThanks({ number: saved.number, link, whatsappUrl });
+    showThanks({ number: saved.number, code: saved.code, link, whatsappUrl });
   } else {
     window.open(whatsappUrl);
     closeAll();
   }
 });
 
-// "Gracias por tu pedido": reemplaza al formulario, con el botón de WhatsApp y el link de
-// seguimiento. Todo con textContent: el número y los links no se interpretan como HTML.
-function showThanks({ number, link, whatsappUrl }) {
+// "Pedido registrado": reemplaza al formulario, con dos pasos: enviar por WhatsApp y
+// seguir el pedido. Se puede hacer en cualquier orden (SEGUIMIENTO-10): si el cliente
+// abre el seguimiento primero, esa página le ofrece enviar el mensaje. Todo con
+// textContent: el número y los links no se interpretan como HTML.
+function showThanks({ number, code, link, whatsappUrl }) {
   const form = $("#form-pedido");
   if (!form) return;
 
@@ -849,13 +843,11 @@ function showThanks({ number, link, whatsappUrl }) {
   panel.className = "gracias-pedido";
 
   const title = document.createElement("h3");
-  title.textContent = "¡Gracias por tu pedido!";
-
-  const num = document.createElement("p");
-  num.textContent = `Pedido #${number}`;
+  title.textContent = `¡Pedido #${number} registrado!`;
 
   const info = document.createElement("p");
-  info.textContent = "Para que el local lo reciba, enviá el mensaje por WhatsApp.";
+  info.className = "gracias-aviso";
+  info.textContent = "Falta un paso: enviá el pedido por WhatsApp para que el local lo reciba.";
 
   const send = document.createElement("a");
   send.className = "btn-whatsapp";
@@ -869,12 +861,19 @@ function showThanks({ number, link, whatsappUrl }) {
   track.href = link;
   track.textContent = "Seguir mi pedido";
 
+  send.addEventListener("click", () => {
+    ORDERS?.markHandoffSent(window.localStorage, code);
+    info.textContent = "¡Listo! Ahora podés seguir el estado de tu pedido.";
+    send.classList.add("hecho");
+    track.classList.add("destacado");
+  });
+
   const close = document.createElement("button");
   close.type = "button";
   close.textContent = "Cerrar";
   close.onclick = closeAll;
 
-  panel.append(title, num, info, send, track, close);
+  panel.append(title, info, send, track, close);
   form.insertAdjacentElement("afterend", panel);
 }
 

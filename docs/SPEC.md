@@ -98,6 +98,10 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   configurados no se pinta nada.
 - **PUBLICO-11** Lo que es solo de las demos (el aviso "¿Querés este menú en tu negocio?" y
   el botón "Volver" a la landing) no se muestra en un negocio real.
+- **PUBLICO-12** Abierto o cerrado se calcula con la hora de Argentina (no la del celular
+  del cliente). Un rango "HH:MM-HH:MM" incluye la hora de inicio y no la de cierre, y
+  uno nocturno ("20:00-02:00") sigue en la madrugada del día siguiente. Un día sin
+  rangos está cerrado; sin ningún horario cargado el negocio está siempre abierto.
 
 ## BUSQUEDA — Buscador
 
@@ -148,6 +152,15 @@ llegando al negocio por WhatsApp.
   se envía por WhatsApp como hasta ahora.
 - **SEGUIMIENTO-8** La página de seguimiento muestra el estado y se actualiza sola
   hasta que el pedido termina; los textos que muestra nunca se interpretan como HTML.
+- **SEGUIMIENTO-9** Fuera del horario del negocio no se reciben pedidos: el servidor los
+  rechaza (`P0006`) y el menú avisa "Cerrado ahora", con el próximo horario de
+  apertura, y no deja enviarlos.
+- **SEGUIMIENTO-10** Al confirmar, el cliente puede mandar el pedido por WhatsApp y
+  seguirlo en cualquier orden: el mensaje queda guardado en su navegador y la página de
+  seguimiento ofrece enviarlo si todavía no lo envió.
+- **SEGUIMIENTO-11** La página de seguimiento tiene la estética del negocio: sus colores,
+  su imagen de cabecera y su plantilla (`minimal` queda blanca). El seguimiento sigue sin
+  datos personales, y los colores y la imagen se validan antes de usarlos.
 
 ## PDF — Menú en PDF
 
