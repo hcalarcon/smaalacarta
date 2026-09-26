@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { closedNotice, headerBackground, mapsUrl, reopenText, showSalesCta, socialLinks } from "./info.js";
+import { closedNotice, headerBackground, mapsUrl, reopenText, isDemoMenu, socialLinks } from "./info.js";
 
 describe("closedNotice — PUBLICO-9", () => {
   it("sin cierre no hay aviso", () => {
@@ -42,14 +42,14 @@ describe("socialLinks — PUBLICO-9", () => {
         },
       }),
     ).toEqual([
-      { name: "Instagram", url: "https://www.instagram.com/casa" },
-      { name: "Facebook", url: "https://www.facebook.com/casa" },
+      { key: "instagram", name: "Instagram", url: "https://www.instagram.com/casa" },
+      { key: "facebook", name: "Facebook", url: "https://www.facebook.com/casa" },
     ]);
   });
 
   it("solo con una red, solo esa", () => {
     expect(socialLinks({ redes: { instagram: "https://www.instagram.com/casa" } })).toEqual([
-      { name: "Instagram", url: "https://www.instagram.com/casa" },
+      { key: "instagram", name: "Instagram", url: "https://www.instagram.com/casa" },
     ]);
   });
 
@@ -118,11 +118,11 @@ describe("headerBackground — PUBLICO-10", () => {
   });
 });
 
-describe("showSalesCta — PUBLICO-11", () => {
-  it("solo las demos muestran la propuesta de venta", () => {
-    expect(showSalesCta("demo")).toBe(true);
-    expect(showSalesCta("cliente")).toBe(false);
-    expect(showSalesCta(undefined)).toBe(false);
-    expect(showSalesCta(null)).toBe(false);
+describe("isDemoMenu — PUBLICO-11", () => {
+  it("solo las demos muestran la propuesta de venta y el botón Volver", () => {
+    expect(isDemoMenu("demo")).toBe(true);
+    expect(isDemoMenu("cliente")).toBe(false);
+    expect(isDemoMenu(undefined)).toBe(false);
+    expect(isDemoMenu(null)).toBe(false);
   });
 });

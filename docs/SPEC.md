@@ -89,14 +89,15 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
 - **PUBLICO-8** La dirección y las redes llegan como `direccion` y `redes`; un cierre
   temporal vigente llega como `cierre`, con su mensaje y la fecha de reapertura. Un
   cierre cuya fecha de reapertura ya llegó no se entrega.
-- **PUBLICO-9** El menú muestra la dirección y las redes, y si el negocio está
-  cerrado temporalmente lo dice con su mensaje y no deja enviar pedidos.
+- **PUBLICO-9** El menú muestra la dirección y las redes al pie de la página ("Encontranos
+  en" y "Seguinos en", con el ícono de cada red), y si el negocio está cerrado
+  temporalmente lo dice arriba, con su mensaje, y no deja enviar pedidos.
 - **PUBLICO-10** El encabezado del menú muestra los colores del negocio aunque no tenga
   imagen (degradé de `primary` a `secondary`); con imagen, la imagen va sobre el degradé.
   La plantilla `minimal` mantiene su encabezado blanco sin imagen, y sin colores
   configurados no se pinta nada.
-- **PUBLICO-11** El aviso "¿Querés este menú en tu negocio?" es solo de las demos: un
-  negocio real nunca lo muestra.
+- **PUBLICO-11** Lo que es solo de las demos (el aviso "¿Querés este menú en tu negocio?" y
+  el botón "Volver" a la landing) no se muestra en un negocio real.
 
 ## BUSQUEDA — Buscador
 

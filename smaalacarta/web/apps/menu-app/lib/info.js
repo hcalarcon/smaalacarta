@@ -44,7 +44,7 @@ export function socialLinks(config) {
 
   return NETWORKS.flatMap((network) => {
     const url = safeHttpUrl(redes[network.key]);
-    return url && network.host.test(url) ? [{ name: network.name, url }] : [];
+    return url && network.host.test(url) ? [{ key: network.key, name: network.name, url }] : [];
   });
 }
 
@@ -71,7 +71,8 @@ export function headerBackground(config, cssUrl) {
   return "";
 }
 
-// El aviso "¿Querés este menú en tu negocio?" es solo de las demos (PUBLICO-11).
-export function showSalesCta(type) {
+// Lo que es solo de las demos (PUBLICO-11): el aviso "¿Querés este menú en tu negocio?"
+// y el botón "Volver" a la landing.
+export function isDemoMenu(type) {
   return type === "demo";
 }
