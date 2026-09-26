@@ -6,6 +6,7 @@ let HTML = null;
 let INFO = null;
 let ORDERS = null;
 let SCHEDULE = null;
+let PWA = null;
 
 // De dónde vino el menú: si es de Supabase, el pedido también se guarda en el sistema.
 let MENU_SOURCE = null;
@@ -102,7 +103,7 @@ async function loadFromSupabase(slug) {
 // INIT
 async function init() {
   try {
-    const [{ resolveBusinessFromHost }, html, info, orders, supabaseConfig, schedule] =
+    const [{ resolveBusinessFromHost }, html, info, orders, supabaseConfig, schedule, pwa] =
       await Promise.all([
         import("/apps/menu-app/lib/hostname.js"),
         import("/apps/menu-app/lib/html.js"),
@@ -110,8 +111,10 @@ async function init() {
         import("/apps/menu-app/lib/orders.js"),
         import("/apps/menu-app/supabase-config.js"),
         import("/apps/menu-app/lib/schedule.js"),
+        import("/apps/menu-app/lib/pwa.js"),
       ]);
     SCHEDULE = schedule;
+    PWA = pwa;
     HTML = html;
     INFO = info;
     ORDERS = orders;
@@ -150,6 +153,12 @@ async function init() {
     }
 
     window.CONFIG = config;
+
+    // App instalable: manifest, ícono y color del negocio (PWA-1 a 3).
+    PWA.applyPwa(document, { type, slug, config });
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js").catch(() => {});
+    }
 
     // Lo que es solo de las demos: la propuesta de venta y el botón "Volver".
     const demo = INFO.isDemoMenu(type);

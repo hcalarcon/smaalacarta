@@ -27,6 +27,7 @@ type Settings = {
   closed?: boolean;
   closedMessage?: string;
   reopensOn?: string | null;
+  logo?: string | null;
 };
 
 const sqlText = (value: string | null | undefined, fallback: string | null) => {
@@ -55,7 +56,8 @@ function save(user: string | null, s: Settings = {}) {
        ${sqlText(s.facebook, "https://www.facebook.com/casaresto")},
        ${s.closed ?? false},
        ${sqlText(s.closedMessage, "")},
-       ${sqlText(s.reopensOn, null)}::date)`,
+       ${sqlText(s.reopensOn, null)}::date,
+       ${sqlText(s.logo, null)})`,
   );
 }
 
@@ -296,4 +298,23 @@ describe("publicación — ADMIN-CONFIG-4", () => {
     const r = await db.query(`insert into business_settings (business_id) values ('${otro}') returning *`);
     expect(r.rows).toHaveLength(1);
   });
+});
+
+describe("logo — ADMIN-CONFIG-8", () => {
+  it("se guarda y se puede quitar", async () => {
+    expect((await save(ANA, { logo: "https://cdn.example.com/logo.png" })).ok).toBe(true);
+    let s = await db.query<{ logo_url: string | null }>(`select logo_url from business_settings where business_id = '${NEG_ANA}'`);
+    expect(s.rows[0].logo_url).toBe("https://cdn.example.com/logo.png");
+
+    expect((await save(ANA, { logo: "" })).ok).toBe(true);
+    s = await db.query<{ logo_url: string | null }>(`select logo_url from business_settings where business_id = '${NEG_ANA}'`);
+    expect(s.rows[0].logo_url).toBeNull();
+  });
+
+  it.each(["http://x.com/a.png", "javascript:alert(1)", "logo.png", 'https://x.com/a"b.png'])(
+    "la base rechaza %s",
+    async (logo) => {
+      expect((await save(ANA, { logo })).ok).toBe(false);
+    },
+  );
 });

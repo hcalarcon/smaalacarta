@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { cssUrl, escapeHtml, safeHttpUrl } from "./html.js";
+import { cssUrl, escapeHtml, safeHttpUrl, safeHttpsUrl } from "./html.js";
 
 describe("escapeHtml — PUBLICO-9", () => {
   it("escapa lo que permite inyectar HTML o cerrar un atributo", () => {
@@ -74,5 +74,15 @@ describe("cssUrl — PUBLICO-9", () => {
   it("con una dirección no válida no aplica nada", () => {
     expect(cssUrl("javascript:alert(1)")).toBe("none");
     expect(cssUrl("")).toBe("none");
+  });
+});
+
+describe("safeHttpsUrl — PWA-1", () => {
+  it("acepta https y descarta http, javascript y rutas", () => {
+    expect(safeHttpsUrl("https://x.com/a.png")).toBe("https://x.com/a.png");
+    expect(safeHttpsUrl("http://x.com/a.png")).toBe("");
+    expect(safeHttpsUrl("javascript:alert(1)")).toBe("");
+    expect(safeHttpsUrl("/a.png")).toBe("");
+    expect(safeHttpsUrl(null)).toBe("");
   });
 });

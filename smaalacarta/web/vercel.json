@@ -30,7 +30,7 @@
     },
 
     {
-      "source": "/((?!apps|data|templates|.*\\..*).*)",
+      "source": "/((?!api|apps|data|templates|.*\\..*).*)",
       "destination": "/apps/menu-app/index.html"
     }
   ]

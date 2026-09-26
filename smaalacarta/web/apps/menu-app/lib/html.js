@@ -14,6 +14,12 @@ export function escapeHtml(value) {
   return String(value ?? "").replace(/[&<>"']/g, (char) => ESCAPES[char]);
 }
 
+// Solo https: para íconos de la app instalable, que un sitio https no puede cargar por http.
+export function safeHttpsUrl(value) {
+  const url = safeHttpUrl(value);
+  return /^https:/i.test(url) ? url : "";
+}
+
 // Solo direcciones http(s) absolutas: descarta `javascript:`, `data:`, rutas
 // relativas y cualquier otra cosa. Devuelve "" si no es válida.
 export function safeHttpUrl(value) {

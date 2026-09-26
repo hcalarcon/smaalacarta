@@ -48,6 +48,7 @@ export type Database = {
           facebook_url: string | null
           header_image_url: string | null
           instagram_url: string | null
+          logo_url: string | null
           primary_color: string
           published: boolean
           reopens_on: string | null
@@ -66,6 +67,7 @@ export type Database = {
           facebook_url?: string | null
           header_image_url?: string | null
           instagram_url?: string | null
+          logo_url?: string | null
           primary_color?: string
           published?: boolean
           reopens_on?: string | null
@@ -84,6 +86,7 @@ export type Database = {
           facebook_url?: string | null
           header_image_url?: string | null
           instagram_url?: string | null
+          logo_url?: string | null
           primary_color?: string
           published?: boolean
           reopens_on?: string | null
@@ -622,6 +625,10 @@ export type Database = {
         }
         Returns: Json
       }
+      is_open_now: {
+        Args: { p_at: string; p_schedule: Json }
+        Returns: boolean
+      }
       is_super_admin: { Args: never; Returns: boolean }
       is_valid_schedule: { Args: { p_schedule: Json }; Returns: boolean }
       new_tracking_code: { Args: never; Returns: string }
@@ -636,6 +643,7 @@ export type Database = {
           p_facebook_url: string
           p_header_image_url: string
           p_instagram_url: string
+          p_logo_url: string
           p_primary_color: string
           p_published: boolean
           p_reopens_on: string

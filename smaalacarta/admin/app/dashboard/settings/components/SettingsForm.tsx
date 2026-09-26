@@ -135,6 +135,7 @@ export default function SettingsForm({
   const [primaryColor, setPrimaryColor] = useState(initial.primaryColor);
   const [secondaryColor, setSecondaryColor] = useState(initial.secondaryColor);
   const [headerImageUrl, setHeaderImageUrl] = useState(initial.headerImageUrl);
+  const [logoUrl, setLogoUrl] = useState(initial.logoUrl);
   const [whatsapp, setWhatsapp] = useState(initial.whatsapp);
   const [address, setAddress] = useState(initial.address);
   const [instagram, setInstagram] = useState(initial.instagram);
@@ -187,6 +188,7 @@ export default function SettingsForm({
         primaryColor,
         secondaryColor,
         headerImageUrl,
+        logoUrl,
         schedule: toSchedule(days, scheduleEnabled),
         whatsapp,
         address,
@@ -299,6 +301,17 @@ export default function SettingsForm({
           inputMode="url"
           autoCapitalize="none"
         />
+
+        <ImageUploader
+          businessId={businessId}
+          label="Logo (opcional)"
+          value={logoUrl}
+          onChange={setLogoUrl}
+        />
+        <p className="-mt-3 text-sm text-stone-500">
+          Cuadrado, de al menos 512 × 512 px. Es el ícono cuando tus clientes instalan
+          el menú en el celular; sin logo se usa el de SMA a la Carta.
+        </p>
 
         {/* Vista previa de la cabecera: colores de marca y, si carga, la imagen. */}
         <div

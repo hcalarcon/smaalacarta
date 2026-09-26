@@ -32,6 +32,7 @@ export async function saveSettingsAction(
     ...input,
     tagline: input.tagline.trim(),
     headerImageUrl: input.headerImageUrl.trim(),
+    logoUrl: input.logoUrl.trim(),
     schedule: normalizeSchedule(input.schedule),
     whatsapp: input.whatsapp.trim(),
   });

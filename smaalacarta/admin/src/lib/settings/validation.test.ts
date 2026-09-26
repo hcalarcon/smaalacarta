@@ -7,6 +7,7 @@ const valid = {
   published: true,
   tagline: "Cocina casera",
   headerImageUrl: "https://ejemplo.com/cabecera.jpg",
+  logoUrl: "https://ejemplo.com/logo.png",
   schedule: { lunes: ["12:00-15:00"], domingo: [] },
   whatsapp: "5493510000000",
   address: "Calle 123",
@@ -142,5 +143,23 @@ describe("cierre temporal — ADMIN-CONFIG-6", () => {
     expect(validateSettings({ ...valid, reopensOn: "2028-02-29" })).toEqual({ ok: true });
     const r = validateSettings({ ...valid, reopensOn: "2027-02-29" });
     expect(r.ok === false && r.errors.reopensOn).toBeTruthy();
+  });
+});
+
+describe("logo — ADMIN-CONFIG-8", () => {
+  it.each(["logo.png", "http://ejemplo.com/logo.png", "javascript:alert(1)", 'https://x.com/a"b.png'])(
+    "rechaza %s",
+    (logoUrl) => {
+      const r = validateSettings({ ...valid, logoUrl });
+      expect(r.ok === false && r.errors.logoUrl).toBeTruthy();
+    },
+  );
+
+  it("es opcional", () => {
+    expect(validateSettings({ ...valid, logoUrl: "" })).toEqual({ ok: true });
+  });
+
+  it("acepta una imagen https", () => {
+    expect(validateSettings({ ...valid, logoUrl: "https://ejemplo.com/logo.png" })).toEqual({ ok: true });
   });
 });

@@ -102,6 +102,7 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   del cliente). Un rango "HH:MM-HH:MM" incluye la hora de inicio y no la de cierre, y
   uno nocturno ("20:00-02:00") sigue en la madrugada del día siguiente. Un día sin
   rangos está cerrado; sin ningún horario cargado el negocio está siempre abierto.
+- **PUBLICO-13** El menú público entrega el logo del negocio en `logo`, solo si lo cargó.
 
 ## BUSQUEDA — Buscador
 
@@ -161,6 +162,20 @@ llegando al negocio por WhatsApp.
 - **SEGUIMIENTO-11** La página de seguimiento tiene la estética del negocio: sus colores,
   su imagen de cabecera y su plantilla (`minimal` queda blanca). El seguimiento sigue sin
   datos personales, y los colores y la imagen se validan antes de usarlos.
+
+## PWA — Instalar el menú en el celular
+
+*Aplicado por `web/api/manifest.js`, `web/sw.js` y `web/apps/menu-app/lib/{manifest,pwa}.js`.
+Cubierto por: `lib/manifest.test.js` y `lib/pwa.test.js`. La función y el service worker
+solo se prueban en una preview de Vercel.*
+
+- **PWA-1** Cada negocio se instala con lo suyo: su nombre, su color y, como ícono, su logo
+  (ADMIN-CONFIG-8). Sin logo se usa el ícono general de SMA a la Carta, así que no hace
+  falta cargar uno por cada comercio.
+- **PWA-2** Las demos y cualquier sitio que no sea un negocio publicado reciben el manifest
+  general de SMA a la Carta.
+- **PWA-3** El service worker no guarda nada en caché: precios, horarios y pedidos siempre
+  vienen de la red.
 
 ## PDF — Menú en PDF
 
@@ -330,6 +345,8 @@ y redes) y `src/lib/storage/images.test.ts`.*
 - **ADMIN-CONFIG-7** Solo los miembros de un negocio suben, cambian y borran archivos
   de su carpeta del bucket de imágenes; solo se aceptan JPG, PNG y WebP de hasta
   2 MB. Nadie puede escribir fuera de la carpeta de su negocio.
+- **ADMIN-CONFIG-8** El negocio puede cargar un logo cuadrado (opcional, una imagen https).
+  Se usa como ícono al instalar el menú en el celular; sin logo se usa el ícono general.
 
 ## ADMIN-PEDIDOS — Pedidos
 
