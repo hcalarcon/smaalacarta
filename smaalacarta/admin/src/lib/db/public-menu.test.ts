@@ -13,6 +13,8 @@ const NEG_PRIVADO = "c3c3c3c3-0000-0000-0000-000000000003";
 let db: TestDb;
 
 type Item = {
+  id?: string;
+  esPromo?: boolean;
   nombre: string;
   descripcion?: string;
   precio: number;
@@ -139,11 +141,12 @@ describe("categorías y productos — PUBLICO-2", () => {
     expect(bebidas.items.map((i) => i.nombre)).toEqual(["Café", "Té"]);
   });
 
-  it("el producto lleva descripción, precio, imagen y destacado", async () => {
+  it("el producto lleva su id, descripción, precio, imagen y destacado", async () => {
     const menu = await publicMenu("ana");
     const cafe = menu!.menu.categorias.find((c) => c.nombre === "Bebidas")!.items[0];
 
     expect(cafe).toEqual({
+      id: "d1000000-0000-0000-0000-000000000001",
       nombre: "Café",
       descripcion: "Doble",
       precio: 1000,
@@ -156,7 +159,12 @@ describe("categorías y productos — PUBLICO-2", () => {
     const menu = await publicMenu("ana");
     const te = menu!.menu.categorias.find((c) => c.nombre === "Bebidas")!.items[1];
 
-    expect(te).toEqual({ nombre: "Té", precio: 800, destacado: false });
+    expect(te).toEqual({
+      id: "d1000000-0000-0000-0000-000000000002",
+      nombre: "Té",
+      precio: 800,
+      destacado: false,
+    });
   });
 
   it("la categoría lleva su descripción", async () => {
@@ -200,6 +208,8 @@ describe("promociones — PUBLICO-3", () => {
     const desayuno = menu!.menu.categorias[0].items.find((i) => i.nombre === "Desayuno")!;
 
     expect(desayuno).toEqual({
+      id: "e1000000-0000-0000-0000-000000000001",
+      esPromo: true,
       nombre: "Desayuno",
       descripcion: "Incluye: Té, Café",
       precio: 1440,
@@ -213,6 +223,8 @@ describe("promociones — PUBLICO-3", () => {
     const combo = menu!.menu.categorias[0].items.find((i) => i.nombre === "Combo")!;
 
     expect(combo).toEqual({
+      id: "e1000000-0000-0000-0000-000000000002",
+      esPromo: true,
       nombre: "Combo",
       descripcion: "Para dos · Incluye: Café, Milanesa",
       precio: 1500,

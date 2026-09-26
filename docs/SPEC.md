@@ -110,6 +110,38 @@ _Sin requisitos todavía._
 
 _Sin requisitos todavía._
 
+## SEGUIMIENTO — Pedido guardado y página de seguimiento
+
+*Aplicado por `supabase/migrations/*_pedidos.sql` (funciones `create_public_order` y
+`public_order_tracking`), `web/apps/menu-app/lib/orders.js` y `web/apps/tracker`.
+Cubierto por: `src/lib/db/orders.test.ts` (admin, contra Postgres real:
+SEGUIMIENTO-1 a 6) y `web/apps/**/lib/*.test.js` (SEGUIMIENTO-7 y 8).*
+
+Cuando el menú viene de Supabase, confirmar el pedido lo guarda en el sistema antes
+de abrir WhatsApp, y el cliente recibe un link para seguirlo. El pedido sigue
+llegando al negocio por WhatsApp.
+
+- **SEGUIMIENTO-1** Un cliente, sin sesión, puede crear un pedido en un negocio
+  publicado y abierto. No puede en uno que no existe, no está publicado o cerró
+  temporalmente.
+- **SEGUIMIENTO-2** Los precios y el total los calcula el sistema a partir del menú:
+  el navegador solo dice qué productos y cuántos. Un precio enviado por el navegador
+  no existe para el sistema.
+- **SEGUIMIENTO-3** Solo se puede pedir lo que el menú público muestra: productos y
+  promociones activos de ese negocio. Si un ítem no es válido, el pedido no se crea.
+- **SEGUIMIENTO-4** Un pedido lleva de 1 a 40 ítems distintos, de 1 a 20 unidades
+  cada uno, con textos de largo acotado; un negocio no recibe más de 20 pedidos por
+  minuto desde el menú.
+- **SEGUIMIENTO-5** Al crear el pedido, el cliente recibe su número y un código único
+  e imposible de adivinar. Con ese código se ve el estado, la línea de tiempo y el
+  detalle del pedido, sin el nombre del cliente, las notas ni ningún dato personal.
+- **SEGUIMIENTO-6** Sin sesión no se lee ni se cambia ninguna tabla de pedidos: solo
+  se crea un pedido y se consulta uno por su código.
+- **SEGUIMIENTO-7** Si el menú no viene de Supabase, o el pedido no se puede guardar,
+  se envía por WhatsApp como hasta ahora.
+- **SEGUIMIENTO-8** La página de seguimiento muestra el estado y se actualiza sola
+  hasta que el pedido termina; los textos que muestra nunca se interpretan como HTML.
+
 ## PDF — Menú en PDF
 
 *Aplicado por `web/apps/pdf`. Cubierto por: pendiente.*
@@ -259,10 +291,22 @@ y redes) y `src/lib/storage/images.test.ts`.*
 
 ## ADMIN-PEDIDOS — Pedidos
 
-*Aplicado por `src/lib/db/orders.ts`, `app/dashboard/orders`. Cubierto por:
-pendiente.*
+*Aplicado por `supabase/migrations/*_pedidos.sql`, `src/lib/orders/`,
+`src/lib/db/orders.ts` y `app/dashboard/orders`. Cubierto por:
+`src/lib/db/orders.test.ts` (contra Postgres real: ADMIN-PEDIDOS-1 a 5) y
+`src/lib/orders/*.test.ts` (ADMIN-PEDIDOS-1 y 3).*
 
-_Sin requisitos todavía._
+- **ADMIN-PEDIDOS-1** Un pedido pasa por Pendiente, Confirmado, En preparación, Listo
+  y Entregado, o se cancela. Desde un estado se puede pasar a uno posterior o
+  cancelar; Entregado y Cancelado no cambian. Cada cambio queda en la línea de
+  tiempo, con su hora.
+- **ADMIN-PEDIDOS-2** Solo los miembros de un negocio ven y cambian sus pedidos.
+- **ADMIN-PEDIDOS-3** El negocio puede cargar un pedido a mano (cliente, ítems con
+  nombre, precio y cantidad); recibe número y código como cualquier otro.
+- **ADMIN-PEDIDOS-4** Los pedidos de un negocio se numeran 1, 2, 3…, sin repetirse ni
+  saltearse, aunque lleguen a la vez.
+- **ADMIN-PEDIDOS-5** Cada ítem guarda el nombre y el precio del momento: editar o
+  borrar el producto después no cambia los pedidos ya hechos.
 
 ## ADMIN-PROMOS — Promociones
 
