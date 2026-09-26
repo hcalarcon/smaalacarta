@@ -154,6 +154,19 @@ Hecho en el código (migración `20260929000000_pedidos.sql`, ya aplicada a la b
 - [ ] [por asignar] Privacidad: definir cuánto tiempo se guardan los pedidos y el nombre de los clientes, y avisarlo en el checkout
 - [ ] [por asignar] Métricas en el resumen: pedidos por estado y ventas del día
 
+## Etapa 6c — Mejoras de la landing
+
+Requisitos LANDING-1 a 9 en `docs/SPEC.md`, cubiertos por `landing/landing.test.js`.
+
+- [x] [herni] Botón principal legible sobre la foto y sin el error de tipeo ("ahora")
+- [x] [herni] Imagen para compartir real (`assets/og-image.jpg`, 1200×630, 50 KB) y logo liviano (`logo.png`) en lugar del `favicon.svg` de 2,5 MB
+- [x] [herni] Enlaces: se sacan Twitter/Instagram sin destino, WhatsApp con el mismo número en toda la página, email con `mailto:`
+- [x] [herni] Textos al día (promociones, seguimiento del pedido, panel de administración) y dominio de los menús `smaalacarta.com.ar`
+- [x] [herni] Accesibilidad: menú del celular y modal de demos con teclado y lectores, enlace para saltar al contenido, foco visible, `prefers-reduced-motion`
+- [x] [herni] Indexación: `robots.txt`, `sitemap.xml`, datos estructurados y manifest corregido
+- [ ] [herni] **Revisar los textos nuevos**: que el panel, las promociones y el seguimiento estén realmente incluidos en el plan Subdominio Completo antes de publicarlos
+- [ ] [por asignar] Reemplazar `favicon.svg` (lo siguen usando las demos de `web/`) y agregar las redes sociales cuando existan
+
 ## Etapa 7 — Pendientes técnicos (backlog)
 
 - [ ] [por asignar] Permisos por `role` en `businesses`: hoy cualquier miembro puede editar el negocio, incluido el `slug`

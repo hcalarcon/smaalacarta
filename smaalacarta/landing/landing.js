@@ -1,157 +1,132 @@
-const header = document.querySelector(".header");
-
-window.addEventListener("scroll", () => {
-  if (window.scrollY > 50) {
-    header.classList.add("scrolled");
-    if (mobileMenuBtn) mobileMenuBtn.classList.add("scrolled");
-  } else {
-    header.classList.remove("scrolled");
-    if (mobileMenuBtn) mobileMenuBtn.classList.remove("scrolled");
-  }
-});
-
-// Handle mobile menu
+const root = document.documentElement;
 const body = document.body;
+const header = document.querySelector(".header");
 const mobileMenuBtn = document.getElementById("mobileMenuBtn");
 const nav = document.querySelector(".nav");
 const mobileNavOverlay = document.getElementById("mobileNavOverlay");
 const navLinks = document.querySelectorAll(".nav-link");
-
-function closeMobileMenu() {
-  const scrollY = body.style.top;
-
-  body.style.position = "";
-  body.style.top = "";
-  body.style.left = "";
-  body.style.right = "";
-
-  window.scrollTo(0, parseInt(scrollY || "0") * -1);
-  if (nav) nav.classList.remove("mobile-nav-open");
-  if (mobileMenuBtn) mobileMenuBtn.classList.remove("mobile-menu-active");
-  if (mobileNavOverlay) mobileNavOverlay.classList.remove("show");
-  body.classList.remove("menu-open");
-}
-
-function openMobileMenu() {
-  const scrollY = window.scrollY;
-
-  body.style.position = "fixed";
-  body.style.top = `-${scrollY}px`;
-  body.style.left = "0";
-  body.style.right = "0";
-  if (nav) nav.classList.add("mobile-nav-open");
-  if (mobileMenuBtn) mobileMenuBtn.classList.add("mobile-menu-active");
-  if (mobileNavOverlay) mobileNavOverlay.classList.add("show");
-  body.classList.add("menu-open");
-}
-
-if (mobileMenuBtn && nav) {
-  mobileMenuBtn.addEventListener("click", function () {
-    if (nav.classList.contains("mobile-nav-open")) {
-      closeMobileMenu();
-    } else {
-      openMobileMenu();
-    }
-  });
-}
-
-if (mobileNavOverlay) {
-  mobileNavOverlay.addEventListener("click", closeMobileMenu);
-}
-
-navLinks.forEach((link) => {
-  link.addEventListener("click", closeMobileMenu);
-});
-
-// Animate elements on scroll
-const observerOptions = {
-  threshold: 0.1,
-  rootMargin: "0px 0px -50px 0px",
-};
-
-const observer = new IntersectionObserver(function (entries) {
-  entries.forEach((entry) => {
-    if (entry.isIntersecting) {
-      entry.target.style.opacity = "1";
-      entry.target.style.transform = "translateY(0)";
-    }
-  });
-}, observerOptions);
-
-// Observe elements for animation
-const animateElements = document.querySelectorAll(
-  ".step, .benefit-card, .plan-card, .contact-method",
-);
-
-animateElements.forEach((el) => {
-  el.style.opacity = "0";
-  el.style.transform = "translateY(20px)";
-  el.style.transition = "opacity 0.6s ease, transform 0.6s ease";
-  observer.observe(el);
-});
-
-// Add hover effects to cards
-const cards = document.querySelectorAll(".benefit-card, .plan-card");
-
-cards.forEach((card) => {
-  card.addEventListener("mouseenter", function () {
-    this.style.transform = "translateY(-8px)";
-  });
-
-  card.addEventListener("mouseleave", function () {
-    this.style.transform = "translateY(0)";
-  });
-});
-
-// =====================================================
-// DEMOS MODAL FUNCTIONALITY
-// =====================================================
-
-// Get modal elements
 const demosBtn = document.getElementById("demosBtn");
 const demosModal = document.getElementById("demosModal");
 
-// Open modal function
+const prefersReducedMotion = () =>
+  typeof window.matchMedia === "function" &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+// =====================================================
+// ENCABEZADO: toma fondo al bajar
+// =====================================================
+function updateHeader() {
+  const scrolled = window.scrollY > 50;
+  header?.classList.toggle("scrolled", scrolled);
+  mobileMenuBtn?.classList.toggle("scrolled", scrolled);
+}
+
+window.addEventListener("scroll", updateHeader, { passive: true });
+updateHeader();
+
+// =====================================================
+// MENÚ DEL CELULAR
+// =====================================================
+const isMenuOpen = () => nav?.classList.contains("mobile-nav-open") ?? false;
+
+function setMenu(open) {
+  nav?.classList.toggle("mobile-nav-open", open);
+  mobileMenuBtn?.classList.toggle("mobile-menu-active", open);
+  mobileNavOverlay?.classList.toggle("show", open);
+  body.classList.toggle("menu-open", open);
+  mobileMenuBtn?.setAttribute("aria-expanded", String(open));
+  mobileMenuBtn?.setAttribute("aria-label", open ? "Cerrar menú" : "Abrir menú");
+}
+
+if (mobileMenuBtn && nav) {
+  mobileMenuBtn.addEventListener("click", () => setMenu(!isMenuOpen()));
+}
+
+mobileNavOverlay?.addEventListener("click", () => setMenu(false));
+navLinks.forEach((link) => link.addEventListener("click", () => setMenu(false)));
+
+// =====================================================
+// MODAL DE DEMOS
+// =====================================================
+const isModalOpen = () => demosModal?.classList.contains("show") ?? false;
+
+function focusableInModal() {
+  return [...demosModal.querySelectorAll("a[href], button:not([disabled])")];
+}
+
 function openDemosModal() {
-  demosModal.style.display = "flex";
-  document.body.style.overflow = "hidden";
+  if (!demosModal) return;
+  demosModal.classList.add("show");
+  body.style.overflow = "hidden";
+  (demosModal.querySelector(".modal-close") ?? focusableInModal()[0])?.focus();
 }
 
-// Close modal function
 function closeDemosModal() {
-  demosModal.style.display = "none";
-  document.body.style.overflow = "auto";
+  if (!demosModal) return;
+  demosModal.classList.remove("show");
+  body.style.overflow = "";
+  demosBtn?.focus();
 }
 
-// Open modal on button click
-if (demosBtn) {
-  demosBtn.addEventListener("click", openDemosModal);
-}
+demosBtn?.addEventListener("click", openDemosModal);
+demosModal?.querySelector(".modal-close")?.addEventListener("click", closeDemosModal);
 
-// Close modal when clicking outside (on the overlay)
-if (demosModal) {
-  demosModal.addEventListener("click", function (event) {
-    if (event.target === this) {
-      closeDemosModal();
-    }
-  });
-}
+// Tocar afuera del contenido (sobre el fondo oscuro) cierra el modal.
+demosModal?.addEventListener("click", (event) => {
+  if (event.target === demosModal) closeDemosModal();
+});
 
-// Close modal when pressing ESC
-document.addEventListener("keydown", function (event) {
+document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") {
-    closeDemosModal();
+    if (isModalOpen()) {
+      closeDemosModal();
+    } else if (isMenuOpen()) {
+      setMenu(false);
+      mobileMenuBtn?.focus();
+    }
+    return;
+  }
+
+  // Con el modal abierto, Tab da la vuelta adentro en lugar de salir a la página.
+  if (event.key === "Tab" && isModalOpen()) {
+    const items = focusableInModal();
+    if (items.length === 0) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+
+    if (event.shiftKey && (document.activeElement === first || !demosModal.contains(document.activeElement))) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && (document.activeElement === last || !demosModal.contains(document.activeElement))) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 });
 
-// Add pulse effect to CTA buttons
-const pulseButtons = document.querySelectorAll(".hero-cta");
+// =====================================================
+// ANIMACIÓN DE ENTRADA
+// El contenido es visible por defecto: el CSS solo lo esconde si este script activa
+// `js-reveal`, y no lo hace si el navegador no soporta IntersectionObserver o la persona
+// pidió menos movimiento.
+// =====================================================
+if ("IntersectionObserver" in window && !prefersReducedMotion()) {
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting) return;
+        entry.target.classList.add("is-visible");
+        observer.unobserve(entry.target);
+      });
+    },
+    { threshold: 0.1, rootMargin: "0px 0px -50px 0px" },
+  );
 
-pulseButtons.forEach((button) => {
-  setInterval(() => {
-    button.style.transform = "scale(1.02)";
-    setTimeout(() => {
-      button.style.transform = "scale(1)";
-    }, 200);
-  }, 3000);
-});
+  root.classList.add("js-reveal");
+  document
+    .querySelectorAll(".step, .benefit-card, .plan-card, .contact-method")
+    .forEach((el) => {
+      el.classList.add("reveal");
+      observer.observe(el);
+    });
+}

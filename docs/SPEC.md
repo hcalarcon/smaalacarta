@@ -155,9 +155,31 @@ _Sin requisitos todavía._
 ## LANDING — Sitio de venta
 
 *Planes, enlaces de contacto, demos. Aplicado por `landing/index.html`,
-`landing/landing.js`. Cubierto por: pendiente.*
+`landing/landing.js`, `landing/landing.css`, `landing/robots.txt`,
+`landing/sitemap.xml` y `landing/assets/site.webmanifest`. Cubierto por:
+`landing/landing.test.js`.*
 
-_Sin requisitos todavía._
+- **LANDING-1** Lo que se comparte da buena imagen: `og:image` y `twitter:image` apuntan a un
+  archivo que existe en `assets/`, de 1200×630 y menos de 300 KB, y el logo del
+  encabezado no usa el `favicon.svg` de 2,5 MB.
+- **LANDING-2** Ningún enlace queda vacío (`href="#"`) y los de contacto usan los mismos
+  datos (WhatsApp y email) en toda la página.
+- **LANDING-3** Los planes hablan del mismo dominio que los menús:
+  `<negocio>.smaalacarta.com.ar`.
+- **LANDING-4** Lo que ofrecemos está al día: la página menciona el panel de administración,
+  las promociones y el seguimiento del pedido.
+- **LANDING-5** El menú del celular avisa su estado (`aria-expanded`, `aria-controls`), se
+  cierra con Escape y, cerrado, no deja enlaces enfocables fuera de la pantalla.
+- **LANDING-6** El modal de demos es un diálogo (`role="dialog"`, `aria-modal`, con
+  título), lleva el foco adentro al abrirse, lo devuelve al botón al cerrarse, se cierra
+  con Escape, con un botón "Cerrar" o tocando afuera, y no deja salir el foco con Tab.
+- **LANDING-7** Todo el contenido se ve aunque falle el JavaScript o el navegador pida menos
+  movimiento: la animación de entrada solo la activa el JS y nunca con
+  `prefers-reduced-motion`.
+- **LANDING-8** Las imágenes tienen texto alternativo en español, tamaño declarado y carga
+  diferida (salvo la principal); hay un enlace para saltar al contenido y un foco visible.
+- **LANDING-9** El sitio se deja indexar bien: `robots.txt`, `sitemap.xml`, datos
+  estructurados (`LocalBusiness`) y un `site.webmanifest` con el nombre real.
 
 ---
 
@@ -368,12 +390,13 @@ se resuelve en su propia rama `fix/`.
   saltearla, pero solo para su propia cuenta.
 - **Superadmin: roles sin efecto.** Un miembro puede ser `owner` o `staff`, pero
   ninguna política distingue uno de otro. Ver "`role` no limita nada".
-- **Landing: texto del botón principal** dice "Solicitá tu sitio ahoras".
-- **Landing: imagen para compartir.** `twitter:image` apunta a
-  `assets/og-image.jpg`, que no existe, y `og:image` usa `favicon.svg` (2,5 MB).
-- **Landing: enlace "Twitter"** del pie muestra un ícono de email y apunta a `#`.
-- **Dominios mezclados.** Demos y canonical usan `smaalacarta.com.ar`; el plan
-  Subdominio y el email usan `smaalacarta.online`.
+- **Landing: `favicon.svg` pesa 2,5 MB.** Es un PNG metido dentro de un SVG y también
+  lo usan las demos de `web/`; la landing ya no lo carga en la página (usa `logo.png`),
+  pero conviene reemplazarlo por un SVG real o por el PNG en las demos.
+- **Landing: redes sociales.** El pie ya no muestra Twitter ni un Instagram sin
+  destino; cuando el negocio tenga cuentas, agregarlas.
+- **Dominio del email.** La landing y los menús usan `smaalacarta.com.ar`; el email de
+  ventas sigue siendo `@smaalacarta.online` hasta que exista un buzón en el otro dominio.
 - **Menú web: resolución de negocio duplicada.** `app.js` tiene
   `resolveAppConfig`, `getSlug` y `getAppContext`; solo la primera se usa, y los
   dominios de producción están escritos a mano en ella.
