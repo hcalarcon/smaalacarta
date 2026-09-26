@@ -1,5 +1,4 @@
 import { authErrorMessage } from "@/lib/auth/messages";
-import { isValidEmail } from "@/lib/auth/validation";
 
 import { superAdminErrorMessage, type DbError } from "./messages";
 import {
@@ -9,15 +8,18 @@ import {
 } from "./validation";
 
 // Lo que la orquestación necesita del mundo exterior. Se inyecta para poder
-// probar las reglas sin Supabase: en especial, que `inviteUser` (que usa la clave
-// de servicio, con acceso total) no se llame si quien pide no es superadmin.
+// probar las reglas sin Supabase: en especial, que las operaciones con la clave de
+// servicio (`createAccount`, `setTemporaryPassword`), que tienen acceso total, no
+// se llamen si quien pide no es superadmin.
 export type AccountDeps = {
   isSuperAdmin(): Promise<boolean>;
   findProfileIdByEmail(email: string): Promise<string | null>;
   slugExists(slug: string): Promise<boolean>;
-  inviteUser(
+  // Crea la cuenta ya confirmada, con esa contraseña, marcada como temporal.
+  createAccount(
     email: string,
     fullName: string,
+    password: string,
   ): Promise<{ id: string } | { error: DbError }>;
   createBusiness(input: {
     name: string;
@@ -30,7 +32,18 @@ export type AccountDeps = {
     userId: string;
     role: string;
   }): Promise<{ error?: DbError }>;
+  // Email del miembro, o null si no es miembro de ese negocio.
+  getMemberEmail(businessId: string, userId: string): Promise<string | null>;
+  isSuperAdminUser(userId: string): Promise<boolean>;
+  setTemporaryPassword(
+    userId: string,
+    password: string,
+  ): Promise<{ error?: DbError }>;
+  generatePassword(): string;
 };
+
+// Se muestra una sola vez al superadmin, que se la pasa a la persona.
+export type Credentials = { email: string; password: string };
 
 export type ActionFailure = {
   ok: false;
@@ -45,26 +58,33 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-// Devuelve el id de la cuenta con ese email. Si no existe, la crea invitándola
-// por mail (ADMIN-SUPER-6).
+// Devuelve el id de la cuenta con ese email. Si no existe, la crea con una
+// contraseña temporal (ADMIN-SUPER-6); si existe, la reutiliza sin tocarla.
 async function resolveAccount(
   deps: AccountDeps,
   email: string,
   fullName: string,
 ): Promise<
-  { ok: true; userId: string; invited: boolean } | { ok: false; error: string }
+  | { ok: true; userId: string; credentials: Credentials | null }
+  | { ok: false; error: string }
 > {
   const existing = await deps.findProfileIdByEmail(email);
   if (existing) {
-    return { ok: true, userId: existing, invited: false };
+    return { ok: true, userId: existing, credentials: null };
   }
 
-  const invitation = await deps.inviteUser(email, fullName);
-  if ("error" in invitation) {
-    return { ok: false, error: authErrorMessage(invitation.error) };
+  const password = deps.generatePassword();
+  const created = await deps.createAccount(email, fullName, password);
+
+  if ("error" in created) {
+    return { ok: false, error: authErrorMessage(created.error) };
   }
 
-  return { ok: true, userId: invitation.id, invited: true };
+  return {
+    ok: true,
+    userId: created.id,
+    credentials: { email, password },
+  };
 }
 
 export async function createBusinessWithOwner(
@@ -77,9 +97,10 @@ export async function createBusinessWithOwner(
     ownerName: string;
   },
 ): Promise<
-  { ok: true; businessId: string; invited: boolean } | ActionFailure
+  | { ok: true; businessId: string; credentials: Credentials | null }
+  | ActionFailure
 > {
-  // Lo primero: sin permiso no se valida, no se consulta y no se invita.
+  // Lo primero: sin permiso no se valida, no se consulta y no se crea nada.
   if (!(await deps.isSuperAdmin())) {
     return { ok: false, error: NO_PERMISSION };
   }
@@ -101,7 +122,7 @@ export async function createBusinessWithOwner(
     };
   }
 
-  // Antes de mandar una invitación, se descarta el error más común.
+  // Antes de crear una cuenta, se descarta el error más común.
   if (await deps.slugExists(input.slug)) {
     return {
       ok: false,
@@ -126,19 +147,23 @@ export async function createBusinessWithOwner(
     const reason = superAdminErrorMessage(created.error);
     return {
       ok: false,
-      error: owner.invited
-        ? `${reason} La invitación ya se envió: volvé a intentar con el mismo email.`
+      error: owner.credentials
+        ? `${reason} La cuenta ya se creó: volvé a intentar con el mismo email.`
         : reason,
     };
   }
 
-  return { ok: true, businessId: created.id, invited: owner.invited };
+  return {
+    ok: true,
+    businessId: created.id,
+    credentials: owner.credentials,
+  };
 }
 
 export async function addMemberByEmail(
   deps: AccountDeps,
   raw: { businessId: string; email: string; role: string },
-): Promise<{ ok: true; invited: boolean } | ActionFailure> {
+): Promise<{ ok: true; credentials: Credentials | null } | ActionFailure> {
   if (!(await deps.isSuperAdmin())) {
     return { ok: false, error: NO_PERMISSION };
   }
@@ -146,11 +171,11 @@ export async function addMemberByEmail(
   const email = normalizeEmail(raw.email);
 
   const validation = validateMember({ email, role: raw.role });
-  if (!validation.ok || !isValidEmail(email)) {
+  if (!validation.ok) {
     return {
       ok: false,
       error: "Revisá los datos marcados.",
-      fieldErrors: validation.ok ? {} : validation.errors,
+      fieldErrors: validation.errors,
     };
   }
 
@@ -169,5 +194,38 @@ export async function addMemberByEmail(
     return { ok: false, error: superAdminErrorMessage(added.error) };
   }
 
-  return { ok: true, invited: account.invited };
+  return { ok: true, credentials: account.credentials };
+}
+
+// Restablece la contraseña de un miembro: una temporal nueva, que se muestra una
+// vez, y la persona vuelve a quedar obligada a cambiarla (ADMIN-SUPER-11).
+export async function resetMemberPassword(
+  deps: AccountDeps,
+  raw: { businessId: string; userId: string },
+): Promise<{ ok: true; credentials: Credentials } | ActionFailure> {
+  if (!(await deps.isSuperAdmin())) {
+    return { ok: false, error: NO_PERMISSION };
+  }
+
+  // Solo miembros de ese negocio: no es una llave para cualquier cuenta.
+  const email = await deps.getMemberEmail(raw.businessId, raw.userId);
+  if (!email) {
+    return { ok: false, error: "Esa cuenta no es miembro de este negocio." };
+  }
+
+  if (await deps.isSuperAdminUser(raw.userId)) {
+    return {
+      ok: false,
+      error: "No se puede restablecer la contraseña de otro superadmin.",
+    };
+  }
+
+  const password = deps.generatePassword();
+  const updated = await deps.setTemporaryPassword(raw.userId, password);
+
+  if (updated.error) {
+    return { ok: false, error: authErrorMessage(updated.error) };
+  }
+
+  return { ok: true, credentials: { email, password } };
 }

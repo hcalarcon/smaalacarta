@@ -20,6 +20,7 @@ export type Product = {
   description: string | null;
   price: number;
   active: boolean;
+  image_url: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -45,6 +46,16 @@ export async function updateProduct(
   payload: ProductInput & { category_id?: string },
 ) {
   await updateRecord("products", id, businessId, toProductUpdate(payload));
+}
+
+// Activar o desactivar un producto sin tocar nada más (ADMIN-MENU-2 mantiene el
+// resto de sus datos).
+export async function setProductActive(
+  businessId: string,
+  id: string,
+  active: boolean,
+) {
+  await updateRecord("products", id, businessId, { active });
 }
 
 export async function deleteProduct(businessId: string, id: string) {

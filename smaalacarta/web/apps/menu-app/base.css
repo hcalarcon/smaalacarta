@@ -96,3 +96,58 @@ body.no-scroll {
   align-items: center;
 }
 
+/* AVISO DE CIERRE TEMPORAL, DIRECCIÓN Y REDES (los arma app.js con datos del negocio) */
+.cierre-temporal {
+  background: #fef3c7;
+  color: #92400e;
+  padding: 0.75rem 1rem;
+  text-align: center;
+  font-weight: 600;
+}
+
+.info-negocio {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.35rem 1rem;
+  padding: 0.6rem 1rem;
+  font-size: 0.9rem;
+}
+
+.info-negocio a {
+  color: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+#form-pedido button[type="submit"]:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* "GRACIAS POR TU PEDIDO" (lo arma app.js al guardar el pedido) */
+.gracias-pedido {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.5rem 1rem;
+  text-align: center;
+}
+
+.gracias-pedido a,
+.gracias-pedido button {
+  display: block;
+  padding: 0.85rem 1rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.gracias-pedido .btn-whatsapp {
+  background: #25d366;
+  color: #fff;
+}
+
+.gracias-pedido .btn-seguimiento {
+  border: 2px solid currentColor;
+}

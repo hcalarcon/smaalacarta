@@ -1,12 +1,16 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-import { redirectForRoute } from "@/lib/auth/access";
+import { hasTemporaryPassword, redirectForRoute } from "@/lib/auth/access";
 import { updateSession } from "@/lib/supabase-proxy";
 
 export async function proxy(request: NextRequest) {
   const { response, user } = await updateSession(request);
 
-  const destination = redirectForRoute(request.nextUrl.pathname, !!user);
+  const destination = redirectForRoute(
+    request.nextUrl.pathname,
+    !!user,
+    hasTemporaryPassword(user?.app_metadata),
+  );
 
   if (!destination) {
     return response;

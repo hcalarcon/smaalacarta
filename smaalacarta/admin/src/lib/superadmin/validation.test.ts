@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  RESERVED_SLUGS,
   normalizeWhatsapp,
   slugify,
   validateMember,
@@ -129,5 +130,41 @@ describe("validateMember — ADMIN-SUPER-4", () => {
   it("rechaza un email inválido", () => {
     const r = validateMember({ email: "nada", role: "owner" });
     expect(r.ok === false && r.errors.email).toBeTruthy();
+  });
+});
+
+describe("slugs reservados — ADMIN-SUPER-12", () => {
+  it.each(["www", "admin", "app", "api", "demo", "moderno", "clasico", "minimal"])(
+    "rechaza %s",
+    (slug) => {
+      const r = validateNewBusiness({
+        name: "Negocio",
+        slug,
+        whatsapp: "",
+        ownerEmail: "a@b.com",
+        ownerName: "",
+      });
+      expect(r.ok === false && r.errors.slug).toMatch(/reservad/i);
+    },
+  );
+
+  it("la lista coincide con la de la base de datos", () => {
+    expect([...RESERVED_SLUGS].sort()).toEqual(
+      [
+        "www", "app", "admin", "api", "demo", "demos", "moderno", "clasico", "minimal",
+        "mail", "static", "assets", "cdn", "dev", "staging", "panel", "login", "landing",
+      ].sort(),
+    );
+  });
+
+  it("un slug parecido a uno reservado sí sirve", () => {
+    const r = validateNewBusiness({
+      name: "Negocio",
+      slug: "admin-bar",
+      whatsapp: "",
+      ownerEmail: "a@b.com",
+      ownerName: "",
+    });
+    expect(r).toEqual({ ok: true });
   });
 });

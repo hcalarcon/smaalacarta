@@ -19,6 +19,7 @@ describe("toProductInsert — ADMIN-MENU-1", () => {
       description: "Con leche",
       price: 3500,
       active: false,
+      image_url: null,
     });
   });
 
@@ -71,5 +72,40 @@ describe("toProductUpdate — ADMIN-MENU-2", () => {
     expect(toProductUpdate({ name: "A", price: 1 })).not.toHaveProperty(
       "active",
     );
+  });
+});
+
+describe("imagen del producto — ADMIN-MENU-6", () => {
+  it("un producto nuevo puede llevar imagen", () => {
+    expect(
+      toProductInsert("b1", {
+        category_id: "c1",
+        name: "A",
+        price: 1,
+        image_url: "https://x.supabase.co/storage/v1/object/public/business-images/b1/a.png",
+      }).image_url,
+    ).toBe("https://x.supabase.co/storage/v1/object/public/business-images/b1/a.png");
+  });
+
+  it("sin imagen queda nula", () => {
+    expect(toProductInsert("b1", { category_id: "c1", name: "A", price: 1 }).image_url).toBeNull();
+    expect(
+      toProductInsert("b1", { category_id: "c1", name: "A", price: 1, image_url: "" }).image_url,
+    ).toBeNull();
+  });
+
+  it("editar sin indicar la imagen la conserva", () => {
+    expect(toProductUpdate({ name: "A", price: 1 })).not.toHaveProperty("image_url");
+  });
+
+  it("editar con una imagen nueva la cambia", () => {
+    expect(toProductUpdate({ name: "A", price: 1, image_url: "https://x.com/n.png" }).image_url).toBe(
+      "https://x.com/n.png",
+    );
+  });
+
+  it("quitarla (nula o vacía) la deja en blanco", () => {
+    expect(toProductUpdate({ name: "A", price: 1, image_url: null }).image_url).toBeNull();
+    expect(toProductUpdate({ name: "A", price: 1, image_url: "" }).image_url).toBeNull();
   });
 });

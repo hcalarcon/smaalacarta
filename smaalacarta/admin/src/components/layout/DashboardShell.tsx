@@ -134,6 +134,13 @@ export default function DashboardShell({
                 </Link>
               ) : null}
 
+              <Link
+                href="/cambiar-contrasena"
+                className="hidden text-sm font-medium text-stone-500 hover:text-brand sm:block"
+              >
+                Cambiar contraseña
+              </Link>
+
               <form action={signOutAction}>
                 <button
                   type="submit"

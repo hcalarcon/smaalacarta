@@ -39,6 +39,71 @@ export type Database = {
   }
   public: {
     Tables: {
+      business_settings: {
+        Row: {
+          address: string | null
+          business_id: string
+          closed_message: string | null
+          created_at: string
+          facebook_url: string | null
+          header_image_url: string | null
+          instagram_url: string | null
+          primary_color: string
+          published: boolean
+          reopens_on: string | null
+          schedule: Json
+          secondary_color: string
+          tagline: string | null
+          template: string
+          temporarily_closed: boolean
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          business_id: string
+          closed_message?: string | null
+          created_at?: string
+          facebook_url?: string | null
+          header_image_url?: string | null
+          instagram_url?: string | null
+          primary_color?: string
+          published?: boolean
+          reopens_on?: string | null
+          schedule?: Json
+          secondary_color?: string
+          tagline?: string | null
+          template?: string
+          temporarily_closed?: boolean
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          business_id?: string
+          closed_message?: string | null
+          created_at?: string
+          facebook_url?: string | null
+          header_image_url?: string | null
+          instagram_url?: string | null
+          primary_color?: string
+          published?: boolean
+          reopens_on?: string | null
+          schedule?: Json
+          secondary_color?: string
+          tagline?: string | null
+          template?: string
+          temporarily_closed?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_settings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_users: {
         Row: {
           business_id: string
@@ -149,14 +214,142 @@ export type Database = {
           },
         ]
       }
+      order_counters: {
+        Row: {
+          business_id: string
+          last_number: number
+        }
+        Insert: {
+          business_id: string
+          last_number?: number
+        }
+        Update: {
+          business_id?: string
+          last_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_counters_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_events: {
+        Row: {
+          business_id: string
+          changed_by: string | null
+          created_at: string
+          id: string
+          order_id: string
+          status: string
+        }
+        Insert: {
+          business_id: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          order_id: string
+          status: string
+        }
+        Update: {
+          business_id?: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_events_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_events_order_id_business_id_fkey"
+            columns: ["order_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id", "business_id"]
+          },
+        ]
+      }
+      order_items: {
+        Row: {
+          business_id: string
+          id: string
+          name: string
+          order_id: string
+          product_id: string | null
+          promotion_id: string | null
+          quantity: number
+          sort_order: number
+          unit_price: number
+        }
+        Insert: {
+          business_id: string
+          id?: string
+          name: string
+          order_id: string
+          product_id?: string | null
+          promotion_id?: string | null
+          quantity: number
+          sort_order?: number
+          unit_price: number
+        }
+        Update: {
+          business_id?: string
+          id?: string
+          name?: string
+          order_id?: string
+          product_id?: string | null
+          promotion_id?: string | null
+          quantity?: number
+          sort_order?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_business_id_fkey"
+            columns: ["order_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id", "business_id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           active: boolean
           business_id: string
+          code: string
           created_at: string
+          customer_name: string | null
+          delivery: string | null
           id: string
           notes: string | null
           order_number: string
+          payment: string | null
+          source: string
           status: string
           total: number
           updated_at: string
@@ -164,10 +357,15 @@ export type Database = {
         Insert: {
           active?: boolean
           business_id: string
+          code?: string
           created_at?: string
+          customer_name?: string | null
+          delivery?: string | null
           id?: string
           notes?: string | null
           order_number: string
+          payment?: string | null
+          source?: string
           status?: string
           total?: number
           updated_at?: string
@@ -175,10 +373,15 @@ export type Database = {
         Update: {
           active?: boolean
           business_id?: string
+          code?: string
           created_at?: string
+          customer_name?: string | null
+          delivery?: string | null
           id?: string
           notes?: string | null
           order_number?: string
+          payment?: string | null
+          source?: string
           status?: string
           total?: number
           updated_at?: string
@@ -205,6 +408,7 @@ export type Database = {
           image_url: string | null
           name: string
           price: number
+          sort_order: number | null
           updated_at: string
         }
         Insert: {
@@ -218,6 +422,7 @@ export type Database = {
           image_url?: string | null
           name: string
           price?: number
+          sort_order?: number | null
           updated_at?: string
         }
         Update: {
@@ -231,6 +436,7 @@ export type Database = {
           image_url?: string | null
           name?: string
           price?: number
+          sort_order?: number | null
           updated_at?: string
         }
         Relationships: [
@@ -271,6 +477,42 @@ export type Database = {
         }
         Relationships: []
       }
+      promotion_items: {
+        Row: {
+          business_id: string
+          product_id: string
+          promotion_id: string
+          sort_order: number
+        }
+        Insert: {
+          business_id: string
+          product_id: string
+          promotion_id: string
+          sort_order?: number
+        }
+        Update: {
+          business_id?: string
+          product_id?: string
+          promotion_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "promotion_items_product_id_business_id_fkey"
+            columns: ["product_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id", "business_id"]
+          },
+          {
+            foreignKeyName: "promotion_items_promotion_id_business_id_fkey"
+            columns: ["promotion_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id", "business_id"]
+          },
+        ]
+      }
       promotions: {
         Row: {
           active: boolean
@@ -280,7 +522,9 @@ export type Database = {
           discount_percent: number
           id: string
           name: string
+          price: number | null
           slug: string | null
+          type: string
           updated_at: string
         }
         Insert: {
@@ -291,7 +535,9 @@ export type Database = {
           discount_percent?: number
           id?: string
           name: string
+          price?: number | null
           slug?: string | null
+          type?: string
           updated_at?: string
         }
         Update: {
@@ -302,7 +548,9 @@ export type Database = {
           discount_percent?: number
           id?: string
           name?: string
+          price?: number | null
           slug?: string | null
+          type?: string
           updated_at?: string
         }
         Relationships: [
@@ -315,12 +563,109 @@ export type Database = {
           },
         ]
       }
+      super_admins: {
+        Row: {
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "super_admins_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      create_business_with_owner: {
+        Args: {
+          p_name: string
+          p_owner_id: string
+          p_slug: string
+          p_whatsapp: string
+        }
+        Returns: string
+      }
+      create_manual_order: {
+        Args: {
+          p_business_id: string
+          p_customer_name: string
+          p_delivery: string
+          p_items: Json
+          p_notes: string
+          p_payment: string
+        }
+        Returns: Json
+      }
+      create_public_order: {
+        Args: {
+          p_customer_name: string
+          p_delivery: string
+          p_items: Json
+          p_notes: string
+          p_payment: string
+          p_slug: string
+        }
+        Returns: Json
+      }
+      is_super_admin: { Args: never; Returns: boolean }
+      is_valid_schedule: { Args: { p_schedule: Json }; Returns: boolean }
+      new_tracking_code: { Args: never; Returns: string }
+      next_order_number: { Args: { p_business_id: string }; Returns: number }
+      public_menu: { Args: { p_slug: string }; Returns: Json }
+      public_order_tracking: { Args: { p_code: string }; Returns: Json }
+      save_business_settings: {
+        Args: {
+          p_address: string
+          p_business_id: string
+          p_closed_message: string
+          p_facebook_url: string
+          p_header_image_url: string
+          p_instagram_url: string
+          p_primary_color: string
+          p_published: boolean
+          p_reopens_on: string
+          p_schedule: Json
+          p_secondary_color: string
+          p_tagline: string
+          p_template: string
+          p_temporarily_closed: boolean
+          p_whatsapp: string
+        }
+        Returns: undefined
+      }
+      save_promotion: {
+        Args: {
+          p_active: boolean
+          p_business_id: string
+          p_description: string
+          p_discount_percent: number
+          p_id: string
+          p_name: string
+          p_price: number
+          p_product_ids: string[]
+          p_type: string
+        }
+        Returns: string
+      }
+      set_order_status: {
+        Args: { p_order_id: string; p_status: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

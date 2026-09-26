@@ -1,6 +1,15 @@
 let cart = [];
 let MENU_GLOBAL = null;
 
+// Módulos de /lib, cargados en init(): escape de HTML y datos del negocio.
+let HTML = null;
+let INFO = null;
+let ORDERS = null;
+
+// De dónde vino el menú: si es de Supabase, el pedido también se guarda en el sistema.
+let MENU_SOURCE = null;
+let SUPABASE_CFG = null;
+
 async function fetchJSON(path) {
   try {
     const res = await fetch(path);
@@ -18,7 +27,7 @@ async function fetchJSON(path) {
 }
 
 //nueva funcion hardcodeada
-function resolveAppConfig() {
+function resolveAppConfig(resolveHost) {
   const params = new URLSearchParams(window.location.search);
   const host = window.location.hostname;
 
@@ -46,21 +55,15 @@ function resolveAppConfig() {
 
   /*
   ========================================
-  2. PRODUCCIÓN: DOMINIOS HARDCODEADOS
+  2. PRODUCCIÓN: SUBDOMINIO = SLUG DEL NEGOCIO
   ========================================
+  <slug>.smaalacarta.com.ar abre el negocio con ese slug, sin declararlo acá.
+  Las reglas están en lib/hostname.js (con tests).
   */
-  const DOMAINS = {
-    "moderno.smaalacarta.com.ar": { type: "demo", slug: "moderno" },
-    "clasico.smaalacarta.com.ar": { type: "demo", slug: "clasico" },
-    "minimal.smaalacarta.com.ar": { type: "demo", slug: "minimal" },
-    "santa-julia-resto.smaalacarta.com.ar": {
-      type: "cliente",
-      slug: "santa-julia-resto",
-    },
-  };
+  const fromHost = resolveHost ? resolveHost(host) : null;
 
-  if (DOMAINS[host]) {
-    return DOMAINS[host];
+  if (fromHost) {
+    return fromHost;
   }
 
   /*
@@ -107,10 +110,42 @@ function getSlug() {
   return { slug: subdomain, type: "cliente" };
 }
 
+// Menú publicado desde el admin (PUBLICO-6). Devuelve null si Supabase no está
+// configurado, el negocio no está publicado o algo falla: entonces se usan los JSON.
+async function loadFromSupabase(slug) {
+  try {
+    const [{ fetchPublicMenu, isSupabaseConfigured }, { SUPABASE }] =
+      await Promise.all([
+        import("/apps/menu-app/lib/public-menu.js"),
+        import("/apps/menu-app/supabase-config.js"),
+      ]);
+
+    if (!isSupabaseConfigured(SUPABASE)) return null;
+
+    return await fetchPublicMenu({ ...SUPABASE, slug });
+  } catch (err) {
+    console.error("No se pudo cargar el menú desde Supabase:", err);
+    return null;
+  }
+}
+
 // INIT
 async function init() {
   try {
-    const result = resolveAppConfig();
+    const [{ resolveBusinessFromHost }, html, info, orders, supabaseConfig] =
+      await Promise.all([
+        import("/apps/menu-app/lib/hostname.js"),
+        import("/apps/menu-app/lib/html.js"),
+        import("/apps/menu-app/lib/info.js"),
+        import("/apps/menu-app/lib/orders.js"),
+        import("/apps/menu-app/supabase-config.js"),
+      ]);
+    HTML = html;
+    INFO = info;
+    ORDERS = orders;
+    SUPABASE_CFG = supabaseConfig.SUPABASE;
+
+    const result = resolveAppConfig(resolveBusinessFromHost);
     if (!result) {
       console.error("No se encontró slug en la URL");
       return;
@@ -120,12 +155,27 @@ async function init() {
 
     const basePath = type === "cliente" ? "/data/clientes" : "/data/demos";
 
-    // 1 solo fetch 👇
-    const config = await fetchJSON(`${basePath}/${slug}/config.json`);
-    if (!config) return;
+    // Los negocios que cargaron su menú en el admin vienen de Supabase; los demás
+    // (y las demos) siguen en los JSON de /data.
+    let config = null;
+    let menu = null;
 
-    const menu = await fetchJSON(`${basePath}/${slug}/menu.json`);
-    if (!menu) return;
+    if (type === "cliente") {
+      const remote = await loadFromSupabase(slug);
+      if (remote) {
+        config = remote.config;
+        menu = remote.menu;
+        MENU_SOURCE = { slug };
+      }
+    }
+
+    if (!config || !menu) {
+      config = await fetchJSON(`${basePath}/${slug}/config.json`);
+      if (!config) return;
+
+      menu = await fetchJSON(`${basePath}/${slug}/menu.json`);
+      if (!menu) return;
+    }
 
     window.CONFIG = config;
 
@@ -296,7 +346,7 @@ function renderHeader(c) {
 
   if (header && c.header?.imagen) {
     header.style.backgroundImage = `
-      url("${c.header.imagen}"),
+      ${HTML.cssUrl(c.header.imagen)},
       linear-gradient(
         135deg,
         var(--color-primary, #463AE5),
@@ -305,7 +355,10 @@ function renderHeader(c) {
     `;
   }
 
-  const abierto = isAbiertoAhora(c);
+  const cierre = INFO.closedNotice(c);
+  const abierto = !cierre && isAbiertoAhora(c);
+
+  renderInfo(c, cierre);
 
   if (estadoEl) {
     estadoEl.textContent = abierto ? "Abierto" : "Cerrado";
@@ -313,6 +366,71 @@ function renderHeader(c) {
 
   if (dot) {
     dot.style.background = abierto ? "#4ade80" : "#ef4444";
+  }
+}
+
+// Aviso de cierre temporal, dirección y redes, debajo del encabezado. Todo se arma
+// con textContent y atributos: lo que escribe el negocio nunca se interpreta como HTML.
+function renderInfo(c, cierre) {
+  document.querySelectorAll("#aviso-cierre, #info-negocio").forEach((el) => el.remove());
+
+  const header = document.querySelector(".header");
+  if (!header) return;
+
+  const bloques = [];
+
+  if (cierre) {
+    const aviso = document.createElement("div");
+    aviso.id = "aviso-cierre";
+    aviso.className = "cierre-temporal";
+    aviso.setAttribute("role", "status");
+    aviso.textContent = [
+      "Cerrado temporalmente",
+      cierre.message,
+      INFO.reopenText(cierre.reopensOn),
+    ]
+      .filter(Boolean)
+      .join(" · ");
+    bloques.push(aviso);
+  }
+
+  const links = INFO.socialLinks(c);
+  const mapa = INFO.mapsUrl(c.direccion);
+
+  if (mapa || links.length > 0) {
+    const info = document.createElement("div");
+    info.id = "info-negocio";
+    info.className = "info-negocio";
+
+    if (mapa) {
+      const a = document.createElement("a");
+      a.href = mapa;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = "📍 " + c.direccion;
+      info.appendChild(a);
+    }
+
+    links.forEach((link) => {
+      const a = document.createElement("a");
+      a.href = link.url;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      a.textContent = link.name;
+      info.appendChild(a);
+    });
+
+    bloques.push(info);
+  }
+
+  // Orden final: aviso de cierre y después la info (cada uno va "después del header").
+  bloques.reverse().forEach((el) => header.insertAdjacentElement("afterend", el));
+
+  // Cerrado: no se pueden enviar pedidos.
+  const enviar = document.querySelector("#form-pedido button[type='submit']");
+  if (enviar) {
+    enviar.disabled = Boolean(cierre);
+    if (cierre) enviar.textContent = "Cerrado temporalmente";
   }
 }
 
@@ -401,8 +519,11 @@ function buildEnhancedMenu(menu) {
     });
   }
 
-  // 💸 Ofertas
-  if (ofertas.length > 0) {
+  // 💸 Ofertas (si el menú ya trae su categoría de ofertas, como las promociones
+  // del admin, no se arma otra)
+  const yaTieneOfertas = menu.categorias.some((cat) => cat.tipo === "ofertas");
+
+  if (ofertas.length > 0 && !yaTieneOfertas) {
     nuevasCategorias.push({
       nombre: "Ofertas",
       tipo: "ofertas",
@@ -438,7 +559,7 @@ function renderMenu(menu) {
 
     // 🔥 ESTRUCTURA CORRECTA
     sec.innerHTML = `
-      <h2 class="categoria-titulo">${cat.nombre}</h2>
+      <h2 class="categoria-titulo">${HTML.escapeHtml(cat.nombre)}</h2>
       <div class="categoria-grid"></div>
     `;
 
@@ -452,13 +573,15 @@ function renderMenu(menu) {
         d.setAttribute("data-promo", p.promo);
       }
 
+      const imagen = HTML.safeHttpUrl(p.imagen);
+
       d.innerHTML = `
-        ${p.imagen ? `<img src="${p.imagen}">` : ""}
+        ${imagen ? `<img src="${HTML.escapeHtml(imagen)}" alt="">` : ""}
         <div class="producto-info">
-          <h3>${p.nombre}</h3>
-          <p>${p.descripcion || ""}</p>
-          ${p.precioAnterior ? `<span class="precio-anterior">$${p.precioAnterior}</span>` : ""}
-          <div class="producto-precio">$${p.precio}</div>
+          <h3>${HTML.escapeHtml(p.nombre)}</h3>
+          <p>${HTML.escapeHtml(p.descripcion || "")}</p>
+          ${p.precioAnterior ? `<span class="precio-anterior">$${HTML.escapeHtml(p.precioAnterior)}</span>` : ""}
+          <div class="producto-precio">$${HTML.escapeHtml(p.precio)}</div>
         </div>
         <button class="btn-add">+</button>
       `;
@@ -542,7 +665,8 @@ function initSearch() {
 function addToCart(p) {
   if (!p) return;
 
-  const existente = cart.find((i) => i.nombre === p.nombre);
+  // Con id (menú de Supabase) se agrupa por id; los menús de JSON, por nombre.
+  const existente = cart.find((i) => (p.id ? i.id === p.id : i.nombre === p.nombre));
 
   if (existente) {
     existente.cantidad++;
@@ -576,14 +700,14 @@ function updateCart() {
 
     d.innerHTML = `
       <div class="item-info">
-        <h4>${i.nombre || ""}</h4>
-        <span class="item-precio">$${i.precio}</span>
+        <h4>${HTML.escapeHtml(i.nombre || "")}</h4>
+        <span class="item-precio">$${HTML.escapeHtml(i.precio)}</span>
       </div>
       <div class="item-controls">
         <button class="btn-minus"><svg width="16" height="16" viewBox="0 0 24 24">
   <path d="M5 12h14" stroke="currentColor" stroke-width="2"/>
 </svg></button>
-        <span class="item-cantidad">${i.cantidad}</span>
+        <span class="item-cantidad">${HTML.escapeHtml(i.cantidad)}</span>
         <button class="btn-plus">
         <svg width="16" height="16" viewBox="0 0 24 24">
           <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2"/>
@@ -671,6 +795,7 @@ $("#cerrar-carrito")?.addEventListener("click", closeAll);
 $("#overlay")?.addEventListener("click", closeAll);
 
 function closeAll() {
+  resetCheckout();
   $("#carrito-panel")?.classList.remove("active");
   $("#overlay")?.classList.remove("active");
   $("#checkout")?.classList.remove("active");
@@ -686,10 +811,16 @@ $("#btn-finalizar")?.addEventListener("click", () => {
 $("#cerrar-checkout")?.addEventListener("click", closeAll);
 
 // WHATSAPP
-$("#form-pedido")?.addEventListener("submit", (e) => {
+$("#form-pedido")?.addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const f = new FormData(e.target);
+  if (INFO?.closedNotice(window.CONFIG)) {
+    alert("Estamos cerrados temporalmente: por ahora no podemos tomar pedidos.");
+    return;
+  }
+
+  const form = e.target;
+  const f = new FormData(form);
 
   const formatPrice = (n) => n.toLocaleString("es-AR");
 
@@ -730,15 +861,116 @@ $("#form-pedido")?.addEventListener("submit", (e) => {
   msg += `💰 *TOTAL: $${formatPrice(total)}*\n\n`;
   msg += `📲 SMA a la Carta`;
 
-  window.open(
-    `https://api.whatsapp.com/send?phone=${CONFIG.telefono}&text=${encodeURIComponent(msg)}`,
-  );
+  // Si el menú viene de Supabase, el pedido se guarda primero en el sistema para poder
+  // seguirlo. Si no se puede (menú de JSON, sin conexión…), sigue por WhatsApp como siempre.
+  const items = MENU_SOURCE && ORDERS ? ORDERS.buildOrderItems(cart) : null;
+  let saved = null;
+
+  if (items) {
+    const submit = form.querySelector("button[type='submit']");
+    if (submit) {
+      submit.disabled = true;
+      submit.textContent = "Enviando…";
+    }
+
+    const horarioNota = ahora ? "Horario: ahora mismo" : horario ? `Horario: ${horario}` : "";
+    const result = await ORDERS.createOrder({
+      ...SUPABASE_CFG,
+      slug: MENU_SOURCE.slug,
+      customer: f.get("nombre") || "",
+      delivery: f.get("entrega") || "",
+      payment: f.get("pago") || "",
+      notes: [horarioNota, f.get("notas") || ""].filter(Boolean).join(" · ").slice(0, 500),
+      items,
+    });
+
+    if (submit) {
+      submit.disabled = false;
+      submit.textContent = "Enviar por WhatsApp";
+    }
+
+    if (result.ok) {
+      saved = result;
+    } else if (result.reason === "closed") {
+      alert("Estamos cerrados temporalmente: por ahora no podemos tomar pedidos.");
+      return;
+    } else if (result.reason === "busy") {
+      alert("Estamos recibiendo muchos pedidos. Probá de nuevo en un minuto.");
+      return;
+    } else if (result.reason === "unavailable") {
+      alert("Algún producto ya no está disponible. Recargá el menú para ver lo que hay.");
+      return;
+    }
+    // "invalid" y "unknown": se manda solo por WhatsApp.
+  }
+
+  const link = saved ? ORDERS.trackingLink(window.location.origin, saved.code) : "";
+  if (link) msg += `\n\n🔎 Seguí tu pedido: ${link}`;
+
+  const whatsappUrl = `https://api.whatsapp.com/send?phone=${CONFIG.telefono}&text=${encodeURIComponent(msg)}`;
 
   cart = [];
   saveCart();
   updateCart();
-  closeAll();
+
+  if (saved) {
+    // El navegador puede bloquear una ventana abierta después de esperar: por eso se
+    // muestra un botón, que sí cuenta como acción del cliente.
+    showThanks({ number: saved.number, link, whatsappUrl });
+  } else {
+    window.open(whatsappUrl);
+    closeAll();
+  }
 });
+
+// "Gracias por tu pedido": reemplaza al formulario, con el botón de WhatsApp y el link de
+// seguimiento. Todo con textContent: el número y los links no se interpretan como HTML.
+function showThanks({ number, link, whatsappUrl }) {
+  const form = $("#form-pedido");
+  if (!form) return;
+
+  resetCheckout();
+  form.classList.add("hidden");
+
+  const panel = document.createElement("div");
+  panel.id = "gracias-pedido";
+  panel.className = "gracias-pedido";
+
+  const title = document.createElement("h3");
+  title.textContent = "¡Gracias por tu pedido!";
+
+  const num = document.createElement("p");
+  num.textContent = `Pedido #${number}`;
+
+  const info = document.createElement("p");
+  info.textContent = "Para que el local lo reciba, enviá el mensaje por WhatsApp.";
+
+  const send = document.createElement("a");
+  send.className = "btn-whatsapp";
+  send.href = whatsappUrl;
+  send.target = "_blank";
+  send.rel = "noopener noreferrer";
+  send.textContent = "Enviar por WhatsApp";
+
+  const track = document.createElement("a");
+  track.className = "btn-seguimiento";
+  track.href = link;
+  track.textContent = "Seguir mi pedido";
+
+  const close = document.createElement("button");
+  close.type = "button";
+  close.textContent = "Cerrar";
+  close.onclick = closeAll;
+
+  panel.append(title, num, info, send, track, close);
+  form.insertAdjacentElement("afterend", panel);
+}
+
+// Vuelve el checkout a su estado normal (formulario visible, sin el "gracias").
+function resetCheckout() {
+  document.querySelector("#gracias-pedido")?.remove();
+  $("#form-pedido")?.classList.remove("hidden");
+}
 
 // INIT
 init();

@@ -19,6 +19,29 @@ const SUPABASE_STUBS = `
   create role authenticated nologin;
   grant usage on schema public, auth to anon, authenticated;
   grant execute on function auth.uid() to anon, authenticated;
+
+  -- Storage: lo mínimo que usan las migraciones y las políticas de los buckets.
+  create schema storage;
+  create table storage.buckets (
+    id text primary key,
+    name text not null,
+    public boolean default false,
+    file_size_limit bigint,
+    allowed_mime_types text[]
+  );
+  create table storage.objects (
+    id uuid primary key default gen_random_uuid(),
+    bucket_id text references storage.buckets(id),
+    name text,
+    owner uuid
+  );
+  alter table storage.objects enable row level security;
+  -- Como la de Supabase: las carpetas del nombre, sin el archivo.
+  create function storage.foldername(name text) returns text[] language sql immutable as $$
+    select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1]
+  $$;
+  grant usage on schema storage to anon, authenticated;
+  grant execute on function storage.foldername(text) to anon, authenticated;
 `;
 
 export type TestDb = PGlite;
@@ -45,7 +68,7 @@ export async function createTestDb(): Promise<TestDb> {
 
   // Supabase da estos permisos por defecto; lo que limita es el RLS.
   await db.exec(
-    "grant all on all tables in schema public to anon, authenticated;",
+    "grant all on all tables in schema public to anon, authenticated; grant all on all tables in schema storage to anon, authenticated;",
   );
 
   return db;

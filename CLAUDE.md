@@ -132,17 +132,54 @@ Todo el código vive bajo `smaalacarta/`, en tres proyectos sin build compartido
   recuperar, restablecer) y sus Server Actions en `app/(auth)/actions.ts`. Un
   usuario sin negocio va a `/sin-negocio`, nunca en bucle a `/login`.
 - **Superadmin** (`/superadmin`): el equipo de SMA a la Carta crea los negocios y sus
-  cuentas; no hay registro público. `super_admins` (tabla sin escritura desde la
-  app) + `is_super_admin()` y `create_business_with_owner()` en la migración
-  `*_superadmin.sql`. Las reglas de alta están en `src/lib/superadmin/accounts.ts`
-  con dependencias inyectadas, y `src/lib/superadmin/deps.ts` las conecta a Supabase.
-  `SUPABASE_SERVICE_ROLE_KEY` (solo servidor, `src/lib/supabase-admin.ts` con
-  `server-only`) se usa **únicamente** para invitar cuentas y después de comprobar
-  que quien pide es superadmin. Los links de invitación y de recuperación entran por
-  `/auth/confirm` (`token_hash`), no por `/auth/callback`.
+  cuentas; no hay registro público ni se envían mails. `super_admins` (tabla sin
+  escritura desde la app) + `is_super_admin()` y `create_business_with_owner()` en la
+  migración `*_superadmin.sql`. Las reglas de alta y de restablecimiento están en
+  `src/lib/superadmin/accounts.ts` con dependencias inyectadas, y
+  `src/lib/superadmin/deps.ts` las conecta a Supabase. Cada cuenta nace con una
+  contraseña temporal (`password.ts`) que se muestra **una sola vez**; la marca
+  `must_change_password` vive en `app_metadata` (solo la escribe el servidor) y
+  `proxy.ts` deja a esa cuenta solo en `/cambiar-contrasena` hasta que elija una
+  propia (`src/lib/auth/change-password.ts`). `SUPABASE_SERVICE_ROLE_KEY` (solo
+  servidor, `src/lib/supabase-admin.ts` con `server-only`) se usa **únicamente** para
+  crear cuentas, restablecer contraseñas y borrar la marca de temporal, y siempre
+  después de comprobar quién pide la acción.
 - **Tests contra Postgres real**: `src/test/db.ts` levanta PGlite con los stubs de
   Supabase y aplica las migraciones; `src/lib/db/*.test.ts` prueban el RLS. Toda
   migración con políticas nuevas se prueba ahí.
+- **Orden y promociones**: `sort_order` en categorías y productos
+  (`src/lib/menu/ordering.ts`, lectura ordenada en `db/categories.ts`, guardado en
+  `db/ordering.ts`). Las promociones (`src/lib/promotions/`, `db/promotions.ts`) son
+  `percent` o `combo`, con sus productos en `promotion_items`; se guardan con
+  `save_promotion()` (atómica, con los permisos de quien la llama). El arrastrar y
+  soltar usa `@dnd-kit` (`components/menu/Sortable.tsx` y el editor de promociones).
+  Las acciones nuevas toman el negocio de `requireBusiness()`, no del navegador.
+- **Configuración y menú público**: `business_settings` (una fila por negocio; se
+  guarda con `save_business_settings()`, atómica junto con el WhatsApp) y
+  `public_menu(slug)`, que cualquiera puede llamar sin sesión y solo entrega lo
+  publicado y activo. Reglas puras de horarios y datos en `src/lib/settings/`. En
+  `web/`, `apps/menu-app/lib/public-menu.js` la consume con fallback a los JSON, y
+  `supabase-config.js` lleva la dirección y la publishable key (públicas; la clave de
+  servicio nunca va en `web/`).
+- **Extras del negocio e imágenes**: dirección, Instagram, Facebook y cierre temporal
+  viven en `business_settings` (`src/lib/settings/social.ts` normaliza `@usuario` a
+  dirección https). Las imágenes van al bucket `business-images`, en la carpeta
+  `<business_id>/` (`src/lib/storage/images.ts`, `components/ui/ImageUploader.tsx`, que
+  sube con la sesión del usuario: lo limita el RLS de Storage). En `web/`, los textos de
+  cada negocio se **escapan siempre** antes de armar HTML (`lib/html.js`), y el negocio
+  sale del subdominio (`lib/hostname.js`). La lista de slugs reservados está en tres
+  lugares que deben coincidir (migración, `superadmin/validation.ts` y `hostname.js`),
+  con tests que lo comprueban.
+- **Pedidos**: `orders` + `order_items` (con nombre y precio del momento) +
+  `order_events` (línea de tiempo) + `order_counters` (numeración por negocio, sin
+  políticas: solo lo usan las funciones). El cliente crea el pedido con
+  `create_public_order` (sin sesión; **el navegador nunca manda precios**, solo
+  `id`/tipo/cantidad) y lo sigue con `public_order_tracking` por un código aleatorio,
+  sin datos personales. El negocio los gestiona con `set_order_status` y
+  `create_manual_order`. Los estados y sus transiciones están en
+  `src/lib/orders/status.ts` y en la base, y un test compara la matriz completa. En
+  `web/`: `apps/menu-app/lib/orders.js` (checkout) y `apps/tracker` (seguimiento, todo
+  con `textContent`).
 - **Multi-negocio**: `getCurrentBusiness()` resuelve usuario → `business_users`
   (con `role`) → `businesses`; las páginas del panel usan `requireBusiness()`.
   Toda tabla de recursos (`categories`, `products`, `promotions`, `orders`) se filtra

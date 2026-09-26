@@ -69,38 +69,25 @@ Si algo falla al aplicar una migración: vaciar la base propia, corregir la migr
 
 **Modelo.** No hay registro público: las cuentas y los negocios los crea el equipo de SMA a la Carta (el superadmin) desde `/superadmin`, y el resto de los usuarios solo puede entrar y recuperar su contraseña.
 
-**Diseño elegido.** Tabla `super_admins` (un usuario que no pertenece a ningún negocio), sección `/superadmin` dentro de este admin, y cuentas creadas por invitación por mail. El superadmin usa RLS para ver y gestionar miembros; crear un negocio solo se puede con la función atómica `create_business_with_owner`. La clave de servicio se usa en un único lugar (invitar cuentas), solo después de comprobar que quien pide es superadmin. Requisitos en `docs/SPEC.md` (ADMIN-SUPER-1 a 10).
+**Diseño elegido.** Tabla `super_admins` (un usuario que no pertenece a ningún negocio) y sección `/superadmin` dentro de este admin. **Sin mails**: como el mail por defecto de Supabase solo entrega a miembros del equipo del proyecto y permite 2 por hora, las cuentas se crean con una **contraseña temporal** que el superadmin ve una sola vez y le pasa a la persona; en su primer ingreso solo puede llegar a "Cambiar contraseña" y elige una propia. Si la olvida, el superadmin le restablece una temporal nueva. El superadmin usa RLS para ver y gestionar miembros; crear un negocio solo se puede con la función atómica `create_business_with_owner`. La clave de servicio se usa solo para crear cuentas y cambiar contraseñas, después de comprobar quién pide la acción. Requisitos en `docs/SPEC.md` (ADMIN-SUPER-1 a 11).
 
 Hecho en el código:
 
 - [x] [herni] Sacar el registro público del admin (`/registro`)
 - [x] [herni] Decidir el diseño del superadmin (ver arriba)
 - [x] [herni] Requisitos `ADMIN-SUPER-*` en `docs/SPEC.md`
-- [x] [herni] Migración `20260925120000_superadmin.sql`, probada en Postgres real (PGlite) con `src/lib/db/superadmin.test.ts`
-- [x] [herni] Pantallas: listado de negocios, alta de negocio con su cuenta dueña y detalle con alta y baja de miembros (`/superadmin`)
-- [x] [herni] Ruta `/auth/confirm` para los links de invitación y de recuperación
+- [x] [herni] Migración `20260925120000_superadmin.sql`, aplicada y probada en Postgres real (PGlite) con `src/lib/db/superadmin.test.ts`
+- [x] [herni] Pantallas: listado de negocios, alta de negocio con su cuenta dueña, y detalle con alta, baja y restablecimiento de contraseña de miembros (`/superadmin`)
+- [x] [herni] Contraseña temporal y cambio obligatorio en el primer ingreso (`/cambiar-contrasena`)
 
-**Para dejarlo andando (pasos manuales de Herni, en este orden):**
+Pasos de Supabase:
 
-1. [ ] [herni] **Apagar el registro público en Supabase** (**Authentication → Sign In / Providers → "Allow new users to sign up"**). Imprescindible: la clave pública viaja en el navegador y, con el registro encendido, cualquiera podría crear cuentas llamando a la API aunque el admin no tenga pantalla para eso. Las invitaciones del superadmin funcionan igual con el registro apagado
-2. [ ] [herni] Aplicar la migración: `npm run db:push -- --dry-run`, revisar y `npm run db:push`. Después `npm run db:types` y commitear `src/types/database.ts`
-3. [ ] [herni] Cargar el primer superadmin. En Supabase, **Authentication → Users → Add user** (tu email, con "Auto Confirm User"), y en el **SQL Editor**:
-   ```sql
-   insert into public.super_admins (user_id)
-   select id from public.profiles where email = 'tu@email.com';
-   ```
-4. [ ] [herni] Agregar `SUPABASE_SERVICE_ROLE_KEY` a `admin/.env.local` (**Project Settings → API Keys → secret key**). Sin ella `/superadmin` funciona, pero al invitar a una cuenta nueva muestra "Falta configurar la clave de servicio". Nunca se commitea ni se comparte
-5. [ ] [herni] **Plantillas de mail** (**Authentication → Emails → Templates**). Las invitaciones no soportan PKCE, así que el link por defecto no sirve. En **Invite user**, cambiar el link por:
-   ```html
-   <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/restablecer">Aceptar la invitación</a>
-   ```
-   y en **Reset password**:
-   ```html
-   <a href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/restablecer">Elegir una contraseña nueva</a>
-   ```
-   Con la **Site URL** ya configurada (Etapa 2)
-6. [ ] [herni] **Probar a mano**: entrar como superadmin (debe llevarte a `/superadmin`), crear un negocio con un email tuyo alternativo, abrir la invitación, elegir la contraseña, entrar como dueño y ver su panel; agregar y quitar un miembro; y con un usuario común comprobar que `/superadmin` lo manda a `/dashboard`
-7. [ ] [herni] Confirmar que `/recuperar` solo sirve a cuentas ya creadas y no revela si un email existe (ADMIN-AUTH-9)
+- [x] [herni] Apagar el registro público (**Authentication → Sign In / Providers → "Allow new users to sign up"**)
+- [x] [herni] Redirect URL `http://localhost:3000/auth/callback`
+- [x] [herni] Cargar el primer superadmin (SQL en el encabezado de la migración)
+- [x] [herni] `SUPABASE_SERVICE_ROLE_KEY` en `admin/.env.local`
+- [x] [herni] **Probar a mano** (hecho: alta con contraseña temporal, ingreso y cambio de contraseña): entrar como superadmin (debe llevarte a `/superadmin` o mostrar el botón "Superadmin"), crear un negocio con un email alternativo, copiar la contraseña temporal, entrar en una ventana privada con esa cuenta (debe llevarte a "Elegí tu contraseña"), elegir una propia y ver su panel; restablecer su contraseña desde el detalle del negocio; y con un usuario común comprobar que `/superadmin` lo manda a `/dashboard`
+- [ ] [herni] Cuando haya un SMTP propio (plan pago o proveedor externo): reevaluar `/recuperar` para clientes y las plantillas de mail. Hasta entonces, la recuperación la hace el superadmin
 
 ## Etapa 5 — Que el admin compile
 
@@ -110,11 +97,62 @@ Hecho en el código:
 - [x] [herni] Quitar los `continue-on-error` del CI para lint y build del admin
 - [ ] [herni] PR hacia `main`
 
-## Etapa 6 — Roadmap del producto
+## Etapa 5b — Menú y promociones
 
-- [ ] [por asignar] Revisar las "brechas conocidas" de `docs/SPEC.md` y priorizarlas
-- [ ] [por asignar] **Diseñar la conexión admin ↔ menús públicos** (`web/` hoy lee JSON estáticos). Es una decisión de arquitectura: diseñarla antes de escribir código. Incluye las políticas `anon` de lectura
-- [ ] [por asignar] Plan de migración de los clientes actuales (`data/clientes/*`) a Supabase
+Hecho en el código (migración `20260926000000_orden_y_promociones.sql`, ya aplicada a la base de Herni):
+
+- [x] [herni] Borrar productos, activar/desactivar con un clic y sin recargar la página
+- [x] [herni] Ordenar categorías y productos arrastrando (`sort_order`), y guardar el orden
+- [x] [herni] Promociones: tipo **descuento %** o **combo a precio fijo**, armadas arrastrando productos del menú (`/dashboard/promotions`), con precio final y ahorro en vivo
+- [ ] [herni] **Probar a mano en el navegador** el arrastrar y soltar (categorías, productos y armado de promociones, con mouse y en el celular) y el borrado
+- [ ] [por asignar] Imagen de producto (Supabase Storage entra en el plan gratuito) y `featured`
+- [ ] [por asignar] Vigencia de las promociones (fechas o días de la semana) y otros tipos (2x1)
+
+## Etapa 6 — Menú público desde el admin
+
+**Diseño.** La función `public_menu(slug)` de Supabase entrega el menú publicado con el mismo formato que los JSON de `web/`; el menú público la pide sin sesión (`web/apps/menu-app/lib/public-menu.js`) y, si no está o falla, usa los JSON como hasta ahora. La configuración (plantilla, colores, cabecera, horarios, WhatsApp, si es público) vive en `business_settings` y se edita en `/dashboard/settings`. Las promociones salen como la categoría "Ofertas". Requisitos en `docs/SPEC.md` (ADMIN-CONFIG y PUBLICO).
+
+Hecho en el código (migración `20260927000000_configuracion_y_menu_publico.sql`, ya aplicada a la base de Herni):
+
+- [x] [herni] Tabla `business_settings` y pantalla de Configuración (publicar, plantilla, colores, cabecera, descripción, horarios por día con turnos y cierre, WhatsApp)
+- [x] [herni] Función `public_menu` y adaptador en `web/`, con fallback a los JSON
+- [ ] [herni] En `web/apps/menu-app/supabase-config.js`, completar `url` y `key` (Supabase → Project Settings → API; son públicas por diseño: la publishable key, **nunca** la secret). Vacío, el menú usa solo los JSON
+- [ ] [herni] **Probar a mano**: en Configuración, completar y publicar; abrir el menú con `?cliente=<slug>` (servidor estático sobre `web/`) y ver colores, cabecera, horarios, productos en su orden y las promociones en "Ofertas"; despublicar y ver que vuelve a los JSON
+- [x] [herni] Dirección, Instagram y Facebook, y **cierre temporal** (con mensaje y fecha de reapertura que termina sola), en Configuración y en el menú público
+- [x] [herni] **Imágenes por bucket** de Supabase Storage (`business-images`, 2 MB, JPG/PNG/WebP, cada negocio en su carpeta): cabecera del menú e imagen de cada producto
+- [x] [herni] **Subdominio = slug** en el código (`web/apps/menu-app/lib/hostname.js`): `<slug>.smaalacarta.com.ar` abre el negocio sin declararlo en `app.js`; los slugs reservados (`www`, `admin`, `app`, `api`, `demo`, `moderno`…) no se pueden usar
+- [x] [herni] Se escapan todos los textos del negocio antes de mostrarlos en el menú público (`lib/html.js`): un nombre con HTML ya no puede ejecutar código en el navegador de los clientes
+- [ ] [herni] **Comodín de Vercel** (`*.smaalacarta.com.ar`). El motivo habitual de que no funcione: Vercel solo emite el certificado de un comodín si **el dominio usa sus nameservers** (`ns1.vercel-dns.com` y `ns2.vercel-dns.com`). En orden:
+  1. En Vercel → **Domains**, agregar `smaalacarta.com.ar` y, en el proyecto de los menús, `*.smaalacarta.com.ar`. Vercel muestra los nameservers que pide.
+  2. **Antes de cambiar nada en NIC**, cargar en Vercel → Domains → **DNS Records** todos los registros que hoy tiene el dominio (apex y `www` hacia la landing, y sobre todo los del **mail**: `MX`, `TXT`/SPF/DKIM). Al delegar, los registros del proveedor actual dejan de valer.
+  3. En **nic.ar**, cambiar la delegación del dominio a `ns1.vercel-dns.com` y `ns2.vercel-dns.com`. Puede tardar horas.
+  4. Asignar cada dominio a su proyecto: apex y `www` → landing; `*` → menús. Un subdominio puntual (por ejemplo `www`) tiene prioridad sobre el comodín.
+  5. Repetir para `smaalacarta.online` si se va a usar.
+  6. Probar con un negocio publicado: `https://<slug>.smaalacarta.com.ar`.
+- [ ] [por asignar] Dominio propio por negocio (por ejemplo `menu.minegocio.com`): columna en la base y una consulta por host; se evalúa después del comodín
+- [ ] [por asignar] Migrar los clientes de `data/clientes/*` a Supabase, uno por uno
+- [ ] [por asignar] Limpiar del bucket las imágenes que quedaron sin uso al reemplazarlas (hoy quedan huérfanas, ocupan espacio)
+- [ ] [por asignar] Pausa de proyectos gratuitos de Supabase (una semana sin actividad): evaluar un chequeo periódico o el plan pago cuando haya clientes reales
+
+**Decisión:** el envío y el retiro **no** se gestionan en el sistema; se arreglan con cada cliente por WhatsApp.
+
+## Etapa 6b — Pedidos y seguimiento
+
+**Diseño.** Confirmar un pedido en el menú lo guarda en el sistema **antes** de abrir WhatsApp (`create_public_order`); el cliente ve "Gracias por tu pedido", envía el mensaje por WhatsApp como siempre y puede seguir el estado en `https://<slug>.smaalacarta.com.ar/pedido/<código>` (código aleatorio de 20 caracteres). El negocio ve y gestiona los pedidos en `/dashboard/orders`. Si el menú viene de un JSON, o guardar falla, el pedido sigue solo por WhatsApp. Requisitos en `docs/SPEC.md` (ADMIN-PEDIDOS y SEGUIMIENTO).
+
+Hecho en el código (migración `20260929000000_pedidos.sql`, ya aplicada a la base de Herni):
+
+- [x] [herni] Tablero de pedidos (Nuevos, En curso, Listos, Terminados) con cambio de estado, línea de tiempo, link de seguimiento y actualización cada 20 s
+- [x] [herni] Pedido manual para lo que llega por fuera del menú
+- [x] [herni] Numeración por negocio (1, 2, 3…), ítems con nombre y precio del momento, estados con transiciones controladas
+- [x] [herni] El menú guarda el pedido en el sistema, con precios y total calculados por el servidor, y muestra "Gracias por tu pedido" con el botón de WhatsApp y el link de seguimiento
+- [x] [herni] Página pública de seguimiento (`web/apps/tracker`), sin datos personales, que se actualiza sola hasta que el pedido termina; ruta `/pedido/:code` en `web/vercel.json`
+- [ ] [herni] **Probar a mano** el circuito: publicar un negocio, hacer un pedido desde su menú, verlo en `/dashboard/orders`, cambiarle el estado y mirar el seguimiento. Un servidor estático no aplica la ruta `/pedido/:code`: en local abrí `apps/tracker/index.html?code=<código>`; la ruta real se prueba en una preview de Vercel
+- [ ] [por asignar] **Avisar "tu pedido está listo" por WhatsApp**: con un botón que abre el chat con el mensaje escrito (necesita pedir el teléfono del cliente en el checkout) o, más adelante, automático con la API oficial de WhatsApp. Se deja para cuando haya clientes reales
+- [ ] [por asignar] Tiempo real (Supabase Realtime) y un aviso sonoro de pedido nuevo en el tablero
+- [ ] [por asignar] Captcha (Cloudflare Turnstile, gratis) si aparecen pedidos falsos; hoy el freno es de 20 pedidos por minuto por negocio
+- [ ] [por asignar] Privacidad: definir cuánto tiempo se guardan los pedidos y el nombre de los clientes, y avisarlo en el checkout
+- [ ] [por asignar] Métricas en el resumen: pedidos por estado y ventas del día
 
 ## Etapa 7 — Pendientes técnicos (backlog)
 

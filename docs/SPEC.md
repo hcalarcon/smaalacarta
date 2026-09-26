@@ -38,10 +38,15 @@ comportamiento que ya existe, una app por rama:
 
 ## RUTAS — Qué negocio y qué vista abre cada URL
 
-*Aplicado por `web/vercel.json` y la resolución de negocio de
-`web/apps/menu-app`. Cubierto por: pendiente.*
+*Aplicado por `web/vercel.json`, `web/apps/menu-app/app.js` y
+`web/apps/menu-app/lib/hostname.js`. Cubierto por: `lib/hostname.test.js`
+(RUTAS-1 y 2).*
 
-_Sin requisitos todavía._
+- **RUTAS-1** Un negocio se abre desde `<slug>.smaalacarta.com.ar` (o
+  `.smaalacarta.online`) sin declararlo en el código: el subdominio es su slug. El
+  parámetro `?cliente=<slug>` sigue sirviendo para desarrollo.
+- **RUTAS-2** Los subdominios reservados (`www`, `admin`, `app`, `api`, `demo`…) no
+  son negocios; los de las demos (`moderno`, `clasico`, `minimal`) abren su demo.
 
 ## HORARIO — Abierto o cerrado
 
@@ -55,6 +60,37 @@ _Sin requisitos todavía._
 pendiente.*
 
 _Sin requisitos todavía._
+
+## PUBLICO — El menú desde Supabase
+
+*Aplicado por `supabase/migrations/*_configuracion_y_menu_publico.sql` (función
+`public_menu`) y `web/apps/menu-app/lib/` (`public-menu.js`, `info.js` y `html.js`). Cubierto por:
+`src/lib/db/public-menu.test.ts` (admin, contra Postgres real: PUBLICO-1 a 5 y 8) y
+`web/apps/menu-app/lib/*.test.js` (PUBLICO-6, 7 y 9).*
+
+El menú público pide a Supabase el negocio por su slug, sin sesión, y recibe el
+mismo formato que hoy leen los JSON (`config` y `menu`).
+
+- **PUBLICO-1** Un negocio que no existe o no está publicado no devuelve nada.
+- **PUBLICO-2** Solo se entregan las categorías y los productos activos del negocio,
+  en el orden que definió, sin categorías vacías y sin nada de otros negocios.
+- **PUBLICO-3** Las promociones activas, con todos sus productos activos, van en una
+  categoría "Ofertas" al principio, con su precio final y el precio anterior
+  (ADMIN-PROMOS-4); el precio anterior se omite si no hay ahorro.
+- **PUBLICO-4** La configuración llega con el formato del menú actual (nombre,
+  descripción, plantilla, teléfono, colores, cabecera y horarios); lo que el negocio
+  no cargó no aparece. Sin horarios, el menú se muestra siempre abierto.
+- **PUBLICO-5** Quien no tiene sesión puede pedir el menú de un negocio publicado,
+  pero no puede leer ninguna tabla del negocio.
+- **PUBLICO-6** El menú web pide el negocio a Supabase; si Supabase no está
+  configurado, no lo tiene o falla, usa los JSON locales como hasta ahora.
+- **PUBLICO-7** Lo que llega de Supabase se completa con valores por defecto para
+  que el menú nunca reciba categorías o ítems sin lista.
+- **PUBLICO-8** La dirección y las redes llegan como `direccion` y `redes`; un cierre
+  temporal vigente llega como `cierre`, con su mensaje y la fecha de reapertura. Un
+  cierre cuya fecha de reapertura ya llegó no se entrega.
+- **PUBLICO-9** El menú muestra la dirección y las redes, y si el negocio está
+  cerrado temporalmente lo dice con su mensaje y no deja enviar pedidos.
 
 ## BUSQUEDA — Buscador
 
@@ -73,6 +109,38 @@ _Sin requisitos todavía._
 *Aplicado por: pendiente. Cubierto por: pendiente.*
 
 _Sin requisitos todavía._
+
+## SEGUIMIENTO — Pedido guardado y página de seguimiento
+
+*Aplicado por `supabase/migrations/*_pedidos.sql` (funciones `create_public_order` y
+`public_order_tracking`), `web/apps/menu-app/lib/orders.js` y `web/apps/tracker`.
+Cubierto por: `src/lib/db/orders.test.ts` (admin, contra Postgres real:
+SEGUIMIENTO-1 a 6) y `web/apps/**/lib/*.test.js` (SEGUIMIENTO-7 y 8).*
+
+Cuando el menú viene de Supabase, confirmar el pedido lo guarda en el sistema antes
+de abrir WhatsApp, y el cliente recibe un link para seguirlo. El pedido sigue
+llegando al negocio por WhatsApp.
+
+- **SEGUIMIENTO-1** Un cliente, sin sesión, puede crear un pedido en un negocio
+  publicado y abierto. No puede en uno que no existe, no está publicado o cerró
+  temporalmente.
+- **SEGUIMIENTO-2** Los precios y el total los calcula el sistema a partir del menú:
+  el navegador solo dice qué productos y cuántos. Un precio enviado por el navegador
+  no existe para el sistema.
+- **SEGUIMIENTO-3** Solo se puede pedir lo que el menú público muestra: productos y
+  promociones activos de ese negocio. Si un ítem no es válido, el pedido no se crea.
+- **SEGUIMIENTO-4** Un pedido lleva de 1 a 40 ítems distintos, de 1 a 20 unidades
+  cada uno, con textos de largo acotado; un negocio no recibe más de 20 pedidos por
+  minuto desde el menú.
+- **SEGUIMIENTO-5** Al crear el pedido, el cliente recibe su número y un código único
+  e imposible de adivinar. Con ese código se ve el estado, la línea de tiempo y el
+  detalle del pedido, sin el nombre del cliente, las notas ni ningún dato personal.
+- **SEGUIMIENTO-6** Sin sesión no se lee ni se cambia ninguna tabla de pedidos: solo
+  se crea un pedido y se consulta uno por su código.
+- **SEGUIMIENTO-7** Si el menú no viene de Supabase, o el pedido no se puede guardar,
+  se envía por WhatsApp como hasta ahora.
+- **SEGUIMIENTO-8** La página de seguimiento muestra el estado y se actualiza sola
+  hasta que el pedido termina; los textos que muestra nunca se interpretan como HTML.
 
 ## PDF — Menú en PDF
 
@@ -131,12 +199,14 @@ recuperación se prueban a mano.*
 ## ADMIN-SUPER — Superadmin y alta de cuentas
 
 *Aplicado por `supabase/migrations/*_superadmin.sql`, `src/lib/auth/superadmin.ts`,
-`src/lib/superadmin/`, `app/superadmin` y `app/auth/confirm`. Cubierto por:
+`src/lib/superadmin/`, `app/superadmin` y `app/(auth)/cambiar-contrasena`. Cubierto por:
 `src/lib/db/superadmin.test.ts` (ADMIN-SUPER-1 a 4, contra Postgres real) y por los
 tests de `src/lib/superadmin/` y `src/lib/auth/` (el resto).*
 
 No hay registro público: las cuentas y los negocios los crea el equipo de SMA a la
-Carta desde `/superadmin`.
+Carta desde `/superadmin`. No se envían mails: cada cuenta nueva nace con una
+contraseña temporal que el superadmin le pasa a la persona, y que ella cambia en su
+primer ingreso.
 
 - **ADMIN-SUPER-1** Un superadmin es un usuario registrado en `super_admins`.
   Ningún usuario, ni siquiera un superadmin, puede agregar ni quitar filas de esa
@@ -150,41 +220,114 @@ Carta desde `/superadmin`.
   negocio.
 - **ADMIN-SUPER-5** El slug de un negocio es único y solo tiene minúsculas,
   números y guiones; se propone a partir del nombre, sin tildes.
-- **ADMIN-SUPER-6** Dar de alta a un dueño con un email nuevo le envía una
-  invitación; si ese email ya tiene cuenta se reutiliza y no se invita de nuevo.
+- **ADMIN-SUPER-6** Dar de alta a un dueño con un email nuevo crea su cuenta con
+  una contraseña temporal generada al azar, que se muestra una sola vez; si ese
+  email ya tiene cuenta se reutiliza y no se genera ninguna contraseña.
 - **ADMIN-SUPER-7** Sin sesión, `/superadmin` lleva a `/login`; un usuario que no
   es superadmin va a su panel y no ve nada de `/superadmin`.
 - **ADMIN-SUPER-8** La clave de servicio de Supabase solo se usa después de
   comprobar que quien pide la acción es superadmin.
 - **ADMIN-SUPER-9** Un superadmin sin negocio entra a `/superadmin`, no a
   `/sin-negocio`.
-- **ADMIN-SUPER-10** El link de invitación o de recuperación abre una sesión y
-  lleva a elegir la contraseña; solo se aceptan los tipos `invite` y `recovery`.
+- **ADMIN-SUPER-10** Una cuenta con contraseña temporal solo puede llegar a la
+  pantalla de cambio de contraseña, hasta que elija una propia; con la nueva, la
+  marca de temporal se borra.
+- **ADMIN-SUPER-11** Un superadmin puede restablecer la contraseña de un miembro
+  de un negocio: se genera una temporal nueva, se muestra una sola vez y la
+  persona vuelve a quedar obligada a cambiarla. No puede hacerlo con otro
+  superadmin ni con quien no es miembro de ese negocio.
+- **ADMIN-SUPER-12** Un negocio no puede llamarse con un slug reservado (`www`,
+  `admin`, `app`, `api`, `demo`, `moderno`, `clasico`, `minimal`…): serían
+  subdominios que no abren un negocio.
 
 ## ADMIN-MENU — Categorías y productos
 
 *Aplicado por `src/lib/db/categories.ts`, `src/lib/db/products.ts`,
-`src/lib/menu/product-fields.ts`, `app/dashboard/menu`. Cubierto por:
-`src/lib/menu/product-fields.test.ts` (ADMIN-MENU-1 y 2).*
+`src/lib/menu/product-fields.ts`, `src/lib/menu/ordering.ts`, `app/dashboard/menu`.
+Cubierto por: `src/lib/menu/product-fields.test.ts` (ADMIN-MENU-1 y 2),
+`src/lib/menu/ordering.test.ts` y `src/lib/db/ordering.test.ts` (ADMIN-MENU-3 a 5).*
 
 - **ADMIN-MENU-1** Un producto se crea siempre dentro de una categoría; la
   descripción vacía se guarda como nula y un producto nuevo nace activo.
 - **ADMIN-MENU-2** Editar un producto conserva su categoría, salvo que se indique
   otra de forma explícita.
+- **ADMIN-MENU-3** Las categorías y, dentro de cada una, los productos se muestran
+  en el orden que definió el negocio; los que todavía no tienen orden van al final,
+  del más viejo al más nuevo.
+- **ADMIN-MENU-4** Reordenar guarda la posición de cada elemento (0, 1, 2…) solo
+  dentro de su lista: las categorías del negocio, o los productos de una categoría.
+- **ADMIN-MENU-5** Un negocio no puede reordenar ni modificar las categorías o los
+  productos de otro.
+- **ADMIN-MENU-6** Un producto puede tener una imagen; quitarla la deja en blanco, y
+  editar el producto sin tocar la imagen la conserva.
+
+## ADMIN-CONFIG — Configuración del negocio
+
+*Aplicado por `supabase/migrations/*_configuracion_y_menu_publico.sql`,
+`src/lib/settings/`, `src/lib/db/settings.ts` y `app/dashboard/settings`. Cubierto
+por: `src/lib/db/settings.test.ts` (ADMIN-CONFIG-1 a 6, contra Postgres real),
+`src/lib/db/storage.test.ts` (ADMIN-CONFIG-7), `src/lib/settings/*.test.ts` (formatos
+y redes) y `src/lib/storage/images.test.ts`.*
+
+- **ADMIN-CONFIG-1** Cada negocio tiene una configuración propia (plantilla, colores,
+  imagen de cabecera, descripción, horarios y si el menú es público); solo sus
+  miembros la ven y la editan.
+- **ADMIN-CONFIG-2** La plantilla es `moderno`, `clasico` o `minimal`; los colores son
+  `#rrggbb`; la imagen es una dirección `https`; los horarios son rangos
+  `HH:MM-HH:MM` por día (de `lunes` a `domingo`), que pueden cruzar la medianoche,
+  sin ser de duración cero ni superponerse dentro de un día.
+- **ADMIN-CONFIG-3** Guardar la configuración y el WhatsApp del negocio es atómico.
+- **ADMIN-CONFIG-4** Un negocio nuevo no es público: su menú solo se ve desde
+  Supabase cuando su dueño lo publica.
+- **ADMIN-CONFIG-5** La dirección (hasta 200 caracteres), el Instagram y el Facebook
+  son opcionales. Las redes se guardan como direcciones `https` de esas redes; se
+  acepta escribir `@usuario` o el usuario a secas y se convierte.
+- **ADMIN-CONFIG-6** Un negocio puede cerrar temporalmente, con un mensaje opcional
+  (hasta 200 caracteres) y una fecha de reapertura opcional. Con fecha, el cierre
+  termina solo al llegar ese día.
+- **ADMIN-CONFIG-7** Solo los miembros de un negocio suben, cambian y borran archivos
+  de su carpeta del bucket de imágenes; solo se aceptan JPG, PNG y WebP de hasta
+  2 MB. Nadie puede escribir fuera de la carpeta de su negocio.
 
 ## ADMIN-PEDIDOS — Pedidos
 
-*Aplicado por `src/lib/db/orders.ts`, `app/dashboard/orders`. Cubierto por:
-pendiente.*
+*Aplicado por `supabase/migrations/*_pedidos.sql`, `src/lib/orders/`,
+`src/lib/db/orders.ts` y `app/dashboard/orders`. Cubierto por:
+`src/lib/db/orders.test.ts` (contra Postgres real: ADMIN-PEDIDOS-1 a 5) y
+`src/lib/orders/*.test.ts` (ADMIN-PEDIDOS-1 y 3).*
 
-_Sin requisitos todavía._
+- **ADMIN-PEDIDOS-1** Un pedido pasa por Pendiente, Confirmado, En preparación, Listo
+  y Entregado, o se cancela. Desde un estado se puede pasar a uno posterior o
+  cancelar; Entregado y Cancelado no cambian. Cada cambio queda en la línea de
+  tiempo, con su hora.
+- **ADMIN-PEDIDOS-2** Solo los miembros de un negocio ven y cambian sus pedidos.
+- **ADMIN-PEDIDOS-3** El negocio puede cargar un pedido a mano (cliente, ítems con
+  nombre, precio y cantidad); recibe número y código como cualquier otro.
+- **ADMIN-PEDIDOS-4** Los pedidos de un negocio se numeran 1, 2, 3…, sin repetirse ni
+  saltearse, aunque lleguen a la vez.
+- **ADMIN-PEDIDOS-5** Cada ítem guarda el nombre y el precio del momento: editar o
+  borrar el producto después no cambia los pedidos ya hechos.
 
 ## ADMIN-PROMOS — Promociones
 
-*Aplicado por `src/lib/db/promotions.ts`, `app/dashboard/promotions`. Cubierto
-por: pendiente.*
+*Aplicado por `supabase/migrations/*_orden_y_promociones.sql`,
+`src/lib/promotions/`, `src/lib/db/promotions.ts`, `app/dashboard/promotions`.
+Cubierto por: `src/lib/db/promotions.test.ts` (ADMIN-PROMOS-2, 3, 5 y 6) y
+`src/lib/promotions/*.test.ts` (ADMIN-PROMOS-1 y 4).*
 
-_Sin requisitos todavía._
+- **ADMIN-PROMOS-1** Una promoción es de tipo `percent` (descuento del 1 al 100 %
+  sobre cada producto) o `combo` (precio fijo mayor a 0 por el conjunto), tiene un
+  nombre y lleva al menos un producto.
+- **ADMIN-PROMOS-2** Los productos de una promoción se guardan en el orden elegido
+  y solo pueden ser del mismo negocio que la promoción.
+- **ADMIN-PROMOS-3** Guardar una promoción con sus productos es atómico: si algo
+  falla no queda una promoción a medias ni con productos de menos.
+- **ADMIN-PROMOS-4** El precio final de una promoción es la suma de sus productos
+  menos el descuento (`percent`) o el precio fijo (`combo`); el ahorro nunca es
+  negativo.
+- **ADMIN-PROMOS-5** Un negocio solo ve, edita y borra sus propias promociones.
+- **ADMIN-PROMOS-6** Borrar un producto lo saca de sus promociones; borrar una
+  promoción no borra sus productos.
 
 ---
 
@@ -215,10 +358,14 @@ se resuelve en su propia rama `fix/`.
 - **Superadmin: pasos manuales en Supabase.** (1) Apagar el registro público
   (`Allow new users to sign up`): con la clave pública, cualquiera puede crear
   cuentas llamando a la API aunque el admin no tenga pantalla para eso. (2) Cargar
-  el primer superadmin con SQL. (3) Poner en la plantilla de mail "Invite user" el
-  link `{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=invite&next=/restablecer`:
-  las invitaciones no soportan PKCE, así que no sirven con el link por defecto.
-  Ver [PLAN.md](PLAN.md).
+  el primer superadmin con SQL. (3) Poner `SUPABASE_SERVICE_ROLE_KEY` en el
+  servidor. Ver [PLAN.md](PLAN.md).
+- **Recuperar la contraseña por mail no llega a los clientes.** El mail por defecto
+  de Supabase solo entrega a miembros del equipo del proyecto y permite 2 por hora;
+  sin un SMTP propio, `/recuperar` no le sirve a un cliente. Por eso el
+  restablecimiento lo hace el superadmin (ADMIN-SUPER-11). La marca de "contraseña
+  temporal" la respeta la app, no la base: quien use la API con su sesión puede
+  saltearla, pero solo para su propia cuenta.
 - **Superadmin: roles sin efecto.** Un miembro puede ser `owner` o `staff`, pero
   ninguna política distingue uno de otro. Ver "`role` no limita nada".
 - **Landing: texto del botón principal** dice "Solicitá tu sitio ahoras".

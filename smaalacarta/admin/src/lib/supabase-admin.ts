@@ -6,8 +6,9 @@ import { createClient } from "@supabase/supabase-js";
 // acceso total a la base y a las cuentas. Reglas:
 // - `server-only` hace fallar el build si algo de esto llega al navegador.
 // - La variable NO lleva el prefijo NEXT_PUBLIC_, así que Next no la expone.
-// - Se usa solo para invitar cuentas (`auth.admin`), y solo después de comprobar
-//   que quien pide la acción es superadmin (ADMIN-SUPER-8).
+// - Se usa solo para crear cuentas y cambiar contraseñas (`auth.admin`), y solo
+//   después de comprobar que quien pide la acción es superadmin (ADMIN-SUPER-8) o
+//   que es el propio usuario cambiando su contraseña temporal.
 // Se lee al llamar, no al cargar el módulo, para que el build no la necesite.
 export function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

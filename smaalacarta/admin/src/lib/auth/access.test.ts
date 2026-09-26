@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { accessState, redirectForRoute, superAdminAccess } from "./access";
+import {
+  accessState,
+  hasTemporaryPassword,
+  redirectForRoute,
+  superAdminAccess,
+} from "./access";
 
 describe("redirectForRoute — ADMIN-AUTH-7", () => {
   it("manda a /login a quien no tiene sesión y pide el panel", () => {
@@ -41,11 +46,9 @@ describe("redirectForRoute — ADMIN-AUTH-7", () => {
     expect(redirectForRoute("/restablecer", false)).toBeNull();
   });
 
-  it("no toca /auth/callback ni /auth/confirm", () => {
-    for (const path of ["/auth/callback", "/auth/confirm"]) {
-      expect(redirectForRoute(path, false)).toBeNull();
-      expect(redirectForRoute(path, true)).toBeNull();
-    }
+  it("no toca /auth/callback", () => {
+    expect(redirectForRoute("/auth/callback", false)).toBeNull();
+    expect(redirectForRoute("/auth/callback", true)).toBeNull();
   });
 
   it("no confunde prefijos parecidos con el panel", () => {
@@ -135,5 +138,54 @@ describe("accessState con superadmin — ADMIN-SUPER-9", () => {
     expect(
       accessState({ user: null, business: null, isSuperAdmin: true }),
     ).toBe("login");
+  });
+});
+
+describe("contraseña temporal — ADMIN-SUPER-10", () => {
+  it.each(["/dashboard", "/dashboard/menu", "/superadmin", "/superadmin/negocios/x", "/login", "/recuperar", "/sin-negocio"])(
+    "manda %s al cambio de contraseña",
+    (path) => {
+      expect(redirectForRoute(path, true, true)).toBe("/cambiar-contrasena");
+    },
+  );
+
+  it.each(["/cambiar-contrasena", "/restablecer", "/auth/callback"])(
+    "deja pasar %s: ahí se elige la contraseña propia",
+    (path) => {
+      expect(redirectForRoute(path, true, true)).toBeNull();
+    },
+  );
+
+  it("sin la marca no cambia nada", () => {
+    expect(redirectForRoute("/dashboard", true, false)).toBeNull();
+    expect(redirectForRoute("/dashboard", true)).toBeNull();
+  });
+
+  it("la pantalla de cambio pide sesión", () => {
+    expect(redirectForRoute("/cambiar-contrasena", false)).toBe(
+      "/login?next=%2Fcambiar-contrasena",
+    );
+    expect(redirectForRoute("/cambiar-contrasena", true)).toBeNull();
+  });
+
+  it("sin sesión la marca no importa", () => {
+    expect(redirectForRoute("/login", false, true)).toBeNull();
+  });
+});
+
+describe("hasTemporaryPassword — ADMIN-SUPER-10", () => {
+  it("es verdadero solo con la marca en true", () => {
+    expect(hasTemporaryPassword({ must_change_password: true })).toBe(true);
+  });
+
+  it.each([
+    [undefined],
+    [null],
+    [{}],
+    [{ must_change_password: false }],
+    [{ must_change_password: "true" }],
+    [{ must_change_password: 1 }],
+  ])("es falso con %j", (metadata) => {
+    expect(hasTemporaryPassword(metadata as never)).toBe(false);
   });
 });
