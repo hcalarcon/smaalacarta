@@ -25,6 +25,11 @@
     },
 
     {
+      "source": "/pedido/:code",
+      "destination": "/apps/tracker/index.html"
+    },
+
+    {
       "source": "/((?!apps|data|templates|.*\\..*).*)",
       "destination": "/apps/menu-app/index.html"
     }

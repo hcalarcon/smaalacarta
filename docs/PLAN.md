@@ -136,6 +136,24 @@ Hecho en el código (migración `20260927000000_configuracion_y_menu_publico.sql
 
 **Decisión:** el envío y el retiro **no** se gestionan en el sistema; se arreglan con cada cliente por WhatsApp.
 
+## Etapa 6b — Pedidos y seguimiento
+
+**Diseño.** Confirmar un pedido en el menú lo guarda en el sistema **antes** de abrir WhatsApp (`create_public_order`); el cliente ve "Gracias por tu pedido", envía el mensaje por WhatsApp como siempre y puede seguir el estado en `https://<slug>.smaalacarta.com.ar/pedido/<código>` (código aleatorio de 20 caracteres). El negocio ve y gestiona los pedidos en `/dashboard/orders`. Si el menú viene de un JSON, o guardar falla, el pedido sigue solo por WhatsApp. Requisitos en `docs/SPEC.md` (ADMIN-PEDIDOS y SEGUIMIENTO).
+
+Hecho en el código (migración `20260929000000_pedidos.sql`, ya aplicada a la base de Herni):
+
+- [x] [herni] Tablero de pedidos (Nuevos, En curso, Listos, Terminados) con cambio de estado, línea de tiempo, link de seguimiento y actualización cada 20 s
+- [x] [herni] Pedido manual para lo que llega por fuera del menú
+- [x] [herni] Numeración por negocio (1, 2, 3…), ítems con nombre y precio del momento, estados con transiciones controladas
+- [x] [herni] El menú guarda el pedido en el sistema, con precios y total calculados por el servidor, y muestra "Gracias por tu pedido" con el botón de WhatsApp y el link de seguimiento
+- [x] [herni] Página pública de seguimiento (`web/apps/tracker`), sin datos personales, que se actualiza sola hasta que el pedido termina; ruta `/pedido/:code` en `web/vercel.json`
+- [ ] [herni] **Probar a mano** el circuito: publicar un negocio, hacer un pedido desde su menú, verlo en `/dashboard/orders`, cambiarle el estado y mirar el seguimiento. Un servidor estático no aplica la ruta `/pedido/:code`: en local abrí `apps/tracker/index.html?code=<código>`; la ruta real se prueba en una preview de Vercel
+- [ ] [por asignar] **Avisar "tu pedido está listo" por WhatsApp**: con un botón que abre el chat con el mensaje escrito (necesita pedir el teléfono del cliente en el checkout) o, más adelante, automático con la API oficial de WhatsApp. Se deja para cuando haya clientes reales
+- [ ] [por asignar] Tiempo real (Supabase Realtime) y un aviso sonoro de pedido nuevo en el tablero
+- [ ] [por asignar] Captcha (Cloudflare Turnstile, gratis) si aparecen pedidos falsos; hoy el freno es de 20 pedidos por minuto por negocio
+- [ ] [por asignar] Privacidad: definir cuánto tiempo se guardan los pedidos y el nombre de los clientes, y avisarlo en el checkout
+- [ ] [por asignar] Métricas en el resumen: pedidos por estado y ventas del día
+
 ## Etapa 7 — Pendientes técnicos (backlog)
 
 - [ ] [por asignar] Permisos por `role` en `businesses`: hoy cualquier miembro puede editar el negocio, incluido el `slug`

@@ -4,6 +4,11 @@ let MENU_GLOBAL = null;
 // Módulos de /lib, cargados en init(): escape de HTML y datos del negocio.
 let HTML = null;
 let INFO = null;
+let ORDERS = null;
+
+// De dónde vino el menú: si es de Supabase, el pedido también se guarda en el sistema.
+let MENU_SOURCE = null;
+let SUPABASE_CFG = null;
 
 async function fetchJSON(path) {
   try {
@@ -127,13 +132,18 @@ async function loadFromSupabase(slug) {
 // INIT
 async function init() {
   try {
-    const [{ resolveBusinessFromHost }, html, info] = await Promise.all([
-      import("/apps/menu-app/lib/hostname.js"),
-      import("/apps/menu-app/lib/html.js"),
-      import("/apps/menu-app/lib/info.js"),
-    ]);
+    const [{ resolveBusinessFromHost }, html, info, orders, supabaseConfig] =
+      await Promise.all([
+        import("/apps/menu-app/lib/hostname.js"),
+        import("/apps/menu-app/lib/html.js"),
+        import("/apps/menu-app/lib/info.js"),
+        import("/apps/menu-app/lib/orders.js"),
+        import("/apps/menu-app/supabase-config.js"),
+      ]);
     HTML = html;
     INFO = info;
+    ORDERS = orders;
+    SUPABASE_CFG = supabaseConfig.SUPABASE;
 
     const result = resolveAppConfig(resolveBusinessFromHost);
     if (!result) {
@@ -155,6 +165,7 @@ async function init() {
       if (remote) {
         config = remote.config;
         menu = remote.menu;
+        MENU_SOURCE = { slug };
       }
     }
 
@@ -654,7 +665,8 @@ function initSearch() {
 function addToCart(p) {
   if (!p) return;
 
-  const existente = cart.find((i) => i.nombre === p.nombre);
+  // Con id (menú de Supabase) se agrupa por id; los menús de JSON, por nombre.
+  const existente = cart.find((i) => (p.id ? i.id === p.id : i.nombre === p.nombre));
 
   if (existente) {
     existente.cantidad++;
@@ -783,6 +795,7 @@ $("#cerrar-carrito")?.addEventListener("click", closeAll);
 $("#overlay")?.addEventListener("click", closeAll);
 
 function closeAll() {
+  resetCheckout();
   $("#carrito-panel")?.classList.remove("active");
   $("#overlay")?.classList.remove("active");
   $("#checkout")?.classList.remove("active");
@@ -798,7 +811,7 @@ $("#btn-finalizar")?.addEventListener("click", () => {
 $("#cerrar-checkout")?.addEventListener("click", closeAll);
 
 // WHATSAPP
-$("#form-pedido")?.addEventListener("submit", (e) => {
+$("#form-pedido")?.addEventListener("submit", async (e) => {
   e.preventDefault();
 
   if (INFO?.closedNotice(window.CONFIG)) {
@@ -806,7 +819,8 @@ $("#form-pedido")?.addEventListener("submit", (e) => {
     return;
   }
 
-  const f = new FormData(e.target);
+  const form = e.target;
+  const f = new FormData(form);
 
   const formatPrice = (n) => n.toLocaleString("es-AR");
 
@@ -847,15 +861,116 @@ $("#form-pedido")?.addEventListener("submit", (e) => {
   msg += `💰 *TOTAL: $${formatPrice(total)}*\n\n`;
   msg += `📲 SMA a la Carta`;
 
-  window.open(
-    `https://api.whatsapp.com/send?phone=${CONFIG.telefono}&text=${encodeURIComponent(msg)}`,
-  );
+  // Si el menú viene de Supabase, el pedido se guarda primero en el sistema para poder
+  // seguirlo. Si no se puede (menú de JSON, sin conexión…), sigue por WhatsApp como siempre.
+  const items = MENU_SOURCE && ORDERS ? ORDERS.buildOrderItems(cart) : null;
+  let saved = null;
+
+  if (items) {
+    const submit = form.querySelector("button[type='submit']");
+    if (submit) {
+      submit.disabled = true;
+      submit.textContent = "Enviando…";
+    }
+
+    const horarioNota = ahora ? "Horario: ahora mismo" : horario ? `Horario: ${horario}` : "";
+    const result = await ORDERS.createOrder({
+      ...SUPABASE_CFG,
+      slug: MENU_SOURCE.slug,
+      customer: f.get("nombre") || "",
+      delivery: f.get("entrega") || "",
+      payment: f.get("pago") || "",
+      notes: [horarioNota, f.get("notas") || ""].filter(Boolean).join(" · ").slice(0, 500),
+      items,
+    });
+
+    if (submit) {
+      submit.disabled = false;
+      submit.textContent = "Enviar por WhatsApp";
+    }
+
+    if (result.ok) {
+      saved = result;
+    } else if (result.reason === "closed") {
+      alert("Estamos cerrados temporalmente: por ahora no podemos tomar pedidos.");
+      return;
+    } else if (result.reason === "busy") {
+      alert("Estamos recibiendo muchos pedidos. Probá de nuevo en un minuto.");
+      return;
+    } else if (result.reason === "unavailable") {
+      alert("Algún producto ya no está disponible. Recargá el menú para ver lo que hay.");
+      return;
+    }
+    // "invalid" y "unknown": se manda solo por WhatsApp.
+  }
+
+  const link = saved ? ORDERS.trackingLink(window.location.origin, saved.code) : "";
+  if (link) msg += `\n\n🔎 Seguí tu pedido: ${link}`;
+
+  const whatsappUrl = `https://api.whatsapp.com/send?phone=${CONFIG.telefono}&text=${encodeURIComponent(msg)}`;
 
   cart = [];
   saveCart();
   updateCart();
-  closeAll();
+
+  if (saved) {
+    // El navegador puede bloquear una ventana abierta después de esperar: por eso se
+    // muestra un botón, que sí cuenta como acción del cliente.
+    showThanks({ number: saved.number, link, whatsappUrl });
+  } else {
+    window.open(whatsappUrl);
+    closeAll();
+  }
 });
+
+// "Gracias por tu pedido": reemplaza al formulario, con el botón de WhatsApp y el link de
+// seguimiento. Todo con textContent: el número y los links no se interpretan como HTML.
+function showThanks({ number, link, whatsappUrl }) {
+  const form = $("#form-pedido");
+  if (!form) return;
+
+  resetCheckout();
+  form.classList.add("hidden");
+
+  const panel = document.createElement("div");
+  panel.id = "gracias-pedido";
+  panel.className = "gracias-pedido";
+
+  const title = document.createElement("h3");
+  title.textContent = "¡Gracias por tu pedido!";
+
+  const num = document.createElement("p");
+  num.textContent = `Pedido #${number}`;
+
+  const info = document.createElement("p");
+  info.textContent = "Para que el local lo reciba, enviá el mensaje por WhatsApp.";
+
+  const send = document.createElement("a");
+  send.className = "btn-whatsapp";
+  send.href = whatsappUrl;
+  send.target = "_blank";
+  send.rel = "noopener noreferrer";
+  send.textContent = "Enviar por WhatsApp";
+
+  const track = document.createElement("a");
+  track.className = "btn-seguimiento";
+  track.href = link;
+  track.textContent = "Seguir mi pedido";
+
+  const close = document.createElement("button");
+  close.type = "button";
+  close.textContent = "Cerrar";
+  close.onclick = closeAll;
+
+  panel.append(title, num, info, send, track, close);
+  form.insertAdjacentElement("afterend", panel);
+}
+
+// Vuelve el checkout a su estado normal (formulario visible, sin el "gracias").
+function resetCheckout() {
+  document.querySelector("#gracias-pedido")?.remove();
+  $("#form-pedido")?.classList.remove("hidden");
+}
 
 // INIT
 init();

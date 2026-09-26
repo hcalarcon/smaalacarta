@@ -170,6 +170,16 @@ Todo el código vive bajo `smaalacarta/`, en tres proyectos sin build compartido
   sale del subdominio (`lib/hostname.js`). La lista de slugs reservados está en tres
   lugares que deben coincidir (migración, `superadmin/validation.ts` y `hostname.js`),
   con tests que lo comprueban.
+- **Pedidos**: `orders` + `order_items` (con nombre y precio del momento) +
+  `order_events` (línea de tiempo) + `order_counters` (numeración por negocio, sin
+  políticas: solo lo usan las funciones). El cliente crea el pedido con
+  `create_public_order` (sin sesión; **el navegador nunca manda precios**, solo
+  `id`/tipo/cantidad) y lo sigue con `public_order_tracking` por un código aleatorio,
+  sin datos personales. El negocio los gestiona con `set_order_status` y
+  `create_manual_order`. Los estados y sus transiciones están en
+  `src/lib/orders/status.ts` y en la base, y un test compara la matriz completa. En
+  `web/`: `apps/menu-app/lib/orders.js` (checkout) y `apps/tracker` (seguimiento, todo
+  con `textContent`).
 - **Multi-negocio**: `getCurrentBusiness()` resuelve usuario → `business_users`
   (con `role`) → `businesses`; las páginas del panel usan `requireBusiness()`.
   Toda tabla de recursos (`categories`, `products`, `promotions`, `orders`) se filtra

@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Seguimiento de tu pedido</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- El link tiene el código del pedido: que no salga en el Referer ni se indexe. -->
+    <meta name="referrer" content="no-referrer" />
+    <meta name="robots" content="noindex, nofollow" />
+    <link rel="stylesheet" href="/apps/tracker/tracker.css" />
+  </head>
+  <body>
+    <main id="app" aria-live="polite">
+      <p class="tracker-loading">Buscando tu pedido…</p>
+    </main>
+    <script type="module" src="/apps/tracker/tracker.js"></script>
+  </body>
+</html>

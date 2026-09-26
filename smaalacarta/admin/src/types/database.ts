@@ -214,14 +214,142 @@ export type Database = {
           },
         ]
       }
+      order_counters: {
+        Row: {
+          business_id: string
+          last_number: number
+        }
+        Insert: {
+          business_id: string
+          last_number?: number
+        }
+        Update: {
+          business_id?: string
+          last_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_counters_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      order_events: {
+        Row: {
+          business_id: string
+          changed_by: string | null
+          created_at: string
+          id: string
+          order_id: string
+          status: string
+        }
+        Insert: {
+          business_id: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          order_id: string
+          status: string
+        }
+        Update: {
+          business_id?: string
+          changed_by?: string | null
+          created_at?: string
+          id?: string
+          order_id?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_events_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_events_order_id_business_id_fkey"
+            columns: ["order_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id", "business_id"]
+          },
+        ]
+      }
+      order_items: {
+        Row: {
+          business_id: string
+          id: string
+          name: string
+          order_id: string
+          product_id: string | null
+          promotion_id: string | null
+          quantity: number
+          sort_order: number
+          unit_price: number
+        }
+        Insert: {
+          business_id: string
+          id?: string
+          name: string
+          order_id: string
+          product_id?: string | null
+          promotion_id?: string | null
+          quantity: number
+          sort_order?: number
+          unit_price: number
+        }
+        Update: {
+          business_id?: string
+          id?: string
+          name?: string
+          order_id?: string
+          product_id?: string | null
+          promotion_id?: string | null
+          quantity?: number
+          sort_order?: number
+          unit_price?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "order_items_order_id_business_id_fkey"
+            columns: ["order_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id", "business_id"]
+          },
+          {
+            foreignKeyName: "order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_promotion_id_fkey"
+            columns: ["promotion_id"]
+            isOneToOne: false
+            referencedRelation: "promotions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       orders: {
         Row: {
           active: boolean
           business_id: string
+          code: string
           created_at: string
+          customer_name: string | null
+          delivery: string | null
           id: string
           notes: string | null
           order_number: string
+          payment: string | null
+          source: string
           status: string
           total: number
           updated_at: string
@@ -229,10 +357,15 @@ export type Database = {
         Insert: {
           active?: boolean
           business_id: string
+          code?: string
           created_at?: string
+          customer_name?: string | null
+          delivery?: string | null
           id?: string
           notes?: string | null
           order_number: string
+          payment?: string | null
+          source?: string
           status?: string
           total?: number
           updated_at?: string
@@ -240,10 +373,15 @@ export type Database = {
         Update: {
           active?: boolean
           business_id?: string
+          code?: string
           created_at?: string
+          customer_name?: string | null
+          delivery?: string | null
           id?: string
           notes?: string | null
           order_number?: string
+          payment?: string | null
+          source?: string
           status?: string
           total?: number
           updated_at?: string
@@ -462,9 +600,34 @@ export type Database = {
         }
         Returns: string
       }
+      create_manual_order: {
+        Args: {
+          p_business_id: string
+          p_customer_name: string
+          p_delivery: string
+          p_items: Json
+          p_notes: string
+          p_payment: string
+        }
+        Returns: Json
+      }
+      create_public_order: {
+        Args: {
+          p_customer_name: string
+          p_delivery: string
+          p_items: Json
+          p_notes: string
+          p_payment: string
+          p_slug: string
+        }
+        Returns: Json
+      }
       is_super_admin: { Args: never; Returns: boolean }
       is_valid_schedule: { Args: { p_schedule: Json }; Returns: boolean }
+      new_tracking_code: { Args: never; Returns: string }
+      next_order_number: { Args: { p_business_id: string }; Returns: number }
       public_menu: { Args: { p_slug: string }; Returns: Json }
+      public_order_tracking: { Args: { p_code: string }; Returns: Json }
       save_business_settings: {
         Args: {
           p_address: string
@@ -498,6 +661,10 @@ export type Database = {
           p_type: string
         }
         Returns: string
+      }
+      set_order_status: {
+        Args: { p_order_id: string; p_status: string }
+        Returns: undefined
       }
     }
     Enums: {

@@ -124,3 +124,30 @@ body.no-scroll {
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* "GRACIAS POR TU PEDIDO" (lo arma app.js al guardar el pedido) */
+.gracias-pedido {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1.5rem 1rem;
+  text-align: center;
+}
+
+.gracias-pedido a,
+.gracias-pedido button {
+  display: block;
+  padding: 0.85rem 1rem;
+  border-radius: 0.75rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.gracias-pedido .btn-whatsapp {
+  background: #25d366;
+  color: #fff;
+}
+
+.gracias-pedido .btn-seguimiento {
+  border: 2px solid currentColor;
+}
