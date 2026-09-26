@@ -26,7 +26,7 @@ async function fetchJSON(path) {
   }
 }
 
-//nueva funcion hardcodeada
+// Qué negocio abre esta URL (RUTAS-1 y 2).
 function resolveAppConfig(resolveHost) {
   const params = new URLSearchParams(window.location.search);
   const host = window.location.hostname;
@@ -77,37 +77,6 @@ function resolveAppConfig(resolveHost) {
     slug: "moderno",
     type: "demo",
   };
-}
-
-function getSlug() {
-  const params = new URLSearchParams(window.location.search);
-
-  // 1. prioridad: query (DEV)
-  if (params.get("demo")) {
-    return { slug: params.get("demo"), type: "demo" };
-  }
-
-  if (params.get("cliente")) {
-    return { slug: params.get("cliente"), type: "cliente" };
-  }
-
-  // 2. subdominio (PROD)
-  const host = window.location.hostname;
-  const parts = host.split(".");
-
-  if (parts.length < 3) {
-    return null; // localhost o sin subdominio
-  }
-
-  const subdomain = parts[0];
-
-  // evitar subdominios internos
-  const RESERVED = ["www", "demo", "app", "admin"];
-  if (RESERVED.includes(subdomain)) return null;
-
-  // 🔥 decisión inteligente:
-  // si NO viene por query, asumimos cliente
-  return { slug: subdomain, type: "cliente" };
 }
 
 // Menú publicado desde el admin (PUBLICO-6). Devuelve null si Supabase no está
@@ -179,6 +148,10 @@ async function init() {
 
     window.CONFIG = config;
 
+    // La propuesta de venta ("¿Querés este menú en tu negocio?") es solo de las demos.
+    const cta = document.querySelector(".cta-section");
+    if (cta) cta.hidden = !INFO.showSalesCta(type);
+
     // 🎨 Colores dinámicos
     if (config.colores) {
       const root = document.documentElement;
@@ -220,96 +193,6 @@ async function init() {
     document.body.innerHTML = "<h2>Error inesperado</h2>";
   }
 }
-// INIT
-function getAppContext() {
-  const params = new URLSearchParams(window.location.search);
-  const host = window.location.hostname;
-  const path = window.location.pathname;
-
-  /*
-    ========================================
-    1. PRIORIDAD: QUERY (modo desarrollo)
-    ========================================
-    Ej:
-    ?demo=moderno
-    ?cliente=don-juan
-  */
-  const querySlug = params.get("demo") || params.get("cliente");
-
-  if (querySlug) {
-    return {
-      slug: querySlug,
-      source: params.get("demo") ? "demo" : "cliente",
-      mode: "app", // por defecto
-    };
-  }
-
-  /*
-    ========================================
-    2. SUBDOMINIO (carrito producción)
-    ========================================
-    Ej:
-    don-juan.smaalacarta.com.ar
-  */
-  const parts = host.split(".");
-
-  if (parts.length >= 3) {
-    const subdomain = parts[0];
-
-    // evitamos cosas como www
-    if (subdomain !== "www" && subdomain !== "demo") {
-      return {
-        slug: subdomain,
-        source: "cliente",
-        mode: "app", // carrito
-      };
-    }
-  }
-
-  /*
-    ========================================
-    3. PATH (rutas)
-    ========================================
-    Ej:
-    /moderno
-    /don-juan/menu
-    /don-juan/qr
-  */
-  const segments = path.split("/").filter(Boolean);
-
-  if (segments.length === 0) {
-    return null;
-  }
-
-  const slug = segments[0];
-
-  /*
-    Detectamos modo:
-    - /menu → menú HTML
-    - /qr → PDF
-    - default → app/demo
-  */
-  let mode = "app";
-
-  if (segments[1] === "menu") {
-    mode = "menu";
-  } else if (segments[1] === "qr") {
-    mode = "qr";
-  }
-
-  /*
-    Detectamos si es demo o cliente
-    (simple: si estás en demo subdominio → demo)
-  */
-  const isDemoHost = host.includes("demo.");
-
-  return {
-    slug,
-    source: isDemoHost ? "demo" : "cliente",
-    mode,
-  };
-}
-
 function loadTemplate(template) {
   return new Promise((resolve, reject) => {
     if (!template) {
@@ -344,15 +227,9 @@ function renderHeader(c) {
   if (nombreEl) nombreEl.textContent = c.nombre || "";
   if (descEl) descEl.textContent = c.descripcion || "";
 
-  if (header && c.header?.imagen) {
-    header.style.backgroundImage = `
-      ${HTML.cssUrl(c.header.imagen)},
-      linear-gradient(
-        135deg,
-        var(--color-primary, #463AE5),
-        var(--color-secondary, #9A6CE0)
-      )
-    `;
+  if (header) {
+    const background = INFO.headerBackground(c, HTML.cssUrl);
+    if (background) header.style.backgroundImage = background;
   }
 
   const cierre = INFO.closedNotice(c);

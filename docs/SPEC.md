@@ -91,6 +91,12 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   cierre cuya fecha de reapertura ya llegó no se entrega.
 - **PUBLICO-9** El menú muestra la dirección y las redes, y si el negocio está
   cerrado temporalmente lo dice con su mensaje y no deja enviar pedidos.
+- **PUBLICO-10** El encabezado del menú muestra los colores del negocio aunque no tenga
+  imagen (degradé de `primary` a `secondary`); con imagen, la imagen va sobre el degradé.
+  La plantilla `minimal` mantiene su encabezado blanco sin imagen, y sin colores
+  configurados no se pinta nada.
+- **PUBLICO-11** El aviso "¿Querés este menú en tu negocio?" es solo de las demos: un
+  negocio real nunca lo muestra.
 
 ## BUSQUEDA — Buscador
 
@@ -397,6 +403,3 @@ se resuelve en su propia rama `fix/`.
   destino; cuando el negocio tenga cuentas, agregarlas.
 - **Dominio del email.** La landing y los menús usan `smaalacarta.com.ar`; el email de
   ventas sigue siendo `@smaalacarta.online` hasta que exista un buzón en el otro dominio.
-- **Menú web: resolución de negocio duplicada.** `app.js` tiene
-  `resolveAppConfig`, `getSlug` y `getAppContext`; solo la primera se usa, y los
-  dominios de producción están escritos a mano en ella.

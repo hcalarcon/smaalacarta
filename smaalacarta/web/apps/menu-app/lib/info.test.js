@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { closedNotice, mapsUrl, reopenText, socialLinks } from "./info.js";
+import { closedNotice, headerBackground, mapsUrl, reopenText, showSalesCta, socialLinks } from "./info.js";
 
 describe("closedNotice — PUBLICO-9", () => {
   it("sin cierre no hay aviso", () => {
@@ -81,5 +81,48 @@ describe("mapsUrl", () => {
   it("sin dirección no hay enlace", () => {
     expect(mapsUrl("")).toBe("");
     expect(mapsUrl(undefined)).toBe("");
+  });
+});
+
+describe("headerBackground — PUBLICO-10", () => {
+  const cssUrl = (u) => `url("${u}")`;
+  const colores = { primary: "#111111", secondary: "#222222" };
+
+  it("sin imagen pinta el degradé con los colores del negocio", () => {
+    const bg = headerBackground({ template: "moderno", colores }, cssUrl);
+    expect(bg).toMatch(/^linear-gradient\(/);
+    expect(bg).toContain("var(--color-primary");
+    expect(bg).toContain("var(--color-secondary");
+  });
+
+  it("con imagen, la imagen va primero (arriba) y el degradé debajo", () => {
+    const bg = headerBackground({ template: "moderno", colores, header: { imagen: "https://x.com/a.jpg" } }, cssUrl);
+    expect(bg.startsWith('url("https://x.com/a.jpg"), linear-gradient(')).toBe(true);
+  });
+
+  it("la plantilla minimal queda blanca sin imagen", () => {
+    expect(headerBackground({ template: "minimal", colores }, cssUrl)).toBe("");
+  });
+
+  it("minimal con imagen también la muestra", () => {
+    expect(headerBackground({ template: "minimal", colores, header: { imagen: "https://x.com/a.jpg" } }, cssUrl)).toContain("https://x.com/a.jpg");
+  });
+
+  it("sin colores y sin imagen no pinta nada", () => {
+    expect(headerBackground({ template: "moderno" }, cssUrl)).toBe("");
+    expect(headerBackground({ template: "moderno", colores: {} }, cssUrl)).toBe("");
+  });
+
+  it("con un solo color alcanza (el otro usa el de respaldo)", () => {
+    expect(headerBackground({ colores: { primary: "#111" } }, cssUrl)).toMatch(/^linear-gradient/);
+  });
+});
+
+describe("showSalesCta — PUBLICO-11", () => {
+  it("solo las demos muestran la propuesta de venta", () => {
+    expect(showSalesCta("demo")).toBe(true);
+    expect(showSalesCta("cliente")).toBe(false);
+    expect(showSalesCta(undefined)).toBe(false);
+    expect(showSalesCta(null)).toBe(false);
   });
 });

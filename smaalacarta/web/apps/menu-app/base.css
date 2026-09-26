@@ -151,3 +151,8 @@ body.no-scroll {
 .gracias-pedido .btn-seguimiento {
   border: 2px solid currentColor;
 }
+
+/* La propuesta de venta solo se muestra en las demos (la muestra app.js) */
+.cta-section[hidden] {
+  display: none !important;
+}
