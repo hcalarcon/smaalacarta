@@ -4,7 +4,7 @@ import { changePassword, type ChangePasswordDeps } from "./change-password";
 
 function makeDeps(overrides: Partial<ChangePasswordDeps> = {}) {
   const deps = {
-    matchesCurrentPassword: vi.fn(async () => false),
+    matchesCurrentPassword: vi.fn(async () => true),
     updateOwnPassword: vi.fn(async () => ({})),
     updateTemporaryPassword: vi.fn(async () => ({})),
     ...overrides,
@@ -16,11 +16,12 @@ const temporal = {
   userId: "u1",
   email: "ana@x.com",
   isTemporary: true,
+  currentPassword: "LaTemporal9",
   password: "MiClavePropia9",
   confirm: "MiClavePropia9",
 };
 
-describe("changePassword — ADMIN-SUPER-10 y ADMIN-AUTH-5", () => {
+describe("changePassword — ADMIN-SUPER-10 y ADMIN-AUTH-5 y 10", () => {
   it("con datos inválidos informa los campos y no toca nada", async () => {
     const deps = makeDeps();
 
@@ -47,6 +48,10 @@ describe("changePassword — ADMIN-SUPER-10 y ADMIN-AUTH-5", () => {
     const result = await changePassword(deps, temporal);
 
     expect(result).toEqual({ ok: true });
+    expect(deps.matchesCurrentPassword).toHaveBeenCalledWith(
+      "ana@x.com",
+      "LaTemporal9",
+    );
     expect(deps.updateTemporaryPassword).toHaveBeenCalledWith(
       "u1",
       "MiClavePropia9",
@@ -54,20 +59,34 @@ describe("changePassword — ADMIN-SUPER-10 y ADMIN-AUTH-5", () => {
     expect(deps.updateOwnPassword).not.toHaveBeenCalled();
   });
 
-  it("con contraseña temporal: rechaza que la 'nueva' sea la misma temporal", async () => {
-    const deps = makeDeps({ matchesCurrentPassword: vi.fn(async () => true) });
+  it("rechaza que la 'nueva' sea igual a la actual", async () => {
+    const deps = makeDeps();
 
-    const result = await changePassword(deps, temporal);
+    const result = await changePassword(deps, {
+      ...temporal,
+      password: temporal.currentPassword,
+      confirm: temporal.currentPassword,
+    });
 
     expect(!result.ok && result.fieldErrors?.password).toMatch(/distinta/i);
-    expect(deps.matchesCurrentPassword).toHaveBeenCalledWith(
-      "ana@x.com",
-      "MiClavePropia9",
-    );
+    expect(deps.updateTemporaryPassword).not.toHaveBeenCalled();
+    expect(deps.updateOwnPassword).not.toHaveBeenCalled();
+  });
+
+  it("si la contraseña actual no es correcta, no cambia nada (ADMIN-AUTH-10)", async () => {
+    const deps = makeDeps({ matchesCurrentPassword: vi.fn(async () => false) });
+
+    const result = await changePassword(deps, {
+      ...temporal,
+      isTemporary: false,
+    });
+
+    expect(!result.ok && result.fieldErrors?.currentPassword).toBeTruthy();
+    expect(deps.updateOwnPassword).not.toHaveBeenCalled();
     expect(deps.updateTemporaryPassword).not.toHaveBeenCalled();
   });
 
-  it("sin contraseña temporal: cambio común, sin clave de servicio", async () => {
+  it("sin contraseña temporal: cambio común, verificando la actual", async () => {
     const deps = makeDeps();
 
     const result = await changePassword(deps, {
@@ -76,9 +95,12 @@ describe("changePassword — ADMIN-SUPER-10 y ADMIN-AUTH-5", () => {
     });
 
     expect(result).toEqual({ ok: true });
+    expect(deps.matchesCurrentPassword).toHaveBeenCalledWith(
+      "ana@x.com",
+      "LaTemporal9",
+    );
     expect(deps.updateOwnPassword).toHaveBeenCalledWith("MiClavePropia9");
     expect(deps.updateTemporaryPassword).not.toHaveBeenCalled();
-    expect(deps.matchesCurrentPassword).not.toHaveBeenCalled();
   });
 
   it("si Supabase falla devuelve un mensaje en español", async () => {
@@ -101,6 +123,8 @@ describe("changePassword — ADMIN-SUPER-10 y ADMIN-AUTH-5", () => {
     const result = await changePassword(deps, {
       ...temporal,
       isTemporary: false,
+      password: "OtraDistinta9",
+      confirm: "OtraDistinta9",
     });
 
     expect(!result.ok && result.error).toMatch(/distinta/i);

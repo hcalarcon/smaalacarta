@@ -5,6 +5,7 @@ import { dashboardLinks } from "@/components/layout/nav-links";
 import { getSuperAdminStatus } from "@/lib/auth/superadmin";
 import { countPendingOrders } from "@/lib/db/summary";
 import { resolveAccess } from "@/lib/get-current-business";
+import { menuUrl } from "@/lib/menu-url";
 
 export default async function DashboardLayout({
   children,
@@ -36,6 +37,8 @@ export default async function DashboardLayout({
       switchLink={
         isSuperAdmin ? { href: "/superadmin", label: "Superadmin" } : undefined
       }
+      menuLink={{ href: menuUrl(current!.business!.slug), label: "Ver mi menú" }}
+      showChangePassword={false}
     >
       {children}
     </DashboardShell>

@@ -255,6 +255,10 @@ recuperación se prueban a mano.*
   ve un aviso de que su cuenta no tiene negocio asignado y puede cerrar sesión.
 - **ADMIN-AUTH-9** Pedir recuperar la contraseña muestra el mismo mensaje
   exista o no una cuenta con ese email.
+- **ADMIN-AUTH-10** Cambiar la contraseña con sesión iniciada (desde
+  Configuración o, con la temporal, en `/cambiar-contrasena`) pide la
+  contraseña actual y la valida contra Supabase antes de guardar la nueva; si
+  no coincide, no se toca nada. La nueva tiene que ser distinta de la actual.
 
 ## ADMIN-SUPER — Superadmin y alta de cuentas
 

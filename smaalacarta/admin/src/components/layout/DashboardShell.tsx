@@ -16,6 +16,10 @@ type DashboardShellProps = {
   links: NavLink[];
   // Enlace para pasar entre el panel de un negocio y /superadmin.
   switchLink?: { href: string; label: string };
+  // Acceso rápido al menú público del negocio (no aplica a /superadmin).
+  menuLink?: { href: string; label: string };
+  // El superadmin no tiene Configuración propia: ahí sigue en el header.
+  showChangePassword?: boolean;
   children: React.ReactNode;
 };
 
@@ -26,6 +30,8 @@ export default function DashboardShell({
   userEmail,
   links,
   switchLink,
+  menuLink,
+  showChangePassword = true,
   children,
 }: DashboardShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -45,7 +51,7 @@ export default function DashboardShell({
   return (
     <div className="min-h-screen bg-cream text-stone-900">
       {/* Escritorio: barra lateral fija. */}
-      <aside className="fixed inset-y-0 left-0 hidden w-72 flex-col border-r border-line bg-white lg:flex">
+      <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-line bg-white lg:flex">
         <div className="border-b border-line p-6">
           <Logo />
           <p className="mt-2 text-sm text-stone-500">{sidebarSubtitle}</p>
@@ -80,13 +86,16 @@ export default function DashboardShell({
             </div>
 
             <div className="flex-1 overflow-y-auto p-4">
-              <DashboardNav links={links} onNavigate={() => setMenuOpen(false)} />
+              <DashboardNav
+                links={links}
+                onNavigate={() => setMenuOpen(false)}
+              />
             </div>
           </aside>
         </div>
       ) : null}
 
-      <div className="lg:pl-72">
+      <div className="lg:pl-60">
         <header className="sticky top-0 z-30 border-b border-line bg-white/90 backdrop-blur">
           <div className="flex items-center justify-between gap-4 px-4 py-3 md:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-3">
@@ -125,6 +134,31 @@ export default function DashboardShell({
                 {userEmail}
               </span>
 
+              {menuLink ? (
+                <a
+                  href={menuLink.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand-soft px-3 py-2 text-sm font-medium text-brand transition hover:bg-line sm:px-4"
+                >
+                  <svg
+                    aria-hidden="true"
+                    viewBox="0 0 24 24"
+                    className="h-4 w-4 shrink-0"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  >
+                    <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
+                    <path d="M15 3h6v6M10 14L21 3" />
+                  </svg>
+                  <span className="hidden sm:inline">{menuLink.label}</span>
+                  <span className="sm:hidden">Web</span>
+                </a>
+              ) : null}
+
               {switchLink ? (
                 <Link
                   href={switchLink.href}
@@ -134,12 +168,14 @@ export default function DashboardShell({
                 </Link>
               ) : null}
 
-              <Link
-                href="/cambiar-contrasena"
-                className="hidden text-sm font-medium text-stone-500 hover:text-brand sm:block"
-              >
-                Cambiar contraseña
-              </Link>
+              {showChangePassword ? (
+                <Link
+                  href="/cambiar-contrasena"
+                  className="hidden text-sm font-medium text-stone-500 hover:text-brand sm:block"
+                >
+                  Cambiar contraseña
+                </Link>
+              ) : null}
 
               <form action={signOutAction}>
                 <button

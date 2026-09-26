@@ -14,7 +14,9 @@ import { createClient } from "@/lib/supabase-server";
 export type AuthFormState = {
   error?: string;
   message?: string;
-  fieldErrors?: Partial<Record<"email" | "password" | "confirm", string>>;
+  fieldErrors?: Partial<
+    Record<"email" | "currentPassword" | "password" | "confirm", string>
+  >;
   // Se devuelve para no vaciar el campo si el envío falla.
   email?: string;
 };
@@ -122,6 +124,7 @@ export async function updatePasswordAction(
       userId: user.id,
       email: user.email ?? "",
       isTemporary: hasTemporaryPassword(user.app_metadata),
+      currentPassword: text(formData, "currentPassword"),
       password: text(formData, "password"),
       confirm: text(formData, "confirm"),
     },
