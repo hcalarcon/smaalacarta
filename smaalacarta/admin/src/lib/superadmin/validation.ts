@@ -33,6 +33,36 @@ export function normalizeWhatsapp(input: string) {
   return input.replace(/\D/g, "");
 }
 
+// Compartido por el alta de negocios (superadmin) y por el cambio de nombre/URL
+// desde Configuración: las mismas reglas de formato en los dos lugares.
+function slugError(slug: string): string | undefined {
+  if (slug.length < 2 || slug.length > SLUG_MAX || !SLUG_PATTERN.test(slug)) {
+    return "Usá entre 2 y 40 caracteres: minúsculas, números y guiones, sin empezar ni terminar con guion.";
+  }
+
+  if ((RESERVED_SLUGS as readonly string[]).includes(slug)) {
+    return "Ese nombre está reservado por la plataforma. Elegí otro.";
+  }
+
+  return undefined;
+}
+
+export function validateBusinessProfile(input: {
+  name: string;
+  slug: string;
+}): ValidationResult<"name" | "slug"> {
+  const errors: Partial<Record<"name" | "slug", string>> = {};
+
+  if (input.name.trim().length < 2) {
+    errors.name = "Ingresá el nombre del negocio.";
+  }
+
+  const slug = slugError(input.slug);
+  if (slug) errors.slug = slug;
+
+  return Object.keys(errors).length ? { ok: false, errors } : { ok: true };
+}
+
 export function validateNewBusiness(input: {
   name: string;
   slug: string;
@@ -48,18 +78,8 @@ export function validateNewBusiness(input: {
     errors.name = "Ingresá el nombre del negocio.";
   }
 
-  if (
-    input.slug.length < 2 ||
-    input.slug.length > SLUG_MAX ||
-    !SLUG_PATTERN.test(input.slug)
-  ) {
-    errors.slug =
-      "Usá entre 2 y 40 caracteres: minúsculas, números y guiones, sin empezar ni terminar con guion.";
-  }
-
-  if ((RESERVED_SLUGS as readonly string[]).includes(input.slug)) {
-    errors.slug = "Ese nombre está reservado por la plataforma. Elegí otro.";
-  }
+  const slug = slugError(input.slug);
+  if (slug) errors.slug = slug;
 
   // Vacío es válido. Si hay algo, tiene que parecer un teléfono.
   if (input.whatsapp.trim()) {

@@ -7,6 +7,7 @@ import { saveSettingsAction } from "../actions";
 import Field from "@/components/ui/Field";
 import FormAlert from "@/components/ui/FormAlert";
 import ImageUploader from "@/components/ui/ImageUploader";
+import Section from "@/components/ui/Section";
 import {
   DAYS,
   parseRange,
@@ -63,26 +64,6 @@ function toSchedule(state: ScheduleState, enabled: boolean): Schedule {
 const inputClass =
   "rounded-xl border border-line-strong bg-white px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30";
 
-function Section({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="rounded-3xl border border-line bg-white p-6 shadow-sm">
-      <h2 className="text-xl font-semibold text-brand">{title}</h2>
-      {description ? (
-        <p className="mt-1 text-sm text-stone-500">{description}</p>
-      ) : null}
-      <div className="mt-5 space-y-5">{children}</div>
-    </section>
-  );
-}
-
 function ColorField({
   label,
   value,
@@ -120,11 +101,9 @@ function ColorField({
 
 export default function SettingsForm({
   businessId,
-  slug,
   initial,
 }: {
   businessId: string;
-  slug: string;
   initial: SettingsInput;
 }) {
   const router = useRouter();
@@ -229,12 +208,7 @@ export default function SettingsForm({
             onChange={(event) => setPublished(event.target.checked)}
             className="mt-1 h-5 w-5"
           />
-          <span>
-            <span className="block font-medium text-stone-900">Menú público</span>
-            <span className="block text-sm text-stone-500">
-              Tu identificador es <code className="rounded bg-cream px-1.5">{slug}</code>.
-            </span>
-          </span>
+          <span className="block font-medium text-stone-900">Menú público</span>
         </label>
       </Section>
 
