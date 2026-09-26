@@ -88,6 +88,14 @@ describe("timeline", () => {
   it("descarta eventos sin estado", () => {
     expect(timeline([{ fecha: "2026-09-29T15:00:00Z" }, null])).toEqual([]);
   });
+
+  it("pasa la nota de cada evento, si tiene (SEGUIMIENTO-12)", () => {
+    const eventos = [
+      { estado: "pending", fecha: "2026-09-29T15:00:00Z" },
+      { estado: "cancelled", fecha: "2026-09-29T15:05:00Z", nota: "Sin stock" },
+    ];
+    expect(timeline(eventos).map((e) => e.note)).toEqual([null, "Sin stock"]);
+  });
 });
 
 function fakeFetch(body, { ok = true, status = 200 } = {}) {

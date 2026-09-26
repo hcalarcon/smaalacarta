@@ -246,6 +246,7 @@ export type Database = {
           changed_by: string | null
           created_at: string
           id: string
+          note: string | null
           order_id: string
           status: string
         }
@@ -254,6 +255,7 @@ export type Database = {
           changed_by?: string | null
           created_at?: string
           id?: string
+          note?: string | null
           order_id: string
           status: string
         }
@@ -262,6 +264,7 @@ export type Database = {
           changed_by?: string | null
           created_at?: string
           id?: string
+          note?: string | null
           order_id?: string
           status?: string
         }
@@ -671,7 +674,7 @@ export type Database = {
         Returns: string
       }
       set_order_status: {
-        Args: { p_order_id: string; p_status: string }
+        Args: { p_note?: string; p_order_id: string; p_status: string }
         Returns: undefined
       }
     }

@@ -62,7 +62,13 @@ export function timeline(events) {
 
   return events.flatMap((event) =>
     event && typeof event.estado === "string"
-      ? [{ label: EVENT_LABELS[event.estado] ?? event.estado, date: event.fecha ?? null }]
+      ? [
+          {
+            label: EVENT_LABELS[event.estado] ?? event.estado,
+            date: event.fecha ?? null,
+            note: typeof event.nota === "string" ? event.nota : null,
+          },
+        ]
       : [],
   );
 }

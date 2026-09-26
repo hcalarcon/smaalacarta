@@ -150,8 +150,11 @@ function render(data, { stale }) {
           { className: "events" },
           events.map((event) =>
             el("li", {}, [
-              el("span", { text: event.label }),
-              el("time", { text: event.date ? time.format(new Date(event.date)) : "" }),
+              el("div", { className: "event-row" }, [
+                el("span", { text: event.label }),
+                el("time", { text: event.date ? time.format(new Date(event.date)) : "" }),
+              ]),
+              ...(event.note ? [el("p", { className: "event-note", text: event.note })] : []),
             ]),
           ),
         ),

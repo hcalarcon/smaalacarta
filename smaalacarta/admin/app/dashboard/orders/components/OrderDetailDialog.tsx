@@ -3,19 +3,11 @@
 import { useEffect, useState } from "react";
 
 import type { Order } from "@/lib/db/orders";
-import { trackingUrl } from "@/lib/orders/format";
+import { formatDateTime, trackingUrl } from "@/lib/orders/format";
 import { nextStatuses, STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
 
 const label = (status: string) => STATUS_LABELS[status as OrderStatus] ?? status;
-
-const dateTime = new Intl.DateTimeFormat("es-AR", {
-  day: "2-digit",
-  month: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: "America/Argentina/Buenos_Aires",
-});
 
 export default function OrderDetailDialog({
   order,
@@ -28,9 +20,21 @@ export default function OrderDetailDialog({
   slug: string;
   busy: boolean;
   onClose: () => void;
-  onChangeStatus: (status: string) => void;
+  onChangeStatus: (status: string, note?: string) => void;
 }) {
   const [copied, setCopied] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const [cancelNote, setCancelNote] = useState("");
+
+  // Al abrir un pedido distinto (o cerrar), se limpia el estado de cancelar. Se
+  // hace al renderizar y no en un efecto, que es como React pide sincronizar
+  // estado con props.
+  const [syncedOrderId, setSyncedOrderId] = useState(order?.id ?? null);
+  if (syncedOrderId !== (order?.id ?? null)) {
+    setSyncedOrderId(order?.id ?? null);
+    setCancelling(false);
+    setCancelNote("");
+  }
 
   // Escape cierra el diálogo.
   useEffect(() => {
@@ -59,11 +63,15 @@ export default function OrderDetailDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
       <div
         role="dialog"
         aria-modal="true"
         aria-label={`Pedido ${order.order_number}`}
+        onClick={(event) => event.stopPropagation()}
         className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"
       >
         <div className="flex items-start justify-between gap-4">
@@ -117,9 +125,14 @@ export default function OrderDetailDialog({
           <h3 className="text-sm font-semibold text-brand">Línea de tiempo</h3>
           <ol className="mt-2 space-y-1 text-sm text-stone-600">
             {order.order_events.map((event, index) => (
-              <li key={index} className="flex justify-between gap-3">
-                <span>{label(event.status)}</span>
-                <span className="text-stone-400">{dateTime.format(new Date(event.created_at))}</span>
+              <li key={index}>
+                <div className="flex justify-between gap-3">
+                  <span>{label(event.status)}</span>
+                  <span className="text-stone-400">{formatDateTime(event.created_at)}</span>
+                </div>
+                {event.note ? (
+                  <p className="text-xs italic text-stone-500">“{event.note}”</p>
+                ) : null}
               </li>
             ))}
           </ol>
@@ -140,31 +153,66 @@ export default function OrderDetailDialog({
         {options.length > 0 ? (
           <div className="mt-6">
             <h3 className="text-sm font-semibold text-brand">Cambiar estado</h3>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {options.map((status) => (
-                <button
-                  key={status}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    if (
-                      status === "cancelled" &&
-                      !window.confirm("¿Cancelar este pedido? No se puede deshacer.")
-                    ) {
-                      return;
-                    }
-                    onChangeStatus(status);
-                  }}
-                  className={`rounded-xl px-4 py-2 text-sm font-medium transition disabled:opacity-60 ${
-                    status === "cancelled"
-                      ? "text-red-600 hover:bg-red-50"
-                      : "border border-line-strong text-brand hover:bg-brand-soft"
-                  }`}
-                >
-                  {label(status)}
-                </button>
-              ))}
-            </div>
+
+            {cancelling ? (
+              <div className="mt-2 space-y-3 rounded-2xl border border-red-200 bg-red-50 p-4">
+                <p className="text-sm font-medium text-red-800">
+                  ¿Seguro que querés cancelar este pedido? No se puede deshacer.
+                </p>
+
+                <textarea
+                  value={cancelNote}
+                  onChange={(event) => setCancelNote(event.target.value)}
+                  rows={2}
+                  maxLength={300}
+                  placeholder="Motivo (opcional): tu cliente lo ve en su seguimiento"
+                  className="w-full rounded-xl border border-red-200 bg-white px-3 py-2 text-sm focus:border-red-400 focus:outline-none focus:ring-2 focus:ring-red-200/60"
+                />
+
+                <div className="flex justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCancelling(false)}
+                    className="rounded-xl border border-line-strong bg-white px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-brand-soft"
+                  >
+                    Volver
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => onChangeStatus("cancelled", cancelNote.trim() || undefined)}
+                    className="rounded-xl bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:opacity-60"
+                  >
+                    {busy ? "Cancelando…" : "Confirmar cancelación"}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {options.map((status) => (
+                  <button
+                    key={status}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => {
+                      if (status === "cancelled") {
+                        setCancelling(true);
+                        return;
+                      }
+                      onChangeStatus(status);
+                    }}
+                    className={`rounded-xl px-4 py-2 text-sm font-medium transition disabled:opacity-60 ${
+                      status === "cancelled"
+                        ? "text-red-600 hover:bg-red-50"
+                        : "border border-line-strong text-brand hover:bg-brand-soft"
+                    }`}
+                  >
+                    {label(status)}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         ) : null}
       </div>

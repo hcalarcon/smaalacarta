@@ -371,7 +371,7 @@ describe("seguimiento por código — SEGUIMIENTO-5", () => {
       negocio: { nombre: string; telefono: string; slug: string };
       pedido: Record<string, unknown>;
       items: { nombre: string; cantidad: number; precio: number }[];
-      eventos: { estado: string; fecha: string }[];
+      eventos: { estado: string; fecha: string; nota?: string }[];
     };
   }
 
@@ -433,6 +433,28 @@ describe("seguimiento por código — SEGUIMIENTO-5", () => {
     const t = await track(c.code);
     expect(t!.pedido.estado).toBe("ready");
     expect(t!.eventos.map((e) => e.estado)).toEqual(["pending", "confirmed", "ready"]);
+  });
+
+  it("una nota al cambiar de estado se ve en el seguimiento, solo en ese evento (SEGUIMIENTO-12)", async () => {
+    const c = created(await order("ana", [{ id: CAFE }]))!;
+    const id = (await db.query<{ id: string }>(`select id from orders where code = '${c.code}'`)).rows[0].id;
+
+    await asUser(db, ANA, `select public.set_order_status('${id}', 'cancelled', 'Nos quedamos sin stock')`);
+
+    const t = await track(c.code);
+    const [pendiente, cancelado] = t!.eventos;
+    expect(pendiente.nota).toBeUndefined();
+    expect(cancelado.nota).toBe("Nos quedamos sin stock");
+  });
+
+  it("una nota en blanco no se guarda como nota (SEGUIMIENTO-12)", async () => {
+    const c = created(await order("ana", [{ id: CAFE }]))!;
+    const id = (await db.query<{ id: string }>(`select id from orders where code = '${c.code}'`)).rows[0].id;
+
+    await asUser(db, ANA, `select public.set_order_status('${id}', 'confirmed', '   ')`);
+
+    const t = await track(c.code);
+    expect(t!.eventos[1].nota).toBeUndefined();
   });
 
   it.each(["", "abc", "0".repeat(19), "0".repeat(21), "ZZZZZZZZZZZZZZZZZZZZ", "'; drop table orders; --", "00000000000000000000"])(

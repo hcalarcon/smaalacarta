@@ -165,6 +165,9 @@ llegando al negocio por WhatsApp.
 - **SEGUIMIENTO-11** La página de seguimiento tiene la estética del negocio: sus colores,
   su imagen de cabecera y su plantilla (`minimal` queda blanca). El seguimiento sigue sin
   datos personales, y los colores y la imagen se validan antes de usarlos.
+- **SEGUIMIENTO-12** Al cambiar el estado de un pedido, el negocio puede dejar un
+  mensaje opcional (por ejemplo, el motivo de una cancelación); el cliente lo ve
+  junto al evento correspondiente en su seguimiento.
 
 ## PWA — Instalar el menú en el celular
 

@@ -170,14 +170,24 @@ body {
 }
 
 .events li {
+  padding: 0.25rem 0;
+}
+
+.event-row {
   display: flex;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.25rem 0;
 }
 
 .events time {
   color: #9ca3af;
+}
+
+.event-note {
+  margin: 0.15rem 0 0;
+  color: #6b7280;
+  font-size: 0.85em;
+  font-style: italic;
 }
 
 .handoff {
