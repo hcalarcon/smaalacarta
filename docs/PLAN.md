@@ -213,12 +213,14 @@ Nada de esto necesita un framework nuevo ni build: se arma con el mismo patrón 
 siempre (JS plano, lógica en `lib/*.js` con tests, funciones en `web/api/`).
 
 - [x] [herni] Documentar la decisión de los tres servicios independientes (decisión 6, más arriba)
-- [ ] [herni] Migración: columna `menu_pdf_url` en `business_settings` (nullable);
+- [x] [herni] Migración: columna `menu_pdf_url` en `business_settings` (nullable);
       bucket `business-pdfs` (`application/pdf`, ~10 MB, mismo RLS por `business_id`
       que `business-images`); un parámetro más en `save_business_settings`; RPC
       nueva `public_business_pdf(slug)` que no exige `published` (no tocar
-      `public_menu`: la usa el interactivo y ya tiene tests)
-- [ ] [herni] `npm run db:types` después de la migración
+      `public_menu`: la usa el interactivo y ya tiene tests). Migración
+      `20260930000400_menu_pdf.sql`, aplicada a la base de Herni, con requisitos
+      PDF-1 y PDF-2 en `docs/SPEC.md` y tests contra Postgres real
+- [x] [herni] `npm run db:types` después de la migración
 - [ ] [herni] Admin: sección "Menú en PDF" en Configuración (subir archivo, mismo
       patrón que `ImageUploader` pero para PDF)
 - [ ] [herni] `web/apps/pdf`: reescribir la resolución del negocio para que use
