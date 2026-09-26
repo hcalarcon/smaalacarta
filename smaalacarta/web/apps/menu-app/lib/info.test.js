@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { closedNotice, mapsUrl, reopenText, socialLinks } from "./info.js";
+import { closedNotice, headerBackground, mapsUrl, reopenText, isDemoMenu, socialLinks } from "./info.js";
 
 describe("closedNotice — PUBLICO-9", () => {
   it("sin cierre no hay aviso", () => {
@@ -42,14 +42,14 @@ describe("socialLinks — PUBLICO-9", () => {
         },
       }),
     ).toEqual([
-      { name: "Instagram", url: "https://www.instagram.com/casa" },
-      { name: "Facebook", url: "https://www.facebook.com/casa" },
+      { key: "instagram", name: "Instagram", url: "https://www.instagram.com/casa" },
+      { key: "facebook", name: "Facebook", url: "https://www.facebook.com/casa" },
     ]);
   });
 
   it("solo con una red, solo esa", () => {
     expect(socialLinks({ redes: { instagram: "https://www.instagram.com/casa" } })).toEqual([
-      { name: "Instagram", url: "https://www.instagram.com/casa" },
+      { key: "instagram", name: "Instagram", url: "https://www.instagram.com/casa" },
     ]);
   });
 
@@ -81,5 +81,48 @@ describe("mapsUrl", () => {
   it("sin dirección no hay enlace", () => {
     expect(mapsUrl("")).toBe("");
     expect(mapsUrl(undefined)).toBe("");
+  });
+});
+
+describe("headerBackground — PUBLICO-10", () => {
+  const cssUrl = (u) => `url("${u}")`;
+  const colores = { primary: "#111111", secondary: "#222222" };
+
+  it("sin imagen pinta el degradé con los colores del negocio", () => {
+    const bg = headerBackground({ template: "moderno", colores }, cssUrl);
+    expect(bg).toMatch(/^linear-gradient\(/);
+    expect(bg).toContain("var(--color-primary");
+    expect(bg).toContain("var(--color-secondary");
+  });
+
+  it("con imagen, la imagen va primero (arriba) y el degradé debajo", () => {
+    const bg = headerBackground({ template: "moderno", colores, header: { imagen: "https://x.com/a.jpg" } }, cssUrl);
+    expect(bg.startsWith('url("https://x.com/a.jpg"), linear-gradient(')).toBe(true);
+  });
+
+  it("la plantilla minimal queda blanca sin imagen", () => {
+    expect(headerBackground({ template: "minimal", colores }, cssUrl)).toBe("");
+  });
+
+  it("minimal con imagen también la muestra", () => {
+    expect(headerBackground({ template: "minimal", colores, header: { imagen: "https://x.com/a.jpg" } }, cssUrl)).toContain("https://x.com/a.jpg");
+  });
+
+  it("sin colores y sin imagen no pinta nada", () => {
+    expect(headerBackground({ template: "moderno" }, cssUrl)).toBe("");
+    expect(headerBackground({ template: "moderno", colores: {} }, cssUrl)).toBe("");
+  });
+
+  it("con un solo color alcanza (el otro usa el de respaldo)", () => {
+    expect(headerBackground({ colores: { primary: "#111" } }, cssUrl)).toMatch(/^linear-gradient/);
+  });
+});
+
+describe("isDemoMenu — PUBLICO-11", () => {
+  it("solo las demos muestran la propuesta de venta y el botón Volver", () => {
+    expect(isDemoMenu("demo")).toBe(true);
+    expect(isDemoMenu("cliente")).toBe(false);
+    expect(isDemoMenu(undefined)).toBe(false);
+    expect(isDemoMenu(null)).toBe(false);
   });
 });

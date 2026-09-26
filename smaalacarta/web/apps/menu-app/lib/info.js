@@ -44,7 +44,7 @@ export function socialLinks(config) {
 
   return NETWORKS.flatMap((network) => {
     const url = safeHttpUrl(redes[network.key]);
-    return url && network.host.test(url) ? [{ name: network.name, url }] : [];
+    return url && network.host.test(url) ? [{ key: network.key, name: network.name, url }] : [];
   });
 }
 
@@ -53,4 +53,26 @@ export function mapsUrl(address) {
   return query
     ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`
     : "";
+}
+
+// Fondo del encabezado (PUBLICO-10): degradé de los colores del negocio, con la imagen
+// arriba si la subió. `minimal` es blanco por diseño, así que sin imagen no se pinta.
+// Devuelve el valor de `background-image`, o "" si no hay nada que pintar.
+export function headerBackground(config, cssUrl) {
+  const image = typeof config?.header?.imagen === "string" ? config.header.imagen : "";
+  const colors = config?.colores ?? {};
+  const hasColors = Boolean(colors.primary || colors.secondary);
+
+  const gradient =
+    "linear-gradient(135deg, var(--color-primary, #463AE5), var(--color-secondary, #9A6CE0))";
+
+  if (image) return `${cssUrl(image)}, ${gradient}`;
+  if (hasColors && config.template !== "minimal") return gradient;
+  return "";
+}
+
+// Lo que es solo de las demos (PUBLICO-11): el aviso "¿Querés este menú en tu negocio?"
+// y el botón "Volver" a la landing.
+export function isDemoMenu(type) {
+  return type === "demo";
 }

@@ -31,9 +31,16 @@
     />
     <meta property="og:url" content="https://www.smaalacarta.com.ar/" />
     <meta property="og:site_name" content="SMA a la Carta" />
+    <meta property="og:locale" content="es_AR" />
     <meta
       property="og:image"
-      content="https://www.smaalacarta.com.ar/assets/favicon.svg"
+      content="https://www.smaalacarta.com.ar/assets/og-image.jpg"
+    />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta
+      property="og:image:alt"
+      content="SMA a la Carta: menús digitales con QR y pedidos por WhatsApp"
     />
 
     <!-- Twitter Card -->
@@ -60,12 +67,38 @@
       }
     </style>
     <!-- Favicon (orden correcto) -->
-    <link rel="icon" href="/assets/favicon.ico" />
-    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+    <link rel="icon" href="/assets/favicon.ico" sizes="any" />
+    <link
+      rel="icon"
+      type="image/png"
+      sizes="96x96"
+      href="/assets/favicon-96x96.png"
+    />
     <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
 
-    <!-- (Opcional) Manifest -->
-    <!-- <link rel="manifest" href="/assets/site.webmanifest" /> -->
+    <!-- Manifest -->
+    <link rel="manifest" href="/assets/site.webmanifest" />
+
+    <!-- Datos estructurados (Google) -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "SMA a la Carta",
+        "description": "Menús digitales con QR y pedidos por WhatsApp para restaurantes y bares.",
+        "url": "https://www.smaalacarta.com.ar/",
+        "image": "https://www.smaalacarta.com.ar/assets/og-image.jpg",
+        "telephone": "+5493644277105",
+        "email": "ventas@smaalacarta.online",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "San Martín de los Andes",
+          "addressRegion": "Neuquén",
+          "addressCountry": "AR"
+        },
+        "areaServed": "San Martín de los Andes"
+      }
+    </script>
 
     <!-- Fonts (optimizado) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -79,18 +112,20 @@
     <link rel="stylesheet" href="./landing.css" />
   </head>
   <body>
+    <a class="skip-link" href="#contenido">Saltar al contenido</a>
+
     <!-- Header -->
     <div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
     <header class="header">
       <div class="container header-content">
         <div class="logo">
           <div class="logo-icon">
-            <img src="/assets/favicon.svg" alt="" />
+            <img src="/assets/logo.png" alt="" width="32" height="32" />
           </div>
           <span class="logo-text">SMA a la Carta</span>
         </div>
 
-        <nav class="nav">
+        <nav class="nav" id="mainNav" aria-label="Principal">
           <a href="#inicio" class="nav-link">Inicio</a>
           <a href="#como-funciona" class="nav-link">Cómo funciona</a>
           <a href="#beneficios" class="nav-link">Beneficios</a>
@@ -98,10 +133,24 @@
           <a href="#contacto" class="nav-link">Contacto</a>
         </nav>
 
-        <button id="demosBtn" class="btn btn-demo">Ver Demo</button>
+        <button
+          id="demosBtn"
+          class="btn btn-demo"
+          type="button"
+          aria-haspopup="dialog"
+        >
+          Ver Demo
+        </button>
 
         <!-- Mobile menu button -->
-        <button class="mobile-menu-btn" id="mobileMenuBtn">
+        <button
+          class="mobile-menu-btn"
+          id="mobileMenuBtn"
+          type="button"
+          aria-label="Abrir menú"
+          aria-controls="mainNav"
+          aria-expanded="false"
+        >
           <span></span>
           <span></span>
           <span></span>
@@ -109,14 +158,17 @@
       </div>
     </header>
 
-    <main>
+    <main id="contenido">
       <!-- Hero Section -->
       <section id="inicio" class="hero">
         <div class="hero-bg">
           <img
             src="/assets/hero.jpg"
-            alt="Patagonia landscape"
+            alt=""
             class="hero-image"
+            width="1200"
+            height="757"
+            fetchpriority="high"
           />
           <div class="hero-overlay"></div>
         </div>
@@ -131,7 +183,7 @@
               comisiones, pedidos directos a tu WhatsApp.
             </p>
             <a href="#contacto" class="btn btn-primary btn-lg hero-cta">
-              Solicitá tu sitio ahoras
+              Solicitá tu sitio ahora
             </a>
           </div>
         </div>
@@ -150,7 +202,7 @@
           <div class="offer-grid">
             <!-- Card 1 -->
             <div class="offer-card">
-              <div class="offer-icon">📄</div>
+              <div class="offer-icon" aria-hidden="true">📄</div>
               <h3 class="offer-title">Menú en PDF con QR</h3>
               <p class="offer-description">
                 Tu carta en PDF accesible desde un código QR, ideal para mesas,
@@ -160,21 +212,21 @@
 
             <!-- Card 2 -->
             <div class="offer-card featured">
-              <div class="offer-icon">📱</div>
+              <div class="offer-icon" aria-hidden="true">📱</div>
               <h3 class="offer-title">Menú digital interactivo</h3>
               <p class="offer-description">
-                Tu menú en una web rápida y moderna, fácil de navegar desde
-                cualquier celular.
+                Tu menú en una web rápida y moderna, con tus promociones y
+                ofertas siempre al día.
               </p>
             </div>
 
             <!-- Card 3 -->
             <div class="offer-card">
-              <div class="offer-icon">💬</div>
+              <div class="offer-icon" aria-hidden="true">💬</div>
               <h3 class="offer-title">Pedidos por WhatsApp</h3>
               <p class="offer-description">
-                Los clientes eligen productos y envían el pedido armado
-                directamente a tu WhatsApp.
+                Los clientes arman el pedido, te lo envían por WhatsApp y
+                siguen su estado con un link.
               </p>
             </div>
           </div>
@@ -194,7 +246,7 @@
           <div class="how-it-works-grid">
             <div class="steps">
               <div class="step">
-                <div class="step-icon">🎨</div>
+                <div class="step-icon" aria-hidden="true">🎨</div>
                 <div class="step-content">
                   <h3 class="step-title">
                     Nos contactás y definimos tu solución
@@ -206,7 +258,7 @@
               </div>
 
               <div class="step">
-                <div class="step-icon">📝</div>
+                <div class="step-icon" aria-hidden="true">📝</div>
                 <div class="step-content">
                   <h3 class="step-title">Diseñamos tu menú y tu web</h3>
                   <p class="step-description">
@@ -216,7 +268,7 @@
               </div>
 
               <div class="step">
-                <div class="step-icon">📱</div>
+                <div class="step-icon" aria-hidden="true">📱</div>
                 <div class="step-content">
                   <h3 class="step-title">
                     Publicamos y empezás a recibir pedidos
@@ -231,8 +283,11 @@
             <div class="how-it-works-image">
               <img
                 src="https://images.unsplash.com/photo-1625038624658-01a222d8fb8e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHxxciUyMGNvZGUlMjByZXN0YXVyYW50JTIwbWVudXxlbnwxfHx8fDE3NTg3MjIyNTh8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-                alt="QR code menu"
+                alt="Código QR de un menú de restaurante"
                 class="feature-image"
+                width="1080"
+                height="720"
+                loading="lazy"
               />
             </div>
           </div>
@@ -253,14 +308,17 @@
             <div class="benefits-image">
               <img
                 src="https://images.unsplash.com/photo-1669131196140-49591336b13e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHxtb2Rlcm4lMjByZXN0YXVyYW50JTIwaW50ZXJpb3J8ZW58MXx8fHwxNzU4NjEzMDM4fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-                alt="Modern restaurant interior"
+                alt="Interior de un restaurante moderno"
                 class="feature-image"
+                width="1080"
+                height="720"
+                loading="lazy"
               />
             </div>
 
             <div class="benefits-list">
               <div class="benefit-card" style="--benefit-color: #388b46">
-                <div class="benefit-icon">🔍</div>
+                <div class="benefit-icon" aria-hidden="true">🔍</div>
                 <div class="benefit-content">
                   <h3 class="benefit-title">Aumentá tu visibilidad</h3>
                   <p class="benefit-description">
@@ -271,7 +329,7 @@
               </div>
 
               <div class="benefit-card" style="--benefit-color: #3870ab">
-                <div class="benefit-icon">✨</div>
+                <div class="benefit-icon" aria-hidden="true">✨</div>
                 <div class="benefit-content">
                   <h3 class="benefit-title">Modernizá tu negocio</h3>
                   <p class="benefit-description">
@@ -281,12 +339,23 @@
               </div>
 
               <div class="benefit-card" style="--benefit-color: #1c3c7c">
-                <div class="benefit-icon">📈</div>
+                <div class="benefit-icon" aria-hidden="true">📈</div>
                 <div class="benefit-content">
                   <h3 class="benefit-title">Llegá a más clientes</h3>
                   <p class="benefit-description">
                     Expandí tu alcance y aumentá tus ventas con pedidos
                     digitales
+                  </p>
+                </div>
+              </div>
+
+              <div class="benefit-card" style="--benefit-color: #d97706">
+                <div class="benefit-icon" aria-hidden="true">🧾</div>
+                <div class="benefit-content">
+                  <h3 class="benefit-title">Todo desde un panel</h3>
+                  <p class="benefit-description">
+                    Cargá productos, armá promociones y seguí tus pedidos desde
+                    un panel simple, sin depender de nadie
                   </p>
                 </div>
               </div>
@@ -378,9 +447,10 @@
               </div>
 
               <ul class="plan-features">
-                <li>Tu sitio: tunegocio.smaalacarta.online</li>
+                <li>Tu sitio: tunegocio.smaalacarta.com.ar</li>
                 <li>Menú web interactivo</li>
-                <li>Pedidos por WhatsApp</li>
+                <li>Pedidos por WhatsApp con seguimiento para tu cliente</li>
+                <li>Panel de administración: productos, promociones y pedidos</li>
                 <li>Diseño personalizable</li>
                 <li>Escalable a nuevas funciones</li>
               </ul>
@@ -422,7 +492,11 @@
               <div class="contact-methods">
                 <div class="contact-method">
                   <div class="contact-icon" style="background-color: #388b46">
-                    <svg fill="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
                       <path
                         d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.700"
                       />
@@ -454,7 +528,11 @@
 
                 <div class="contact-method">
                   <div class="contact-icon" style="background-color: #388b46">
-                    <svg fill="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      fill="currentColor"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
                       <path
                         d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"
                       />
@@ -479,7 +557,7 @@
                 </p>
                 <div class="contact-buttons">
                   <a
-                    href="https://wa.me/543644277105?text=Hola%20me%20gustar%C3%ADa%20conocer%20los%20planes"
+                    href="https://wa.me/5493644277105?text=Hola%20me%20gustar%C3%ADa%20conocer%20los%20planes"
                     target="_blank"
                     rel="noopener noreferrer"
                     class="btn primary btn-lg contact-btn"
@@ -507,7 +585,9 @@
           <!-- Brand -->
           <div class="footer-brand">
             <div class="logo">
-              <div class="logo-icon">🍽️</div>
+              <div class="logo-icon">
+                <img src="/assets/logo.png" alt="" width="32" height="32" loading="lazy" />
+              </div>
               <span class="logo-text">SMA a la Carta</span>
             </div>
 
@@ -517,36 +597,25 @@
             </p>
 
             <div class="social-links">
-              <a href="#" class="social-link" aria-label="Twitter">
+              <a
+                href="mailto:ventas@smaalacarta.online"
+                class="social-link"
+                aria-label="Email"
+              >
                 <svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path
                     d="M20 4H4C2.9 4 2 4.9 2 6v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 4-8 5-8-5V6l8 5 8-5v2z"
                   />
                 </svg>
               </a>
-              <a href="#" class="social-link" aria-label="Instagram">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
-                  aria-hidden="true"
-                >
-                  <path
-                    d="M7.75 2h8.5C19.44 2 22 4.56 22 7.75v8.5C22 19.44 19.44 22 16.25 22h-8.5C4.56 22 2 19.44 2 16.25v-8.5C2 4.56 4.56 2 7.75 2zm0 1.5C5.39 3.5 3.5 5.39 3.5 7.75v8.5c0 2.36 1.89 4.25 4.25 4.25h8.5c2.36 0 4.25-1.89 4.25-4.25v-8.5c0-2.36-1.89-4.25-4.25-4.25h-8.5z"
-                  />
-                  <path
-                    d="M12 7.25a4.75 4.75 0 1 0 0 9.5 4.75 4.75 0 0 0 0-9.5zm0 1.5a3.25 3.25 0 1 1 0 6.5 3.25 3.25 0 0 1 0-6.5z"
-                  />
-                  <circle cx="17.25" cy="6.75" r="1" />
-                </svg>
-              </a>
               <a
-                href="https://wa.me/543644277105"
+                href="https://wa.me/5493644277105"
                 class="social-link"
                 target="_blank"
+                rel="noopener noreferrer"
                 aria-label="WhatsApp"
               >
-                <svg fill="currentColor" viewBox="0 0 24 24">
+                <svg fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                   <path
                     d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893A11.821 11.821 0 0020.885 3.700"
                   />
@@ -578,7 +647,13 @@
                   >+54 9 3644277105</a
                 >
               </li>
-              <li>ventas@smaalacarta.online</li>
+              <li>
+                <a
+                  href="mailto:ventas@smaalacarta.online"
+                  style="text-decoration: none; color: white"
+                  >ventas@smaalacarta.online</a
+                >
+              </li>
             </ul>
           </div>
         </div>
@@ -601,21 +676,52 @@
 
     <!-- Demos Modal -->
     <div class="modal-overlay" id="demosModal">
-      <div class="modal-content">
+      <div
+        class="modal-content"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="demosTitle"
+      >
+        <button
+          type="button"
+          class="modal-close"
+          aria-label="Cerrar"
+        >
+          ×
+        </button>
+        <h2 class="modal-title" id="demosTitle">Elegí una demo</h2>
         <!-- Subdominio Completo Section -->
         <section class="demo-section">
-          <h2 class="section-heading">Subdominio Completo</h2>
+          <h3 class="section-heading">Subdominio Completo</h3>
           <div class="cards-container">
             <a href="https://moderno.smaalacarta.com.ar/" class="card-link">
-              <img src="./assets/moderno.jpeg" alt="" />
+              <img
+                src="./assets/moderno.jpeg"
+                alt="Demo del estilo moderno"
+                width="936"
+                height="1600"
+                loading="lazy"
+              />
               <span class="card-label">Demo Moderno</span>
             </a>
             <a href="https://clasico.smaalacarta.com.ar/" class="card-link">
-              <img src="./assets/clasico.jpeg" alt="" />
+              <img
+                src="./assets/clasico.jpeg"
+                alt="Demo del estilo clásico"
+                width="937"
+                height="1600"
+                loading="lazy"
+              />
               <span class="card-label">Demo Clásico</span>
             </a>
             <a href="https://minimal.smaalacarta.com.ar" class="card-link">
-              <img src="./assets/minimal.jpeg" alt="" />
+              <img
+                src="./assets/minimal.jpeg"
+                alt="Demo del estilo minimalista"
+                width="936"
+                height="1600"
+                loading="lazy"
+              />
               <span class="card-label">Demo Minimalista</span>
             </a>
           </div>
@@ -623,18 +729,36 @@
 
         <!-- Menu Web Section -->
         <section class="demo-section">
-          <h2 class="section-heading">Menu Web</h2>
+          <h3 class="section-heading">Menú Web</h3>
           <div class="cards-container">
             <a href="https://demo.smaalacarta.com.ar/moderno" class="card-link">
-              <img src="./assets/menu-moderno.jpeg" alt="" />
+              <img
+                src="./assets/menu-moderno.jpeg"
+                alt="Menú web de estilo moderno"
+                width="1126"
+                height="1280"
+                loading="lazy"
+              />
               <span class="card-label">Menú moderno</span>
             </a>
             <a href="https://demo.smaalacarta.com.ar/clasico" class="card-link">
-              <img src="./assets/menu-clasico.jpeg" alt="" />
+              <img
+                src="./assets/menu-clasico.jpeg"
+                alt="Menú web de estilo clásico"
+                width="1170"
+                height="1199"
+                loading="lazy"
+              />
               <span class="card-label">Menú clásico</span>
             </a>
             <a href="https://demo.smaalacarta.com.ar/minimal" class="card-link">
-              <img src="./assets/menu-minimal.jpeg" alt="" />
+              <img
+                src="./assets/menu-minimal.jpeg"
+                alt="Menú web de estilo minimalista"
+                width="1170"
+                height="1173"
+                loading="lazy"
+              />
               <span class="card-label">Menú minimalista</span>
             </a>
           </div>
@@ -642,10 +766,24 @@
 
         <!-- QR+PDF Section -->
         <section class="demo-section">
-          <h2 class="section-heading">QR+PDF</h2>
+          <h3 class="section-heading">QR + PDF</h3>
           <div class="qr-pdf-container">
-            <img src="./assets/pdf-demo.png" alt="PDF" class="pdf-image" />
-            <img src="./assets/qr.png" alt="QR Code" class="qr-image" />
+            <img
+              src="./assets/pdf-demo.png"
+              alt="Menú en PDF de ejemplo"
+              class="pdf-image"
+              width="798"
+              height="548"
+              loading="lazy"
+            />
+            <img
+              src="./assets/qr.png"
+              alt="Código QR de ejemplo"
+              class="qr-image"
+              width="282"
+              height="278"
+              loading="lazy"
+            />
           </div>
         </section>
       </div>

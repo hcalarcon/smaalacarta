@@ -122,13 +122,14 @@ Hecho en el código (migración `20260927000000_configuracion_y_menu_publico.sql
 - [x] [herni] **Imágenes por bucket** de Supabase Storage (`business-images`, 2 MB, JPG/PNG/WebP, cada negocio en su carpeta): cabecera del menú e imagen de cada producto
 - [x] [herni] **Subdominio = slug** en el código (`web/apps/menu-app/lib/hostname.js`): `<slug>.smaalacarta.com.ar` abre el negocio sin declararlo en `app.js`; los slugs reservados (`www`, `admin`, `app`, `api`, `demo`, `moderno`…) no se pueden usar
 - [x] [herni] Se escapan todos los textos del negocio antes de mostrarlos en el menú público (`lib/html.js`): un nombre con HTML ya no puede ejecutar código en el navegador de los clientes
-- [ ] [herni] **Comodín de Vercel** (`*.smaalacarta.com.ar`). El motivo habitual de que no funcione: Vercel solo emite el certificado de un comodín si **el dominio usa sus nameservers** (`ns1.vercel-dns.com` y `ns2.vercel-dns.com`). En orden:
-  1. En Vercel → **Domains**, agregar `smaalacarta.com.ar` y, en el proyecto de los menús, `*.smaalacarta.com.ar`. Vercel muestra los nameservers que pide.
-  2. **Antes de cambiar nada en NIC**, cargar en Vercel → Domains → **DNS Records** todos los registros que hoy tiene el dominio (apex y `www` hacia la landing, y sobre todo los del **mail**: `MX`, `TXT`/SPF/DKIM). Al delegar, los registros del proveedor actual dejan de valer.
-  3. En **nic.ar**, cambiar la delegación del dominio a `ns1.vercel-dns.com` y `ns2.vercel-dns.com`. Puede tardar horas.
-  4. Asignar cada dominio a su proyecto: apex y `www` → landing; `*` → menús. Un subdominio puntual (por ejemplo `www`) tiene prioridad sobre el comodín.
-  5. Repetir para `smaalacarta.online` si se va a usar.
+- [ ] [herni] **Comodín de Vercel** (`*.smaalacarta.com.ar`) con el DNS en **Cloudflare**. Vercel solo emite el certificado de un comodín si puede resolver el desafío `_acme-challenge`; como los nameservers se quedan en Cloudflare, ese subdominio se delega a Vercel (guía oficial: "Use wildcard domains with an external DNS provider", en la documentación de Vercel → Add a domain). En orden:
+  1. En el proyecto de los menús → **Settings → Domains**, agregar `*.smaalacarta.com.ar`.
+  2. En Vercel → **Domains** (a nivel del equipo) → `smaalacarta.com.ar` → **DNS Records** → **Enable Vercel DNS**. **No** cambiar los nameservers en el registro del dominio: siguen en Cloudflare.
+  3. En **Cloudflare → DNS**, agregar dos registros `NS` con nombre `_acme-challenge` y valores `ns1.vercel-dns.com` y `ns2.vercel-dns.com`. Solo delegan la validación del certificado y **tienen que quedarse** para que se renueve.
+  4. En Cloudflare, agregar el `CNAME` con nombre `*` hacia `cname.vercel-dns-0.com` (o el valor que muestre Vercel), en **"solo DNS" (nube gris), sin proxy**: con la nube naranja Vercel no puede validar ni renovar el certificado.
+  5. Esperar la propagación y mirar el estado en Settings → Domains. Un subdominio puntual (por ejemplo `www` o `admin`) que ya tenga su propio registro tiene prioridad sobre el comodín.
   6. Probar con un negocio publicado: `https://<slug>.smaalacarta.com.ar`.
+  7. Si se va a usar `smaalacarta.online`, repetir para ese dominio.
 - [ ] [por asignar] Dominio propio por negocio (por ejemplo `menu.minegocio.com`): columna en la base y una consulta por host; se evalúa después del comodín
 - [ ] [por asignar] Migrar los clientes de `data/clientes/*` a Supabase, uno por uno
 - [ ] [por asignar] Limpiar del bucket las imágenes que quedaron sin uso al reemplazarlas (hoy quedan huérfanas, ocupan espacio)
@@ -153,6 +154,19 @@ Hecho en el código (migración `20260929000000_pedidos.sql`, ya aplicada a la b
 - [ ] [por asignar] Captcha (Cloudflare Turnstile, gratis) si aparecen pedidos falsos; hoy el freno es de 20 pedidos por minuto por negocio
 - [ ] [por asignar] Privacidad: definir cuánto tiempo se guardan los pedidos y el nombre de los clientes, y avisarlo en el checkout
 - [ ] [por asignar] Métricas en el resumen: pedidos por estado y ventas del día
+
+## Etapa 6c — Mejoras de la landing
+
+Requisitos LANDING-1 a 9 en `docs/SPEC.md`, cubiertos por `landing/landing.test.js`.
+
+- [x] [herni] Botón principal legible sobre la foto y sin el error de tipeo ("ahora")
+- [x] [herni] Imagen para compartir real (`assets/og-image.jpg`, 1200×630, 50 KB) y logo liviano (`logo.png`) en lugar del `favicon.svg` de 2,5 MB
+- [x] [herni] Enlaces: se sacan Twitter/Instagram sin destino, WhatsApp con el mismo número en toda la página, email con `mailto:`
+- [x] [herni] Textos al día (promociones, seguimiento del pedido, panel de administración) y dominio de los menús `smaalacarta.com.ar`
+- [x] [herni] Accesibilidad: menú del celular y modal de demos con teclado y lectores, enlace para saltar al contenido, foco visible, `prefers-reduced-motion`
+- [x] [herni] Indexación: `robots.txt`, `sitemap.xml`, datos estructurados y manifest corregido
+- [ ] [herni] **Revisar los textos nuevos**: que el panel, las promociones y el seguimiento estén realmente incluidos en el plan Subdominio Completo antes de publicarlos
+- [ ] [por asignar] Reemplazar `favicon.svg` (lo siguen usando las demos de `web/`) y agregar las redes sociales cuando existan
 
 ## Etapa 7 — Pendientes técnicos (backlog)
 
