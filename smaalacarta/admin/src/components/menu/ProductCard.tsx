@@ -41,7 +41,8 @@ export default function ProductCard({
 
         {/* Info */}
         <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-3">
+          {/* En el celular el nombre va arriba, entero, y el estado y el precio debajo. */}
+          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
             <div className="min-w-0">
               <h3 className="truncate text-sm font-semibold text-brand">
                 {product.name}
@@ -52,13 +53,13 @@ export default function ProductCard({
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 sm:shrink-0">
               <button
                 type="button"
                 onClick={onToggleActive}
                 aria-pressed={product.active}
                 title={product.active ? "Desactivar" : "Activar"}
-                className={`rounded-full px-2 py-0.5 text-[11px] font-medium transition hover:opacity-80 ${
+                className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium transition hover:opacity-80 ${
                   product.active
                     ? "bg-emerald-100 text-emerald-700"
                     : "bg-line text-stone-600"

@@ -3,6 +3,8 @@ export type NavLink = {
   label: string;
   // Trazo de un ícono de 24x24 (estilo outline).
   icon: string;
+  // Contador junto al nombre (por ejemplo, pedidos nuevos).
+  badge?: number;
 };
 
 export const dashboardLinks: NavLink[] = [

@@ -91,7 +91,7 @@ export default function CategorySection({
       </summary>
 
       {products.length > 0 ? (
-        <div className="mt-4 grid gap-3">
+        <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-3">
           <SortableList
             ids={products.map((product) => product.id)}
             onReorder={onReorderProducts}

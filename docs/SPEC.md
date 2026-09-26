@@ -370,6 +370,19 @@ y redes) y `src/lib/storage/images.test.ts`.*
 - **ADMIN-PEDIDOS-5** Cada ítem guarda el nombre y el precio del momento: editar o
   borrar el producto después no cambia los pedidos ya hechos.
 
+## ADMIN-RESUMEN — Pantalla de inicio del panel
+
+*Aplicado por `app/dashboard/page.tsx`, `src/lib/db/summary.ts`, `src/lib/dates.ts`,
+`src/lib/menu-url.ts` y el menú lateral. Cubierto por: `src/lib/dates.test.ts`,
+`src/lib/menu-url.test.ts` y `src/lib/layout/nav-badge.test.ts`.*
+
+- **ADMIN-RESUMEN-1** "Pedidos hoy" cuenta desde las 00:00 de Argentina, sin importar la zona
+  horaria del servidor.
+- **ADMIN-RESUMEN-2** El resumen muestra la dirección pública del menú
+  (`https://<slug>.smaalacarta.com.ar`), si está publicado o no, y permite abrirla y copiarla.
+- **ADMIN-RESUMEN-3** Los pedidos nuevos (pendientes) se avisan en el resumen y con un contador
+  junto a "Pedidos" en el menú lateral (hasta "9+").
+
 ## ADMIN-PROMOS — Promociones
 
 *Aplicado por `supabase/migrations/*_orden_y_promociones.sql`,

@@ -168,6 +168,20 @@ Requisitos LANDING-1 a 9 en `docs/SPEC.md`, cubiertos por `landing/landing.test.
 - [ ] [herni] **Revisar los textos nuevos**: que el panel, las promociones y el seguimiento estén realmente incluidos en el plan Subdominio Completo antes de publicarlos
 - [ ] [por asignar] Reemplazar `favicon.svg` (lo siguen usando las demos de `web/`) y agregar las redes sociales cuando existan
 
+## Etapa 6d — Flujo del pedido, PWA y pulido de las pantallas
+
+Requisitos en `docs/SPEC.md` (PUBLICO-10 a 14, SEGUIMIENTO-9 a 11, PWA-1 a 3, ADMIN-CONFIG-8, ADMIN-RESUMEN-1 a 3). Migraciones `20260930000000` a `20260930000200`, ya aplicadas a la base de Herni.
+
+- [x] [herni] Cierre por horario: el menú avisa "Cerrado ahora · Abrimos hoy a las 20:00", no deja enviar y el servidor también lo rechaza (hora de Argentina; antes usaba la hora del celular)
+- [x] [herni] Confirmación del pedido: enviar por WhatsApp y seguirlo en cualquier orden; el seguimiento ofrece enviar si todavía no se envió
+- [x] [herni] Seguimiento del pedido con los colores, la imagen y la plantilla del negocio
+- [x] [herni] PWA por negocio: manifest con su nombre, color y logo (o el ícono general), y logo opcional en Configuración
+- [x] [herni] Menú público en escritorio: columna centrada y grilla de productos
+- [x] [herni] Admin: resumen con el link público y aviso de pedidos nuevos, contador en el menú lateral, "pedidos de hoy" con la hora de Argentina, y arreglos en el celular (desborde de productos y error de hidratación al arrastrar)
+- [ ] [herni] **Probar en una preview de Vercel**: `/api/manifest?slug=<slug>` (función nueva, no se puede probar con un servidor estático), instalar el menú desde el celular y ver el ícono
+- [ ] [por asignar] Botón "Instalar app" dentro del menú (hoy depende de que el navegador lo ofrezca; en iPhone es "Compartir → Agregar a inicio")
+- [ ] [por asignar] Horarios de retiro programado cuando el negocio está cerrado (hoy, cerrado = no se toman pedidos)
+
 ## Etapa 7 — Pendientes técnicos (backlog)
 
 - [ ] [por asignar] Permisos por `role` en `businesses`: hoy cualquier miembro puede editar el negocio, incluido el `slug`

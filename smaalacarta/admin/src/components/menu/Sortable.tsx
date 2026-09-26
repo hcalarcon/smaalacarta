@@ -16,6 +16,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useId } from "react";
 
 import { moveItem } from "@/lib/menu/ordering";
 
@@ -30,6 +31,9 @@ export function SortableList({
   onReorder: (orderedIds: string[]) => void;
   children: React.ReactNode;
 }) {
+  // dnd-kit numera sus textos de ayuda con un contador que difiere entre el servidor y el
+  // navegador (error de hidratación): un id estable lo evita.
+  const dndId = useId();
   const sensors = useSensors(
     // Un mínimo de recorrido evita que un clic se confunda con un arrastre.
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -43,6 +47,7 @@ export function SortableList({
 
   return (
     <DndContext
+      id={dndId}
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
