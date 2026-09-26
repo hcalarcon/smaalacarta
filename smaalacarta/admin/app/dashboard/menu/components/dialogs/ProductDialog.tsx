@@ -14,6 +14,7 @@ type ProductDialogProps = {
   // Categoría donde se crea un producto nuevo; al editar no se usa.
   categoryId: string | null;
   onSubmit: (data: {
+    id?: string;
     category_id: string | null;
     name: string;
     description?: string;
@@ -53,6 +54,7 @@ function ProductDialogForm({
 
     try {
       await onSubmit({
+        id: editing ? initialData.id : undefined,
         category_id: categoryId,
         name: name.trim(),
         description: description.trim() || undefined,
@@ -66,9 +68,15 @@ function ProductDialogForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl">
-        <div className="mb-6">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      onClick={onClose}
+    >
+      <div
+        onClick={(event) => event.stopPropagation()}
+        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl"
+      >
+        <div className="mb-4">
           <h2 className="text-xl font-semibold text-brand">
             {mode === "edit" ? "Editar producto" : "Nuevo producto"}
           </h2>
@@ -81,53 +89,57 @@ function ProductDialogForm({
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="mb-1 block text-sm font-medium">Nombre</label>
+          <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+            <div>
+              <label className="mb-1 block text-sm font-medium">Nombre</label>
 
-            <input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-2xl border border-line-strong px-4 py-3"
-              placeholder="Ej. Coca Cola"
-              required
-            />
+              <input
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full rounded-2xl border border-line-strong px-4 py-2.5"
+                placeholder="Ej. Coca Cola"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium">Precio</label>
+
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                className="w-full rounded-2xl border border-line-strong px-4 py-2.5 sm:w-32"
+                placeholder="3500"
+                required
+              />
+            </div>
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              Descripción
-            </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="mb-1 block text-sm font-medium">
+                Descripción
+              </label>
 
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="w-full rounded-2xl border border-line-strong px-4 py-3"
-              rows={3}
-              placeholder="Descripción opcional"
+              <textarea
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                className="w-full rounded-2xl border border-line-strong px-4 py-2.5"
+                rows={2}
+                placeholder="Descripción opcional"
+              />
+            </div>
+
+            <ImageUploader
+              businessId={businessId}
+              label="Imagen (opcional)"
+              value={imageUrl}
+              onChange={setImageUrl}
             />
           </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium">Precio</label>
-
-            <input
-              type="number"
-              min="0"
-              step="0.01"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              className="w-full rounded-2xl border border-line-strong px-4 py-3"
-              placeholder="3500"
-              required
-            />
-          </div>
-
-          <ImageUploader
-            businessId={businessId}
-            label="Imagen (opcional)"
-            value={imageUrl}
-            onChange={setImageUrl}
-          />
 
           <label className="flex items-center gap-2 text-sm">
             <input

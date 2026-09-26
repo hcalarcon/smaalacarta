@@ -1,8 +1,10 @@
 import { Product } from "@/lib/db/products";
+import DropdownMenu from "@/components/ui/DropdownMenu";
 
 type ProductCardProps = {
   product: Product;
-  // Asa para arrastrar (la arma <SortableItem>).
+  // Asa para arrastrar (la arma <SortableItem>); sin ella, la tarjeta no se
+  // puede arrastrar (por ejemplo, mientras hay un filtro aplicado).
   handle?: React.ReactNode;
   onEdit: () => void;
   onDelete: () => void;
@@ -24,7 +26,7 @@ export default function ProductCard({
           : "border-line bg-cream opacity-60"
       }`}
     >
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5">
         {handle}
 
         {/* Imagen / Placeholder */}
@@ -33,75 +35,77 @@ export default function ProductCard({
           <img
             src={product.image_url}
             alt=""
-            className="h-14 w-14 shrink-0 rounded-xl object-cover"
+            className="h-11 w-11 shrink-0 rounded-lg object-cover"
           />
         ) : (
-          <div className="h-14 w-14 shrink-0 rounded-xl bg-line" />
+          <div className="h-11 w-11 shrink-0 rounded-lg bg-line" />
         )}
 
-        {/* Info */}
         <div className="min-w-0 flex-1">
-          {/* En el celular el nombre va arriba, entero, y el estado y el precio debajo. */}
-          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-            <div className="min-w-0">
-              <h3 className="truncate text-sm font-semibold text-brand">
-                {product.name}
-              </h3>
+          <h3 className="truncate text-sm font-semibold text-brand">
+            {product.name}
+          </h3>
+          <p className="truncate text-xs text-stone-500">
+            {product.description || "Sin descripción"}
+          </p>
+        </div>
+      </div>
 
-              <p className="truncate text-xs text-stone-500">
-                {product.description || "Sin descripción"}
-              </p>
-            </div>
+      <div className="mt-2 flex items-center justify-between gap-2">
+        <button
+          type="button"
+          onClick={onToggleActive}
+          aria-pressed={product.active}
+          title={product.active ? "Desactivar" : "Activar"}
+          className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium transition hover:opacity-80 ${
+            product.active
+              ? "bg-emerald-100 text-emerald-700"
+              : "bg-line text-stone-600"
+          }`}
+        >
+          ● {product.active ? "Activo" : "Oculto"}
+        </button>
 
-            <div className="flex items-center gap-2 sm:shrink-0">
-              <button
-                type="button"
-                onClick={onToggleActive}
-                aria-pressed={product.active}
-                title={product.active ? "Desactivar" : "Activar"}
-                className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium transition hover:opacity-80 ${
-                  product.active
-                    ? "bg-emerald-100 text-emerald-700"
-                    : "bg-line text-stone-600"
-                }`}
-              >
-                ● {product.active ? "Activo" : "Oculto"}
-              </button>
+        <div className="flex items-center gap-1.5">
+          <span className="whitespace-nowrap text-sm font-bold text-brand">
+            ${product.price}
+          </span>
 
-              <span className="whitespace-nowrap text-base font-bold text-brand">
-                ${product.price}
-              </span>
+          <DropdownMenu label="Opciones del producto">
+            {(close) => (
+              <>
+                <button
+                  onClick={() => {
+                    close();
+                    onEdit();
+                  }}
+                  className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-brand-soft"
+                >
+                  Editar
+                </button>
 
-              <details className="relative">
-                <summary className="cursor-pointer list-none rounded-lg px-2 py-1 text-stone-500 hover:bg-brand-soft">
-                  ⋮
-                </summary>
+                <button
+                  onClick={() => {
+                    close();
+                    onToggleActive();
+                  }}
+                  className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-brand-soft"
+                >
+                  {product.active ? "Desactivar" : "Activar"}
+                </button>
 
-                <div className="absolute right-0 top-10 z-10 w-44 rounded-xl border border-line bg-white p-2 shadow-xl">
-                  <button
-                    onClick={onEdit}
-                    className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-brand-soft"
-                  >
-                    Editar
-                  </button>
-
-                  <button
-                    onClick={onToggleActive}
-                    className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-brand-soft"
-                  >
-                    {product.active ? "Desactivar" : "Activar"}
-                  </button>
-
-                  <button
-                    onClick={onDelete}
-                    className="w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
-                  >
-                    Eliminar
-                  </button>
-                </div>
-              </details>
-            </div>
-          </div>
+                <button
+                  onClick={() => {
+                    close();
+                    onDelete();
+                  }}
+                  className="w-full rounded-lg px-3 py-2 text-left text-sm text-red-600 hover:bg-red-50"
+                >
+                  Eliminar
+                </button>
+              </>
+            )}
+          </DropdownMenu>
         </div>
       </div>
     </article>
