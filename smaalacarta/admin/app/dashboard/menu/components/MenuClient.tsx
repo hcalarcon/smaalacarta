@@ -241,6 +241,7 @@ export default function MenuClient({
     price: number;
     active: boolean;
     image_url: string | null;
+    featured: boolean;
   }) {
     if (data.id) {
       await updateProductAction(businessId, data.id, {
@@ -249,6 +250,7 @@ export default function MenuClient({
         price: data.price,
         active: data.active,
         image_url: data.image_url,
+        featured: data.featured,
       });
     } else {
       // Un producto nuevo siempre nace dentro de una categoría (ADMIN-MENU-1).
@@ -261,6 +263,7 @@ export default function MenuClient({
         price: data.price,
         active: data.active,
         image_url: data.image_url,
+        featured: data.featured,
       });
     }
 

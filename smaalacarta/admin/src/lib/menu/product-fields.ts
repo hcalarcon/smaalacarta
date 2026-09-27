@@ -5,6 +5,8 @@ export type ProductInput = {
   active?: boolean;
   // Dirección de la imagen. Vacía o nula, el producto queda sin imagen.
   image_url?: string | null;
+  // Aparece en la categoría "Destacados" del menú público (ADMIN-MENU-7).
+  featured?: boolean;
 };
 
 // Fila para crear un producto. Siempre lleva categoría (ADMIN-MENU-1).
@@ -20,6 +22,7 @@ export function toProductInsert(
     price: input.price,
     active: input.active ?? true,
     image_url: input.image_url || null,
+    featured: input.featured ?? false,
   };
 }
 
@@ -34,5 +37,6 @@ export function toProductUpdate(input: ProductInput & { category_id?: string }) 
     ...(input.active !== undefined && { active: input.active }),
     // Sin indicarla se conserva; con nula o vacía se quita (ADMIN-MENU-6).
     ...(input.image_url !== undefined && { image_url: input.image_url || null }),
+    ...(input.featured !== undefined && { featured: input.featured }),
   };
 }

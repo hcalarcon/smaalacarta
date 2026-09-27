@@ -17,6 +17,7 @@ export async function createProductAction(
     price: number;
     active: boolean;
     image_url?: string | null;
+    featured?: boolean;
   },
 ) {
   await createProduct(businessId, data);
@@ -33,6 +34,7 @@ export async function updateProductAction(
     price: number;
     active: boolean;
     image_url?: string | null;
+    featured?: boolean;
   },
 ) {
   await updateProduct(businessId, id, data);

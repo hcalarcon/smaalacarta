@@ -21,6 +21,7 @@ type ProductDialogProps = {
     price: number;
     active: boolean;
     image_url: string | null;
+    featured: boolean;
   }) => Promise<void>;
 };
 
@@ -40,6 +41,9 @@ function ProductDialogForm({
   );
   const [price, setPrice] = useState(editing ? String(initialData.price) : "");
   const [active, setActive] = useState(editing ? initialData.active : true);
+  const [featured, setFeatured] = useState(
+    editing ? initialData.featured : false,
+  );
   const [imageUrl, setImageUrl] = useState(
     editing ? (initialData.image_url ?? "") : "",
   );
@@ -61,6 +65,7 @@ function ProductDialogForm({
         price: Number(price || 0),
         active,
         image_url: imageUrl || null,
+        featured,
       });
     } finally {
       setLoading(false);
@@ -141,14 +146,25 @@ function ProductDialogForm({
             />
           </div>
 
-          <label className="flex items-center gap-2 text-sm">
-            <input
-              type="checkbox"
-              checked={active}
-              onChange={(e) => setActive(e.target.checked)}
-            />
-            Producto activo
-          </label>
+          <div className="flex flex-wrap gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={active}
+                onChange={(e) => setActive(e.target.checked)}
+              />
+              Producto activo
+            </label>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={featured}
+                onChange={(e) => setFeatured(e.target.checked)}
+              />
+              Destacado
+            </label>
+          </div>
 
           <div className="flex justify-end gap-3 pt-2">
             <button

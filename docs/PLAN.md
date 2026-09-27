@@ -3,7 +3,7 @@
 > Plan compartido de Herni y Fede para llegar a una primera versión que funcione.
 > Al empezar una sesión: _"Leé docs/PLAN.md y seguimos desde la primera tarea sin tildar de mi nombre."_
 
-Última actualización: 26/09/2026
+Última actualización: 27/09/2026
 
 **Dueños.** Cada tarea lleva `[herni]`, `[fede]` o `[por asignar]`. Antes de tomar
 una `[por asignar]`, cambiá la etiqueta por tu nombre y pusheala a tu rama. No
@@ -13,7 +13,7 @@ tomes una tarea de otro (ver [`CLAUDE.md`](../CLAUDE.md)).
 
 ## Contexto
 
-- **Repo público**, tres proyectos bajo `smaalacarta/`: `landing/` (estático), `web/` (menús públicos en JSON, en Vercel) y `admin/` (Next.js 16 + Supabase, todavía no conectado a `web/`).
+- **Repo público**, tres proyectos bajo `smaalacarta/`: `landing/` (estático), `web/` (menús públicos: interactivo, estático y PDF, en Vercel) y `admin/` (Next.js 16 + Supabase; de ahí salen los datos que muestra `web/`).
 - **Ramas**: `main` es producción; cada uno trabaja en la suya, `dev-herni` y `dev-fede`, y entra a `main` por pull request. Herni, el dueño, mergea; lo de Fede además necesita su aprobación. Las reglas están en [`CLAUDE.md`](../CLAUDE.md) (para los dos Claude) y el porqué en [`BRANCHING.md`](BRANCHING.md).
 - **Supabase**: cada uno con su **propio proyecto**. Lo compartido son las migraciones en git. La conexión va por `.env`: la app lee `admin/.env.local` y la CLI lee `admin/.env.supabase` (token y contraseña) a través de los scripts `db:*`, así nadie cambia de cuenta en su CLI. Plantillas en `admin/.env.example` y `admin/.env.supabase.example`.
 - **Sin Docker**: no se puede correr `supabase db reset` en local. La base propia sirve de entorno de prueba y se puede vaciar mientras no tenga datos que importen.
@@ -238,15 +238,43 @@ siempre (JS plano, lógica en `lib/*.js` con tests, funciones en `web/api/`).
       (colores, cabecera, categorías, productos, link fijo de WhatsApp, sin
       carrito) con `apps/menu-app/lib/static-page.js`. Reusa las clases y el CSS
       del menú interactivo (`base.css` + `templates/carrito/<template>`), no el
-      maquetado de `apps/menu-html`: ese es fijo para las demos, no está pensado
-      para recibir datos reales. Nuevo rewrite en `vercel.json` para
-      `/:cliente/menu.html`
+      maquetado de las demos fijas que había en `apps/menu-html` (ya borrado, ver
+      abajo): no estaba pensado para recibir datos reales. Nuevo rewrite en
+      `vercel.json` para `/:cliente/menu.html`
 - [x] [herni] Requisitos ESTATICO-1 a 3 en `docs/SPEC.md`, con tests en
       `static-page.test.js`
+- [x] [herni] Una sola familia de plantillas para demos y negocios reales:
+      `/moderno`, `/clasico` y `/minimal` (también bajo `demo.smaalacarta.com.ar`)
+      pasan a abrir la demo por el menú interactivo real
+      (`resolveDemoFromPath`, RUTAS-3), y `apps/menu-html` (las páginas fijas de
+      antes, sin datos reales) se borró. Los datos de las demos (`data/demos/*`) se
+      completaron: dirección, redes, imágenes livianas. Sin la copia aparte, cada
+      mejora de `templates/carrito/*` se ve igual en la demo, en el menú interactivo
+      y en el estático
 - [ ] [herni] Probar a mano los tres servicios juntos en un mismo negocio de prueba
 - [ ] [por asignar] Generar el PDF automáticamente desde el menú del admin (idea a futuro)
 - [ ] [por asignar] Diferenciar en el admin qué plan tiene cada negocio (hoy todo
       es un único flag `published`; la landing ya vende 3 planes distintos)
+
+## Etapa 6f — Una sola familia de plantillas (demos y clientes)
+
+**Diseño.** Las tres plantillas (`moderno`, `clasico`, `minimal`) son las mismas para
+demos y negocios reales, en el menú interactivo y en el estático
+(`base.css` + `templates/carrito/<plantilla>/styles.css`). Requisitos en `docs/SPEC.md`
+(RUTAS-3, PUBLICO-15).
+
+- [x] [herni] `/moderno`, `/clasico` y `/minimal` abren la demo por el menú interactivo real
+      (`resolveDemoFromPath`); se borró `apps/menu-html` y sus rewrites. De paso, arregla
+      que `demo.smaalacarta.com.ar/<demo>` caía siempre en moderno
+- [x] [herni] Datos de las tres demos parejos y completos (`data/demos/*`)
+- [x] [herni] El estático arma las mismas secciones que el interactivo (`lib/menu.js`) y un
+      test (`templates.test.js`) comprueba que toda clase que emite tiene estilo
+- [x] [herni] Pulido de las tres plantillas y texto legible sobre colores claros de marca
+      (`lib/colors.js`, PUBLICO-15)
+- [ ] [herni] **Mirar `/moderno`, `/clasico` y `/minimal` en el celular** (el agente solo las
+      vio en capturas headless) y probar colores claros en clásico y minimal con un negocio real
+- [ ] [por asignar] Precios con formato es-AR (`$12.000`; hoy `$12000`): toca el carrito
+- [ ] [por asignar] Mostrar la descripción de cada categoría en el menú (llega en `public_menu`, no se pinta)
 
 ## Etapa 7 — Pendientes técnicos (backlog)
 

@@ -7,6 +7,8 @@ let INFO = null;
 let ORDERS = null;
 let SCHEDULE = null;
 let PWA = null;
+let MENU = null;
+let COLORS = null;
 
 // De dónde vino el menú: si es de Supabase, el pedido también se guarda en el sistema.
 let MENU_SOURCE = null;
@@ -29,7 +31,7 @@ async function fetchJSON(path) {
 }
 
 // Qué negocio abre esta URL (RUTAS-1 y 2).
-function resolveAppConfig(resolveHost) {
+function resolveAppConfig(resolveHost, resolveDemo) {
   const params = new URLSearchParams(window.location.search);
   const host = window.location.hostname;
 
@@ -70,7 +72,20 @@ function resolveAppConfig(resolveHost) {
 
   /*
   ========================================
-  3. FALLBACK (MVP)
+  3. DEMO POR PATH
+  ========================================
+  /moderno, /clasico y /minimal (también demo.smaalacarta.com.ar/moderno) abren la
+  demo que nombran, con las mismas plantillas que un negocio real.
+  */
+  const fromPath = resolveDemo ? resolveDemo(window.location.pathname) : null;
+
+  if (fromPath) {
+    return fromPath;
+  }
+
+  /*
+  ========================================
+  4. FALLBACK (MVP)
   ========================================
   */
   console.warn("Dominio no reconocido:", host, "→ fallback a demo moderno");
@@ -103,24 +118,37 @@ async function loadFromSupabase(slug) {
 // INIT
 async function init() {
   try {
-    const [{ resolveBusinessFromHost }, html, info, orders, supabaseConfig, schedule, pwa] =
-      await Promise.all([
-        import("/apps/menu-app/lib/hostname.js"),
-        import("/apps/menu-app/lib/html.js"),
-        import("/apps/menu-app/lib/info.js"),
-        import("/apps/menu-app/lib/orders.js"),
-        import("/apps/menu-app/supabase-config.js"),
-        import("/apps/menu-app/lib/schedule.js"),
-        import("/apps/menu-app/lib/pwa.js"),
-      ]);
+    const [
+      { resolveBusinessFromHost, resolveDemoFromPath },
+      html,
+      info,
+      orders,
+      supabaseConfig,
+      schedule,
+      pwa,
+      menuLib,
+      colorsLib,
+    ] = await Promise.all([
+      import("/apps/menu-app/lib/hostname.js"),
+      import("/apps/menu-app/lib/html.js"),
+      import("/apps/menu-app/lib/info.js"),
+      import("/apps/menu-app/lib/orders.js"),
+      import("/apps/menu-app/supabase-config.js"),
+      import("/apps/menu-app/lib/schedule.js"),
+      import("/apps/menu-app/lib/pwa.js"),
+      import("/apps/menu-app/lib/menu.js"),
+      import("/apps/menu-app/lib/colors.js"),
+    ]);
+    COLORS = colorsLib;
     SCHEDULE = schedule;
     PWA = pwa;
+    MENU = menuLib;
     HTML = html;
     INFO = info;
     ORDERS = orders;
     SUPABASE_CFG = supabaseConfig.SUPABASE;
 
-    const result = resolveAppConfig(resolveBusinessFromHost);
+    const result = resolveAppConfig(resolveBusinessFromHost, resolveDemoFromPath);
     if (!result) {
       console.error("No se encontró slug en la URL");
       return;
@@ -169,14 +197,10 @@ async function init() {
     if (volver) volver.hidden = !demo;
 
     // 🎨 Colores dinámicos
-    if (config.colores) {
-      const root = document.documentElement;
-      if (config.colores.primary) {
-        root.style.setProperty("--color-primary", config.colores.primary);
-      }
-      if (config.colores.secondary) {
-        root.style.setProperty("--color-secondary", config.colores.secondary);
-      }
+    // (con el texto que se lee sobre ellos: un negocio puede elegir colores claros)
+    const brandVars = COLORS.brandVariables(config.colores);
+    for (const [name, value] of Object.entries(brandVars)) {
+      if (value) document.documentElement.style.setProperty(name, value);
     }
 
     // ⏳ Esperar que cargue el CSS del template
@@ -188,7 +212,7 @@ async function init() {
       return;
     }
 
-    const enhancedMenu = buildEnhancedMenu(menu);
+    const enhancedMenu = MENU.buildEnhancedMenu(menu);
 
     MENU_GLOBAL = enhancedMenu;
     renderMenu(enhancedMenu);
@@ -274,21 +298,14 @@ function renderHeader(c) {
   }
 }
 
-// Íconos de las redes (fijos, no vienen del negocio).
-const SOCIAL_ICONS = {
-  instagram:
-    "M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 2 16.25v-8.5A5.75 5.75 0 0 1 7.75 2zm0 1.5A4.25 4.25 0 0 0 3.5 7.75v8.5a4.25 4.25 0 0 0 4.25 4.25h8.5a4.25 4.25 0 0 0 4.25-4.25v-8.5a4.25 4.25 0 0 0-4.25-4.25zM12 7.25a4.75 4.75 0 1 1 0 9.5 4.75 4.75 0 0 1 0-9.5zm0 1.5a3.25 3.25 0 1 0 0 6.5 3.25 3.25 0 0 0 0-6.5zM17.25 5.75a1 1 0 1 1 0 2 1 1 0 0 1 0-2z",
-  facebook:
-    "M13.5 22v-8.2h2.8l.5-3.3h-3.3V8.4c0-.95.3-1.6 1.7-1.6h1.7V3.9c-.3 0-1.3-.1-2.5-.1-2.5 0-4.2 1.5-4.2 4.3v2.4H7.3v3.3h2.9V22z",
-};
-
+// El ícono de cada red: mismo trazo que usa el menú estático (lib/info.js).
 function socialIcon(key) {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", "0 0 24 24");
   svg.setAttribute("fill", "currentColor");
   svg.setAttribute("aria-hidden", "true");
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  path.setAttribute("d", SOCIAL_ICONS[key] ?? "");
+  path.setAttribute("d", INFO.socialIconPath(key));
   svg.appendChild(path);
   return svg;
 }
@@ -396,56 +413,6 @@ function renderCategorias(menu) {
       document.getElementById(id)?.scrollIntoView({ behavior: "smooth" });
     categoriasContainer.appendChild(b);
   });
-}
-
-function buildEnhancedMenu(menu) {
-  if (!menu?.categorias) return menu;
-
-  const destacados = [];
-  const ofertas = [];
-
-  menu.categorias.forEach((cat) => {
-    (cat.items || []).forEach((item) => {
-      if (item.destacado) {
-        destacados.push(item);
-      }
-
-      if (item.precioAnterior || item.promo) {
-        ofertas.push(item);
-      }
-    });
-  });
-
-  const nuevasCategorias = [];
-
-  // ⭐ Destacados
-  if (destacados.length > 0) {
-    nuevasCategorias.push({
-      nombre: "Destacados",
-      tipo: "destacados",
-      items: destacados,
-    });
-  }
-
-  // 💸 Ofertas (si el menú ya trae su categoría de ofertas, como las promociones
-  // del admin, no se arma otra)
-  const yaTieneOfertas = menu.categorias.some((cat) => cat.tipo === "ofertas");
-
-  if (ofertas.length > 0 && !yaTieneOfertas) {
-    nuevasCategorias.push({
-      nombre: "Ofertas",
-      tipo: "ofertas",
-      items: ofertas,
-    });
-  }
-
-  // 👇 después agregamos las originales
-  nuevasCategorias.push(...menu.categorias);
-
-  return {
-    ...menu,
-    categorias: nuevasCategorias,
-  };
 }
 
 function renderMenu(menu) {

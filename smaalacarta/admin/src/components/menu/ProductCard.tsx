@@ -42,8 +42,13 @@ export default function ProductCard({
         )}
 
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-semibold text-brand">
-            {product.name}
+          <h3 className="flex items-center gap-1 truncate text-sm font-semibold text-brand">
+            {product.featured ? (
+              <span title="Destacado" aria-label="Destacado" className="text-amber-500">
+                ★
+              </span>
+            ) : null}
+            <span className="truncate">{product.name}</span>
           </h3>
           <p className="truncate text-xs text-stone-500">
             {product.description || "Sin descripción"}

@@ -26,7 +26,7 @@ pedido y le llega al negocio por WhatsApp.
 | Plan | Qué entrega | Dónde vive |
 | --- | --- | --- |
 | Menú QR + PDF | QR que abre la carta en PDF | `web/apps/pdf` |
-| Menú Web | Carta web en una de tres plantillas | `web/apps/menu-html` |
+| Menú Web | Carta web de solo lectura en una de tres plantillas | `web/api/static-menu.js` |
 | Subdominio Completo | `negocio.smaalacarta…` con carrito y pedido por WhatsApp | `web/apps/menu-app` |
 
 Cada negocio es una carpeta en `web/data/clientes/<slug>/` con `config.json`

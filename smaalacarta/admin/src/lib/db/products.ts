@@ -21,6 +21,7 @@ export type Product = {
   price: number;
   active: boolean;
   image_url: string | null;
+  featured: boolean;
   created_at: string;
   updated_at: string;
 };

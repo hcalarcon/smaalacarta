@@ -5,8 +5,17 @@
 // Todo texto del negocio se escapa (PUBLICO-9): nunca se interpola sin pasar por
 // `escapeHtml` o `safeHttpUrl`.
 
+import { brandVariables } from "./colors.js";
 import { cssUrl, escapeHtml, safeHttpUrl } from "./html.js";
-import { closedNotice, headerBackground, mapsUrl, reopenText, socialLinks } from "./info.js";
+import {
+  closedNotice,
+  headerBackground,
+  mapsUrl,
+  reopenText,
+  socialIconPath,
+  socialLinks,
+} from "./info.js";
+import { buildEnhancedMenu } from "./menu.js";
 import { isOpenNow, nextOpening, openingText } from "./schedule.js";
 
 const TEMPLATES = ["moderno", "clasico", "minimal"];
@@ -23,10 +32,19 @@ function slugify(text) {
     .replace(/\s+/g, "-");
 }
 
+function socialIconSvg(key) {
+  const path = socialIconPath(key);
+  return path
+    ? `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${path}"/></svg>`
+    : "";
+}
+
 function productCard(item) {
   const image = safeHttpUrl(item?.imagen);
+  // Igual que el interactivo: la plantilla dibuja la etiqueta de la promo desde el atributo.
+  const promo = item?.promo ? ` data-promo="${escapeHtml(item.promo)}"` : "";
 
-  return `<article class="producto">
+  return `<article class="producto"${promo}>
     ${image ? `<img src="${escapeHtml(image)}" alt="">` : ""}
     <div class="producto-info">
       <h3>${escapeHtml(item?.nombre)}</h3>
@@ -91,7 +109,7 @@ function footer(config) {
     const redes = links
       .map(
         (link) =>
-          `<a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(link.name)}">${escapeHtml(link.name)}</a>`,
+          `<a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(link.name)}" title="${escapeHtml(link.name)}">${socialIconSvg(link.key)}</a>`,
       )
       .join("");
     parts.push(`<div class="pie-redes">${redes}</div>`);
@@ -100,25 +118,39 @@ function footer(config) {
   return parts.length > 0 ? `<footer class="pie-negocio">${parts.join("")}</footer>` : "";
 }
 
+// Reusa `.btn-cta` (ya con los colores de marca, en los tres templates) en vez
+// de inventar una clase propia sin estilo en este contexto.
 function whatsappContact(config) {
   const phone = String(config?.telefono ?? "").replace(/\D/g, "");
   if (!phone) return "";
 
   const message = `Hola, consulto por el menú de ${config?.nombre ?? ""}`;
-  return `<a class="contact" href="https://api.whatsapp.com/send?phone=${escapeHtml(phone)}&text=${encodeURIComponent(message)}" target="_blank" rel="noopener noreferrer">Consultar por WhatsApp</a>`;
+  return `<div class="contacto-estatico"><a class="btn-cta" href="https://api.whatsapp.com/send?phone=${escapeHtml(phone)}&text=${encodeURIComponent(message)}" target="_blank" rel="noopener noreferrer">Consultar por WhatsApp</a></div>`;
 }
 
 // El HTML completo del menú estático de un negocio, a partir de lo mismo que
 // devuelve `public_menu` (`{ config, menu }`).
 export function renderStaticMenuPage({ config, menu } = {}) {
-  const categorias = Array.isArray(menu?.categorias) ? menu.categorias : [];
+  // Las mismas secciones que el interactivo: Destacados y Ofertas antes de las categorías.
+  const enhanced = buildEnhancedMenu(menu);
+  const categorias = Array.isArray(enhanced?.categorias) ? enhanced.categorias : [];
   const template = TEMPLATES.includes(config?.template) ? config.template : "moderno";
   const primary = safeColor(config?.colores?.primary, "#5a4a3a");
   const secondary = safeColor(config?.colores?.secondary, "#d97706");
+  // Los colores y el texto que se lee sobre ellos: solo salen hex y rgba() calculados.
+  const brandCss = Object.entries(brandVariables({ primary, secondary }))
+    .filter(([, value]) => value)
+    .map(([name, value]) => `${name}:${value}`)
+    .join(";");
 
   const { html: aviso, abierto } = closedBanner(config);
+  // `cssUrl` devuelve `url("…")`, con comillas adentro: hay que escaparlas para
+  // que no corten el atributo `style="…"` a la mitad (rompía toda la cabecera).
   const headerImage = headerBackground(config, cssUrl);
-  const headerStyle = headerImage ? ` style="background-image: ${headerImage}"` : "";
+  const headerStyle = headerImage
+    ? ` style="background-image: ${escapeHtml(headerImage)}"`
+    : "";
+  const logo = safeHttpUrl(config?.logo);
 
   return `<!doctype html>
 <html lang="es" data-template="${template}">
@@ -127,14 +159,17 @@ export function renderStaticMenuPage({ config, menu } = {}) {
 <title>${escapeHtml(config?.nombre || "Menú")}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
-<style>:root{--color-primary:${primary};--color-secondary:${secondary}}</style>
+<style>:root{${brandCss}}</style>
 <link rel="stylesheet" href="/apps/menu-app/base.css">
 <link rel="stylesheet" href="/templates/carrito/${template}/styles.css">
 <link rel="stylesheet" href="/apps/menu-app/desktop.css" media="(min-width: 1024px)">
 </head>
-<body>
+<body class="menu-estatico">
 <header class="header"${headerStyle}>
-  <span class="badge-estado"><span class="dot" style="background:${abierto ? "#4ade80" : "#ef4444"}"></span>${abierto ? "Abierto" : "Cerrado"}</span>
+  <div class="header-top">
+    <span class="badge-estado"><span class="dot" style="background:${abierto ? "#4ade80" : "#ef4444"}"></span>${abierto ? "Abierto" : "Cerrado"}</span>
+  </div>
+  ${logo ? `<img class="logo-negocio" src="${escapeHtml(logo)}" alt="">` : ""}
   <h1>${escapeHtml(config?.nombre)}</h1>
   <p>${escapeHtml(config?.descripcion || "")}</p>
 </header>
