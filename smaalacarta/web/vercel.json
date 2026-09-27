@@ -25,6 +25,11 @@
     },
 
     {
+      "source": "/:cliente/menu.html",
+      "destination": "/api/static-menu?slug=:cliente"
+    },
+
+    {
       "source": "/pedido/:code",
       "destination": "/apps/tracker/index.html"
     },

@@ -233,12 +233,16 @@ siempre (JS plano, lógica en `lib/*.js` con tests, funciones en `web/api/`).
       cliente estático que hay hoy). El caso `demo.*` ya no depende de un slug: es
       siempre el mismo PDF fijo, sin pedir nada a Supabase ni al JSON. Requisitos
       PDF-3 y 4 en `docs/SPEC.md`
-- [ ] [herni] Nueva función `web/api/static-menu.js` (mismo patrón que `api/manifest.js`):
-      pide `public_menu(slug)` y arma un HTML de solo lectura (colores, cabecera,
-      categorías, productos, WhatsApp como link `wa.me`, sin carrito) reusando el
-      maquetado de `apps/menu-html`; nuevo rewrite en `vercel.json` para `/:cliente/menu.html`
-- [ ] [herni] Requisitos en `docs/SPEC.md` (la sección "PDF" ya existe pero está
-      vacía; sumar también los del menú estático) y tests para todo lo de arriba
+- [x] [herni] Nueva función `web/api/static-menu.js` (mismo patrón que
+      `api/manifest.js`): pide `public_menu(slug)` y arma un HTML de solo lectura
+      (colores, cabecera, categorías, productos, link fijo de WhatsApp, sin
+      carrito) con `apps/menu-app/lib/static-page.js`. Reusa las clases y el CSS
+      del menú interactivo (`base.css` + `templates/carrito/<template>`), no el
+      maquetado de `apps/menu-html`: ese es fijo para las demos, no está pensado
+      para recibir datos reales. Nuevo rewrite en `vercel.json` para
+      `/:cliente/menu.html`
+- [x] [herni] Requisitos ESTATICO-1 a 3 en `docs/SPEC.md`, con tests en
+      `static-page.test.js`
 - [ ] [herni] Probar a mano los tres servicios juntos en un mismo negocio de prueba
 - [ ] [por asignar] Generar el PDF automáticamente desde el menú del admin (idea a futuro)
 - [ ] [por asignar] Diferenciar en el admin qué plan tiene cada negocio (hoy todo

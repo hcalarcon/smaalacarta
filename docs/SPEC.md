@@ -207,6 +207,23 @@ en PDF" de Configuración (`app/dashboard/settings`) y `web/apps/pdf`. Cubierto 
   de ejemplo, sin pedir nada a Supabase ni al JSON: es solo para mostrar cómo se ve
   el plan "QR + PDF", no depende de ningún negocio real.
 
+## ESTATICO — Menú web de solo lectura
+
+*Aplicado por `web/api/static-menu.js` y `web/apps/menu-app/lib/static-page.js`.
+Cubierto por `web/apps/menu-app/lib/static-page.test.js`, en JS puro.*
+
+- **ESTATICO-1** `/:cliente/menu.html` muestra el mismo menú que el interactivo
+  (`public_menu`, mismos colores, plantilla, horarios y cierre temporal) pero de
+  solo lectura: sin carrito, sin formulario de pedido, un link de WhatsApp fijo
+  en vez de un checkout. Comparte la bandera `published` con el interactivo.
+  Sin negocio, sin Supabase configurado o sin publicar, la ruta responde 404.
+- **ESTATICO-2** El HTML se arma en el momento (`web/api/static-menu.js`, función
+  serverless, sin build); el texto del negocio se escapa igual que en el menú
+  interactivo (PUBLICO-9): un nombre o descripción con HTML no se ejecuta.
+- **ESTATICO-3** Una categoría sin productos activos no aparece; una plantilla o
+  un color inválido caen a los valores por defecto, igual que en el resto del
+  menú público.
+
 ---
 
 # Landing — `smaalacarta/landing`
