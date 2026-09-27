@@ -94,27 +94,60 @@ estático, porque pide `/data/...` y `/templates/...` con rutas absolutas.
 Todo el código vive bajo `smaalacarta/`, en tres proyectos sin build compartido:
 
 - `landing/` — sitio de venta estático (HTML/CSS/JS).
-- `web/` — menús públicos estáticos, dirigidos por JSON; Vercel publica con
-  `web/` como raíz (`vercel.json` define las rutas).
+- `web/` — menús públicos sin build (JS plano en módulos ES, más funciones en
+  `web/api/`); Vercel publica con `web/` como raíz (`vercel.json` define las rutas).
 - `admin/` — panel Next.js 16 + Supabase donde cada negocio gestiona categorías,
-  productos, promociones y pedidos. Todavía no está conectado a los menús de `web/`.
+  productos, promociones, pedidos y su configuración; de ahí salen los datos que
+  muestra `web/`.
 
 ### web/
 
-- **Rutas (`web/vercel.json`)**: `/:cliente/pdf` y `demo.*/pdf` van a `apps/pdf`.
-  Cualquier otra ruta sin extensión, incluidas `/moderno`, `/clasico` y `/minimal`,
-  va a `apps/menu-app/index.html`: esas tres son demos que usan las mismas plantillas
-  (`templates/carrito/*`) y los mismos datos (`data/demos/*`) que un negocio real, y
-  `lib/hostname.js` (`resolveDemoFromPath`) las reconoce por el primer segmento del path.
-- **`apps/menu-app/app.js`** es el menú dinámico con carrito. `resolveAppConfig()`
-  elige el negocio: primero `?demo=<slug>` / `?cliente=<slug>` (para desarrollo
-  local), después un mapa de hostnames escrito a mano (`DOMAINS`). Un cliente
-  nuevo con subdominio propio necesita una entrada ahí.
-- **Datos**: `data/clientes/<slug>/` o `data/demos/<slug>/` con `config.json`
-  (nombre, `template`, `telefono` de WhatsApp, `colores`, `horarios` que pueden
-  cruzar medianoche, `pdf.file` opcional) y `menu.json`.
-- **Pedidos**: el carrito vive en localStorage y el checkout abre un link de
-  WhatsApp con el mensaje armado. No hay backend.
+**Tres servicios por negocio, independientes** (pueden convivir en el mismo negocio):
+
+| Servicio | Dirección | Vive en |
+| --- | --- | --- |
+| Interactivo (carrito, pedidos, seguimiento) | `<slug>.smaalacarta.com.ar` | `apps/menu-app` |
+| Estático (solo lectura, sin carrito) | `smaalacarta.com.ar/<slug>/menu.html` | `api/static-menu.js` + `apps/menu-app/lib/static-page.js` |
+| PDF (un archivo que se linkea, p. ej. con un QR) | `smaalacarta.com.ar/<slug>/pdf` | `apps/pdf` |
+
+El interactivo y el estático comparten dato (`public_menu`), bandera `published`,
+plantillas y armado de secciones (`lib/menu.js`); el PDF es independiente de
+`published` (`public_business_pdf`), porque un negocio del plan gratis puede no publicar
+nunca un menú digital. El comodín `*.smaalacarta.com.ar` de Vercel ya está en vivo: un
+negocio nuevo funciona apenas existe y está publicado, sin tocar código.
+
+- **Rutas (`web/vercel.json`)**: `/:cliente/pdf` y `demo.*/pdf` → `apps/pdf`;
+  `/:cliente/menu.html` → `api/static-menu.js`; `/pedido/:code` → `apps/tracker`;
+  cualquier otra ruta sin extensión → `apps/menu-app/index.html`, incluidas `/moderno`,
+  `/clasico` y `/minimal`. Esas tres son demos que usan las mismas plantillas y el
+  mismo camino que un negocio real (ya no hay páginas HTML aparte).
+- **Qué negocio abre el menú interactivo** (`resolveAppConfig()` en `app.js`), en
+  este orden: `?demo=<slug>` / `?cliente=<slug>` (para probar en local o en una
+  preview, donde no hay subdominios); el subdominio (`lib/hostname.js`: `<slug>` es el
+  subdominio, sin declararlo en el código); el primer segmento del path si es una demo
+  (`resolveDemoFromPath`); y, si nada coincide, la demo `moderno`.
+- **De dónde salen los datos**: los negocios cargados desde el admin vienen de Supabase
+  (`public_menu(slug)`, sin sesión; `lib/public-menu.js`) y, si no hay o falla, se usan
+  los JSON de `data/clientes/<slug>/`. Las demos siempre salen de `data/demos/<slug>/`
+  (`config.json` con nombre, `template`, `telefono`, `colores`, `horarios`, `pdf.file`
+  opcional, y `menu.json`).
+- **Plantillas**: hay tres (`moderno`, `clasico`, `minimal`) y son las mismas para
+  demos y clientes, en interactivo y estático: `apps/menu-app/base.css` +
+  `templates/carrito/<plantilla>/styles.css`. `lib/colors.js` calcula con qué color se
+  lee el texto sobre los colores de marca (un negocio puede elegir amarillo). Un test
+  (`templates.test.js`) comprueba que toda clase que emite el menú estático tiene
+  estilo. **El menú estático arma HTML como texto**: todo dato del negocio pasa por
+  `escapeHtml`, y lo que va dentro de un atributo (`style="…"`) también.
+- **PDF** (`apps/pdf`): el negocio va en el path, no en el subdominio (el plan gratis
+  no tiene uno propio). `lib/pdf.js` prueba `public_business_pdf(slug)` y cae al JSON
+  local; `demo.*` muestra siempre el mismo PDF de ejemplo.
+- **Funciones en `web/api/`** (Vercel, sin build): `manifest.js` (PWA por negocio) y
+  `static-menu.js`. No se prueban con un servidor estático: hace falta una preview de
+  Vercel. La lógica va en `lib/*.js` con tests; el handler es solo el conector.
+- **Pedidos**: el checkout guarda el pedido en el sistema (`create_public_order`) y
+  abre un link de WhatsApp con el mensaje armado; si el menú viene de un JSON, o
+  guardar falla, sigue solo por WhatsApp. El cliente lo sigue en `/pedido/<código>`
+  (`apps/tracker`).
 
 ### admin/
 
@@ -172,6 +205,16 @@ Todo el código vive bajo `smaalacarta/`, en tres proyectos sin build compartido
   sale del subdominio (`lib/hostname.js`). La lista de slugs reservados está en tres
   lugares que deben coincidir (migración, `superadmin/validation.ts` y `hostname.js`),
   con tests que lo comprueban.
+- **Configuración (pantalla)**: `app/dashboard/settings` tiene, en orden, Datos del
+  negocio (nombre y slug editables, con las reglas de `superadmin/validation.ts`; si
+  cambia el nombre y no la URL, pregunta si regenerarla), Compartir (link + QR generado
+  en el navegador con `qrcode`, y regenerar la URL desde el nombre), el resto de
+  `SettingsForm` (incluido **Menú en PDF**) y Contraseña. Cambiar la contraseña pide la
+  actual (ADMIN-AUTH-10). El PDF sube a otro bucket, `business-pdfs`
+  (`src/lib/storage/pdfs.ts`, `components/ui/PdfUploader.tsx`, 10 MB, mismo RLS por
+  carpeta), se guarda en `business_settings.menu_pdf_url` y lo lee `public_business_pdf`
+  **sin exigir `published`**. Subir un archivo solo lo deja en pantalla: se guarda con
+  "Guardar cambios", igual que el logo y la cabecera.
 - **Pedidos**: `orders` + `order_items` (con nombre y precio del momento) +
   `order_events` (línea de tiempo) + `order_counters` (numeración por negocio, sin
   políticas: solo lo usan las funciones). El cliente crea el pedido con
@@ -181,7 +224,10 @@ Todo el código vive bajo `smaalacarta/`, en tres proyectos sin build compartido
   `create_manual_order`. Los estados y sus transiciones están en
   `src/lib/orders/status.ts` y en la base, y un test compara la matriz completa. En
   `web/`: `apps/menu-app/lib/orders.js` (checkout) y `apps/tracker` (seguimiento, todo
-  con `textContent`).
+  con `textContent`). Al cancelar, el negocio puede dejar un motivo (`order_events.note`,
+  tercer parámetro de `set_order_status`) que el cliente ve en el seguimiento. El tablero
+  (`/dashboard/orders`) tiene tres columnas con scroll propio; los entregados y
+  cancelados van a una tabla de historial con cuándo empezó y cuándo terminó.
 - **Multi-negocio**: `getCurrentBusiness()` resuelve usuario → `business_users`
   (con `role`) → `businesses`; las páginas del panel usan `requireBusiness()`.
   Toda tabla de recursos (`categories`, `products`, `promotions`, `orders`) se filtra
