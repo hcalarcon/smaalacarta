@@ -238,11 +238,19 @@ siempre (JS plano, lógica en `lib/*.js` con tests, funciones en `web/api/`).
       (colores, cabecera, categorías, productos, link fijo de WhatsApp, sin
       carrito) con `apps/menu-app/lib/static-page.js`. Reusa las clases y el CSS
       del menú interactivo (`base.css` + `templates/carrito/<template>`), no el
-      maquetado de `apps/menu-html`: ese es fijo para las demos, no está pensado
-      para recibir datos reales. Nuevo rewrite en `vercel.json` para
-      `/:cliente/menu.html`
+      maquetado de las demos fijas que había en `apps/menu-html` (ya borrado, ver
+      abajo): no estaba pensado para recibir datos reales. Nuevo rewrite en
+      `vercel.json` para `/:cliente/menu.html`
 - [x] [herni] Requisitos ESTATICO-1 a 3 en `docs/SPEC.md`, con tests en
       `static-page.test.js`
+- [x] [herni] Una sola familia de plantillas para demos y negocios reales:
+      `/moderno`, `/clasico` y `/minimal` (también bajo `demo.smaalacarta.com.ar`)
+      pasan a abrir la demo por el menú interactivo real
+      (`resolveDemoFromPath`, RUTAS-3), y `apps/menu-html` (las páginas fijas de
+      antes, sin datos reales) se borró. Los datos de las demos (`data/demos/*`) se
+      completaron: dirección, redes, imágenes livianas. Sin la copia aparte, cada
+      mejora de `templates/carrito/*` se ve igual en la demo, en el menú interactivo
+      y en el estático
 - [ ] [herni] Probar a mano los tres servicios juntos en un mismo negocio de prueba
 - [ ] [por asignar] Generar el PDF automáticamente desde el menú del admin (idea a futuro)
 - [ ] [por asignar] Diferenciar en el admin qué plan tiene cada negocio (hoy todo

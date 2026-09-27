@@ -40,13 +40,18 @@ comportamiento que ya existe, una app por rama:
 
 *Aplicado por `web/vercel.json`, `web/apps/menu-app/app.js` y
 `web/apps/menu-app/lib/hostname.js`. Cubierto por: `lib/hostname.test.js`
-(RUTAS-1 y 2).*
+(RUTAS-1 a 3).*
 
 - **RUTAS-1** Un negocio se abre desde `<slug>.smaalacarta.com.ar` (o
   `.smaalacarta.online`) sin declararlo en el código: el subdominio es su slug. El
   parámetro `?cliente=<slug>` sigue sirviendo para desarrollo.
 - **RUTAS-2** Los subdominios reservados (`www`, `admin`, `app`, `api`, `demo`…) no
   son negocios; los de las demos (`moderno`, `clasico`, `minimal`) abren su demo.
+- **RUTAS-3** Las direcciones `/moderno`, `/clasico` y `/minimal` (también bajo
+  `demo.smaalacarta.com.ar`, donde el subdominio reservado no dice cuál) abren esa
+  demo con el mismo menú y las mismas plantillas que un negocio real: no hay páginas
+  aparte para las demos. Solo cuenta el primer segmento del path y solo las demos
+  conocidas; una demo pedida por `?demo=` o por subdominio tiene prioridad.
 
 ## HORARIO — Abierto o cerrado
 
@@ -56,10 +61,17 @@ _Sin requisitos todavía._
 
 ## MENU — Armado del menú
 
-*Destacados, ofertas y categorías. Aplicado por: pendiente. Cubierto por:
-pendiente.*
+*Destacados, ofertas y categorías. Aplicado por `web/apps/menu-app/lib/menu.js`
+(lo usan el menú interactivo y el estático). Cubierto por: `lib/menu.test.js`
+(MENU-1 a 3). El resto del armado del menú sigue sin especificar.*
 
-_Sin requisitos todavía._
+- **MENU-1** Los productos marcados como destacados se reúnen en una sección
+  "Destacados" que va antes de todas las categorías.
+- **MENU-2** Los productos con precio anterior o con promo se reúnen en una sección
+  "Ofertas", después de Destacados; si el menú ya trae su categoría de ofertas (las
+  promociones del admin), no se arma otra.
+- **MENU-3** Las categorías del negocio siguen a continuación, sin cambios ni
+  reordenamientos; un menú sin destacados ni ofertas queda como llegó.
 
 ## PUBLICO — El menú desde Supabase
 
@@ -106,6 +118,11 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
 - **PUBLICO-14** En pantallas anchas (desde 1024 px) el menú se centra en una columna de hasta
   1120 px y los productos van en una grilla de tarjetas de ancho parejo, en las tres
   plantillas; en el celular no cambia nada. Solo se prueba mirándolo en el navegador.
+- **PUBLICO-15** Cada negocio elige sus colores, y algunos son claros. El menú (interactivo y
+  estático) calcula con qué texto se lee sobre ellos —blanco u oscuro, el que dé más
+  contraste— y un tono de la marca oscurecido para escribir sobre blanco (mínimo 4.5:1). Las
+  plantillas usan `--on-brand`, `--on-brand-mix` y `--on-header` en vez de blanco fijo. Un
+  valor que no sea un color hexadecimal válido no llega al estilo.
 
 ## BUSQUEDA — Buscador
 
@@ -223,6 +240,9 @@ Cubierto por `web/apps/menu-app/lib/static-page.test.js`, en JS puro.*
 - **ESTATICO-3** Una categoría sin productos activos no aparece; una plantilla o
   un color inválido caen a los valores por defecto, igual que en el resto del
   menú público.
+- **ESTATICO-4** El menú estático se ve como el interactivo con la misma plantilla:
+  arma las mismas secciones (Destacados y Ofertas, MENU-1 a 3), pone la etiqueta de
+  promo en el producto y usa el mismo encabezado (estado dentro de `.header-top`).
 
 ---
 

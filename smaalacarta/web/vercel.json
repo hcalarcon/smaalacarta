@@ -1,19 +1,6 @@
 {
   "rewrites": [
     {
-      "source": "/moderno",
-      "destination": "/apps/menu-html/modern"
-    },
-    {
-      "source": "/clasico",
-      "destination": "/apps/menu-html/classic"
-    },
-    {
-      "source": "/minimal",
-      "destination": "/apps/menu-html/minimalist"
-    },
-
-    {
       "source": "/:cliente/pdf",
       "destination": "/apps/pdf/index.html"
     },

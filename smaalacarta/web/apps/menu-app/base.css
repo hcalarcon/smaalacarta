@@ -206,3 +206,103 @@ body.no-scroll {
 .cta-section[hidden] {
   display: none !important;
 }
+
+/* ==========================================================================
+   Calidad pareja entre las tres plantillas (moderno, clásico y minimal), en el menú
+   interactivo y en el estático. Se carga antes que la plantilla: ella puede pisarlo.
+   ========================================================================== */
+
+/* Los anclajes de las categorías (el menú estático usa enlaces #categoria, el
+   interactivo hace scrollIntoView) no quedan tapados por la barra fija de categorías. */
+html {
+  scroll-behavior: smooth;
+}
+
+.categoria {
+  scroll-margin-top: 4.5rem;
+}
+
+/* La barra de categorías queda arriba al bajar; el encabezado (con foto y buscador) se
+   va con el scroll: fijo ocupaba un cuarto de la pantalla del celular. */
+.categorias {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.categorias::-webkit-scrollbar {
+  display: none;
+}
+
+/* Los botones (menú interactivo) y los enlaces (menú estático) de las categorías se
+   ven igual: las plantillas los estilizan juntos. */
+.categorias a {
+  text-decoration: none;
+  color: inherit;
+}
+
+.categorias button,
+.categorias a {
+  flex: none;
+  white-space: nowrap;
+}
+
+/* El reset de arriba (outline: none en los campos) dejaba sin foco visible a quien
+   navega con teclado: el aro vuelve solo con :focus-visible, no al tocar con el mouse. */
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 2px solid var(--color-primary, #111);
+  outline-offset: 2px;
+}
+
+/* Fotos en las tarjetas: nunca estiradas ni deformadas */
+.producto img {
+  object-fit: cover;
+  flex: none;
+}
+
+/* Botón de agregar: un blanco táctil cómodo */
+.producto .btn-add {
+  min-width: 36px;
+  min-height: 36px;
+}
+
+/* Menú estático (sin carrito): no hace falta el aire de abajo que deja lugar al botón
+   flotante del carrito, y el contacto va centrado. */
+.menu-estatico .pie-negocio {
+  padding-bottom: 1rem;
+}
+
+.contacto-estatico {
+  text-align: center;
+  padding: 1.5rem 1rem 2.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Logo del negocio en el encabezado del menú estático */
+.logo-negocio {
+  width: 64px;
+  height: 64px;
+  margin-top: 10px;
+  border: 2px solid rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  object-fit: cover;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+}

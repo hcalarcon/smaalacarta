@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { DEMO_SLUGS, RESERVED_SUBDOMAINS, resolveBusinessFromHost } from "./hostname.js";
+import {
+  DEMO_SLUGS,
+  RESERVED_SUBDOMAINS,
+  resolveBusinessFromHost,
+  resolveDemoFromPath,
+} from "./hostname.js";
 
 describe("resolveBusinessFromHost — RUTAS-1", () => {
   it.each([
@@ -69,5 +74,28 @@ describe("hosts que no son negocios — RUTAS-1", () => {
       type: "cliente",
       slug: "bar",
     });
+  });
+});
+
+describe("resolveDemoFromPath — RUTAS-2", () => {
+  it.each(DEMO_SLUGS)("/%s abre su demo, con o sin barra final", (slug) => {
+    expect(resolveDemoFromPath(`/${slug}`)).toEqual({ type: "demo", slug });
+    expect(resolveDemoFromPath(`/${slug}/`)).toEqual({ type: "demo", slug });
+  });
+
+  it("solo mira el primer segmento del path", () => {
+    expect(resolveDemoFromPath("/moderno/algo-mas")).toEqual({ type: "demo", slug: "moderno" });
+    expect(resolveDemoFromPath("/otro/moderno")).toBeNull();
+  });
+
+  it.each(["/", "", undefined, null, "/santa-julia-resto", "/api/manifest", "/MODERNO"])(
+    "%j no es una demo",
+    (pathname) => {
+      expect(resolveDemoFromPath(pathname)).toBeNull();
+    },
+  );
+
+  it("acepta otra lista de demos", () => {
+    expect(resolveDemoFromPath("/otra", ["otra"])).toEqual({ type: "demo", slug: "otra" });
   });
 });

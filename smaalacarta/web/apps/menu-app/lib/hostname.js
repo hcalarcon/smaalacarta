@@ -16,6 +16,17 @@ export const RESERVED_SUBDOMAINS = [
 
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;
 
+// La demo que pide el path, si es una: `/moderno`, `/clasico`, `/minimal` (también en
+// `demo.smaalacarta.com.ar/moderno`, donde el subdominio `demo` está reservado y no
+// dice cuál). Es el último recurso antes del respaldo fijo, para que estas direcciones
+// abran la demo que nombran, con las mismas plantillas que un negocio real, y no una
+// página aparte. Solo cuenta el primer segmento y solo las demos conocidas.
+export function resolveDemoFromPath(pathname, demoSlugs = DEMO_SLUGS) {
+  const [first] = String(pathname ?? "").split("/").filter(Boolean);
+
+  return demoSlugs.includes(first) ? { type: "demo", slug: first } : null;
+}
+
 // Devuelve `{ type, slug }` o null si el host no es el de un negocio ni el de una
 // demo (localhost, el dominio raíz, previews de Vercel, subdominios anidados…).
 export function resolveBusinessFromHost(hostname, baseDomains = BASE_DOMAINS) {
