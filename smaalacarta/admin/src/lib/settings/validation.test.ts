@@ -163,3 +163,21 @@ describe("logo — ADMIN-CONFIG-8", () => {
     expect(validateSettings({ ...valid, logoUrl: "https://ejemplo.com/logo.png" })).toEqual({ ok: true });
   });
 });
+
+describe("PDF del menú — PDF-1", () => {
+  it.each(["menu.pdf", "http://ejemplo.com/menu.pdf", "javascript:alert(1)", 'https://x.com/a"b.pdf'])(
+    "rechaza %s",
+    (menuPdfUrl) => {
+      const r = validateSettings({ ...valid, menuPdfUrl });
+      expect(r.ok === false && r.errors.menuPdfUrl).toBeTruthy();
+    },
+  );
+
+  it("es opcional", () => {
+    expect(validateSettings({ ...valid, menuPdfUrl: "" })).toEqual({ ok: true });
+  });
+
+  it("acepta una dirección https", () => {
+    expect(validateSettings({ ...valid, menuPdfUrl: "https://ejemplo.com/menu.pdf" })).toEqual({ ok: true });
+  });
+});

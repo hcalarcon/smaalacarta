@@ -20,6 +20,9 @@ export type SettingsInput = {
   secondaryColor: string;
   headerImageUrl: string;
   logoUrl: string;
+  // El PDF del menú (Etapa 6e): independiente de `published`, no se muestra en
+  // el menú digital, solo se linkea aparte (QR).
+  menuPdfUrl: string;
   schedule: Schedule;
   whatsapp: string;
   address: string;
@@ -41,6 +44,7 @@ export const DEFAULT_SETTINGS: SettingsInput = {
   secondaryColor: "#d97706",
   headerImageUrl: "",
   logoUrl: "",
+  menuPdfUrl: "",
   schedule: {},
   whatsapp: "",
   address: "",
@@ -58,6 +62,7 @@ type Field =
   | "secondaryColor"
   | "headerImageUrl"
   | "logoUrl"
+  | "menuPdfUrl"
   | "schedule"
   | "whatsapp"
   | "address"
@@ -123,6 +128,10 @@ export function validateSettings(input: SettingsInput): ValidationResult<Field> 
 
   if (input.logoUrl.trim() && !IMAGE_URL.test(input.logoUrl.trim())) {
     errors.logoUrl = "Ingresá una dirección que empiece con https://";
+  }
+
+  if (input.menuPdfUrl.trim() && !IMAGE_URL.test(input.menuPdfUrl.trim())) {
+    errors.menuPdfUrl = "Ingresá una dirección que empiece con https://";
   }
 
   if (input.tagline.length > TAGLINE_MAX) {

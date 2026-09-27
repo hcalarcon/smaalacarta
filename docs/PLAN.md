@@ -221,7 +221,7 @@ siempre (JS plano, lógica en `lib/*.js` con tests, funciones en `web/api/`).
       `20260930000400_menu_pdf.sql`, aplicada a la base de Herni, con requisitos
       PDF-1 y PDF-2 en `docs/SPEC.md` y tests contra Postgres real
 - [x] [herni] `npm run db:types` después de la migración
-- [ ] [herni] Admin: sección "Menú en PDF" en Configuración (subir archivo, mismo
+- [x] [herni] Admin: sección "Menú en PDF" en Configuración (subir archivo, mismo
       patrón que `ImageUploader` pero para PDF)
 - [ ] [herni] `web/apps/pdf`: reescribir la resolución del negocio para que use
       `lib/hostname.js` (hoy tiene la suya, sin tests, con un caso especial roto

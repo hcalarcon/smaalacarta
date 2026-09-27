@@ -7,6 +7,7 @@ import { saveSettingsAction } from "../actions";
 import Field from "@/components/ui/Field";
 import FormAlert from "@/components/ui/FormAlert";
 import ImageUploader from "@/components/ui/ImageUploader";
+import PdfUploader from "@/components/ui/PdfUploader";
 import Section from "@/components/ui/Section";
 import {
   DAYS,
@@ -115,6 +116,7 @@ export default function SettingsForm({
   const [secondaryColor, setSecondaryColor] = useState(initial.secondaryColor);
   const [headerImageUrl, setHeaderImageUrl] = useState(initial.headerImageUrl);
   const [logoUrl, setLogoUrl] = useState(initial.logoUrl);
+  const [menuPdfUrl, setMenuPdfUrl] = useState(initial.menuPdfUrl);
   const [whatsapp, setWhatsapp] = useState(initial.whatsapp);
   const [address, setAddress] = useState(initial.address);
   const [instagram, setInstagram] = useState(initial.instagram);
@@ -168,6 +170,7 @@ export default function SettingsForm({
         secondaryColor,
         headerImageUrl,
         logoUrl,
+        menuPdfUrl,
         schedule: toSchedule(days, scheduleEnabled),
         whatsapp,
         address,
@@ -340,6 +343,21 @@ export default function SettingsForm({
             <p className="text-sm text-red-600">{fieldErrors.tagline}</p>
           ) : null}
         </div>
+      </Section>
+
+      <Section
+        title="Menú en PDF"
+        description="Para el plan QR + PDF: un archivo que se linkea aparte del menú digital, no hace falta publicar este último."
+      >
+        <PdfUploader
+          businessId={businessId}
+          label="Archivo del menú"
+          value={menuPdfUrl}
+          onChange={setMenuPdfUrl}
+        />
+        {fieldErrors.menuPdfUrl ? (
+          <p className="text-sm text-red-600">{fieldErrors.menuPdfUrl}</p>
+        ) : null}
       </Section>
 
       <Section

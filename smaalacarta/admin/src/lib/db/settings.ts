@@ -35,6 +35,7 @@ export async function getSettings(
     secondaryColor: data.secondary_color,
     headerImageUrl: data.header_image_url ?? "",
     logoUrl: data.logo_url ?? "",
+    menuPdfUrl: data.menu_pdf_url ?? "",
     schedule: (data.schedule ?? {}) as Schedule,
     whatsapp: whatsapp ?? "",
     address: data.address ?? "",
@@ -71,6 +72,7 @@ export async function saveSettings(
     // La base espera una fecha o nulo, no un texto vacío.
     p_reopens_on: (input.reopensOn || null) as string,
     p_logo_url: input.logoUrl,
+    p_menu_pdf_url: input.menuPdfUrl,
   });
 
   return error ? { error: { code: error.code, message: error.message } } : {};
