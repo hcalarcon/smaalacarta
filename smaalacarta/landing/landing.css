@@ -538,6 +538,7 @@ img {
 ============================== */
 
 .plan-card {
+  position: relative;
   max-width: 400px;
   background-color: var(--bg-card);
   border-radius: 1rem;
@@ -561,7 +562,6 @@ img {
 
 .plan-card.featured {
   border: 3px solid rgba(56, 139, 70, 0.25);
-  position: relative;
 }
 
 .plan-badge {

@@ -174,8 +174,17 @@ Requisitos LANDING-1 a 9 en `docs/SPEC.md`, cubiertos por `landing/landing.test.
 - [x] [herni] Textos al día (promociones, seguimiento del pedido, panel de administración) y dominio de los menús `smaalacarta.com.ar`
 - [x] [herni] Accesibilidad: menú del celular y modal de demos con teclado y lectores, enlace para saltar al contenido, foco visible, `prefers-reduced-motion`
 - [x] [herni] Indexación: `robots.txt`, `sitemap.xml`, datos estructurados y manifest corregido
+- [x] [herni] Bug: el badge "1er mes gratis" del plan "Menú Web" aparecía sobre el
+      hero y se corregía solo al pasar el mouse. `.plan-card.featured` tenía
+      `position: relative` (necesario para anclar el badge) pero el plan sin
+      `.featured` no; al no tener ancla, se posicionaba respecto a toda la página
+      (arriba del todo), y el `transform` del `:hover` lo anclaba momentáneamente
+      por accidente. Se movió `position: relative` a `.plan-card` en general
 - [ ] [herni] **Revisar los textos nuevos**: que el panel, las promociones y el seguimiento estén realmente incluidos en el plan Subdominio Completo antes de publicarlos
 - [ ] [por asignar] Reemplazar `favicon.svg` (lo siguen usando las demos de `web/`) y agregar las redes sociales cuando existan
+- [ ] [por asignar] El modal de demos: la sección "Menú Web" muestra el mismo demo
+      interactivo que "Subdominio Completo" (no hay todavía una demo real de solo
+      lectura; depende del ítem de `static-menu.js` sin respaldo JSON, en la Etapa 6e)
 
 ## Etapa 6d — Flujo del pedido, PWA y pulido de las pantallas
 
@@ -251,7 +260,27 @@ siempre (JS plano, lógica en `lib/*.js` con tests, funciones en `web/api/`).
       completaron: dirección, redes, imágenes livianas. Sin la copia aparte, cada
       mejora de `templates/carrito/*` se ve igual en la demo, en el menú interactivo
       y en el estático
-- [ ] [herni] Probar a mano los tres servicios juntos en un mismo negocio de prueba
+- [x] [herni] Probar a mano los tres servicios juntos: al probarlos en producción
+      salió un bug de verdad — `smaalacarta.com.ar` y `www.` son el proyecto de
+      `landing/`, no llegan a `web/` (confirmado con la landing: redirige a `www.`, y
+      ahí no hay rutas de `web/`). El PDF y el estático estaban armados para leer el
+      negocio del path en el dominio raíz (`/:cliente/pdf`), una ruta que **nunca
+      funcionó en producción**, ni antes de esta etapa. Arreglado: ahora el negocio
+      sale del subdominio (`<slug>.smaalacarta.com.ar/pdf` y `/menu.html`), igual que
+      ya funcionaba el interactivo y el seguimiento de pedidos; `vercel.json` con
+      rutas "bare" (`/pdf`, `/menu.html`, sin `:cliente`)
+- [ ] [herni] Probar de nuevo en producción con `kukarachos` (o el negocio de prueba
+      que uses) que `<slug>.smaalacarta.com.ar/pdf` y `/menu.html` respondan bien
+- [ ] [por asignar] El menú estático (`static-menu.js`) todavía no tiene respaldo en
+      JSON para las demos (a diferencia del interactivo y el PDF, que sí caen a
+      `data/demos/*`): por eso el modal de demos de la landing, en "Menú Web", sigue
+      mostrando el menú interactivo (con carrito) en vez de una vista de solo lectura.
+      Para agregarlo con cuidado: los JSON de cada demo tendrían que importarse
+      estáticos en `static-menu.js` (no `fs.readFileSync` con un path armado en
+      tiempo de ejecución, que el empaquetado de Vercel puede no incluir)
+- [ ] [por asignar] El admin no tiene ningún lugar que muestre el link (ni un QR)
+      del PDF o del menú estático para compartir — solo el interactivo lo tiene, en
+      Configuración → Compartir
 - [ ] [por asignar] Generar el PDF automáticamente desde el menú del admin (idea a futuro)
 - [ ] [por asignar] Diferenciar en el admin qué plan tiene cada negocio (hoy todo
       es un único flag `published`; la landing ya vende 3 planes distintos)
@@ -281,4 +310,10 @@ demos y negocios reales, en el menú interactivo y en el estático
 - [ ] [por asignar] Permisos por `role` en `businesses`: hoy cualquier miembro puede editar el negocio, incluido el `slug`
 - [ ] [por asignar] Políticas RLS para `anon` (lectura del menú público), junto con la Etapa 6
 - [ ] [por asignar] `getCurrentBusiness()` con varios negocios por usuario: hoy `.maybeSingle()` falla y redirige a `/login`
+- [ ] [por asignar] Entrar al panel por `smaalacarta.com.ar/admin` en vez de la URL
+      propia de Vercel del proyecto `admin/`. `admin` es SEO reservado (no un
+      negocio), pero hoy nada lo redirige ahí: haría falta un rewrite de `landing/`
+      (o del dominio) hacia el deploy de `admin/`, y el propio Next.js necesitaría
+      un `basePath: "/admin"` para que sus rutas, redirects y cookies coincidan. No
+      es un cambio chico: toca casi todo `admin/`, se evalúa aparte
 - [x] Flujo de alta de negocios y membresías desde el admin: resuelto en la Etapa 4 (superadmin)
