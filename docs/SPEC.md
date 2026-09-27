@@ -382,6 +382,9 @@ Cubierto por: `src/lib/menu/product-fields.test.ts` (ADMIN-MENU-1 y 2),
   productos de otro.
 - **ADMIN-MENU-6** Un producto puede tener una imagen; quitarla la deja en blanco, y
   editar el producto sin tocar la imagen la conserva.
+- **ADMIN-MENU-7** Un producto puede marcarse como destacado; un producto nuevo nace
+  sin destacar si no se indica. El menú público ya arma la categoría "Destacados"
+  con estos productos (PUBLICO-1 a 5); esto solo agrega cómo marcarlos desde el panel.
 
 ## ADMIN-CONFIG — Configuración del negocio
 

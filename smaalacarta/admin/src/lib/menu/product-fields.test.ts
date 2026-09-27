@@ -20,6 +20,7 @@ describe("toProductInsert — ADMIN-MENU-1", () => {
       price: 3500,
       active: false,
       image_url: null,
+      featured: false,
     });
   });
 
@@ -107,5 +108,29 @@ describe("imagen del producto — ADMIN-MENU-6", () => {
   it("quitarla (nula o vacía) la deja en blanco", () => {
     expect(toProductUpdate({ name: "A", price: 1, image_url: null }).image_url).toBeNull();
     expect(toProductUpdate({ name: "A", price: 1, image_url: "" }).image_url).toBeNull();
+  });
+});
+
+describe("destacado — ADMIN-MENU-7", () => {
+  it("un producto nuevo nace sin destacar si no se indica", () => {
+    expect(
+      toProductInsert("b1", { category_id: "c1", name: "A", price: 1 }).featured,
+    ).toBe(false);
+  });
+
+  it("un producto nuevo puede nacer destacado", () => {
+    expect(
+      toProductInsert("b1", { category_id: "c1", name: "A", price: 1, featured: true })
+        .featured,
+    ).toBe(true);
+  });
+
+  it("editar sin indicar 'featured' lo conserva", () => {
+    expect(toProductUpdate({ name: "A", price: 1 })).not.toHaveProperty("featured");
+  });
+
+  it("editar cambia 'featured' si se indica", () => {
+    expect(toProductUpdate({ name: "A", price: 1, featured: true }).featured).toBe(true);
+    expect(toProductUpdate({ name: "A", price: 1, featured: false }).featured).toBe(false);
   });
 });
