@@ -61,6 +61,19 @@ describe("renderStaticMenuPage — Etapa 6e", () => {
     expect(html).not.toContain("Vacía");
   });
 
+  it("la imagen de cabecera no rompe el atributo style (las comillas de url(\"…\") van escapadas)", () => {
+    const html = renderStaticMenuPage({
+      ...base,
+      config: { ...base.config, header: { imagen: "https://cdn.example.com/cabecera.jpg" } },
+    });
+
+    const headerLine = html.split("\n").find((line) => line.includes('class="header"'));
+    expect(headerLine).toContain("&quot;https://cdn.example.com/cabecera.jpg&quot;");
+    // Ni una comilla suelta a mitad del atributo: el style tiene que cerrar una
+    // sola vez, al final.
+    expect(headerLine.match(/style="/g)).toHaveLength(1);
+  });
+
   it("usa la plantilla y los colores del negocio", () => {
     const html = renderStaticMenuPage(base);
 

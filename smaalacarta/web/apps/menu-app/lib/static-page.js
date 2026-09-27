@@ -133,8 +133,12 @@ export function renderStaticMenuPage({ config, menu } = {}) {
   const secondary = safeColor(config?.colores?.secondary, "#d97706");
 
   const { html: aviso, abierto } = closedBanner(config);
+  // `cssUrl` devuelve `url("…")`, con comillas adentro: hay que escaparlas para
+  // que no corten el atributo `style="…"` a la mitad (rompía toda la cabecera).
   const headerImage = headerBackground(config, cssUrl);
-  const headerStyle = headerImage ? ` style="background-image: ${headerImage}"` : "";
+  const headerStyle = headerImage
+    ? ` style="background-image: ${escapeHtml(headerImage)}"`
+    : "";
   const logo = safeHttpUrl(config?.logo);
 
   return `<!doctype html>
