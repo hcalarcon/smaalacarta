@@ -1,8 +1,8 @@
 :root {
   --bg: #ffffff;
   --text: #111;
-  --muted: #161616;
-  --border: #eee;
+  --muted: #6b6b6b;
+  --border: #ececec;
 
   --primary: var(--color-primary, #111);
 }
@@ -13,12 +13,26 @@ body {
   color: var(--text);
 }
 
-/* HEADER */
+/* HEADER: blanco. Si el negocio subió una foto, queda de textura detrás de un velo
+   blanco: el texto oscuro siempre se lee, sea cual sea la foto. */
 .header {
-  background: #fff;
+  position: relative;
+  isolation: isolate;
+  background-color: #fff;
+  background-size: cover;
+  background-position: center;
   color: var(--text);
   padding: 15px;
   border-bottom: 1px solid var(--border);
+}
+
+.header::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .header h1 {
@@ -66,29 +80,38 @@ body {
   display: none;
 }
 
-/* CATEGORÍAS */
+/* CATEGORÍAS: solapas de texto, con una raya debajo en la activa (la posición fija está
+   en base.css) */
 .categorias {
-  display: flex;
-  gap: 15px;
-  overflow-x: auto;
-  padding: 10px 15px;
+  gap: 18px;
+  padding: 12px 15px 0;
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
 }
 
-.categorias button {
+.categorias button,
+.categorias a {
   background: none;
   border: none;
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   color: var(--muted);
-  padding-bottom: 4px;
+  padding: 0 0 10px;
   border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition:
+    color 0.15s ease,
+    border-color 0.15s ease;
 }
 
-.categorias button:hover {
+.categorias button:hover,
+.categorias a:hover {
   color: var(--text);
+  border-bottom-color: var(--border);
 }
 
-.categorias button.active {
+.categorias button.active,
+.categorias a.active {
   color: var(--text);
   border-bottom: 2px solid var(--primary);
 }
@@ -107,19 +130,6 @@ body {
   font-size: 1.1rem;
   font-weight: 600;
   margin-bottom: 10px;
-}
-
-/* DESTACADOS / OFERTAS */
-.categoria-destacados .categoria-titulo::after {
-  content: " • Destacados";
-  font-size: 0.7rem;
-  color: var(--muted);
-}
-
-.categoria-ofertas .categoria-titulo::after {
-  content: " • Ofertas";
-  font-size: 0.7rem;
-  color: var(--muted);
 }
 
 /* PRODUCTO */
@@ -145,17 +155,20 @@ body {
 }
 
 .producto-info h3 {
-  font-size: 0.95rem;
+  font-size: 1rem;
+  font-weight: 600;
   margin-bottom: 3px;
 }
 
 .producto-info p {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
+  line-height: 1.35;
   color: var(--muted);
 }
 
 /* PRECIO */
 .producto-precio {
+  margin-top: 3px;
   font-size: 0.95rem;
   font-weight: 600;
 }
@@ -176,19 +189,39 @@ body {
   right: 6px;
 
   font-size: 0.65rem;
-  color: var(--muted);
+  font-weight: 600;
+  color: var(--text);
 
-  background: #f5f5f5;
+  background: #fff;
+  border: 1px solid var(--border);
   padding: 2px 6px;
   border-radius: 4px;
 }
 
-/* BOTÓN AGREGAR */
+/* BOTÓN AGREGAR: un círculo con borde fino, cómodo para tocar */
 .producto button {
   align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid var(--border);
+  border-radius: 50%;
   background: none;
   color: var(--primary);
-  font-size: 1.2rem;
+  font-size: 1.25rem;
+  line-height: 1;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.producto button:hover {
+  border-color: var(--primary);
+  background: var(--primary);
+  color: #fff;
 }
 
 /* ANIMACIÓN */

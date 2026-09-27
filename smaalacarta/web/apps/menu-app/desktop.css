@@ -31,6 +31,11 @@
   padding: 14px 16px;
 }
 
+/* Las solapas de `minimal` llevan la raya de la activa pegada al borde de la barra */
+html[data-template="minimal"] .categorias {
+  padding-bottom: 0;
+}
+
 /* Grilla de productos: tarjetas de ancho parejo, sin estirarse cuando hay pocas. En
    `moderno`, "Destacados" tiene su propio diseño (tarjetas grandes con foto) y se respeta. */
 .categoria:not(.categoria-destacados) .categoria-grid,
