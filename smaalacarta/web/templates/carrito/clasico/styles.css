@@ -2,11 +2,14 @@
   --bg: #f7f3ee;
   --card: #ffffff;
   --text: #2c2c2c;
-  --muted: #777;
+  --muted: #6b6560;
   --border: #e5e0d9;
 
   --primary: var(--color-primary, #8b0000);
   --secondary: var(--color-secondary, #c0392b);
+
+  /* La letra de la carta de siempre: títulos y nombres de los platos con serif */
+  --serif: Georgia, "Times New Roman", serif;
 }
 
 /* BASE */
@@ -27,7 +30,9 @@ body {
 }
 
 .header h1 {
-  font-size: 1.6rem;
+  font-family: var(--serif);
+  font-size: 1.75rem;
+  letter-spacing: 0.01em;
   margin-top: 10px;
 }
 
@@ -55,22 +60,32 @@ body {
   border-bottom: 1px solid var(--border);
 }
 
-.categorias button {
+.categorias button,
+.categorias a {
   background: transparent;
   border: 1px solid var(--border);
-  padding: 6px 12px;
+  padding: 8px 14px;
   border-radius: 4px;
   font-size: 0.85rem;
   color: var(--text);
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
-.categorias button:hover {
+.categorias button:hover,
+.categorias a:hover,
+.categorias button.active,
+.categorias a.active {
   background: var(--primary);
+  border-color: var(--primary);
   color: #fff;
 }
 
 .categoria-titulo {
-  font-size: 1.2rem;
+  font-family: var(--serif);
+  font-size: 1.25rem;
   font-weight: 700;
   margin-bottom: 10px;
   color: var(--primary);
@@ -108,10 +123,15 @@ body {
   background: var(--primary);
   color: #fff;
 
-  width: 30px;
-  height: 30px;
+  width: 38px;
+  height: 38px;
 
-  border-radius: 4px;
+  border-radius: 6px;
+  transition: filter 0.15s ease;
+}
+
+.producto .btn-add:hover {
+  filter: brightness(1.15);
 }
 
 .producto.adding {
@@ -161,12 +181,13 @@ body {
   font-size: 0.8rem;
 }
 
+/* Sobre la foto oscura del encabezado: en blanco (el color de la marca casi no se leía) */
 .btn-volver {
   display: inline-flex;
   align-items: center;
   gap: 2px;
 
-  color: var(--primary);
+  color: rgba(255, 255, 255, 0.92);
 
   padding: 5px 5px;
   border-radius: 4px;
@@ -177,9 +198,9 @@ body {
   text-decoration: none;
 }
 
-/* hover simple */
 .btn-volver:hover {
   color: #fff;
+  text-decoration: underline;
 }
 
 .badge-estado {
@@ -270,12 +291,14 @@ body {
 }
 
 .producto-info h3 {
-  font-size: 1rem;
+  font-family: var(--serif);
+  font-size: 1.05rem;
   margin-bottom: 3px;
 }
 
 .producto-info p {
-  font-size: 0.8rem;
+  font-size: 0.85rem;
+  line-height: 1.35;
   color: var(--muted);
 }
 
@@ -293,15 +316,13 @@ body {
   text-decoration: line-through;
 }
 
-/* BOTÓN AGREGAR */
+/* BOTÓN AGREGAR (el tamaño lo da .btn-add, más arriba) */
 .producto button {
   align-self: center;
   background: var(--primary);
   color: #fff;
-  border-radius: 4px;
-  width: 32px;
-  height: 32px;
-  font-size: 1.1rem;
+  border-radius: 6px;
+  font-size: 1.2rem;
 }
 
 /* CARRITO */
