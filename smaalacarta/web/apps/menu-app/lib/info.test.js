@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 
-import { closedNotice, headerBackground, mapsUrl, reopenText, isDemoMenu, socialLinks } from "./info.js";
+import {
+  closedNotice,
+  headerBackground,
+  isDemoMenu,
+  mapsUrl,
+  reopenText,
+  socialIconPath,
+  socialLinks,
+} from "./info.js";
 
 describe("closedNotice — PUBLICO-9", () => {
   it("sin cierre no hay aviso", () => {
@@ -115,6 +123,17 @@ describe("headerBackground — PUBLICO-10", () => {
 
   it("con un solo color alcanza (el otro usa el de respaldo)", () => {
     expect(headerBackground({ colores: { primary: "#111" } }, cssUrl)).toMatch(/^linear-gradient/);
+  });
+});
+
+describe("socialIconPath", () => {
+  it.each(["instagram", "facebook"])("tiene un trazo para %s", (key) => {
+    expect(socialIconPath(key)).toMatch(/^M/);
+  });
+
+  it("una red desconocida no tiene trazo", () => {
+    expect(socialIconPath("x")).toBe("");
+    expect(socialIconPath(undefined)).toBe("");
   });
 });
 

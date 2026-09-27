@@ -118,13 +118,36 @@ describe("renderStaticMenuPage — Etapa 6e", () => {
     expect(conDireccion).toContain("google.com/maps");
   });
 
-  it("el WhatsApp solo aparece con un teléfono cargado", () => {
+  it("el WhatsApp solo aparece con un teléfono cargado, con el estilo de botón de marca", () => {
     const sinTelefono = renderStaticMenuPage({ ...base, config: { ...base.config, telefono: null } });
     expect(sinTelefono).not.toContain("Consultar por WhatsApp");
 
     const conTelefono = renderStaticMenuPage(base);
     expect(conTelefono).toContain("Consultar por WhatsApp");
     expect(conTelefono).toContain("phone=5493510000000");
+    expect(conTelefono).toContain('class="btn-cta"');
+  });
+
+  it("las redes se muestran con su ícono, no como texto suelto", () => {
+    const html = renderStaticMenuPage({
+      ...base,
+      config: { ...base.config, redes: { instagram: "https://www.instagram.com/ana" } },
+    });
+
+    expect(html).toContain('aria-label="Instagram"');
+    expect(html).toContain("<svg");
+    expect(html).not.toMatch(/>Instagram</);
+  });
+
+  it("el logo se muestra si el negocio lo cargó", () => {
+    const sinLogo = renderStaticMenuPage(base);
+    expect(sinLogo).not.toContain("<img");
+
+    const conLogo = renderStaticMenuPage({
+      ...base,
+      config: { ...base.config, logo: "https://cdn.example.com/logo.png" },
+    });
+    expect(conLogo).toContain("https://cdn.example.com/logo.png");
   });
 
   it("una imagen que no es http(s) no se muestra", () => {
