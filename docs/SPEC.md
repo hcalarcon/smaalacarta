@@ -215,11 +215,13 @@ en PDF" de Configuración (`app/dashboard/settings`) y `web/apps/pdf`. Cubierto 
 - **PDF-2** El PDF se sube a un bucket aparte (`business-pdfs`), con el mismo
   aislamiento por negocio que las imágenes: cada negocio escribe solo en su
   propia carpeta, y solo se aceptan PDF de hasta 10 MB.
-- **PDF-3** `/:cliente/pdf` muestra el PDF de Supabase si el negocio cargó uno; si
-  no, cae al PDF del JSON local (`data/clientes/<slug>/config.json` → `pdf.file`),
-  que sigue sirviendo al único cliente estático que hay hoy. Un `?cliente=<slug>`
-  en la dirección permite probar cualquiera de los dos casos en un servidor
-  estático, igual que en el menú interactivo.
+- **PDF-3** `<slug>.smaalacarta.com.ar/pdf` muestra el PDF de Supabase si el negocio
+  cargó uno; si no, cae al PDF del JSON local (`data/clientes/<slug>/config.json` →
+  `pdf.file`), que sigue sirviendo al único cliente estático que hay hoy. El negocio
+  sale del subdominio, igual que el menú interactivo: el dominio raíz
+  (`smaalacarta.com.ar`, `www.`) es el sitio de la landing y no llega a esta ruta. Un
+  `?cliente=<slug>` en la dirección permite probar cualquiera de los dos casos en un
+  servidor estático, igual que en el menú interactivo.
 - **PDF-4** Un subdominio `demo.*` (o `?demo=<slug>`) siempre muestra el mismo PDF
   de ejemplo, sin pedir nada a Supabase ni al JSON: es solo para mostrar cómo se ve
   el plan "QR + PDF", no depende de ningún negocio real.
@@ -229,11 +231,14 @@ en PDF" de Configuración (`app/dashboard/settings`) y `web/apps/pdf`. Cubierto 
 *Aplicado por `web/api/static-menu.js` y `web/apps/menu-app/lib/static-page.js`.
 Cubierto por `web/apps/menu-app/lib/static-page.test.js`, en JS puro.*
 
-- **ESTATICO-1** `/:cliente/menu.html` muestra el mismo menú que el interactivo
-  (`public_menu`, mismos colores, plantilla, horarios y cierre temporal) pero de
-  solo lectura: sin carrito, sin formulario de pedido, un link de WhatsApp fijo
-  en vez de un checkout. Comparte la bandera `published` con el interactivo.
-  Sin negocio, sin Supabase configurado o sin publicar, la ruta responde 404.
+- **ESTATICO-1** `<slug>.smaalacarta.com.ar/menu.html` (el negocio sale del
+  subdominio, no hay `:cliente` en el path: el dominio raíz es la landing y no
+  llega acá) muestra el mismo menú que el interactivo (`public_menu`, mismos
+  colores, plantilla, horarios y cierre temporal) pero de solo lectura: sin
+  carrito, sin formulario de pedido, un link de WhatsApp fijo en vez de un
+  checkout. Comparte la bandera `published` con el interactivo. Sin negocio, sin
+  Supabase configurado o sin publicar, la ruta responde 404. Todavía no tiene
+  respaldo en JSON: por ahora solo funciona con negocios reales, no con las demos.
 - **ESTATICO-2** El HTML se arma en el momento (`web/api/static-menu.js`, función
   serverless, sin build); el texto del negocio se escapa igual que en el menú
   interactivo (PUBLICO-9): un nombre o descripción con HTML no se ejecuta.

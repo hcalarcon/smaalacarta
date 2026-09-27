@@ -3,25 +3,31 @@
 // (`public_business_pdf`, no depende de si el negocio publicó su menú digital), el
 // JSON local de siempre como respaldo.
 
+import { resolveBusinessFromHost } from "../../menu-app/lib/hostname.js";
+
 const DEMO_PDF = "/data/demos/demomenu.pdf";
 
-// A quién pedirle el PDF. Igual que el menú (`resolveAppConfig` en
-// apps/menu-app/app.js): primero query (para probar en local, donde no hay
-// subdominios ni los rewrites de `vercel.json`), y si no, la ruta real
-// `/:cliente/pdf` (el negocio va en el path, no en el subdominio: el plan
-// "QR + PDF" no necesita uno propio) o el subdominio legado `demo.*`.
-export function resolvePdfTarget({ hostname, pathname, search } = {}) {
+// A quién pedirle el PDF. El negocio va en el SUBDOMINIO (`<slug>.smaalacarta.com.ar/pdf`),
+// igual que el menú interactivo y el seguimiento de pedidos: el dominio raíz
+// (`smaalacarta.com.ar` y `www.`) es el sitio de la landing, no llega acá, así que
+// una ruta con el negocio en el path (`/:cliente/pdf`) nunca funcionó en producción.
+// Primero query (para probar en local, donde no hay subdominios ni los rewrites de
+// `vercel.json`), después el subdominio, y por último el subdominio legado `demo.*`
+// (sin nombre de demo: siempre la misma).
+export function resolvePdfTarget({ hostname, search } = {}) {
   const params = new URLSearchParams(search ?? "");
 
   if (params.get("demo")) return { type: "demo", slug: params.get("demo") };
   if (params.get("cliente")) return { type: "cliente", slug: params.get("cliente") };
 
+  const fromHost = resolveBusinessFromHost(hostname);
+  if (fromHost) return fromHost;
+
   if (String(hostname ?? "").startsWith("demo.")) {
     return { type: "demo", slug: null };
   }
 
-  const [cliente] = String(pathname ?? "").split("/").filter(Boolean);
-  return cliente ? { type: "cliente", slug: cliente } : null;
+  return null;
 }
 
 // Pide `public_business_pdf(slug)` a Supabase, sin sesión. Devuelve null si no hay
