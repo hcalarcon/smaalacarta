@@ -14,6 +14,7 @@ import {
   socialIconPath,
   socialLinks,
 } from "./info.js";
+import { buildEnhancedMenu } from "./menu.js";
 import { isOpenNow, nextOpening, openingText } from "./schedule.js";
 
 const TEMPLATES = ["moderno", "clasico", "minimal"];
@@ -39,8 +40,10 @@ function socialIconSvg(key) {
 
 function productCard(item) {
   const image = safeHttpUrl(item?.imagen);
+  // Igual que el interactivo: la plantilla dibuja la etiqueta de la promo desde el atributo.
+  const promo = item?.promo ? ` data-promo="${escapeHtml(item.promo)}"` : "";
 
-  return `<article class="producto">
+  return `<article class="producto"${promo}>
     ${image ? `<img src="${escapeHtml(image)}" alt="">` : ""}
     <div class="producto-info">
       <h3>${escapeHtml(item?.nombre)}</h3>
@@ -127,7 +130,9 @@ function whatsappContact(config) {
 // El HTML completo del menú estático de un negocio, a partir de lo mismo que
 // devuelve `public_menu` (`{ config, menu }`).
 export function renderStaticMenuPage({ config, menu } = {}) {
-  const categorias = Array.isArray(menu?.categorias) ? menu.categorias : [];
+  // Las mismas secciones que el interactivo: Destacados y Ofertas antes de las categorías.
+  const enhanced = buildEnhancedMenu(menu);
+  const categorias = Array.isArray(enhanced?.categorias) ? enhanced.categorias : [];
   const template = TEMPLATES.includes(config?.template) ? config.template : "moderno";
   const primary = safeColor(config?.colores?.primary, "#5a4a3a");
   const secondary = safeColor(config?.colores?.secondary, "#d97706");
@@ -155,7 +160,9 @@ export function renderStaticMenuPage({ config, menu } = {}) {
 </head>
 <body>
 <header class="header"${headerStyle}>
-  <span class="badge-estado"><span class="dot" style="background:${abierto ? "#4ade80" : "#ef4444"}"></span>${abierto ? "Abierto" : "Cerrado"}</span>
+  <div class="header-top">
+    <span class="badge-estado"><span class="dot" style="background:${abierto ? "#4ade80" : "#ef4444"}"></span>${abierto ? "Abierto" : "Cerrado"}</span>
+  </div>
   ${logo ? `<img src="${escapeHtml(logo)}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #fff;margin-bottom:8px">` : ""}
   <h1>${escapeHtml(config?.nombre)}</h1>
   <p>${escapeHtml(config?.descripcion || "")}</p>

@@ -179,3 +179,68 @@ describe("renderStaticMenuPage — Etapa 6e", () => {
     expect(html).not.toContain("<img");
   });
 });
+
+// Que el estático se vea como el interactivo (ESTATICO-4): mismas secciones, mismo
+// encabezado, misma marca de promo.
+describe("renderStaticMenuPage — ESTATICO-4 (igual que el interactivo)", () => {
+  const conDestacadosYOfertas = {
+    ...base,
+    menu: {
+      categorias: [
+        {
+          nombre: "Comidas",
+          items: [
+            { nombre: "Torta", precio: 4000, destacado: true },
+            { nombre: "Pizza", precio: 5200, precioAnterior: 6500, promo: "20% OFF" },
+          ],
+        },
+      ],
+    },
+  };
+
+  it("arma las secciones Destacados y Ofertas antes de las categorías", () => {
+    const html = renderStaticMenuPage(conDestacadosYOfertas);
+
+    const titulos = [...html.matchAll(/<h2 class="categoria-titulo">([^<]+)<\/h2>/g)].map((m) => m[1]);
+    expect(titulos).toEqual(["Destacados", "Ofertas", "Comidas"]);
+    expect(html).toContain("categoria-destacados");
+    expect(html).toContain("categoria-ofertas");
+  });
+
+  it("marca la promo del producto para que la plantilla la muestre como etiqueta", () => {
+    const html = renderStaticMenuPage(conDestacadosYOfertas);
+
+    expect(html).toContain('data-promo="20% OFF"');
+  });
+
+  it("escapa la promo", () => {
+    const html = renderStaticMenuPage({
+      ...base,
+      menu: {
+        categorias: [
+          { nombre: "X", items: [{ nombre: "P", precio: 1, promo: '"><script>alert(1)</script>' }] },
+        ],
+      },
+    });
+
+    expect(html).not.toContain("<script>alert(1)</script>");
+  });
+
+  it("el estado va en el mismo contenedor del encabezado que en el interactivo", () => {
+    const html = renderStaticMenuPage(base);
+
+    expect(html).toMatch(/<div class="header-top">\s*<span class="badge-estado">/);
+  });
+
+  it("los enlaces de las categorías apuntan a secciones que existen", () => {
+    const html = renderStaticMenuPage(conDestacadosYOfertas);
+
+    const nav = html.match(/<nav class="categorias">.*?<\/nav>/s)[0];
+    const ids = [...nav.matchAll(/href="#([^"]+)"/g)].map((m) => m[1]);
+
+    expect(ids.length).toBe(3);
+    for (const id of ids) {
+      expect(html).toContain(`id="${id}"`);
+    }
+  });
+});
