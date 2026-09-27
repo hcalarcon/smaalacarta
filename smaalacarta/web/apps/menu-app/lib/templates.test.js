@@ -95,6 +95,17 @@ describe("plantillas — calidad pareja", () => {
     expect(base).toMatch(/prefers-reduced-motion:\s*reduce/);
   });
 
+  it.each(TEMPLATES)("%s: el texto sobre el color de la marca no es blanco fijo (PUBLICO-15)", (name) => {
+    const bloques = templateCss[name].match(/\{[^{}]*\}/g) ?? [];
+    const blancoSobreMarca = bloques.filter(
+      (b) =>
+        /background:\s*(var\(--primary\)|var\(--brand\)|linear-gradient\([^;]*(--brand-2|--color-secondary))/.test(b) &&
+        /(^|[\s;{])color:\s*#fff\s*;/.test(b),
+    );
+
+    expect(blancoSobreMarca).toEqual([]);
+  });
+
   it.each(TEMPLATES)("%s: no repite la palabra de la sección como etiqueta (Destacados • Destacados)", (name) => {
     expect(templateCss[name]).not.toMatch(/content:\s*"\s*•\s*(Destacados|Ofertas)"/);
   });

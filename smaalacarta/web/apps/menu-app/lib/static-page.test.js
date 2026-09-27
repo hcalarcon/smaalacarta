@@ -83,6 +83,16 @@ describe("renderStaticMenuPage — Etapa 6e", () => {
     expect(html).toContain("--color-secondary:#445566");
   });
 
+  it("con colores claros el texto sobre la marca es oscuro (PUBLICO-15)", () => {
+    const html = renderStaticMenuPage({
+      ...base,
+      config: { ...base.config, colores: { primary: "#ffe082", secondary: "#ffcc80" } },
+    });
+
+    expect(html).toContain("--on-brand:#111111");
+    expect(html).toContain("--on-header:#111111");
+  });
+
   it("una plantilla o color inválido cae al valor por defecto", () => {
     const html = renderStaticMenuPage({
       ...base,

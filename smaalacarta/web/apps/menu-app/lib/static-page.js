@@ -5,6 +5,7 @@
 // Todo texto del negocio se escapa (PUBLICO-9): nunca se interpola sin pasar por
 // `escapeHtml` o `safeHttpUrl`.
 
+import { brandVariables } from "./colors.js";
 import { cssUrl, escapeHtml, safeHttpUrl } from "./html.js";
 import {
   closedNotice,
@@ -136,6 +137,11 @@ export function renderStaticMenuPage({ config, menu } = {}) {
   const template = TEMPLATES.includes(config?.template) ? config.template : "moderno";
   const primary = safeColor(config?.colores?.primary, "#5a4a3a");
   const secondary = safeColor(config?.colores?.secondary, "#d97706");
+  // Los colores y el texto que se lee sobre ellos: solo salen hex y rgba() calculados.
+  const brandCss = Object.entries(brandVariables({ primary, secondary }))
+    .filter(([, value]) => value)
+    .map(([name, value]) => `${name}:${value}`)
+    .join(";");
 
   const { html: aviso, abierto } = closedBanner(config);
   // `cssUrl` devuelve `url("…")`, con comillas adentro: hay que escaparlas para
@@ -153,7 +159,7 @@ export function renderStaticMenuPage({ config, menu } = {}) {
 <title>${escapeHtml(config?.nombre || "Menú")}</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex">
-<style>:root{--color-primary:${primary};--color-secondary:${secondary}}</style>
+<style>:root{${brandCss}}</style>
 <link rel="stylesheet" href="/apps/menu-app/base.css">
 <link rel="stylesheet" href="/templates/carrito/${template}/styles.css">
 <link rel="stylesheet" href="/apps/menu-app/desktop.css" media="(min-width: 1024px)">

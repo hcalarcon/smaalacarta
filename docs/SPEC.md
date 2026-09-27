@@ -118,6 +118,11 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
 - **PUBLICO-14** En pantallas anchas (desde 1024 px) el menú se centra en una columna de hasta
   1120 px y los productos van en una grilla de tarjetas de ancho parejo, en las tres
   plantillas; en el celular no cambia nada. Solo se prueba mirándolo en el navegador.
+- **PUBLICO-15** Cada negocio elige sus colores, y algunos son claros. El menú (interactivo y
+  estático) calcula con qué texto se lee sobre ellos —blanco u oscuro, el que dé más
+  contraste— y un tono de la marca oscurecido para escribir sobre blanco (mínimo 4.5:1). Las
+  plantillas usan `--on-brand`, `--on-brand-mix` y `--on-header` en vez de blanco fijo. Un
+  valor que no sea un color hexadecimal válido no llega al estilo.
 
 ## BUSQUEDA — Buscador
 

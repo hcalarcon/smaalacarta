@@ -8,6 +8,7 @@ let ORDERS = null;
 let SCHEDULE = null;
 let PWA = null;
 let MENU = null;
+let COLORS = null;
 
 // De dónde vino el menú: si es de Supabase, el pedido también se guarda en el sistema.
 let MENU_SOURCE = null;
@@ -126,6 +127,7 @@ async function init() {
       schedule,
       pwa,
       menuLib,
+      colorsLib,
     ] = await Promise.all([
       import("/apps/menu-app/lib/hostname.js"),
       import("/apps/menu-app/lib/html.js"),
@@ -135,7 +137,9 @@ async function init() {
       import("/apps/menu-app/lib/schedule.js"),
       import("/apps/menu-app/lib/pwa.js"),
       import("/apps/menu-app/lib/menu.js"),
+      import("/apps/menu-app/lib/colors.js"),
     ]);
+    COLORS = colorsLib;
     SCHEDULE = schedule;
     PWA = pwa;
     MENU = menuLib;
@@ -193,14 +197,10 @@ async function init() {
     if (volver) volver.hidden = !demo;
 
     // 🎨 Colores dinámicos
-    if (config.colores) {
-      const root = document.documentElement;
-      if (config.colores.primary) {
-        root.style.setProperty("--color-primary", config.colores.primary);
-      }
-      if (config.colores.secondary) {
-        root.style.setProperty("--color-secondary", config.colores.secondary);
-      }
+    // (con el texto que se lee sobre ellos: un negocio puede elegir colores claros)
+    const brandVars = COLORS.brandVariables(config.colores);
+    for (const [name, value] of Object.entries(brandVars)) {
+      if (value) document.documentElement.style.setProperty(name, value);
     }
 
     // ⏳ Esperar que cargue el CSS del template

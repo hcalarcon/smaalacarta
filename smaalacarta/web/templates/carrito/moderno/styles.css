@@ -50,7 +50,8 @@ body {
   background-size: cover;
   background-position: center;
   background-blend-mode: overlay;
-  color: #fff;
+  color: var(--on-header, #fff);
+  text-shadow: var(--on-header-shadow, none);
   padding: 12px 14px 16px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
 }
@@ -136,7 +137,7 @@ body {
 .categorias button,
 .categorias a {
   background: var(--brand);
-  color: #fff;
+  color: var(--on-brand, #fff);
   padding: 8px 16px;
   border-radius: 999px;
   border: none;
@@ -267,7 +268,7 @@ body {
   margin-left: auto;
   border-radius: 999px;
   background: linear-gradient(135deg, var(--brand), var(--brand-2));
-  color: #fff;
+  color: var(--on-brand-mix, #fff);
   font-size: 1.3rem;
   font-weight: 600;
   line-height: 1;
@@ -497,7 +498,7 @@ body {
 
 .checkout button[type="submit"] {
   background: linear-gradient(135deg, var(--brand), var(--brand-2));
-  color: #fff;
+  color: var(--on-brand-mix, #fff);
   border: none;
   padding: 14px;
   border-radius: 8px;
@@ -529,7 +530,7 @@ body {
     var(--color-primary, #463ae5),
     var(--color-secondary, #9a6ce0)
   );
-  color: #fff;
+  color: var(--on-brand-mix, #fff);
   font-weight: 700;
   padding: 0.6rem 0.9rem;
   box-shadow: 0 10px 22px rgba(0, 0, 0, 0.2);
@@ -644,7 +645,7 @@ body {
 .btn-plus,
 .btn-remove {
   background: var(--primary);
-  color: #fff;
+  color: var(--on-brand, #fff);
   border: none;
   border-radius: 50%;
   width: 32px;
@@ -679,7 +680,7 @@ body {
 /* BOTÓN FINALIZAR MEJORADO */
 #btn-finalizar {
   background: linear-gradient(135deg, var(--brand), var(--brand-2));
-  color: #fff;
+  color: var(--on-brand-mix, #fff);
   border: none;
   padding: 12px;
   border-radius: 8px;
@@ -725,7 +726,7 @@ body {
     var(--color-primary, #463ae5),
     var(--color-secondary, #9a6ce0)
   );
-  color: #fff;
+  color: var(--on-brand-mix, #fff);
   padding: 14px 32px;
   border-radius: 8px;
   text-decoration: none;

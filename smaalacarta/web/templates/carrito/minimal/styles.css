@@ -221,7 +221,7 @@ body {
 .producto button:hover {
   border-color: var(--primary);
   background: var(--primary);
-  color: #fff;
+  color: var(--on-brand, #fff);
 }
 
 /* ANIMACIÓN */
@@ -336,7 +336,7 @@ body {
   width: 100%;
   padding: 10px;
   background: var(--primary);
-  color: #fff;
+  color: var(--on-brand, #fff);
   border-radius: 4px;
 }
 
@@ -403,7 +403,7 @@ body {
   padding: 10px;
 
   background: var(--primary);
-  color: #fff;
+  color: var(--on-brand, #fff);
 
   border-radius: 4px;
   font-weight: 600;
@@ -430,9 +430,8 @@ body {
 
 .btn-cta {
   background: var(--primary);
-  color: #fff;
+  color: var(--on-brand, #fff);
   display: inline-block;
-  color: #fff;
   padding: 14px 32px;
   border-radius: 8px;
   text-decoration: none;
@@ -448,7 +447,7 @@ body {
   bottom: 1rem;
 
   background: var(--primary);
-  color: #fff;
+  color: var(--on-brand, #fff);
 
   border-radius: 4px;
   padding: 10px 14px;
