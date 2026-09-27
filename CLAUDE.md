@@ -101,9 +101,11 @@ Todo el código vive bajo `smaalacarta/`, en tres proyectos sin build compartido
 
 ### web/
 
-- **Rutas (`web/vercel.json`)**: `/moderno`, `/clasico`, `/minimal` son demos HTML
-  fijas en `apps/menu-html/*`. `/:cliente/pdf` y `demo.*/pdf` van a `apps/pdf`.
-  Cualquier otra ruta sin extensión va a `apps/menu-app/index.html`.
+- **Rutas (`web/vercel.json`)**: `/:cliente/pdf` y `demo.*/pdf` van a `apps/pdf`.
+  Cualquier otra ruta sin extensión, incluidas `/moderno`, `/clasico` y `/minimal`,
+  va a `apps/menu-app/index.html`: esas tres son demos que usan las mismas plantillas
+  (`templates/carrito/*`) y los mismos datos (`data/demos/*`) que un negocio real, y
+  `lib/hostname.js` (`resolveDemoFromPath`) las reconoce por el primer segmento del path.
 - **`apps/menu-app/app.js`** es el menú dinámico con carrito. `resolveAppConfig()`
   elige el negocio: primero `?demo=<slug>` / `?cliente=<slug>` (para desarrollo
   local), después un mapa de hostnames escrito a mano (`DOMAINS`). Un cliente

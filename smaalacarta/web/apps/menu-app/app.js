@@ -29,7 +29,7 @@ async function fetchJSON(path) {
 }
 
 // Qué negocio abre esta URL (RUTAS-1 y 2).
-function resolveAppConfig(resolveHost) {
+function resolveAppConfig(resolveHost, resolveDemo) {
   const params = new URLSearchParams(window.location.search);
   const host = window.location.hostname;
 
@@ -70,7 +70,20 @@ function resolveAppConfig(resolveHost) {
 
   /*
   ========================================
-  3. FALLBACK (MVP)
+  3. DEMO POR PATH
+  ========================================
+  /moderno, /clasico y /minimal (también demo.smaalacarta.com.ar/moderno) abren la
+  demo que nombran, con las mismas plantillas que un negocio real.
+  */
+  const fromPath = resolveDemo ? resolveDemo(window.location.pathname) : null;
+
+  if (fromPath) {
+    return fromPath;
+  }
+
+  /*
+  ========================================
+  4. FALLBACK (MVP)
   ========================================
   */
   console.warn("Dominio no reconocido:", host, "→ fallback a demo moderno");
@@ -103,7 +116,7 @@ async function loadFromSupabase(slug) {
 // INIT
 async function init() {
   try {
-    const [{ resolveBusinessFromHost }, html, info, orders, supabaseConfig, schedule, pwa] =
+    const [{ resolveBusinessFromHost, resolveDemoFromPath }, html, info, orders, supabaseConfig, schedule, pwa] =
       await Promise.all([
         import("/apps/menu-app/lib/hostname.js"),
         import("/apps/menu-app/lib/html.js"),
@@ -120,7 +133,7 @@ async function init() {
     ORDERS = orders;
     SUPABASE_CFG = supabaseConfig.SUPABASE;
 
-    const result = resolveAppConfig(resolveBusinessFromHost);
+    const result = resolveAppConfig(resolveBusinessFromHost, resolveDemoFromPath);
     if (!result) {
       console.error("No se encontró slug en la URL");
       return;

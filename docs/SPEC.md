@@ -40,13 +40,18 @@ comportamiento que ya existe, una app por rama:
 
 *Aplicado por `web/vercel.json`, `web/apps/menu-app/app.js` y
 `web/apps/menu-app/lib/hostname.js`. Cubierto por: `lib/hostname.test.js`
-(RUTAS-1 y 2).*
+(RUTAS-1 a 3).*
 
 - **RUTAS-1** Un negocio se abre desde `<slug>.smaalacarta.com.ar` (o
   `.smaalacarta.online`) sin declararlo en el código: el subdominio es su slug. El
   parámetro `?cliente=<slug>` sigue sirviendo para desarrollo.
 - **RUTAS-2** Los subdominios reservados (`www`, `admin`, `app`, `api`, `demo`…) no
   son negocios; los de las demos (`moderno`, `clasico`, `minimal`) abren su demo.
+- **RUTAS-3** Las direcciones `/moderno`, `/clasico` y `/minimal` (también bajo
+  `demo.smaalacarta.com.ar`, donde el subdominio reservado no dice cuál) abren esa
+  demo con el mismo menú y las mismas plantillas que un negocio real: no hay páginas
+  aparte para las demos. Solo cuenta el primer segmento del path y solo las demos
+  conocidas; una demo pedida por `?demo=` o por subdominio tiene prioridad.
 
 ## HORARIO — Abierto o cerrado
 
