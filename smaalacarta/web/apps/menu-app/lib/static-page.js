@@ -6,7 +6,14 @@
 // `escapeHtml` o `safeHttpUrl`.
 
 import { cssUrl, escapeHtml, safeHttpUrl } from "./html.js";
-import { closedNotice, headerBackground, mapsUrl, reopenText, socialLinks } from "./info.js";
+import {
+  closedNotice,
+  headerBackground,
+  mapsUrl,
+  reopenText,
+  socialIconPath,
+  socialLinks,
+} from "./info.js";
 import { isOpenNow, nextOpening, openingText } from "./schedule.js";
 
 const TEMPLATES = ["moderno", "clasico", "minimal"];
@@ -21,6 +28,13 @@ function slugify(text) {
     .toLowerCase()
     .trim()
     .replace(/\s+/g, "-");
+}
+
+function socialIconSvg(key) {
+  const path = socialIconPath(key);
+  return path
+    ? `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="${path}"/></svg>`
+    : "";
 }
 
 function productCard(item) {
@@ -91,7 +105,7 @@ function footer(config) {
     const redes = links
       .map(
         (link) =>
-          `<a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(link.name)}">${escapeHtml(link.name)}</a>`,
+          `<a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" aria-label="${escapeHtml(link.name)}" title="${escapeHtml(link.name)}">${socialIconSvg(link.key)}</a>`,
       )
       .join("");
     parts.push(`<div class="pie-redes">${redes}</div>`);
@@ -100,12 +114,14 @@ function footer(config) {
   return parts.length > 0 ? `<footer class="pie-negocio">${parts.join("")}</footer>` : "";
 }
 
+// Reusa `.btn-cta` (ya con los colores de marca, en los tres templates) en vez
+// de inventar una clase propia sin estilo en este contexto.
 function whatsappContact(config) {
   const phone = String(config?.telefono ?? "").replace(/\D/g, "");
   if (!phone) return "";
 
   const message = `Hola, consulto por el menú de ${config?.nombre ?? ""}`;
-  return `<a class="contact" href="https://api.whatsapp.com/send?phone=${escapeHtml(phone)}&text=${encodeURIComponent(message)}" target="_blank" rel="noopener noreferrer">Consultar por WhatsApp</a>`;
+  return `<div style="text-align:center;padding:24px 20px"><a class="btn-cta" href="https://api.whatsapp.com/send?phone=${escapeHtml(phone)}&text=${encodeURIComponent(message)}" target="_blank" rel="noopener noreferrer">Consultar por WhatsApp</a></div>`;
 }
 
 // El HTML completo del menú estático de un negocio, a partir de lo mismo que
@@ -117,8 +133,13 @@ export function renderStaticMenuPage({ config, menu } = {}) {
   const secondary = safeColor(config?.colores?.secondary, "#d97706");
 
   const { html: aviso, abierto } = closedBanner(config);
+  // `cssUrl` devuelve `url("…")`, con comillas adentro: hay que escaparlas para
+  // que no corten el atributo `style="…"` a la mitad (rompía toda la cabecera).
   const headerImage = headerBackground(config, cssUrl);
-  const headerStyle = headerImage ? ` style="background-image: ${headerImage}"` : "";
+  const headerStyle = headerImage
+    ? ` style="background-image: ${escapeHtml(headerImage)}"`
+    : "";
+  const logo = safeHttpUrl(config?.logo);
 
   return `<!doctype html>
 <html lang="es" data-template="${template}">
@@ -135,6 +156,7 @@ export function renderStaticMenuPage({ config, menu } = {}) {
 <body>
 <header class="header"${headerStyle}>
   <span class="badge-estado"><span class="dot" style="background:${abierto ? "#4ade80" : "#ef4444"}"></span>${abierto ? "Abierto" : "Cerrado"}</span>
+  ${logo ? `<img src="${escapeHtml(logo)}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #fff;margin-bottom:8px">` : ""}
   <h1>${escapeHtml(config?.nombre)}</h1>
   <p>${escapeHtml(config?.descripcion || "")}</p>
 </header>

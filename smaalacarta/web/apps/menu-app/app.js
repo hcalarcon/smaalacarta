@@ -274,21 +274,14 @@ function renderHeader(c) {
   }
 }
 
-// Íconos de las redes (fijos, no vienen del negocio).
-const SOCIAL_ICONS = {
-  instagram:
-    "M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 2 16.25v-8.5A5.75 5.75 0 0 1 7.75 2zm0 1.5A4.25 4.25 0 0 0 3.5 7.75v8.5a4.25 4.25 0 0 0 4.25 4.25h8.5a4.25 4.25 0 0 0 4.25-4.25v-8.5a4.25 4.25 0 0 0-4.25-4.25zM12 7.25a4.75 4.75 0 1 1 0 9.5 4.75 4.75 0 0 1 0-9.5zm0 1.5a3.25 3.25 0 1 0 0 6.5 3.25 3.25 0 0 0 0-6.5zM17.25 5.75a1 1 0 1 1 0 2 1 1 0 0 1 0-2z",
-  facebook:
-    "M13.5 22v-8.2h2.8l.5-3.3h-3.3V8.4c0-.95.3-1.6 1.7-1.6h1.7V3.9c-.3 0-1.3-.1-2.5-.1-2.5 0-4.2 1.5-4.2 4.3v2.4H7.3v3.3h2.9V22z",
-};
-
+// El ícono de cada red: mismo trazo que usa el menú estático (lib/info.js).
 function socialIcon(key) {
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
   svg.setAttribute("viewBox", "0 0 24 24");
   svg.setAttribute("fill", "currentColor");
   svg.setAttribute("aria-hidden", "true");
   const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-  path.setAttribute("d", SOCIAL_ICONS[key] ?? "");
+  path.setAttribute("d", INFO.socialIconPath(key));
   svg.appendChild(path);
   return svg;
 }
