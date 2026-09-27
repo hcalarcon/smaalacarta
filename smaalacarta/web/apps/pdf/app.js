@@ -1,39 +1,31 @@
-const hostname = window.location.hostname;
-const pathParts = window.location.pathname.split("/").filter(Boolean);
+import { fetchBusinessPdf, resolvePdf, resolvePdfTarget } from "./lib/pdf.js";
+import { SUPABASE } from "/apps/menu-app/supabase-config.js";
 
-let cliente = null;
-
-// 👉 Caso 1: subdominio (demo.smaalacarta.com)
-if (hostname.startsWith("demo.")) {
-  cliente = "demo";
-}
-// 👉 Caso 2: path (/santa-julia/pdf)
-else {
-  cliente = pathParts[0];
+async function fetchJSON(path) {
+  try {
+    const res = await fetch(path);
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
 }
 
-// 👉 vista (pdf, menu, etc)
-const view = hostname.startsWith("demo.")
-  ? pathParts[0] // /pdf
-  : pathParts[1]; // /cliente/pdf
+async function init() {
+  const target = resolvePdfTarget(window.location);
 
-let pdfPath = "";
+  const result = await resolvePdf(target, {
+    fetchRemote: (slug) => fetchBusinessPdf({ ...SUPABASE, slug }),
+    fetchJSON,
+  });
 
-if (cliente === "demo") {
-  pdfPath = "/data/demos/demomenu.pdf";
-  document.title = "Menú Demo";
-  document.getElementById("pdfViewer").src = pdfPath;
-} else {
-  const basePath = `/data/clientes/${cliente}`;
+  if (!result) {
+    document.title = "Menú no encontrado";
+    document.body.innerHTML = "<h1>No encontramos este menú.</h1>";
+    return;
+  }
 
-  fetch(`${basePath}/config.json`)
-    .then((res) => res.json())
-    .then((config) => {
-      pdfPath = `${basePath}/${config.pdf.file}`;
-      document.title = `Menú - ${config.name}`;
-      document.getElementById("pdfViewer").src = pdfPath;
-    })
-    .catch(() => {
-      document.body.innerHTML = "<h1>Cliente no encontrado</h1>";
-    });
+  document.title = result.title;
+  document.getElementById("pdfViewer").src = result.url;
 }
+
+init();

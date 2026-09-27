@@ -223,13 +223,16 @@ siempre (JS plano, lógica en `lib/*.js` con tests, funciones en `web/api/`).
 - [x] [herni] `npm run db:types` después de la migración
 - [x] [herni] Admin: sección "Menú en PDF" en Configuración (subir archivo, mismo
       patrón que `ImageUploader` pero para PDF)
-- [ ] [herni] `web/apps/pdf`: reescribir la resolución del negocio para que use
-      `lib/hostname.js` (hoy tiene la suya, sin tests, con un caso especial roto
-      para `demo.*` que siempre muestra el mismo PDF fijo); sumar `?cliente=`/`?demo=`
-      para probarlo en local; probar primero `public_business_pdf(slug)` y, si no
-      hay o falla, caer al JSON local (`data/clientes/.../config.json` → `pdf.file`,
-      que sigue sirviendo al único cliente estático que hay hoy)
-- [ ] [herni] Separar la lógica de `apps/pdf` en un `lib/pdf.js` con tests (hoy no tiene ninguno)
+- [x] [herni] `web/apps/pdf` reescrito: la resolución del negocio pasó a
+      `lib/pdf.js`, con tests (antes no tenía ninguno). El negocio del PDF va en
+      el path (`/:cliente/pdf`, no en el subdominio: por eso no se reusó
+      `lib/hostname.js`, pensado para subdominios) y también acepta
+      `?cliente=`/`?demo=` para probarlo en un servidor estático. Primero prueba
+      `public_business_pdf(slug)` y, si no hay o falla, cae al JSON local
+      (`data/clientes/.../config.json` → `pdf.file`, que sigue sirviendo al único
+      cliente estático que hay hoy). El caso `demo.*` ya no depende de un slug: es
+      siempre el mismo PDF fijo, sin pedir nada a Supabase ni al JSON. Requisitos
+      PDF-3 y 4 en `docs/SPEC.md`
 - [ ] [herni] Nueva función `web/api/static-menu.js` (mismo patrón que `api/manifest.js`):
       pide `public_menu(slug)` y arma un HTML de solo lectura (colores, cabecera,
       categorías, productos, WhatsApp como link `wa.me`, sin carrito) reusando el

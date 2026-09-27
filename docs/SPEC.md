@@ -185,17 +185,27 @@ solo se prueban en una preview de Vercel.*
 
 ## PDF — Menú en PDF
 
-*Aplicado por `supabase/migrations/20260930000400_menu_pdf.sql`. Cubierto por
-`src/lib/db/settings.test.ts` (PDF-1) y `src/lib/db/storage-pdfs.test.ts` (PDF-2),
-contra Postgres real. Todavía falta: subirlo desde el admin y que `web/apps/pdf`
-lo use (ver Etapa 6e en `docs/PLAN.md`).*
+*Aplicado por `supabase/migrations/20260930000400_menu_pdf.sql`, la sección "Menú
+en PDF" de Configuración (`app/dashboard/settings`) y `web/apps/pdf`. Cubierto por
+`src/lib/db/settings.test.ts` (PDF-1), `src/lib/db/storage-pdfs.test.ts` (PDF-2) y
+`src/lib/settings/validation.test.ts` contra Postgres real y en JS puro; y
+`web/apps/pdf/lib/pdf.test.js` (PDF-3 y PDF-4).*
 
 - **PDF-1** Un negocio puede tener un PDF de menú (`menu_pdf_url`), independiente
   de si publicó o no el menú digital: `public_business_pdf(slug)` lo devuelve
-  exista o no `published`, y no devuelve nada si no cargó ninguno.
+  exista o no `published`, y no devuelve nada si no cargó ninguno. Se sube desde
+  Configuración, sin depender del interruptor "Menú público".
 - **PDF-2** El PDF se sube a un bucket aparte (`business-pdfs`), con el mismo
   aislamiento por negocio que las imágenes: cada negocio escribe solo en su
   propia carpeta, y solo se aceptan PDF de hasta 10 MB.
+- **PDF-3** `/:cliente/pdf` muestra el PDF de Supabase si el negocio cargó uno; si
+  no, cae al PDF del JSON local (`data/clientes/<slug>/config.json` → `pdf.file`),
+  que sigue sirviendo al único cliente estático que hay hoy. Un `?cliente=<slug>`
+  en la dirección permite probar cualquiera de los dos casos en un servidor
+  estático, igual que en el menú interactivo.
+- **PDF-4** Un subdominio `demo.*` (o `?demo=<slug>`) siempre muestra el mismo PDF
+  de ejemplo, sin pedir nada a Supabase ni al JSON: es solo para mostrar cómo se ve
+  el plan "QR + PDF", no depende de ningún negocio real.
 
 ---
 
