@@ -124,7 +124,7 @@ function whatsappContact(config) {
   if (!phone) return "";
 
   const message = `Hola, consulto por el menú de ${config?.nombre ?? ""}`;
-  return `<div style="text-align:center;padding:24px 20px"><a class="btn-cta" href="https://api.whatsapp.com/send?phone=${escapeHtml(phone)}&text=${encodeURIComponent(message)}" target="_blank" rel="noopener noreferrer">Consultar por WhatsApp</a></div>`;
+  return `<div class="contacto-estatico"><a class="btn-cta" href="https://api.whatsapp.com/send?phone=${escapeHtml(phone)}&text=${encodeURIComponent(message)}" target="_blank" rel="noopener noreferrer">Consultar por WhatsApp</a></div>`;
 }
 
 // El HTML completo del menú estático de un negocio, a partir de lo mismo que
@@ -158,12 +158,12 @@ export function renderStaticMenuPage({ config, menu } = {}) {
 <link rel="stylesheet" href="/templates/carrito/${template}/styles.css">
 <link rel="stylesheet" href="/apps/menu-app/desktop.css" media="(min-width: 1024px)">
 </head>
-<body>
+<body class="menu-estatico">
 <header class="header"${headerStyle}>
   <div class="header-top">
     <span class="badge-estado"><span class="dot" style="background:${abierto ? "#4ade80" : "#ef4444"}"></span>${abierto ? "Abierto" : "Cerrado"}</span>
   </div>
-  ${logo ? `<img src="${escapeHtml(logo)}" alt="" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #fff;margin-bottom:8px">` : ""}
+  ${logo ? `<img class="logo-negocio" src="${escapeHtml(logo)}" alt="">` : ""}
   <h1>${escapeHtml(config?.nombre)}</h1>
   <p>${escapeHtml(config?.descripcion || "")}</p>
 </header>
