@@ -107,8 +107,15 @@ Todo el código vive bajo `smaalacarta/`, en tres proyectos sin build compartido
 | Servicio | Dirección | Vive en |
 | --- | --- | --- |
 | Interactivo (carrito, pedidos, seguimiento) | `<slug>.smaalacarta.com.ar` | `apps/menu-app` |
-| Estático (solo lectura, sin carrito) | `smaalacarta.com.ar/<slug>/menu.html` | `api/static-menu.js` + `apps/menu-app/lib/static-page.js` |
-| PDF (un archivo que se linkea, p. ej. con un QR) | `smaalacarta.com.ar/<slug>/pdf` | `apps/pdf` |
+| Estático (solo lectura, sin carrito) | `<slug>.smaalacarta.com.ar/menu.html` | `api/static-menu.js` + `apps/menu-app/lib/static-page.js` |
+| PDF (un archivo que se linkea, p. ej. con un QR) | `<slug>.smaalacarta.com.ar/pdf` | `apps/pdf` |
+
+**El negocio siempre va en el subdominio, nunca en el path del dominio raíz**:
+`smaalacarta.com.ar` y `www.smaalacarta.com.ar` son el proyecto de `landing/`, no
+llegan a `web/` (confirmado en producción: redirige a `www.` y ahí no hay rutas de
+`web/`). Una ruta pensada como `smaalacarta.com.ar/<slug>/pdf` nunca funciona; por
+eso el PDF y el estático se resuelven igual que el interactivo y el seguimiento de
+pedidos, por subdominio.
 
 El interactivo y el estático comparten dato (`public_menu`), bandera `published`,
 plantillas y armado de secciones (`lib/menu.js`); el PDF es independiente de
@@ -116,11 +123,12 @@ plantillas y armado de secciones (`lib/menu.js`); el PDF es independiente de
 nunca un menú digital. El comodín `*.smaalacarta.com.ar` de Vercel ya está en vivo: un
 negocio nuevo funciona apenas existe y está publicado, sin tocar código.
 
-- **Rutas (`web/vercel.json`)**: `/:cliente/pdf` y `demo.*/pdf` → `apps/pdf`;
-  `/:cliente/menu.html` → `api/static-menu.js`; `/pedido/:code` → `apps/tracker`;
-  cualquier otra ruta sin extensión → `apps/menu-app/index.html`, incluidas `/moderno`,
-  `/clasico` y `/minimal`. Esas tres son demos que usan las mismas plantillas y el
-  mismo camino que un negocio real (ya no hay páginas HTML aparte).
+- **Rutas (`web/vercel.json`)**: `/pdf` → `apps/pdf`; `/menu.html` → `api/static-menu.js`;
+  `/pedido/:code` → `apps/tracker`; cualquier otra ruta sin extensión →
+  `apps/menu-app/index.html`, incluidas `/moderno`, `/clasico` y `/minimal`. Esas tres
+  son demos que usan las mismas plantillas y el mismo camino que un negocio real (ya no
+  hay páginas HTML aparte). Las tres rutas son "bare" (sin `:cliente` en el path): el
+  negocio sale del subdominio con el que se llegó, no del path.
 - **Qué negocio abre el menú interactivo** (`resolveAppConfig()` en `app.js`), en
   este orden: `?demo=<slug>` / `?cliente=<slug>` (para probar en local o en una
   preview, donde no hay subdominios); el subdominio (`lib/hostname.js`: `<slug>` es el
@@ -138,9 +146,10 @@ negocio nuevo funciona apenas existe y está publicado, sin tocar código.
   (`templates.test.js`) comprueba que toda clase que emite el menú estático tiene
   estilo. **El menú estático arma HTML como texto**: todo dato del negocio pasa por
   `escapeHtml`, y lo que va dentro de un atributo (`style="…"`) también.
-- **PDF** (`apps/pdf`): el negocio va en el path, no en el subdominio (el plan gratis
-  no tiene uno propio). `lib/pdf.js` prueba `public_business_pdf(slug)` y cae al JSON
-  local; `demo.*` muestra siempre el mismo PDF de ejemplo.
+- **PDF** (`apps/pdf`): `lib/pdf.js` prueba `public_business_pdf(slug)` y cae al JSON
+  local; el subdominio `demo.*` (sin nombre de demo) muestra siempre el mismo PDF de
+  ejemplo. El estático (`static-menu.js`) todavía no tiene ese respaldo para las
+  demos: solo funciona con negocios reales, en Supabase.
 - **Funciones en `web/api/`** (Vercel, sin build): `manifest.js` (PWA por negocio) y
   `static-menu.js`. No se prueban con un servidor estático: hace falta una preview de
   Vercel. La lógica va en `lib/*.js` con tests; el handler es solo el conector.

@@ -9,33 +9,41 @@ function fakeFetch(body, { ok = true, status = 200 } = {}) {
 describe("resolvePdfTarget — PDF-1", () => {
   it("prioriza ?demo= sobre todo lo demás", () => {
     expect(
-      resolvePdfTarget({ hostname: "smaalacarta.com.ar", pathname: "/ana/pdf", search: "?demo=moderno&cliente=ana" }),
+      resolvePdfTarget({ hostname: "ana.smaalacarta.com.ar", search: "?demo=moderno&cliente=ana" }),
     ).toEqual({ type: "demo", slug: "moderno" });
   });
 
   it("usa ?cliente= si no hay ?demo=", () => {
-    expect(resolvePdfTarget({ pathname: "/", search: "?cliente=ana" })).toEqual({
+    expect(resolvePdfTarget({ search: "?cliente=ana" })).toEqual({
       type: "cliente",
       slug: "ana",
     });
   });
 
   it("un subdominio demo.* sin query es la demo fija, sin slug", () => {
-    expect(resolvePdfTarget({ hostname: "demo.smaalacarta.com.ar", pathname: "/pdf" })).toEqual({
+    expect(resolvePdfTarget({ hostname: "demo.smaalacarta.com.ar" })).toEqual({
       type: "demo",
       slug: null,
     });
   });
 
-  it("toma el negocio del primer segmento del path (la ruta real /:cliente/pdf)", () => {
-    expect(resolvePdfTarget({ hostname: "smaalacarta.com.ar", pathname: "/santa-julia-resto/pdf" })).toEqual({
+  it("toma el negocio del subdominio (igual que el interactivo): el dominio raíz es la landing", () => {
+    expect(resolvePdfTarget({ hostname: "santa-julia-resto.smaalacarta.com.ar" })).toEqual({
       type: "cliente",
       slug: "santa-julia-resto",
     });
   });
 
+  it("un subdominio de demo conocido (moderno, clasico, minimal) también es una demo", () => {
+    expect(resolvePdfTarget({ hostname: "moderno.smaalacarta.com.ar" })).toEqual({
+      type: "demo",
+      slug: "moderno",
+    });
+  });
+
   it("sin negocio en ningún lado, no hay nada que resolver", () => {
-    expect(resolvePdfTarget({ hostname: "smaalacarta.com.ar", pathname: "/" })).toBeNull();
+    expect(resolvePdfTarget({ hostname: "smaalacarta.com.ar" })).toBeNull();
+    expect(resolvePdfTarget({ hostname: "www.smaalacarta.com.ar" })).toBeNull();
     expect(resolvePdfTarget()).toBeNull();
   });
 });

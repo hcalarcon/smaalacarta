@@ -1,19 +1,13 @@
 {
   "rewrites": [
     {
-      "source": "/:cliente/pdf",
-      "destination": "/apps/pdf/index.html"
-    },
-
-    {
       "source": "/pdf",
-      "has": [{ "type": "host", "value": "demo.*" }],
       "destination": "/apps/pdf/index.html"
     },
 
     {
-      "source": "/:cliente/menu.html",
-      "destination": "/api/static-menu?slug=:cliente"
+      "source": "/menu.html",
+      "destination": "/api/static-menu"
     },
 
     {
