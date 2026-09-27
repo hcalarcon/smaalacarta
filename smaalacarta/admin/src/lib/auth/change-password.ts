@@ -3,8 +3,8 @@ import { validateNewPassword } from "./validation";
 
 // Lo que hace falta del exterior, inyectado para probar las reglas sin Supabase.
 export type ChangePasswordDeps = {
-  // ¿Iniciar sesión con esta contraseña funcionaría hoy? Sirve para detectar que
-  // la "nueva" contraseña es, en realidad, la temporal.
+  // ¿Iniciar sesión con esta contraseña funcionaría hoy? Verifica la actual
+  // antes de cambiarla (ADMIN-AUTH-10).
   matchesCurrentPassword(email: string, password: string): Promise<boolean>;
   // Cambio común, con la sesión del usuario.
   updateOwnPassword(password: string): Promise<{ error?: { code?: string } }>;
@@ -21,7 +21,9 @@ export type ChangePasswordResult =
   | {
       ok: false;
       error?: string;
-      fieldErrors?: Partial<Record<"password" | "confirm", string>>;
+      fieldErrors?: Partial<
+        Record<"currentPassword" | "password" | "confirm", string>
+      >;
     };
 
 export async function changePassword(
@@ -30,6 +32,7 @@ export async function changePassword(
     userId: string;
     email: string;
     isTemporary: boolean;
+    currentPassword: string;
     password: string;
     confirm: string;
   },
@@ -39,22 +42,35 @@ export async function changePassword(
     return { ok: false, fieldErrors: validation.errors };
   }
 
+  const verified = await deps.matchesCurrentPassword(
+    input.email,
+    input.currentPassword,
+  );
+  if (!verified) {
+    return {
+      ok: false,
+      fieldErrors: {
+        currentPassword: "La contraseña actual no es correcta.",
+      },
+    };
+  }
+
+  if (input.password === input.currentPassword) {
+    return {
+      ok: false,
+      fieldErrors: {
+        password: input.isTemporary
+          ? "Elegí una contraseña distinta de la temporal."
+          : "Elegí una contraseña distinta de la actual.",
+      },
+    };
+  }
+
   if (!input.isTemporary) {
     const result = await deps.updateOwnPassword(input.password);
     return result.error
       ? { ok: false, error: authErrorMessage(result.error) }
       : { ok: true };
-  }
-
-  // Con la temporal, la contraseña propia tiene que ser otra: la temporal la
-  // conoce quien creó la cuenta.
-  if (await deps.matchesCurrentPassword(input.email, input.password)) {
-    return {
-      ok: false,
-      fieldErrors: {
-        password: "Elegí una contraseña distinta de la temporal.",
-      },
-    };
   }
 
   const result = await deps.updateTemporaryPassword(input.userId, input.password);

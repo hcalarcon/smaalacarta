@@ -361,3 +361,13 @@ describe("permisos — PUBLICO-5", () => {
     expect(r.ok && r.rows[0].menu).toBeNull();
   });
 });
+
+describe("logo — PUBLICO-13", () => {
+  it("llega en config.logo solo si el negocio lo cargó", async () => {
+    await db.exec(`update business_settings set logo_url = null where business_id = '${NEG_BETO}'`);
+    expect((await publicMenu("beto"))!.config).not.toHaveProperty("logo");
+
+    await db.exec(`update business_settings set logo_url = 'https://cdn.example.com/beto.png' where business_id = '${NEG_BETO}'`);
+    expect(((await publicMenu("beto"))!.config as Record<string, unknown>).logo).toBe("https://cdn.example.com/beto.png");
+  });
+});

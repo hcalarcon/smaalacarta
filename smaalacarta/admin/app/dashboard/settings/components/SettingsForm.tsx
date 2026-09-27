@@ -7,6 +7,8 @@ import { saveSettingsAction } from "../actions";
 import Field from "@/components/ui/Field";
 import FormAlert from "@/components/ui/FormAlert";
 import ImageUploader from "@/components/ui/ImageUploader";
+import PdfUploader from "@/components/ui/PdfUploader";
+import Section from "@/components/ui/Section";
 import {
   DAYS,
   parseRange,
@@ -63,26 +65,6 @@ function toSchedule(state: ScheduleState, enabled: boolean): Schedule {
 const inputClass =
   "rounded-xl border border-line-strong bg-white px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30";
 
-function Section({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="rounded-3xl border border-line bg-white p-6 shadow-sm">
-      <h2 className="text-xl font-semibold text-brand">{title}</h2>
-      {description ? (
-        <p className="mt-1 text-sm text-stone-500">{description}</p>
-      ) : null}
-      <div className="mt-5 space-y-5">{children}</div>
-    </section>
-  );
-}
-
 function ColorField({
   label,
   value,
@@ -120,11 +102,9 @@ function ColorField({
 
 export default function SettingsForm({
   businessId,
-  slug,
   initial,
 }: {
   businessId: string;
-  slug: string;
   initial: SettingsInput;
 }) {
   const router = useRouter();
@@ -135,6 +115,8 @@ export default function SettingsForm({
   const [primaryColor, setPrimaryColor] = useState(initial.primaryColor);
   const [secondaryColor, setSecondaryColor] = useState(initial.secondaryColor);
   const [headerImageUrl, setHeaderImageUrl] = useState(initial.headerImageUrl);
+  const [logoUrl, setLogoUrl] = useState(initial.logoUrl);
+  const [menuPdfUrl, setMenuPdfUrl] = useState(initial.menuPdfUrl);
   const [whatsapp, setWhatsapp] = useState(initial.whatsapp);
   const [address, setAddress] = useState(initial.address);
   const [instagram, setInstagram] = useState(initial.instagram);
@@ -187,6 +169,8 @@ export default function SettingsForm({
         primaryColor,
         secondaryColor,
         headerImageUrl,
+        logoUrl,
+        menuPdfUrl,
         schedule: toSchedule(days, scheduleEnabled),
         whatsapp,
         address,
@@ -227,12 +211,7 @@ export default function SettingsForm({
             onChange={(event) => setPublished(event.target.checked)}
             className="mt-1 h-5 w-5"
           />
-          <span>
-            <span className="block font-medium text-stone-900">Menú público</span>
-            <span className="block text-sm text-stone-500">
-              Tu identificador es <code className="rounded bg-cream px-1.5">{slug}</code>.
-            </span>
-          </span>
+          <span className="block font-medium text-stone-900">Menú público</span>
         </label>
       </Section>
 
@@ -300,6 +279,17 @@ export default function SettingsForm({
           autoCapitalize="none"
         />
 
+        <ImageUploader
+          businessId={businessId}
+          label="Logo (opcional)"
+          value={logoUrl}
+          onChange={setLogoUrl}
+        />
+        <p className="-mt-3 text-sm text-stone-500">
+          Cuadrado, de al menos 512 × 512 px. Es el ícono cuando tus clientes instalan
+          el menú en el celular; sin logo se usa el de SMA a la Carta.
+        </p>
+
         {/* Vista previa de la cabecera: colores de marca y, si carga, la imagen. */}
         <div
           className="relative h-32 overflow-hidden rounded-2xl"
@@ -353,6 +343,21 @@ export default function SettingsForm({
             <p className="text-sm text-red-600">{fieldErrors.tagline}</p>
           ) : null}
         </div>
+      </Section>
+
+      <Section
+        title="Menú en PDF"
+        description="Para el plan QR + PDF: un archivo que se linkea aparte del menú digital, no hace falta publicar este último."
+      >
+        <PdfUploader
+          businessId={businessId}
+          label="Archivo del menú"
+          value={menuPdfUrl}
+          onChange={setMenuPdfUrl}
+        />
+        {fieldErrors.menuPdfUrl ? (
+          <p className="text-sm text-red-600">{fieldErrors.menuPdfUrl}</p>
+        ) : null}
       </Section>
 
       <Section

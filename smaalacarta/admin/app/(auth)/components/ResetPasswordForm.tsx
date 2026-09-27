@@ -20,6 +20,15 @@ export default function ResetPasswordForm() {
       {state.error ? <FormAlert tone="error">{state.error}</FormAlert> : null}
 
       <Field
+        label="Contraseña actual"
+        name="currentPassword"
+        type="password"
+        autoComplete="current-password"
+        error={state.fieldErrors?.currentPassword}
+        required
+      />
+
+      <Field
         label="Contraseña nueva"
         name="password"
         type="password"

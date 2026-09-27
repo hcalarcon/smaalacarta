@@ -48,9 +48,15 @@ function CategoryDialogForm({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl">
-        <div className="mb-6">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      onClick={onClose}
+    >
+      <div
+        onClick={(event) => event.stopPropagation()}
+        className="w-full max-w-md rounded-3xl bg-white p-5 shadow-2xl"
+      >
+        <div className="mb-4">
           <h2 className="text-2xl font-bold text-brand">
             {mode === "create" ? "Nueva categoría" : "Editar categoría"}
           </h2>

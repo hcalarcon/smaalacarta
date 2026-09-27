@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { navBadgeLabel } from "@/lib/layout/nav-badge";
+
 import type { NavLink } from "./nav-links";
 
 // La raíz de cada sección (/dashboard, /superadmin) solo es activa en su propia
@@ -53,6 +55,16 @@ export default function DashboardNav({
               <path d={link.icon} />
             </svg>
             {link.label}
+            {navBadgeLabel(link.badge) ? (
+              <span
+                className={`ml-auto rounded-full px-2 py-0.5 text-xs font-bold ${
+                  active ? "bg-white text-brand" : "bg-accent text-white"
+                }`}
+                aria-label={`${link.badge} pendientes`}
+              >
+                {navBadgeLabel(link.badge)}
+              </span>
+            ) : null}
           </Link>
         );
       })}

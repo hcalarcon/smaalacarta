@@ -17,6 +17,7 @@ export type OrderActionResult =
 export async function setOrderStatusAction(
   orderId: string,
   status: string,
+  note?: string,
 ): Promise<OrderActionResult> {
   await requireBusiness();
 
@@ -24,7 +25,7 @@ export async function setOrderStatusAction(
     return { ok: false, error: "Estado desconocido." };
   }
 
-  const result = await setOrderStatus(orderId, status);
+  const result = await setOrderStatus(orderId, status, note);
   if ("error" in result) {
     return { ok: false, error: orderErrorMessage(result.error) };
   }

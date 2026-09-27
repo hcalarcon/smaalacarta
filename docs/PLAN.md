@@ -3,7 +3,7 @@
 > Plan compartido de Herni y Fede para llegar a una primera versión que funcione.
 > Al empezar una sesión: _"Leé docs/PLAN.md y seguimos desde la primera tarea sin tildar de mi nombre."_
 
-Última actualización: 25/09/2026
+Última actualización: 26/09/2026
 
 **Dueños.** Cada tarea lleva `[herni]`, `[fede]` o `[por asignar]`. Antes de tomar
 una `[por asignar]`, cambiá la etiqueta por tu nombre y pusheala a tu rama. No
@@ -27,6 +27,15 @@ tomes una tarea de otro (ver [`CLAUDE.md`](../CLAUDE.md)).
 3. **Variable de entorno**: `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` reemplaza a `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 4. **Ramas**: `main` + `dev-herni` + `dev-fede`, sin rama `development` intermedia. Se agrega una integración solo si el equipo crece.
 5. **CLAUDE.md** unificado: contrato de trabajo de los dos Claude más la arquitectura.
+6. **Un negocio puede tener varios servicios a la vez, independientes entre sí**
+   (Etapa 6e): menú interactivo (`<slug>.smaalacarta.com.ar`, con carrito y
+   pedidos), menú estático (`smaalacarta.com.ar/<slug>/menu.html`, sin carrito,
+   mismo dato que el interactivo) y menú en PDF (QR a un archivo en un bucket
+   aparte). El interactivo y el estático comparten la bandera `published`; el
+   PDF es independiente porque un negocio del plan gratis puede no publicar
+   nunca un menú digital. Nada de esto vive detrás de un framework nuevo: se
+   arma con el mismo patrón sin build que ya tiene `web/` (funciones en
+   `web/api/*.js`, como `manifest.js`).
 
 ---
 
@@ -122,7 +131,7 @@ Hecho en el código (migración `20260927000000_configuracion_y_menu_publico.sql
 - [x] [herni] **Imágenes por bucket** de Supabase Storage (`business-images`, 2 MB, JPG/PNG/WebP, cada negocio en su carpeta): cabecera del menú e imagen de cada producto
 - [x] [herni] **Subdominio = slug** en el código (`web/apps/menu-app/lib/hostname.js`): `<slug>.smaalacarta.com.ar` abre el negocio sin declararlo en `app.js`; los slugs reservados (`www`, `admin`, `app`, `api`, `demo`, `moderno`…) no se pueden usar
 - [x] [herni] Se escapan todos los textos del negocio antes de mostrarlos en el menú público (`lib/html.js`): un nombre con HTML ya no puede ejecutar código en el navegador de los clientes
-- [ ] [herni] **Comodín de Vercel** (`*.smaalacarta.com.ar`) con el DNS en **Cloudflare**. Vercel solo emite el certificado de un comodín si puede resolver el desafío `_acme-challenge`; como los nameservers se quedan en Cloudflare, ese subdominio se delega a Vercel (guía oficial: "Use wildcard domains with an external DNS provider", en la documentación de Vercel → Add a domain). En orden:
+- [x] [herni] **Comodín de Vercel** (`*.smaalacarta.com.ar`) con el DNS en **Cloudflare**. Confirmado en vivo (26/09/2026): `pruebacualquiera.smaalacarta.com.ar` resuelve y responde `200` con certificado válido. Quedan los pasos de referencia por si hace falta repetirlos (por ejemplo, para `smaalacarta.online`):
   1. En el proyecto de los menús → **Settings → Domains**, agregar `*.smaalacarta.com.ar`.
   2. En Vercel → **Domains** (a nivel del equipo) → `smaalacarta.com.ar` → **DNS Records** → **Enable Vercel DNS**. **No** cambiar los nameservers en el registro del dominio: siguen en Cloudflare.
   3. En **Cloudflare → DNS**, agregar dos registros `NS` con nombre `_acme-challenge` y valores `ns1.vercel-dns.com` y `ns2.vercel-dns.com`. Solo delegan la validación del certificado y **tienen que quedarse** para que se renueve.
@@ -167,6 +176,77 @@ Requisitos LANDING-1 a 9 en `docs/SPEC.md`, cubiertos por `landing/landing.test.
 - [x] [herni] Indexación: `robots.txt`, `sitemap.xml`, datos estructurados y manifest corregido
 - [ ] [herni] **Revisar los textos nuevos**: que el panel, las promociones y el seguimiento estén realmente incluidos en el plan Subdominio Completo antes de publicarlos
 - [ ] [por asignar] Reemplazar `favicon.svg` (lo siguen usando las demos de `web/`) y agregar las redes sociales cuando existan
+
+## Etapa 6d — Flujo del pedido, PWA y pulido de las pantallas
+
+Requisitos en `docs/SPEC.md` (PUBLICO-10 a 14, SEGUIMIENTO-9 a 11, PWA-1 a 3, ADMIN-CONFIG-8, ADMIN-RESUMEN-1 a 3). Migraciones `20260930000000` a `20260930000200`, ya aplicadas a la base de Herni.
+
+- [x] [herni] Cierre por horario: el menú avisa "Cerrado ahora · Abrimos hoy a las 20:00", no deja enviar y el servidor también lo rechaza (hora de Argentina; antes usaba la hora del celular)
+- [x] [herni] Confirmación del pedido: enviar por WhatsApp y seguirlo en cualquier orden; el seguimiento ofrece enviar si todavía no se envió
+- [x] [herni] Seguimiento del pedido con los colores, la imagen y la plantilla del negocio
+- [x] [herni] PWA por negocio: manifest con su nombre, color y logo (o el ícono general), y logo opcional en Configuración
+- [x] [herni] Menú público en escritorio: columna centrada y grilla de productos
+- [x] [herni] Admin: resumen con el link público y aviso de pedidos nuevos, contador en el menú lateral, "pedidos de hoy" con la hora de Argentina, y arreglos en el celular (desborde de productos y error de hidratación al arrastrar)
+- [ ] [herni] **Probar en una preview de Vercel**: `/api/manifest?slug=<slug>` (función nueva, no se puede probar con un servidor estático), instalar el menú desde el celular y ver el ícono
+- [ ] [por asignar] Botón "Instalar app" dentro del menú (hoy depende de que el navegador lo ofrezca; en iPhone es "Compartir → Agregar a inicio")
+- [ ] [por asignar] Horarios de retiro programado cuando el negocio está cerrado (hoy, cerrado = no se toman pedidos)
+
+## Etapa 6e — Tres servicios por negocio: interactivo, estático y PDF
+
+**Diseño.** Un mismo negocio puede tener, a la vez y sin pisarse:
+
+- **Menú interactivo** (ya existe): `<slug>.smaalacarta.com.ar`, con carrito, pedidos
+  y seguimiento. El comodín de Vercel que necesita ya está confirmado en vivo (Etapa 6).
+- **Menú estático** (nuevo, plan "Menú Web"): `smaalacarta.com.ar/<slug>/menu.html`,
+  sin carrito ni pedidos, con el mismo dato que el interactivo (`public_menu(slug)`)
+  pero armado como HTML de solo lectura por una función serverless (`web/api/*.js`,
+  mismo patrón que `api/manifest.js`), sin agregarle build a `web/`. Comparte la
+  bandera `published` con el interactivo: publicar o despublicar afecta a los dos.
+- **Menú en PDF** (nuevo, plan gratis "QR + PDF"): el negocio manda el PDF que ya
+  tiene (por ahora Herni lo sube a mano, nada de generarlo automático todavía); se
+  guarda en un bucket aparte (`business-pdfs`, calcado del RLS de `business-images`
+  pero con `application/pdf` y un límite más grande) y un QR lo enlaza. Es
+  **independiente de `published`**: un negocio del plan gratis puede no publicar
+  nunca un menú digital y aun así tener su PDF andando.
+
+Nada de esto necesita un framework nuevo ni build: se arma con el mismo patrón de
+siempre (JS plano, lógica en `lib/*.js` con tests, funciones en `web/api/`).
+
+- [x] [herni] Documentar la decisión de los tres servicios independientes (decisión 6, más arriba)
+- [x] [herni] Migración: columna `menu_pdf_url` en `business_settings` (nullable);
+      bucket `business-pdfs` (`application/pdf`, ~10 MB, mismo RLS por `business_id`
+      que `business-images`); un parámetro más en `save_business_settings`; RPC
+      nueva `public_business_pdf(slug)` que no exige `published` (no tocar
+      `public_menu`: la usa el interactivo y ya tiene tests). Migración
+      `20260930000400_menu_pdf.sql`, aplicada a la base de Herni, con requisitos
+      PDF-1 y PDF-2 en `docs/SPEC.md` y tests contra Postgres real
+- [x] [herni] `npm run db:types` después de la migración
+- [x] [herni] Admin: sección "Menú en PDF" en Configuración (subir archivo, mismo
+      patrón que `ImageUploader` pero para PDF)
+- [x] [herni] `web/apps/pdf` reescrito: la resolución del negocio pasó a
+      `lib/pdf.js`, con tests (antes no tenía ninguno). El negocio del PDF va en
+      el path (`/:cliente/pdf`, no en el subdominio: por eso no se reusó
+      `lib/hostname.js`, pensado para subdominios) y también acepta
+      `?cliente=`/`?demo=` para probarlo en un servidor estático. Primero prueba
+      `public_business_pdf(slug)` y, si no hay o falla, cae al JSON local
+      (`data/clientes/.../config.json` → `pdf.file`, que sigue sirviendo al único
+      cliente estático que hay hoy). El caso `demo.*` ya no depende de un slug: es
+      siempre el mismo PDF fijo, sin pedir nada a Supabase ni al JSON. Requisitos
+      PDF-3 y 4 en `docs/SPEC.md`
+- [x] [herni] Nueva función `web/api/static-menu.js` (mismo patrón que
+      `api/manifest.js`): pide `public_menu(slug)` y arma un HTML de solo lectura
+      (colores, cabecera, categorías, productos, link fijo de WhatsApp, sin
+      carrito) con `apps/menu-app/lib/static-page.js`. Reusa las clases y el CSS
+      del menú interactivo (`base.css` + `templates/carrito/<template>`), no el
+      maquetado de `apps/menu-html`: ese es fijo para las demos, no está pensado
+      para recibir datos reales. Nuevo rewrite en `vercel.json` para
+      `/:cliente/menu.html`
+- [x] [herni] Requisitos ESTATICO-1 a 3 en `docs/SPEC.md`, con tests en
+      `static-page.test.js`
+- [ ] [herni] Probar a mano los tres servicios juntos en un mismo negocio de prueba
+- [ ] [por asignar] Generar el PDF automáticamente desde el menú del admin (idea a futuro)
+- [ ] [por asignar] Diferenciar en el admin qué plan tiene cada negocio (hoy todo
+      es un único flag `published`; la landing ya vende 3 planes distintos)
 
 ## Etapa 7 — Pendientes técnicos (backlog)
 

@@ -14,8 +14,10 @@ import {
   sortableKeyboardCoordinates,
   useSortable,
   verticalListSortingStrategy,
+  type SortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
+import { useId } from "react";
 
 import { moveItem } from "@/lib/menu/ordering";
 
@@ -25,11 +27,18 @@ export function SortableList({
   ids,
   onReorder,
   children,
+  // Una grilla necesita `rectSortingStrategy` para calcular bien la posición
+  // al arrastrar entre filas y columnas (la lista vertical no sirve ahí).
+  strategy = verticalListSortingStrategy,
 }: {
   ids: string[];
   onReorder: (orderedIds: string[]) => void;
   children: React.ReactNode;
+  strategy?: SortingStrategy;
 }) {
+  // dnd-kit numera sus textos de ayuda con un contador que difiere entre el servidor y el
+  // navegador (error de hidratación): un id estable lo evita.
+  const dndId = useId();
   const sensors = useSensors(
     // Un mínimo de recorrido evita que un clic se confunda con un arrastre.
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -43,11 +52,12 @@ export function SortableList({
 
   return (
     <DndContext
+      id={dndId}
       sensors={sensors}
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+      <SortableContext items={ids} strategy={strategy}>
         {children}
       </SortableContext>
     </DndContext>

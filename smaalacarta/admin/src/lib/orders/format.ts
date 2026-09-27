@@ -1,3 +1,17 @@
+const dateTimeFormatter = new Intl.DateTimeFormat("es-AR", {
+  day: "2-digit",
+  month: "2-digit",
+  hour: "2-digit",
+  minute: "2-digit",
+  timeZone: "America/Argentina/Buenos_Aires",
+});
+
+// Día, mes y hora en horario argentino: para la línea de tiempo del detalle y el
+// historial de pedidos terminados.
+export function formatDateTime(date: string) {
+  return dateTimeFormatter.format(new Date(date));
+}
+
 // Cuánto pasó desde una fecha, para las tarjetas del tablero. `now` se inyecta para
 // poder probarlo. Una fecha futura (reloj desfasado) cuenta como "ahora".
 export function timeAgo(date: string, now: Date = new Date()) {

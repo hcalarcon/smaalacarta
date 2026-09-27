@@ -48,6 +48,8 @@ export type Database = {
           facebook_url: string | null
           header_image_url: string | null
           instagram_url: string | null
+          logo_url: string | null
+          menu_pdf_url: string | null
           primary_color: string
           published: boolean
           reopens_on: string | null
@@ -66,6 +68,8 @@ export type Database = {
           facebook_url?: string | null
           header_image_url?: string | null
           instagram_url?: string | null
+          logo_url?: string | null
+          menu_pdf_url?: string | null
           primary_color?: string
           published?: boolean
           reopens_on?: string | null
@@ -84,6 +88,8 @@ export type Database = {
           facebook_url?: string | null
           header_image_url?: string | null
           instagram_url?: string | null
+          logo_url?: string | null
+          menu_pdf_url?: string | null
           primary_color?: string
           published?: boolean
           reopens_on?: string | null
@@ -243,6 +249,7 @@ export type Database = {
           changed_by: string | null
           created_at: string
           id: string
+          note: string | null
           order_id: string
           status: string
         }
@@ -251,6 +258,7 @@ export type Database = {
           changed_by?: string | null
           created_at?: string
           id?: string
+          note?: string | null
           order_id: string
           status: string
         }
@@ -259,6 +267,7 @@ export type Database = {
           changed_by?: string | null
           created_at?: string
           id?: string
+          note?: string | null
           order_id?: string
           status?: string
         }
@@ -622,10 +631,15 @@ export type Database = {
         }
         Returns: Json
       }
+      is_open_now: {
+        Args: { p_at: string; p_schedule: Json }
+        Returns: boolean
+      }
       is_super_admin: { Args: never; Returns: boolean }
       is_valid_schedule: { Args: { p_schedule: Json }; Returns: boolean }
       new_tracking_code: { Args: never; Returns: string }
       next_order_number: { Args: { p_business_id: string }; Returns: number }
+      public_business_pdf: { Args: { p_slug: string }; Returns: Json }
       public_menu: { Args: { p_slug: string }; Returns: Json }
       public_order_tracking: { Args: { p_code: string }; Returns: Json }
       save_business_settings: {
@@ -636,6 +650,8 @@ export type Database = {
           p_facebook_url: string
           p_header_image_url: string
           p_instagram_url: string
+          p_logo_url: string
+          p_menu_pdf_url: string
           p_primary_color: string
           p_published: boolean
           p_reopens_on: string
@@ -663,7 +679,7 @@ export type Database = {
         Returns: string
       }
       set_order_status: {
-        Args: { p_order_id: string; p_status: string }
+        Args: { p_note?: string; p_order_id: string; p_status: string }
         Returns: undefined
       }
     }

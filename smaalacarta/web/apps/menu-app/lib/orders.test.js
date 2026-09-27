@@ -1,6 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { buildOrderItems, createOrder, trackingLink, whatsappOrderUrl } from "./orders.js";
+import {
+  buildOrderItems,
+  createOrder,
+  markHandoffSent,
+  pendingHandoff,
+  rememberHandoff,
+  trackingLink,
+  whatsappOrderUrl,
+} from "./orders.js";
 
 const ID_CAFE = "d1000000-0000-0000-0000-000000000001";
 const ID_COMBO = "e1000000-0000-0000-0000-000000000002";
@@ -136,5 +144,95 @@ describe("whatsappOrderUrl", () => {
 
   it("solo deja los dígitos del teléfono", () => {
     expect(whatsappOrderUrl("+54 9 351 000-0001", "x")).toContain("phone=5493510000001&");
+  });
+});
+
+describe("enviar por WhatsApp desde el seguimiento — SEGUIMIENTO-10", () => {
+  const CODE = "0123456789abcdef0123";
+  const URL = "https://api.whatsapp.com/send?phone=5493510000001&text=Hola";
+
+  function fakeStorage(initial = {}) {
+    const data = new Map(Object.entries(initial));
+    return {
+      get length() { return data.size; },
+      key: (i) => [...data.keys()][i] ?? null,
+      getItem: (k) => (data.has(k) ? data.get(k) : null),
+      setItem: (k, v) => void data.set(k, String(v)),
+      removeItem: (k) => void data.delete(k),
+    };
+  }
+
+  it("un pedido recién hecho queda pendiente de enviar", () => {
+    const storage = fakeStorage();
+    rememberHandoff(storage, CODE, URL);
+    expect(pendingHandoff(storage, CODE)).toEqual({ url: URL });
+  });
+
+  it("una vez enviado ya no está pendiente", () => {
+    const storage = fakeStorage();
+    rememberHandoff(storage, CODE, URL);
+    markHandoffSent(storage, CODE);
+    expect(pendingHandoff(storage, CODE)).toBeNull();
+  });
+
+  it("de otro pedido, o sin nada guardado, no hay pendiente", () => {
+    const storage = fakeStorage();
+    rememberHandoff(storage, CODE, URL);
+    expect(pendingHandoff(storage, "f".repeat(20))).toBeNull();
+    expect(pendingHandoff(fakeStorage(), CODE)).toBeNull();
+  });
+
+  it("solo guarda y devuelve links de WhatsApp (nunca otra dirección)", () => {
+    const storage = fakeStorage();
+    rememberHandoff(storage, CODE, "https://evil.com/?x=1");
+    rememberHandoff(storage, CODE, "javascript:alert(1)");
+    expect(pendingHandoff(storage, CODE)).toBeNull();
+
+    // Aunque alguien edite el almacenamiento a mano.
+    storage.setItem("sma-wa:" + CODE, JSON.stringify({ url: "javascript:alert(1)", sent: false }));
+    expect(pendingHandoff(storage, CODE)).toBeNull();
+  });
+
+  it("no guarda con un código que no tiene el formato", () => {
+    const storage = fakeStorage();
+    rememberHandoff(storage, "../../x", URL);
+    expect(storage.length).toBe(0);
+  });
+
+  it("guarda solo los últimos 5 pedidos", () => {
+    const storage = fakeStorage();
+    for (let i = 0; i < 8; i++) rememberHandoff(storage, String(i).repeat(20).slice(0, 20).replace(/[^0-9a-f]/g, "a"), URL, 1000 + i);
+    expect(storage.length).toBe(5);
+  });
+
+  it("si el almacenamiento falla, no rompe", () => {
+    const broken = {
+      length: 0,
+      key: () => null,
+      getItem: () => { throw new Error("bloqueado"); },
+      setItem: () => { throw new Error("bloqueado"); },
+      removeItem: () => {},
+    };
+    expect(() => rememberHandoff(broken, CODE, URL)).not.toThrow();
+    expect(pendingHandoff(broken, CODE)).toBeNull();
+    expect(() => markHandoffSent(broken, CODE)).not.toThrow();
+  });
+});
+
+describe("motivo de rechazo por horario — SEGUIMIENTO-9", () => {
+  it("P0006 (fuera del horario) se distingue del cierre temporal", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: false, status: 400, json: async () => ({ code: "P0006" }) }));
+    const r = await createOrder({
+      url: "https://x.supabase.co",
+      key: "sb_publishable_x",
+      slug: "ana",
+      customer: "X",
+      delivery: "",
+      payment: "",
+      notes: "",
+      items: [{ id: "d1000000-0000-0000-0000-000000000001", kind: "product", quantity: 1 }],
+      fetchImpl,
+    });
+    expect(r).toEqual({ ok: false, reason: "outside_hours" });
   });
 });

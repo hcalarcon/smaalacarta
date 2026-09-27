@@ -39,6 +39,16 @@ type MenuClientProps = {
   initialCategories: Category[];
 };
 
+type StatusFilter = "all" | "active" | "hidden";
+
+// Sin tildes ni mayúsculas, para que buscar "papas" encuentre "Papás".
+function normalize(text: string) {
+  return text
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase();
+}
+
 export default function MenuClient({
   businessId,
   initialCategories,
@@ -75,7 +85,49 @@ export default function MenuClient({
 
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [openCategories, setOpenCategories] = useState<Record<string, boolean>>(
+    {},
+  );
+
   const hasCategories = categories.length > 0;
+  const filtering = search.trim().length > 0 || statusFilter !== "all";
+  const normalizedSearch = normalize(search.trim());
+
+  // Con un buscador o filtro activo, cada categoría muestra solo lo que
+  // coincide (o todos sus productos si coincide el nombre de la categoría).
+  const displayCategories = categories
+    .map((category) => {
+      let products = category.products ?? [];
+
+      if (statusFilter !== "all") {
+        products = products.filter((product) =>
+          statusFilter === "active" ? product.active : !product.active,
+        );
+      }
+
+      if (normalizedSearch) {
+        const categoryMatches = normalize(category.name).includes(
+          normalizedSearch,
+        );
+
+        if (!categoryMatches) {
+          products = products.filter(
+            (product) =>
+              normalize(product.name).includes(normalizedSearch) ||
+              normalize(product.description ?? "").includes(normalizedSearch),
+          );
+        }
+      }
+
+      return { ...category, products };
+    })
+    .filter((category) => !filtering || (category.products?.length ?? 0) > 0);
+
+  function handleToggleCategory(categoryId: string, open: boolean) {
+    setOpenCategories((prev) => ({ ...prev, [categoryId]: open }));
+  }
 
   // Ejecuta un cambio y, si falla, vuelve a pedir el menú al servidor para no
   // dejar en pantalla algo que no se guardó.
@@ -268,17 +320,52 @@ export default function MenuClient({
 
   return (
     <>
-      <div className="space-y-10">
-        <section className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-brand">Menú</h1>
+      <div className="space-y-6">
+        {/* En escritorio ya está el nombre de la sección en el sidebar. */}
+        <section className="lg:hidden">
+          <h1 className="text-3xl font-bold text-brand">Menú</h1>
 
-            <p className="mt-2 text-stone-500">
-              Administrá productos y categorías. Arrastrá el asa ⠿ para
-              cambiar el orden.
-            </p>
-          </div>
+          <p className="mt-2 text-stone-500">
+            Administrá productos y categorías. Arrastrá el asa ⠿ para cambiar
+            el orden.
+          </p>
         </section>
+
+        {hasCategories ? (
+          <section className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <input
+              type="search"
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Buscar producto o categoría…"
+              className="w-full rounded-xl border border-line-strong bg-white px-4 py-2.5 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 sm:max-w-xs"
+            />
+
+            <div className="flex flex-wrap items-center gap-2">
+              {(
+                [
+                  ["all", "Todos"],
+                  ["active", "Activos"],
+                  ["hidden", "Ocultos"],
+                ] as const
+              ).map(([key, label]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setStatusFilter(key)}
+                  aria-pressed={statusFilter === key}
+                  className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
+                    statusFilter === key
+                      ? "bg-brand text-white"
+                      : "border border-line-strong bg-white text-stone-600 hover:bg-brand-soft"
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {error ? (
           <div
@@ -290,36 +377,67 @@ export default function MenuClient({
         ) : null}
 
         {hasCategories ? (
-          <>
-            <div className="space-y-6">
-              <SortableList
-                ids={categories.map((category) => category.id)}
-                onReorder={handleReorderCategories}
-              >
-                {categories.map((category) => (
-                  <SortableItem key={category.id} id={category.id}>
-                    {(categoryHandle) => (
-                      <CategorySection
-                        category={category}
-                        handle={categoryHandle}
-                        onDelete={() => handleDeleteCategory(category)}
-                        onEdit={() => handleEditCategory(category)}
-                        onCreateProduct={() => handleCreateProduct(category.id)}
-                        onEditProduct={handleEditProduct}
-                        onDeleteProduct={setProductToDelete}
-                        onToggleProduct={handleToggleProduct}
-                        onReorderProducts={(ids) =>
-                          handleReorderProducts(category.id, ids)
-                        }
-                      />
-                    )}
-                  </SortableItem>
-                ))}
-              </SortableList>
-            </div>
+          displayCategories.length > 0 ? (
+            <>
+              <div className="space-y-4">
+                {filtering ? (
+                  displayCategories.map((category) => (
+                    <CategorySection
+                      key={category.id}
+                      category={category}
+                      open
+                      onToggle={() => {}}
+                      sortable={false}
+                      onDelete={() => handleDeleteCategory(category)}
+                      onEdit={() => handleEditCategory(category)}
+                      onCreateProduct={() => handleCreateProduct(category.id)}
+                      onEditProduct={handleEditProduct}
+                      onDeleteProduct={setProductToDelete}
+                      onToggleProduct={handleToggleProduct}
+                      onReorderProducts={() => {}}
+                    />
+                  ))
+                ) : (
+                  <SortableList
+                    ids={categories.map((category) => category.id)}
+                    onReorder={handleReorderCategories}
+                  >
+                    {categories.map((category) => (
+                      <SortableItem key={category.id} id={category.id}>
+                        {(categoryHandle) => (
+                          <CategorySection
+                            category={category}
+                            handle={categoryHandle}
+                            open={openCategories[category.id] ?? true}
+                            onToggle={(open) =>
+                              handleToggleCategory(category.id, open)
+                            }
+                            onDelete={() => handleDeleteCategory(category)}
+                            onEdit={() => handleEditCategory(category)}
+                            onCreateProduct={() =>
+                              handleCreateProduct(category.id)
+                            }
+                            onEditProduct={handleEditProduct}
+                            onDeleteProduct={setProductToDelete}
+                            onToggleProduct={handleToggleProduct}
+                            onReorderProducts={(ids) =>
+                              handleReorderProducts(category.id, ids)
+                            }
+                          />
+                        )}
+                      </SortableItem>
+                    ))}
+                  </SortableList>
+                )}
+              </div>
 
-            <CreateCategoryButton onClick={handleCreateCategory} />
-          </>
+              <CreateCategoryButton onClick={handleCreateCategory} />
+            </>
+          ) : (
+            <p className="rounded-2xl border border-dashed border-line-strong bg-white p-6 text-center text-sm text-stone-500">
+              No encontramos productos ni categorías que coincidan.
+            </p>
+          )
         ) : (
           <CreateCategoryButton empty onClick={handleCreateCategory} />
         )}

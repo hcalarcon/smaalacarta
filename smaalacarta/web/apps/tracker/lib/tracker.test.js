@@ -1,6 +1,14 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { fetchTracking, isFinalStatus, parseTrackingCode, statusView, timeline } from "./tracker.js";
+import {
+  brandTheme,
+  fetchTracking,
+  isFinalStatus,
+  parseTrackingCode,
+  safeColor,
+  statusView,
+  timeline,
+} from "./tracker.js";
 
 const CODE = "0123456789abcdef0123";
 
@@ -80,6 +88,14 @@ describe("timeline", () => {
   it("descarta eventos sin estado", () => {
     expect(timeline([{ fecha: "2026-09-29T15:00:00Z" }, null])).toEqual([]);
   });
+
+  it("pasa la nota de cada evento, si tiene (SEGUIMIENTO-12)", () => {
+    const eventos = [
+      { estado: "pending", fecha: "2026-09-29T15:00:00Z" },
+      { estado: "cancelled", fecha: "2026-09-29T15:05:00Z", nota: "Sin stock" },
+    ];
+    expect(timeline(eventos).map((e) => e.note)).toEqual([null, "Sin stock"]);
+  });
 });
 
 function fakeFetch(body, { ok = true, status = 200 } = {}) {
@@ -135,5 +151,51 @@ describe("fetchTracking — SEGUIMIENTO-8", () => {
     expect((await fetchTracking({ url: "", key: "", code: CODE, fetchImpl })).ok).toBe(false);
     expect((await fetchTracking({ ...cfg, code: "corto", fetchImpl })).ok).toBe(false);
     expect(fetchImpl).not.toHaveBeenCalled();
+  });
+});
+
+describe("brandTheme — SEGUIMIENTO-11", () => {
+  const negocio = { plantilla: "moderno", colores: { primary: "#112233", secondary: "#445566" } };
+
+  it("usa los colores del negocio y un degradé en la cabecera", () => {
+    const t = brandTheme(negocio);
+    expect(t.brand).toBe("#112233");
+    expect(t.accent).toBe("#445566");
+    expect(t.header).toMatch(/^linear-gradient\(/);
+    expect(t.plain).toBe(false);
+  });
+
+  it("con imagen, la imagen va sobre el degradé", () => {
+    const t = brandTheme({ ...negocio, imagen: "https://cdn.example.com/a.jpg" });
+    expect(t.header.startsWith('url("https://cdn.example.com/a.jpg"), linear-gradient(')).toBe(true);
+  });
+
+  it("minimal sin imagen es una cabecera blanca", () => {
+    expect(brandTheme({ ...negocio, plantilla: "minimal" }).plain).toBe(true);
+  });
+
+  it("colores inválidos (o un intento de inyección) vuelven a los de la marca", () => {
+    const t = brandTheme({ plantilla: "moderno", colores: { primary: "red; background:url(x)", secondary: "#12" } });
+    expect(t.brand).toBe("#5a4a3a");
+    expect(t.accent).toBe("#d97706");
+  });
+
+  it("una imagen que no es https no se usa", () => {
+    const t = brandTheme({ ...negocio, imagen: "javascript:alert(1)" });
+    expect(t.header).not.toContain("javascript");
+  });
+
+  it("un negocio sin datos de estilo (respuesta vieja) usa los de la marca", () => {
+    const t = brandTheme({ nombre: "X" });
+    expect(t.brand).toBe("#5a4a3a");
+    expect(t.plain).toBe(false);
+  });
+});
+
+describe("safeColor", () => {
+  it("acepta #rrggbb y nada más", () => {
+    expect(safeColor("#AbCdEf", "#000000")).toBe("#AbCdEf");
+    expect(safeColor("#abc", "#000000")).toBe("#000000");
+    expect(safeColor(null, "#000000")).toBe("#000000");
   });
 });

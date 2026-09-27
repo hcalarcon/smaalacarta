@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 
+import ResetPasswordForm from "../../(auth)/components/ResetPasswordForm";
+import BusinessProfileForm from "./components/BusinessProfileForm";
 import SettingsForm from "./components/SettingsForm";
+import ShareSection from "./components/ShareSection";
+import Section from "@/components/ui/Section";
 import { getSettings } from "@/lib/db/settings";
 import { requireBusiness } from "@/lib/get-current-business";
 
@@ -19,11 +23,21 @@ export default async function SettingsPage() {
         </p>
       </section>
 
-      <SettingsForm
-        businessId={business.id}
-        slug={business.slug}
-        initial={settings}
+      <BusinessProfileForm
+        initialName={business.name}
+        initialSlug={business.slug}
       />
+
+      <ShareSection name={business.name} slug={business.slug} />
+
+      <SettingsForm businessId={business.id} initial={settings} />
+
+      <Section
+        title="Contraseña"
+        description="Cambiá la contraseña de tu cuenta."
+      >
+        <ResetPasswordForm />
+      </Section>
     </div>
   );
 }

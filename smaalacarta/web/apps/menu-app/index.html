@@ -5,13 +5,11 @@
     <title>Menú</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-    <!-- Favicon (reutilizado desde landing) -->
-    <link rel="icon" href="https://smaalacarta.com.ar/assets/favicon.ico" />
-    <link
-      rel="icon"
-      type="image/svg+xml"
-      href="https://smaalacarta.com.ar/assets/favicon.svg"
-    />
+    <!-- App instalable: app.js reemplaza estos valores por los del negocio (lib/pwa.js) -->
+    <link rel="manifest" href="/api/manifest" />
+    <link rel="icon" type="image/png" href="/assets/pwa/favicon-96x96.png" />
+    <link rel="apple-touch-icon" href="/assets/pwa/apple-touch-icon.png" />
+    <meta name="theme-color" content="#5a4a3a" />
 
     <link rel="stylesheet" href="/apps/menu-app/base.css" />
     <!-- <link rel="stylesheet" href="./base.css" /> -->
@@ -106,7 +104,7 @@
         <select name="entrega">
           <option disabled selected>-- Tipo de entrega --</option>
           <option value="delivery">Delivery</option>
-          <option value="takeawey">takeawey</option>
+          <option value="retiro">Retiro en el local</option>
         </select>
         <label> <input type="checkbox" name="ahora" /> Ahora mismo </label>
         <input name="horario" type="time" />

@@ -187,6 +187,21 @@ body.no-scroll {
   border: 2px solid currentColor;
 }
 
+.gracias-pedido .gracias-aviso {
+  font-weight: 600;
+}
+
+/* Después de enviar por WhatsApp, el paso que sigue pasa al frente */
+.gracias-pedido .btn-whatsapp.hecho {
+  opacity: 0.6;
+}
+
+.gracias-pedido .btn-seguimiento.destacado {
+  background: var(--color-primary, #111);
+  border-color: var(--color-primary, #111);
+  color: #fff;
+}
+
 /* La propuesta de venta solo se muestra en las demos (la muestra app.js) */
 .cta-section[hidden] {
   display: none !important;

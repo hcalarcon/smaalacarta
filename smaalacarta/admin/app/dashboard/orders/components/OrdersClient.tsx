@@ -6,15 +6,17 @@ import { useEffect, useState } from "react";
 import ManualOrderDialog from "./ManualOrderDialog";
 import OrderCard from "./OrderCard";
 import OrderDetailDialog from "./OrderDetailDialog";
+import OrdersHistory from "./OrdersHistory";
 import { setOrderStatusAction } from "../actions";
 import type { Order } from "@/lib/db/orders";
 import { boardColumn, type BoardColumn } from "@/lib/orders/status";
 
+// "Terminados" (entregados o cancelados) no es una columna más del tablero:
+// va aparte, en el historial de abajo.
 const COLUMNS: { key: BoardColumn; title: string; hint: string }[] = [
   { key: "nuevos", title: "Nuevos", hint: "Esperando confirmación" },
   { key: "en_curso", title: "En curso", hint: "Confirmados y en preparación" },
   { key: "listos", title: "Listos", hint: "Para entregar o retirar" },
-  { key: "cerrados", title: "Terminados", hint: "Últimos entregados o cancelados" },
 ];
 
 const REFRESH_MS = 20_000;
@@ -53,12 +55,12 @@ export default function OrdersClient({
     return () => clearInterval(id);
   }, [router]);
 
-  async function changeStatus(orderId: string, status: string) {
+  async function changeStatus(orderId: string, status: string, note?: string) {
     setError(null);
     setBusyId(orderId);
 
     try {
-      const result = await setOrderStatusAction(orderId, status);
+      const result = await setOrderStatusAction(orderId, status, note);
       if (!result.ok) setError(result.error);
     } catch {
       setError("No pudimos guardar el cambio. Probá de nuevo.");
@@ -109,42 +111,49 @@ export default function OrdersClient({
           Todavía no hay pedidos. Cuando un cliente confirme uno desde tu menú, aparece acá.
         </div>
       ) : (
-        <div className="grid gap-5 lg:grid-cols-4">
-          {COLUMNS.map((column) => {
-            const list = byColumn(column.key);
-            const total = orders.filter((o) => boardColumn(o.status) === column.key).length;
+        <div className="space-y-6">
+          <div className="grid gap-5 lg:grid-cols-3">
+            {COLUMNS.map((column) => {
+              const list = byColumn(column.key);
+              const total = orders.filter((o) => boardColumn(o.status) === column.key).length;
 
-            return (
-              <section key={column.key} className="rounded-3xl bg-cream/70 p-4">
-                <header className="mb-3 flex items-baseline justify-between">
-                  <h2 className="font-semibold text-brand">{column.title}</h2>
-                  <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-stone-600">
-                    {total}
-                  </span>
-                </header>
-                <p className="mb-3 text-xs text-stone-500">{column.hint}</p>
+              return (
+                <section key={column.key} className="rounded-3xl bg-cream/70 p-4">
+                  <header className="mb-3 flex items-baseline justify-between">
+                    <h2 className="font-semibold text-brand">{column.title}</h2>
+                    <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-stone-600">
+                      {total}
+                    </span>
+                  </header>
+                  <p className="mb-3 text-xs text-stone-500">{column.hint}</p>
 
-                <div className="space-y-3">
-                  {list.length === 0 ? (
-                    <p className="rounded-2xl border border-dashed border-line-strong p-4 text-center text-sm text-stone-400">
-                      Sin pedidos
-                    </p>
-                  ) : (
-                    list.map((order) => (
-                      <OrderCard
-                        key={order.id}
-                        order={order}
-                        now={now}
-                        busy={busyId === order.id}
-                        onAdvance={(status) => changeStatus(order.id, status)}
-                        onOpen={() => setSelectedId(order.id)}
-                      />
-                    ))
-                  )}
-                </div>
-              </section>
-            );
-          })}
+                  <div className="max-h-[65vh] space-y-3 overflow-y-auto pr-1">
+                    {list.length === 0 ? (
+                      <p className="rounded-2xl border border-dashed border-line-strong p-4 text-center text-sm text-stone-400">
+                        Sin pedidos
+                      </p>
+                    ) : (
+                      list.map((order) => (
+                        <OrderCard
+                          key={order.id}
+                          order={order}
+                          now={now}
+                          busy={busyId === order.id}
+                          onAdvance={(status) => changeStatus(order.id, status)}
+                          onOpen={() => setSelectedId(order.id)}
+                        />
+                      ))
+                    )}
+                  </div>
+                </section>
+              );
+            })}
+          </div>
+
+          <OrdersHistory
+            orders={byColumn("cerrados")}
+            onOpen={(orderId) => setSelectedId(orderId)}
+          />
         </div>
       )}
 
@@ -153,7 +162,7 @@ export default function OrdersClient({
         slug={slug}
         busy={busyId === selected?.id}
         onClose={() => setSelectedId(null)}
-        onChangeStatus={(status) => selected && changeStatus(selected.id, status)}
+        onChangeStatus={(status, note) => selected && changeStatus(selected.id, status, note)}
       />
 
       <ManualOrderDialog

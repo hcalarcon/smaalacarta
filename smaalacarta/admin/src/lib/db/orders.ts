@@ -11,6 +11,7 @@ export type OrderItem = {
 export type OrderEvent = {
   status: string;
   created_at: string;
+  note: string | null;
 };
 
 export type Order = {
@@ -32,7 +33,7 @@ export type Order = {
 
 const SELECT =
   "id, order_number, status, total, notes, customer_name, delivery, payment, source, code, created_at, updated_at, " +
-  "order_items(name, quantity, unit_price, sort_order), order_events(status, created_at)";
+  "order_items(name, quantity, unit_price, sort_order), order_events(status, created_at, note)";
 
 // Los pedidos más recientes del negocio, con su detalle y su línea de tiempo. El RLS
 // deja ver solo los del negocio (ADMIN-PEDIDOS-2); el filtro por negocio es doble
@@ -65,12 +66,14 @@ type DbFailure = { error: { code?: string; message?: string } };
 export async function setOrderStatus(
   orderId: string,
   status: string,
+  note?: string,
 ): Promise<{ ok: true } | DbFailure> {
   const supabase = await createClient();
 
   const { error } = await supabase.rpc("set_order_status", {
     p_order_id: orderId,
     p_status: status,
+    p_note: note ?? null,
   });
 
   return error ? { error: { code: error.code, message: error.message } } : { ok: true };

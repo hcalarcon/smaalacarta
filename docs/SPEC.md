@@ -98,6 +98,14 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   configurados no se pinta nada.
 - **PUBLICO-11** Lo que es solo de las demos (el aviso "¿Querés este menú en tu negocio?" y
   el botón "Volver" a la landing) no se muestra en un negocio real.
+- **PUBLICO-12** Abierto o cerrado se calcula con la hora de Argentina (no la del celular
+  del cliente). Un rango "HH:MM-HH:MM" incluye la hora de inicio y no la de cierre, y
+  uno nocturno ("20:00-02:00") sigue en la madrugada del día siguiente. Un día sin
+  rangos está cerrado; sin ningún horario cargado el negocio está siempre abierto.
+- **PUBLICO-13** El menú público entrega el logo del negocio en `logo`, solo si lo cargó.
+- **PUBLICO-14** En pantallas anchas (desde 1024 px) el menú se centra en una columna de hasta
+  1120 px y los productos van en una grilla de tarjetas de ancho parejo, en las tres
+  plantillas; en el celular no cambia nada. Solo se prueba mirándolo en el navegador.
 
 ## BUSQUEDA — Buscador
 
@@ -148,12 +156,73 @@ llegando al negocio por WhatsApp.
   se envía por WhatsApp como hasta ahora.
 - **SEGUIMIENTO-8** La página de seguimiento muestra el estado y se actualiza sola
   hasta que el pedido termina; los textos que muestra nunca se interpretan como HTML.
+- **SEGUIMIENTO-9** Fuera del horario del negocio no se reciben pedidos: el servidor los
+  rechaza (`P0006`) y el menú avisa "Cerrado ahora", con el próximo horario de
+  apertura, y no deja enviarlos.
+- **SEGUIMIENTO-10** Al confirmar, el cliente puede mandar el pedido por WhatsApp y
+  seguirlo en cualquier orden: el mensaje queda guardado en su navegador y la página de
+  seguimiento ofrece enviarlo si todavía no lo envió.
+- **SEGUIMIENTO-11** La página de seguimiento tiene la estética del negocio: sus colores,
+  su imagen de cabecera y su plantilla (`minimal` queda blanca). El seguimiento sigue sin
+  datos personales, y los colores y la imagen se validan antes de usarlos.
+- **SEGUIMIENTO-12** Al cambiar el estado de un pedido, el negocio puede dejar un
+  mensaje opcional (por ejemplo, el motivo de una cancelación); el cliente lo ve
+  junto al evento correspondiente en su seguimiento.
+
+## PWA — Instalar el menú en el celular
+
+*Aplicado por `web/api/manifest.js`, `web/sw.js` y `web/apps/menu-app/lib/{manifest,pwa}.js`.
+Cubierto por: `lib/manifest.test.js` y `lib/pwa.test.js`. La función y el service worker
+solo se prueban en una preview de Vercel.*
+
+- **PWA-1** Cada negocio se instala con lo suyo: su nombre, su color y, como ícono, su logo
+  (ADMIN-CONFIG-8). Sin logo se usa el ícono general de SMA a la Carta, así que no hace
+  falta cargar uno por cada comercio.
+- **PWA-2** Las demos y cualquier sitio que no sea un negocio publicado reciben el manifest
+  general de SMA a la Carta.
+- **PWA-3** El service worker no guarda nada en caché: precios, horarios y pedidos siempre
+  vienen de la red.
 
 ## PDF — Menú en PDF
 
-*Aplicado por `web/apps/pdf`. Cubierto por: pendiente.*
+*Aplicado por `supabase/migrations/20260930000400_menu_pdf.sql`, la sección "Menú
+en PDF" de Configuración (`app/dashboard/settings`) y `web/apps/pdf`. Cubierto por
+`src/lib/db/settings.test.ts` (PDF-1), `src/lib/db/storage-pdfs.test.ts` (PDF-2) y
+`src/lib/settings/validation.test.ts` contra Postgres real y en JS puro; y
+`web/apps/pdf/lib/pdf.test.js` (PDF-3 y PDF-4).*
 
-_Sin requisitos todavía._
+- **PDF-1** Un negocio puede tener un PDF de menú (`menu_pdf_url`), independiente
+  de si publicó o no el menú digital: `public_business_pdf(slug)` lo devuelve
+  exista o no `published`, y no devuelve nada si no cargó ninguno. Se sube desde
+  Configuración, sin depender del interruptor "Menú público".
+- **PDF-2** El PDF se sube a un bucket aparte (`business-pdfs`), con el mismo
+  aislamiento por negocio que las imágenes: cada negocio escribe solo en su
+  propia carpeta, y solo se aceptan PDF de hasta 10 MB.
+- **PDF-3** `/:cliente/pdf` muestra el PDF de Supabase si el negocio cargó uno; si
+  no, cae al PDF del JSON local (`data/clientes/<slug>/config.json` → `pdf.file`),
+  que sigue sirviendo al único cliente estático que hay hoy. Un `?cliente=<slug>`
+  en la dirección permite probar cualquiera de los dos casos en un servidor
+  estático, igual que en el menú interactivo.
+- **PDF-4** Un subdominio `demo.*` (o `?demo=<slug>`) siempre muestra el mismo PDF
+  de ejemplo, sin pedir nada a Supabase ni al JSON: es solo para mostrar cómo se ve
+  el plan "QR + PDF", no depende de ningún negocio real.
+
+## ESTATICO — Menú web de solo lectura
+
+*Aplicado por `web/api/static-menu.js` y `web/apps/menu-app/lib/static-page.js`.
+Cubierto por `web/apps/menu-app/lib/static-page.test.js`, en JS puro.*
+
+- **ESTATICO-1** `/:cliente/menu.html` muestra el mismo menú que el interactivo
+  (`public_menu`, mismos colores, plantilla, horarios y cierre temporal) pero de
+  solo lectura: sin carrito, sin formulario de pedido, un link de WhatsApp fijo
+  en vez de un checkout. Comparte la bandera `published` con el interactivo.
+  Sin negocio, sin Supabase configurado o sin publicar, la ruta responde 404.
+- **ESTATICO-2** El HTML se arma en el momento (`web/api/static-menu.js`, función
+  serverless, sin build); el texto del negocio se escapa igual que en el menú
+  interactivo (PUBLICO-9): un nombre o descripción con HTML no se ejecuta.
+- **ESTATICO-3** Una categoría sin productos activos no aparece; una plantilla o
+  un color inválido caen a los valores por defecto, igual que en el resto del
+  menú público.
 
 ---
 
@@ -224,6 +293,10 @@ recuperación se prueban a mano.*
   ve un aviso de que su cuenta no tiene negocio asignado y puede cerrar sesión.
 - **ADMIN-AUTH-9** Pedir recuperar la contraseña muestra el mismo mensaje
   exista o no una cuenta con ese email.
+- **ADMIN-AUTH-10** Cambiar la contraseña con sesión iniciada (desde
+  Configuración o, con la temporal, en `/cambiar-contrasena`) pide la
+  contraseña actual y la valida contra Supabase antes de guardar la nueva; si
+  no coincide, no se toca nada. La nueva tiene que ser distinta de la actual.
 
 ## ADMIN-SUPER — Superadmin y alta de cuentas
 
@@ -317,6 +390,8 @@ y redes) y `src/lib/storage/images.test.ts`.*
 - **ADMIN-CONFIG-7** Solo los miembros de un negocio suben, cambian y borran archivos
   de su carpeta del bucket de imágenes; solo se aceptan JPG, PNG y WebP de hasta
   2 MB. Nadie puede escribir fuera de la carpeta de su negocio.
+- **ADMIN-CONFIG-8** El negocio puede cargar un logo cuadrado (opcional, una imagen https).
+  Se usa como ícono al instalar el menú en el celular; sin logo se usa el ícono general.
 
 ## ADMIN-PEDIDOS — Pedidos
 
@@ -336,6 +411,19 @@ y redes) y `src/lib/storage/images.test.ts`.*
   saltearse, aunque lleguen a la vez.
 - **ADMIN-PEDIDOS-5** Cada ítem guarda el nombre y el precio del momento: editar o
   borrar el producto después no cambia los pedidos ya hechos.
+
+## ADMIN-RESUMEN — Pantalla de inicio del panel
+
+*Aplicado por `app/dashboard/page.tsx`, `src/lib/db/summary.ts`, `src/lib/dates.ts`,
+`src/lib/menu-url.ts` y el menú lateral. Cubierto por: `src/lib/dates.test.ts`,
+`src/lib/menu-url.test.ts` y `src/lib/layout/nav-badge.test.ts`.*
+
+- **ADMIN-RESUMEN-1** "Pedidos hoy" cuenta desde las 00:00 de Argentina, sin importar la zona
+  horaria del servidor.
+- **ADMIN-RESUMEN-2** El resumen muestra la dirección pública del menú
+  (`https://<slug>.smaalacarta.com.ar`), si está publicado o no, y permite abrirla y copiarla.
+- **ADMIN-RESUMEN-3** Los pedidos nuevos (pendientes) se avisan en el resumen y con un contador
+  junto a "Pedidos" en el menú lateral (hasta "9+").
 
 ## ADMIN-PROMOS — Promociones
 
