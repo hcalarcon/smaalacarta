@@ -10,15 +10,20 @@
     "secondary": "#b45309"
   },
   "header": {
-    "imagen": "https://images.unsplash.com/photo-1600891964599-f61ba0e24092"
+    "imagen": "https://images.unsplash.com/photo-1600891964599-f61ba0e24092?auto=format&fit=crop&w=1400&q=70"
   },
-    "horarios": {
-    "lunes": ["12:00-15:00", "20:00-23:30"],
-    "martes": ["12:00-15:00", "20:00-23:30"],
-    "miercoles": ["12:00-15:00"],
-    "jueves": ["12:00-15:00", "20:00-23:30"],
-    "viernes": ["12:00-15:00", "20:00-01:00"],
-    "sabado": ["20:00-02:00"],
-    "domingo": []
+  "direccion": "Av. San Martín 450",
+  "redes": {
+    "instagram": "https://www.instagram.com/smaalacarta",
+    "facebook": "https://www.facebook.com/smaalacarta"
+  },
+  "horarios": {
+    "lunes": ["11:00-02:00"],
+    "martes": ["11:00-02:00"],
+    "miercoles": ["11:00-02:00"],
+    "jueves": ["11:00-02:00"],
+    "viernes": ["11:00-02:00"],
+    "sabado": ["11:00-02:00"],
+    "domingo": ["11:00-02:00"]
   }
 }
