@@ -426,10 +426,19 @@ negocio y los fijos (promo, WhatsApp) no cambian con el tema. Requisitos en
 - [ ] [por asignar] Permisos por `role` en `businesses`: hoy cualquier miembro puede editar el negocio, incluido el `slug`
 - [ ] [por asignar] Políticas RLS para `anon` (lectura del menú público), junto con la Etapa 6
 - [ ] [por asignar] `getCurrentBusiness()` con varios negocios por usuario: hoy `.maybeSingle()` falla y redirige a `/login`
-- [ ] [por asignar] Entrar al panel por `smaalacarta.com.ar/admin` en vez de la URL
-      propia de Vercel del proyecto `admin/`. `admin` es SEO reservado (no un
-      negocio), pero hoy nada lo redirige ahí: haría falta un rewrite de `landing/`
-      (o del dominio) hacia el deploy de `admin/`, y el propio Next.js necesitaría
-      un `basePath: "/admin"` para que sus rutas, redirects y cookies coincidan. No
-      es un cambio chico: toca casi todo `admin/`, se evalúa aparte
+- [x] [herni] Entrar al panel por `smaalacarta.com.ar/admin`: `next.config.ts`
+      tiene `basePath: "/admin"`, y `landing/vercel.json` suma un rewrite externo
+      (`/admin` y `/admin/:path*`) hacia `smaalacarta-admin.vercel.app`, mismo
+      patrón que ya usa `web/`. De paso salió un bug real: `proxy.ts` armaba la
+      redirección de login a mano (`new URL(destino, request.url)`), que no suma
+      el `basePath` solo — sin el fix, cualquier redirect (a `/login`, después de
+      cambiar la contraseña, etc.) mandaba a una ruta sin `/admin` que no existe.
+      También `next/image` necesitó el `basePath` a mano en el `src` de la imagen
+      del login (`app/(auth)/layout.tsx`): a diferencia de `next/link`, no lo suma
+      solo. **Importante:** desde que esto se despliegue, la URL directa de Vercel
+      del panel (`https://smaalacarta-admin.vercel.app/`) da 404 en la raíz — todo
+      vive bajo `/admin` ahora
+- [ ] [herni] Probar el login de verdad en un preview antes de mergear a `main`
+      (curl solo confirmó que las redirecciones arman bien la URL, no un login
+      real con cookies de sesión en un navegador)
 - [x] Flujo de alta de negocios y membresías desde el admin: resuelto en la Etapa 4 (superadmin)

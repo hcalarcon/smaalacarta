@@ -11,7 +11,9 @@ export default function AuthLayout({
     <div className="grid min-h-screen lg:grid-cols-2">
       <aside className="relative hidden overflow-hidden bg-brand lg:block">
         <Image
-          src="/auth-hero.jpg"
+          // `next/image` no le suma el basePath solo a `src` (a diferencia de
+          // `next/link`): hay que escribirlo a mano.
+          src="/admin/auth-hero.jpg"
           alt=""
           fill
           priority
