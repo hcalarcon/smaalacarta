@@ -5,16 +5,29 @@ import { useState } from "react";
 import { saveBusinessProfileAction } from "../actions";
 import ShareQrCode from "./ShareQrCode";
 import CopyLinkButton from "@/components/dashboard/CopyLinkButton";
+import PlanBadges from "@/components/dashboard/PlanBadges";
 import Section from "@/components/ui/Section";
-import { menuUrl } from "@/lib/menu-url";
+import { menuLinks } from "@/lib/menu-url";
 import { slugify } from "@/lib/superadmin/validation";
+
+const LINK_LABELS = {
+  interactivo: "Menú interactivo (con carrito)",
+  estatico: "Menú web (solo lectura)",
+  pdf: "PDF",
+} as const;
 
 export default function ShareSection({
   name,
   slug,
+  planPdf,
+  planWeb,
+  planCompleto,
 }: {
   name: string;
   slug: string;
+  planPdf: boolean;
+  planWeb: boolean;
+  planCompleto: boolean;
 }) {
   const [currentSlug, setCurrentSlug] = useState(slug);
 
@@ -58,19 +71,36 @@ export default function ShareSection({
     }
   }
 
+  const plan = { planPdf, planWeb, planCompleto };
+  const links = menuLinks(currentSlug, plan);
+  const activeLinks = (Object.entries(links) as [keyof typeof links, string | null][]).filter(
+    (entry): entry is [keyof typeof links, string] => entry[1] !== null,
+  );
+
   return (
     <Section
       title="Compartir"
       description="El código QR de tu menú, para imprimir o pegar en el local."
     >
-      <p className="break-all font-mono text-sm text-stone-600">
-        {menuUrl(currentSlug)}
-      </p>
-
-      <div className="flex flex-wrap items-center gap-4">
-        <ShareQrCode value={menuUrl(currentSlug)} />
-        <CopyLinkButton value={menuUrl(currentSlug)} />
+      <div>
+        <span className="mb-1.5 block text-sm font-medium text-brand">Tu plan</span>
+        <PlanBadges plan={plan} />
       </div>
+
+      {activeLinks.length === 0 ? null : (
+        <div className="space-y-5">
+          {activeLinks.map(([key, url]) => (
+            <div key={key}>
+              <p className="mb-1.5 text-sm font-medium text-brand">{LINK_LABELS[key]}</p>
+              <p className="break-all font-mono text-sm text-stone-600">{url}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-4">
+                <ShareQrCode value={url} />
+                <CopyLinkButton value={url} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div>
         <button
@@ -88,7 +118,7 @@ export default function ShareSection({
 
         {status === "done" ? (
           <span role="status" className="ml-3 text-sm font-medium text-emerald-700">
-            ¡Listo! Se actualizó el link y el QR.
+            ¡Listo! Se actualizaron los links y los QR.
           </span>
         ) : null}
 

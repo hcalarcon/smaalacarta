@@ -321,6 +321,12 @@ Requisitos en `docs/SPEC.md` (ADMIN-SUPER-13 a 16).
 - [x] [herni] Elegir el plan (combinable) al dar de alta un negocio, desde `/superadmin/negocios/nuevo`
 - [x] [herni] Cambiar el plan y activar/suspender un negocio desde `/superadmin/negocios/[id]`
 - [x] [herni] `active = false` saca al negocio de los tres servicios públicos
+- [x] [herni] En el panel del propio negocio (no el superadmin): "Compartir" y el
+      botón "Ver mi menú" ahora muestran solo las direcciones que responden según
+      el plan, y qué plan tiene (badges, de solo lectura). Antes siempre mostraban
+      el link del subdominio, aunque el negocio no tuviera `plan_completo` y por
+      lo tanto no respondiera ahí — se notó con kukarachos. `src/lib/menu-url.ts`
+      (`menuLinks()`/`primaryMenuLink()`, ADMIN-CONFIG-10)
 - [x] [herni] Enrutamiento de `web/` según el plan: un negocio sin `plan_completo`
       se sirve por el path del dominio raíz (`smaalacarta.com.ar/<slug>/pdf` y
       `/menu.html`), vía un rewrite externo en `landing/vercel.json` hacia el
@@ -329,17 +335,91 @@ Requisitos en `docs/SPEC.md` (ADMIN-SUPER-13 a 16).
       `20260930000600_ruteo_por_plan.sql`) y exigen el plan del servicio y que el
       negocio no tenga `plan_completo` cuando se llega por path. Requisitos en
       `docs/SPEC.md` (RUTAS-4, PDF-5, ESTATICO-5)
+- [x] [herni] El subdominio también quedó atado al plan (migración
+      `20260930000700_subdominio_exige_plan_completo.sql`): sin `plan_completo`, un
+      negocio no responde por subdominio en nada (interactivo, estático, PDF ni
+      `create_public_order`), solo por path. Antes de esta migración, cualquier
+      negocio publicado y activo seguía respondiendo por subdominio sin mirar el
+      plan — se notó porque `kukarachos.smaalacarta.com.ar` (solo con `plan_pdf` y
+      `plan_web`) seguía sirviendo el menú interactivo. **Importante**: cualquier
+      negocio real que ya estuviera usando su subdominio y no tenga `plan_completo`
+      va a dejar de responder ahí apenas se aplique esta migración — hay que
+      revisar en `/superadmin` qué negocios necesitan `plan_completo` antes o
+      justo después de aplicarla
 - [x] [herni] Probado en preview (`landing` y `web` de `dev-herni`, apuntando
       momentáneamente uno al otro) con kukarachos sin `plan_completo`: el path
       (`/<slug>/pdf` y `/menu.html`) funciona. Ojo: los previews de Vercel piden
       login ("Vercel Authentication"), así que no se pueden probar con `curl`, solo
       en el navegador ya logueado — en producción no debería pasar, pero conviene
       confirmarlo una vez que esto llegue a `main`
-- [ ] [herni] Confirmar que el path funcione en producción real (`smaalacarta.com.ar`)
-      una vez mergeado a `main`, con el dominio `democlientes-git-main-smaalacarta.vercel.app`
-      hardcodeado en `landing/vercel.json`
+- [x] [herni] Confirmado en producción real (`smaalacarta.com.ar/kukarachos/menu.html`
+      y `/pdf`, ambos 200 con el contenido correcto). Encontró y resolvió de paso un
+      problema real: el deploy de `web/` tenía la protección de Vercel
+      ("Vercel Authentication") activa también en producción, así que cualquier
+      visitante sin sesión de Vercel se quedaba en una pantalla de login — quedó
+      desactivada para producción
 - [ ] [por asignar] Historial de pagos o fecha de vencimiento (quedó afuera de esta
       vuelta: por ahora es un interruptor manual, sin fechas)
+
+## Etapa 6h — Tema claro/oscuro por plantilla
+
+**Diseño.** Una variante más de cada plantilla (`moderno`, `clasico`, `minimal`),
+elegida a mano en Configuración (`business_settings.theme`, ADMIN-CONFIG-9): no
+sigue el modo del sistema del visitante. `public_menu` la entrega en
+`config.tema`; el interactivo (`app.js`) y el estático (`static-page.js`) la
+ponen en `data-tema` del `<html>`, y cada plantilla redefine sus variables de
+fondo/tarjeta/texto/borde bajo `[data-tema="oscuro"]`. Los colores de marca del
+negocio y los fijos (promo, WhatsApp) no cambian con el tema. Requisitos en
+`docs/SPEC.md` (ADMIN-CONFIG-9, PUBLICO-16).
+
+- [x] [herni] Migración `20260930000800_tema_claro_oscuro.sql`, selector en
+      Configuración → Apariencia, y el resto de la cadena (`public_menu`, `app.js`,
+      `static-page.js`)
+- [x] [herni] Variables de tema en las tres plantillas (`--bg`, `--card`/`--veil`
+      según la plantilla, `--text`, `--muted`, `--border`, y en clásico además
+      `--tint-ok-*`/`--tint-bad-*` para Destacados/Ofertas y el estado abierto/cerrado)
+- [ ] [herni] **Mirar las tres plantillas en oscuro, en el navegador**: no hay forma
+      de probar esto sin ojos humanos, así que no está verificado más allá de la
+      lectura del CSS. Para probar rápido: Configuración → Apariencia → Oscuro →
+      Guardar, en un negocio real, o el switch de tema de las demos (siguiente ítem)
+- [x] [herni] Switch de tema en las demos del interactivo (`#btn-tema`, junto al
+      estado abierto/cerrado): alterna `data-tema` al toque, sin recargar, para
+      mirar cómo se ve cada plantilla en los dos temas. No está en el estático ni
+      en negocios reales
+- [x] [herni] Arreglos tras mirarlo en el navegador (minimal): el "+" y los
+      botones del carrito usaban el color de marca crudo como texto
+      (`color: var(--primary)`), que podía quedar ilegible según el color elegido
+      y el tema — pasan a `var(--text)`; el botón flotante del carrito suma un
+      borde translúcido para no perderse contra un fondo de página del mismo
+      tono. El switch de tema en sí ya no depende de `--card` (minimal no lo
+      tiene: por eso el fondo se quedaba blanco con el texto en claro,
+      ilegible) — ahora es un chip gris neutro con `color: inherit`, y se movió
+      de flotante a la barra de arriba. Transición suave sumada al cambiar de tema
+- [x] [herni] Minimal ganó un `--card` propio (antes no distinguía superficie de
+      fondo a propósito, "es su estilo"): probado, resultaba demasiado plano —
+      "todo blanco", sin poder diferenciar el encabezado, la barra de categorías,
+      el carrito y el checkout de la página. Los productos siguen sin tarjeta
+      propia (solo una línea debajo, es la lista de siempre): el ajuste es en los
+      paneles, no en cada producto
+- [ ] [por asignar] El mismo switch en el menú estático de las demos (hoy no
+      tiene nada de JS; requeriría un script chico solo para ese caso)
+
+## Etapa 6i — Plan visible en el resumen, negocio suspendido, menú sin trabarse
+
+- [x] [herni] El interactivo (`app.js`) mostraba el loader para siempre cuando no
+      había nada que mostrar (negocio inexistente, sin `plan_completo`,
+      suspendido): ahora se ve un aviso de "no encontramos este menú". Se notó
+      con kukarachos, que no tiene `plan_completo` y por eso no responde por
+      subdominio
+- [x] [herni] El resumen del panel también muestra el plan del negocio
+      (`PlanBadges`, ADMIN-RESUMEN-4), no solo Configuración → Compartir
+- [x] [herni] Negocio suspendido (`active = false`): además de desaparecer de lo
+      público (Etapa 6g), ahora tampoco se puede editar desde el panel —
+      categorías, productos, promociones, configuración y pedidos, con un
+      trigger por tabla (migración `20260930000900_bloqueo_por_suspension.sql`,
+      ADMIN-SUSPENSION-1) que cubre tanto RLS como las funciones
+      `SECURITY DEFINER`. El borrado no se bloquea. Un aviso fijo en todo el
+      panel explica por qué mientras dure
 
 ## Etapa 7 — Pendientes técnicos (backlog)
 

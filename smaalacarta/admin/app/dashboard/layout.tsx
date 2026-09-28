@@ -1,11 +1,12 @@
 import { redirect } from "next/navigation";
 
+import SuspendedBanner from "@/components/dashboard/SuspendedBanner";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { dashboardLinks } from "@/components/layout/nav-links";
 import { getSuperAdminStatus } from "@/lib/auth/superadmin";
 import { countPendingOrders } from "@/lib/db/summary";
 import { resolveAccess } from "@/lib/get-current-business";
-import { menuUrl } from "@/lib/menu-url";
+import { menuLinks, primaryMenuLink } from "@/lib/menu-url";
 
 export default async function DashboardLayout({
   children,
@@ -27,6 +28,16 @@ export default async function DashboardLayout({
     link.href === "/dashboard/orders" ? { ...link, badge: pending } : link,
   );
 
+  // La más completa que tenga el negocio, según su plan (RUTAS-4); sin ninguna
+  // (caso raro: un negocio sin plan cargado) no se muestra el botón.
+  const menuHref = primaryMenuLink(
+    menuLinks(current!.business!.slug, {
+      planPdf: current!.business!.plan_pdf,
+      planWeb: current!.business!.plan_web,
+      planCompleto: current!.business!.plan_completo,
+    }),
+  );
+
   return (
     <DashboardShell
       title={current!.business!.name}
@@ -37,8 +48,9 @@ export default async function DashboardLayout({
       switchLink={
         isSuperAdmin ? { href: "/superadmin", label: "Superadmin" } : undefined
       }
-      menuLink={{ href: menuUrl(current!.business!.slug), label: "Ver mi menú" }}
+      menuLink={menuHref ? { href: menuHref, label: "Ver mi menú" } : undefined}
       showChangePassword={false}
+      banner={current!.business!.active ? undefined : <SuspendedBanner />}
     >
       {children}
     </DashboardShell>

@@ -3,7 +3,9 @@
   --accent: #27ae60;
   --bg: #f4f4f8;
   --card: #fff;
+  --text: #111827;
   --muted: #6b7280;
+  --border: #eee;
   --promo: #e74c3c;
 
   /* Los colores del negocio (los pone app.js o el menú estático). El precio y los
@@ -14,16 +16,28 @@
   --brand-ink: color-mix(in srgb, var(--brand) 75%, #000);
 }
 
+/* Tema oscuro (ADMIN-CONFIG-9): se elige a mano en Configuración, no sigue el
+   modo del sistema del visitante. Los colores de marca (--brand, --brand-2,
+   --promo, botones con degradé) quedan igual: ya se calculan contra el fondo
+   fijo de la marca, no contra la página. */
+:root[data-tema="oscuro"] {
+  --bg: #15161a;
+  --card: #202127;
+  --text: #f2f2f4;
+  --muted: #9aa0ac;
+  --border: rgba(255, 255, 255, 0.08);
+}
+
 body {
   background: var(--bg);
-  color: #111827;
+  color: var(--text);
 }
 
 /* LOADER */
 .loader {
   position: fixed;
   inset: 0;
-  background: white;
+  background: var(--bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -33,8 +47,8 @@ body {
 .spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid #eee;
-  border-top: 4px solid #111;
+  border: 4px solid var(--border);
+  border-top: 4px solid var(--brand);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
@@ -129,9 +143,9 @@ body {
 /* CATEGORÍAS: barra fija arriba al bajar (la posición está en base.css) */
 .categorias {
   padding: 10px 12px;
-  background: rgba(255, 255, 255, 0.94);
+  background: var(--card);
   backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid var(--border);
 }
 
 .categorias button,
@@ -387,7 +401,8 @@ body {
   top: 0;
   width: 320px;
   height: 100%;
-  background: #fff;
+  background: var(--card);
+  color: var(--text);
   transform: translateX(100%);
   transition: 0.3s;
   z-index: 100;
@@ -438,7 +453,8 @@ body {
   position: fixed;
   bottom: 0;
   width: 100%;
-  background: #fff;
+  background: var(--card);
+  color: var(--text);
   padding: 20px;
   transform: translateY(100%);
   transition: 0.3s;
@@ -458,7 +474,7 @@ body {
 .checkout-header h2 {
   margin: 0;
   font-size: 1.5rem;
-  color: var(--primary);
+  color: var(--text);
 }
 
 .checkout-header button {
@@ -479,9 +495,11 @@ body {
 .checkout select,
 .checkout textarea {
   padding: 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 1rem;
+  background: var(--card);
+  color: var(--text);
 }
 
 .checkout input:disabled {
@@ -551,8 +569,8 @@ body {
 }
 
 #carrito-count {
-  background: #fff;
-  color: #111;
+  background: var(--card);
+  color: var(--text);
   border-radius: 999px;
   padding: 0 0.35rem;
   font-size: 0.8rem;
@@ -604,8 +622,8 @@ body {
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  border-bottom: 1px solid #eee;
-  background: #fff;
+  border-bottom: 1px solid var(--border);
+  background: var(--card);
   border-radius: 8px;
   margin-bottom: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
@@ -615,7 +633,7 @@ body {
   margin: 0;
   font-size: 1rem;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--text);
 }
 
 .item-precio {
@@ -625,7 +643,7 @@ body {
 
 .carrito-footer {
   padding: 12px 14px 14px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border);
 }
 
 .carrito-footer p {
@@ -700,16 +718,16 @@ body {
 
 /* CTA FINAL */
 .cta-section {
-  background: linear-gradient(135deg, #f5f5f5 0%, rgba(0, 0, 0, 0.02) 100%);
+  background: var(--card);
   padding: 40px 20px;
   text-align: center;
-  border-top: 2px solid #eee;
+  border-top: 2px solid var(--border);
   margin-top: 40px;
 }
 
 .cta-section h2 {
   font-size: 1.6rem;
-  color: var(--primary);
+  color: var(--text);
   margin-bottom: 10px;
 }
 

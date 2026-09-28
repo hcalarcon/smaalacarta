@@ -18,6 +18,7 @@ import {
 import {
   TAGLINE_MAX,
   TEMPLATES,
+  THEMES,
   type SettingsInput,
 } from "@/lib/settings/validation";
 
@@ -111,6 +112,7 @@ export default function SettingsForm({
 
   const [published, setPublished] = useState(initial.published);
   const [template, setTemplate] = useState(initial.template);
+  const [theme, setTheme] = useState(initial.theme);
   const [tagline, setTagline] = useState(initial.tagline);
   const [primaryColor, setPrimaryColor] = useState(initial.primaryColor);
   const [secondaryColor, setSecondaryColor] = useState(initial.secondaryColor);
@@ -165,6 +167,7 @@ export default function SettingsForm({
       const result = await saveSettingsAction({
         published,
         template,
+        theme,
         tagline,
         primaryColor,
         secondaryColor,
@@ -237,6 +240,30 @@ export default function SettingsForm({
           </div>
           {fieldErrors.template ? (
             <p className="mt-1.5 text-sm text-red-600">{fieldErrors.template}</p>
+          ) : null}
+        </div>
+
+        <div>
+          <span className="mb-1.5 block text-sm font-medium text-brand">Tema</span>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {THEMES.map((option) => (
+              <button
+                key={option.key}
+                type="button"
+                onClick={() => setTheme(option.key)}
+                aria-pressed={theme === option.key}
+                className={`rounded-xl border px-4 py-3 text-sm font-medium transition ${
+                  theme === option.key
+                    ? "border-brand bg-brand text-white"
+                    : "border-line-strong bg-white text-stone-700 hover:bg-brand-soft"
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          {fieldErrors.theme ? (
+            <p className="mt-1.5 text-sm text-red-600">{fieldErrors.theme}</p>
           ) : null}
         </div>
 

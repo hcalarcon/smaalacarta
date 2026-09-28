@@ -36,6 +36,15 @@ describe("validateSettings — ADMIN-CONFIG-2", () => {
     expect(r.ok === false && r.errors.template).toBeTruthy();
   });
 
+  it.each(["claro", "oscuro"])("acepta el tema %s", (theme) => {
+    expect(validateSettings({ ...valid, theme })).toEqual({ ok: true });
+  });
+
+  it("rechaza un tema desconocido", () => {
+    const r = validateSettings({ ...valid, theme: "sepia" });
+    expect(r.ok === false && r.errors.theme).toBeTruthy();
+  });
+
   it.each(["", "463AE5", "#fff", "#GGGGGG", "rojo", "#1234567"])("rechaza el color %j", (color) => {
     const r = validateSettings({ ...valid, primaryColor: color, secondaryColor: color });
     expect(r.ok === false && r.errors.primaryColor).toBeTruthy();

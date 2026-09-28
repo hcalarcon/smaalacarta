@@ -104,6 +104,16 @@ describe("renderStaticMenuPage — Etapa 6e", () => {
     expect(html).not.toContain("javascript:");
   });
 
+  it("el tema va en data-tema; sin cargarlo, o con cualquier otra cosa, cae en claro", () => {
+    expect(renderStaticMenuPage(base)).toContain('data-tema="claro"');
+    expect(
+      renderStaticMenuPage({ ...base, config: { ...base.config, tema: "oscuro" } }),
+    ).toContain('data-tema="oscuro"');
+    expect(
+      renderStaticMenuPage({ ...base, config: { ...base.config, tema: "sepia" } }),
+    ).toContain('data-tema="claro"');
+  });
+
   it("avisa si está cerrado temporalmente", () => {
     const html = renderStaticMenuPage({
       ...base,

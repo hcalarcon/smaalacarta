@@ -34,10 +34,20 @@
           </svg>
           Volver
         </a>
-        <span class="badge-estado">
-          <span class="dot"></span>
-          <span id="estado-texto">Abierto</span>
-        </span>
+        <div class="header-status">
+          <!-- SWITCH DE TEMA (solo demos, lo muestra app.js) -->
+          <button
+            id="btn-tema"
+            class="btn-tema"
+            type="button"
+            aria-label="Cambiar a tema oscuro"
+            hidden
+          ></button>
+          <span class="badge-estado">
+            <span class="dot"></span>
+            <span id="estado-texto">Abierto</span>
+          </span>
+        </div>
       </div>
       <h1 id="nombre-negocio">...</h1>
       <p id="descripcion-negocio"></p>

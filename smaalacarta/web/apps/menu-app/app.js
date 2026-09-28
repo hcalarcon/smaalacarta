@@ -30,6 +30,21 @@ async function fetchJSON(path) {
   }
 }
 
+// Sin negocio (ni en Supabase ni en los JSON): antes se quedaba trabado en el
+// loader para siempre. Sin plantilla ni marca (no hay negocio del que sacarlas):
+// una pantalla simple, igual de espíritu que la del estático y el PDF.
+function showNotFound() {
+  document.body.classList.remove("loading");
+  document.body.innerHTML = `
+    <div style="display:flex;min-height:100vh;flex-direction:column;align-items:center;
+      justify-content:center;gap:.5rem;padding:2rem;text-align:center;
+      font-family:system-ui,-apple-system,sans-serif;color:#111827;">
+      <h1 style="font-size:1.4rem;margin:0;">No encontramos este menú</h1>
+      <p style="margin:0;color:#6b7280;">Puede que el negocio todavía no esté disponible acá.</p>
+    </div>
+  `;
+}
+
 // Qué negocio abre esta URL (RUTAS-1 y 2).
 function resolveAppConfig(resolveHost, resolveDemo) {
   const params = new URLSearchParams(window.location.search);
@@ -174,14 +189,21 @@ async function init() {
 
     if (!config || !menu) {
       config = await fetchJSON(`${basePath}/${slug}/config.json`);
-      if (!config) return;
+      if (!config) {
+        showNotFound();
+        return;
+      }
 
       menu = await fetchJSON(`${basePath}/${slug}/menu.json`);
-      if (!menu) return;
+      if (!menu) {
+        showNotFound();
+        return;
+      }
     }
 
     window.CONFIG = config;
     document.documentElement.dataset.template = config.template || "";
+    document.documentElement.dataset.tema = config.tema || "claro";
 
     // App instalable: manifest, ícono y color del negocio (PWA-1 a 3).
     PWA.applyPwa(document, { type, slug, config });
@@ -195,6 +217,33 @@ async function init() {
     if (cta) cta.hidden = !demo;
     const volver = document.querySelector(".btn-volver");
     if (volver) volver.hidden = !demo;
+
+    // Switch de tema: solo en las demos, para mostrar cómo se ve cada plantilla
+    // en los dos temas sin tener que cargar un negocio real en oscuro.
+    const btnTema = document.getElementById("btn-tema");
+    if (btnTema) {
+      btnTema.hidden = !demo;
+      if (demo) {
+        // Sol (pasar a claro) y luna (pasar a oscuro): el ícono muestra el
+        // tema al que se pasaría al tocar, no el actual.
+        const SOL =
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>';
+        const LUNA =
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>';
+
+        const sync = () => {
+          const oscuro = document.documentElement.dataset.tema === "oscuro";
+          btnTema.innerHTML = oscuro ? SOL : LUNA;
+          btnTema.setAttribute("aria-label", oscuro ? "Cambiar a tema claro" : "Cambiar a tema oscuro");
+        };
+        sync();
+        btnTema.addEventListener("click", () => {
+          document.documentElement.dataset.tema =
+            document.documentElement.dataset.tema === "oscuro" ? "claro" : "oscuro";
+          sync();
+        });
+      }
+    }
 
     // 🎨 Colores dinámicos
     // (con el texto que se lee sobre ellos: un negocio puede elegir colores claros)

@@ -61,7 +61,9 @@ comportamiento que ya existe, una app por rama:
   slug llega distinto según el caso: por query (`?ruta=<slug>`) en el estático,
   que corre del lado del servidor; por el propio `pathname` del navegador
   (`/<slug>/pdf`) en el PDF, que corre del lado del cliente y nunca ve la query
-  del rewrite. Por subdominio sigue el criterio de siempre, sin mirar el plan.
+  del rewrite. El subdominio, a su vez, exige `plan_completo`: sin él, un negocio
+  no responde por subdominio en ningún servicio (interactivo, estático ni PDF),
+  solo por path.
 
 ## HORARIO — Abierto o cerrado
 
@@ -105,7 +107,10 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
 - **PUBLICO-5** Quien no tiene sesión puede pedir el menú de un negocio publicado,
   pero no puede leer ninguna tabla del negocio.
 - **PUBLICO-6** El menú web pide el negocio a Supabase; si Supabase no está
-  configurado, no lo tiene o falla, usa los JSON locales como hasta ahora.
+  configurado, no lo tiene o falla, usa los JSON locales como hasta ahora. Si
+  ninguno de los dos tiene nada (negocio inexistente, sin plan_completo, o
+  suspendido), se ve un aviso de "no encontramos este menú" en vez de quedarse
+  trabado en el loader para siempre.
 - **PUBLICO-7** Lo que llega de Supabase se completa con valores por defecto para
   que el menú nunca reciba categorías o ítems sin lista.
 - **PUBLICO-8** La dirección y las redes llegan como `direccion` y `redes`; un cierre
@@ -133,6 +138,17 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   contraste— y un tono de la marca oscurecido para escribir sobre blanco (mínimo 4.5:1). Las
   plantillas usan `--on-brand`, `--on-brand-mix` y `--on-header` en vez de blanco fijo. Un
   valor que no sea un color hexadecimal válido no llega al estilo.
+- **PUBLICO-16** El menú entrega el tema en `config.tema` (`"claro"` o `"oscuro"`,
+  ADMIN-CONFIG-9); el interactivo lo pone en `data-tema` del `<html>` (`app.js`) y
+  el estático lo arma en el HTML (`static-page.js`). Las tres plantillas leen
+  `[data-tema="oscuro"]` para redefinir sus variables de fondo, tarjeta, texto y
+  borde; los colores de marca del negocio y los fijos (promo, WhatsApp) no
+  cambian con el tema: ya se calculan para leerse sobre sí mismos. Sin tema
+  cargado (las demos, hoy), se ve como siempre: claro. En el interactivo, las
+  demos tienen además un switch (`#btn-tema`, junto al estado abierto/cerrado)
+  para alternar entre los dos temas sin recargar; no existe en negocios reales
+  ni en el estático. El cambio de tema anima suave (transición en fondo, texto
+  y borde), salvo con `prefers-reduced-motion`.
 
 ## BUSQUEDA — Buscador
 
@@ -236,7 +252,8 @@ en PDF" de Configuración (`app/dashboard/settings`) y `web/apps/pdf`. Cubierto 
   de ejemplo, sin pedir nada a Supabase ni al JSON: es solo para mostrar cómo se ve
   el plan "QR + PDF", no depende de ningún negocio real.
 - **PDF-5** `smaalacarta.com.ar/<slug>/pdf` (RUTAS-4) exige `plan_pdf` y que el
-  negocio no tenga `plan_completo`; por subdominio no cambia nada.
+  negocio no tenga `plan_completo`; `<slug>.smaalacarta.com.ar/pdf` (subdominio)
+  exige `plan_completo`, tenga o no `plan_pdf`.
 
 ## ESTATICO — Menú web de solo lectura
 
@@ -261,7 +278,10 @@ en JS puro.*
   arma las mismas secciones (Destacados y Ofertas, MENU-1 a 3), pone la etiqueta de
   promo en el producto y usa el mismo encabezado (estado dentro de `.header-top`).
 - **ESTATICO-5** `smaalacarta.com.ar/<slug>/menu.html` (RUTAS-4) exige `plan_web` y
-  que el negocio no tenga `plan_completo`; por subdominio no cambia nada.
+  que el negocio no tenga `plan_completo`; `<slug>.smaalacarta.com.ar/menu.html`
+  (subdominio) exige `plan_completo`, tenga o no `plan_web`. Mismo criterio para
+  el menú interactivo (`<slug>.smaalacarta.com.ar`) y para crear un pedido: sin
+  `plan_completo`, no responden.
 - **ESTATICO-6** `moderno.smaalacarta.com.ar/menu.html` (también `clasico` y
   `minimal`) muestra la demo de solo lectura, sin pedir nada a Supabase: sale de
   los mismos JSON que usa el menú interactivo para las demos
@@ -429,9 +449,9 @@ Cubierto por: `src/lib/menu/product-fields.test.ts` (ADMIN-MENU-1 y 2),
 
 *Aplicado por `supabase/migrations/*_configuracion_y_menu_publico.sql`,
 `src/lib/settings/`, `src/lib/db/settings.ts` y `app/dashboard/settings`. Cubierto
-por: `src/lib/db/settings.test.ts` (ADMIN-CONFIG-1 a 6, contra Postgres real),
+por: `src/lib/db/settings.test.ts` (ADMIN-CONFIG-1 a 6 y 9, contra Postgres real),
 `src/lib/db/storage.test.ts` (ADMIN-CONFIG-7), `src/lib/settings/*.test.ts` (formatos
-y redes) y `src/lib/storage/images.test.ts`.*
+y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-CONFIG-10).*
 
 - **ADMIN-CONFIG-1** Cada negocio tiene una configuración propia (plantilla, colores,
   imagen de cabecera, descripción, horarios y si el menú es público); solo sus
@@ -454,6 +474,17 @@ y redes) y `src/lib/storage/images.test.ts`.*
   2 MB. Nadie puede escribir fuera de la carpeta de su negocio.
 - **ADMIN-CONFIG-8** El negocio puede cargar un logo cuadrado (opcional, una imagen https).
   Se usa como ícono al instalar el menú en el celular; sin logo se usa el ícono general.
+- **ADMIN-CONFIG-9** El negocio elige el tema de su plantilla, `claro` u `oscuro`
+  (columna `theme`, por defecto `claro`); no sigue el modo del sistema del
+  visitante. Se guarda junto con el resto de Configuración y `public_menu` lo
+  entrega en `config.tema` (PUBLICO-16).
+- **ADMIN-CONFIG-10** "Compartir" y el botón "Ver mi menú" del header muestran
+  solo las direcciones que de verdad responden, según el plan del negocio
+  (`src/lib/menu-url.ts`, `menuLinks()`/`primaryMenuLink()`, mismo criterio que
+  RUTAS-4): con `plan_completo`, el subdominio (interactivo, y estático/PDF si
+  además los tiene); sin él, el path del dominio raíz para el estático y el PDF,
+  si los tiene, y ningún link para el interactivo. También muestra qué plan
+  tiene el negocio (badges), de solo lectura: solo el superadmin lo cambia.
 
 ## ADMIN-PEDIDOS — Pedidos
 
@@ -482,10 +513,27 @@ y redes) y `src/lib/storage/images.test.ts`.*
 
 - **ADMIN-RESUMEN-1** "Pedidos hoy" cuenta desde las 00:00 de Argentina, sin importar la zona
   horaria del servidor.
-- **ADMIN-RESUMEN-2** El resumen muestra la dirección pública del menú
-  (`https://<slug>.smaalacarta.com.ar`), si está publicado o no, y permite abrirla y copiarla.
+- **ADMIN-RESUMEN-2** El link y el QR del menú viven en Configuración → Compartir
+  (ADMIN-CONFIG-10), no acá.
 - **ADMIN-RESUMEN-3** Los pedidos nuevos (pendientes) se avisan en el resumen y con un contador
   junto a "Pedidos" en el menú lateral (hasta "9+").
+- **ADMIN-RESUMEN-4** El resumen muestra qué plan tiene el negocio (`PlanBadges`,
+  mismos badges que Configuración → Compartir), de solo lectura.
+
+## ADMIN-SUSPENSION — Negocio suspendido
+
+*Aplicado por `supabase/migrations/20260930000900_bloqueo_por_suspension.sql`,
+`src/components/dashboard/SuspendedBanner.tsx` y `app/dashboard/layout.tsx`.
+Cubierto por `src/lib/db/suspension.test.ts`, contra Postgres real.*
+
+- **ADMIN-SUSPENSION-1** Un negocio con `active = false` no puede crear ni editar
+  categorías, productos, promociones (ni sus ítems), la configuración, ni pedidos
+  (manuales o los que llegan del menú público) — un trigger por tabla
+  (`guard_business_active()`) lo exige aunque la operación pase por una función
+  `SECURITY DEFINER`. Borrar sigue permitido: solo se bloquea alta y edición.
+  El panel muestra un aviso fijo en todo el dashboard mientras dure la
+  suspensión, y cada acción devuelve un mensaje en español (no el error crudo
+  de Postgres) en vez de fallar en silencio.
 
 ## ADMIN-PROMOS — Promociones
 

@@ -48,10 +48,12 @@ beforeAll(async () => {
 
   await db.exec(`
     insert into super_admins (user_id) values ('${SUPER}');
-    insert into businesses (id, name, slug, whatsapp) values
-      ('${NEG_ANA}', 'Ana Resto', 'ana', '5493510000001'),
-      ('${NEG_BETO}', 'Beto Bar', 'beto', '5493510000002'),
-      ('${NEG_PRIVADO}', 'Privado', 'privado', '5493510000003');
+    -- Estos tests son del camino de siempre (por subdominio, p_via_path = false):
+    -- necesitan plan_completo, igual que cualquier negocio real con ese plan.
+    insert into businesses (id, name, slug, whatsapp, plan_completo) values
+      ('${NEG_ANA}', 'Ana Resto', 'ana', '5493510000001', true),
+      ('${NEG_BETO}', 'Beto Bar', 'beto', '5493510000002', true),
+      ('${NEG_PRIVADO}', 'Privado', 'privado', '5493510000003', true);
     insert into business_users (business_id, user_id) values
       ('${NEG_ANA}', '${ANA}'), ('${NEG_BETO}', '${BETO}');
 
@@ -265,6 +267,7 @@ describe("configuración — PUBLICO-4", () => {
       nombre: "Ana Resto",
       descripcion: "Cocina casera",
       template: "clasico",
+      tema: "claro",
       tipo: "cliente",
       telefono: "5493510000001",
       colores: { primary: "#112233", secondary: "#445566" },
@@ -377,8 +380,8 @@ describe("ruteo por plan — RUTAS-4 y ESTATICO-5", () => {
     `);
   });
 
-  it("por subdominio (p_via_path = false) no le importa el plan", async () => {
-    expect(await publicMenu("con-plan-web", null, false)).not.toBeNull();
+  it("por subdominio (p_via_path = false), sin plan_completo no responde", async () => {
+    expect(await publicMenu("con-plan-web", null, false)).toBeNull();
   });
 
   it("por path (p_via_path = true), con plan_web y sin plan_completo, sí responde", async () => {
@@ -391,10 +394,10 @@ describe("ruteo por plan — RUTAS-4 y ESTATICO-5", () => {
     await asUser(db, SUPER, `update businesses set plan_web = true where id = '${NEG_PLAN}'`);
   });
 
-  it("por path, con plan_completo no responde: ese negocio va por subdominio", async () => {
+  it("con plan_completo: responde por subdominio y ya no por path", async () => {
     await asUser(db, SUPER, `update businesses set plan_completo = true where id = '${NEG_PLAN}'`);
-    expect(await publicMenu("con-plan-web", null, true)).toBeNull();
     expect(await publicMenu("con-plan-web", null, false)).not.toBeNull();
+    expect(await publicMenu("con-plan-web", null, true)).toBeNull();
     await asUser(db, SUPER, `update businesses set plan_completo = false where id = '${NEG_PLAN}'`);
   });
 });

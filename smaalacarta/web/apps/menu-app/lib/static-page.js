@@ -135,6 +135,7 @@ export function renderStaticMenuPage({ config, menu } = {}) {
   const enhanced = buildEnhancedMenu(menu);
   const categorias = Array.isArray(enhanced?.categorias) ? enhanced.categorias : [];
   const template = TEMPLATES.includes(config?.template) ? config.template : "moderno";
+  const tema = config?.tema === "oscuro" ? "oscuro" : "claro";
   const primary = safeColor(config?.colores?.primary, "#5a4a3a");
   const secondary = safeColor(config?.colores?.secondary, "#d97706");
   // Los colores y el texto que se lee sobre ellos: solo salen hex y rgba() calculados.
@@ -153,7 +154,7 @@ export function renderStaticMenuPage({ config, menu } = {}) {
   const logo = safeHttpUrl(config?.logo);
 
   return `<!doctype html>
-<html lang="es" data-template="${template}">
+<html lang="es" data-template="${template}" data-tema="${tema}">
 <head>
 <meta charset="UTF-8">
 <title>${escapeHtml(config?.nombre || "Menú")}</title>

@@ -1,10 +1,30 @@
 :root {
   --bg: #ffffff;
+  --card: #f6f6f4;
   --text: #111;
   --muted: #6b6b6b;
-  --border: #ececec;
+  --border: #e5e5e2;
+  /* Velo sobre la foto del encabezado y fondo de la barra de categorías: una
+     versión translúcida de --card, para que se note el fondo debajo al deslizar. */
+  --veil: rgba(246, 246, 244, 0.94);
 
   --primary: var(--color-primary, #111);
+}
+
+/* Tema oscuro (ADMIN-CONFIG-9): se elige a mano en Configuración, no sigue el
+   modo del sistema del visitante. --primary queda igual: es el color de marca,
+   ya se lee bien sobre sí mismo, no sobre la página. Minimal sigue siendo una
+   lista sin tarjetas (los productos van sin fondo propio, solo una línea
+   debajo), pero los paneles —encabezado, categorías, carrito, checkout—
+   necesitan un tono un toque distinto del fondo, o se pierden contra la
+   página. */
+:root[data-tema="oscuro"] {
+  --bg: #121212;
+  --card: #1c1c1c;
+  --text: #f0f0f0;
+  --muted: #9a9a9a;
+  --border: rgba(255, 255, 255, 0.12);
+  --veil: rgba(28, 28, 28, 0.9);
 }
 
 /* BASE */
@@ -18,7 +38,7 @@ body {
 .header {
   position: relative;
   isolation: isolate;
-  background-color: #fff;
+  background-color: var(--card);
   background-size: cover;
   background-position: center;
   color: var(--text);
@@ -32,7 +52,7 @@ body {
   inset: 0;
   z-index: -1;
   border-radius: inherit;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--veil);
 }
 
 .header h1 {
@@ -52,7 +72,7 @@ body {
   width: 100%;
   border-bottom: 1px solid var(--border);
   background: transparent;
-  color: #111;
+  color: var(--text);
 }
 
 .header input::placeholder {
@@ -85,7 +105,7 @@ body {
 .categorias {
   gap: 18px;
   padding: 12px 15px 0;
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--veil);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
 }
@@ -192,7 +212,7 @@ body {
   font-weight: 600;
   color: var(--text);
 
-  background: #fff;
+  background: var(--card);
   border: 1px solid var(--border);
   padding: 2px 6px;
   border-radius: 4px;
@@ -209,7 +229,11 @@ body {
   border: 1px solid var(--border);
   border-radius: 50%;
   background: none;
-  color: var(--primary);
+  /* Texto de la página, no el color de marca crudo: un color de marca claro
+     (o cercano al fondo en tema oscuro) dejaba el "+" ilegible. Al tocar, sí
+     pasa a los colores de marca (fondo + on-brand, ya pensados para leerse
+     entre sí). */
+  color: var(--text);
   font-size: 1.25rem;
   line-height: 1;
   transition:
@@ -238,7 +262,7 @@ body {
   width: 320px;
   height: 100%;
 
-  background: #fff;
+  background: var(--card);
 
   transform: translateX(100%);
   transition: transform 0.25s ease;
@@ -302,7 +326,7 @@ body {
 .carrito-footer {
   padding: 15px;
   border-top: 1px solid var(--border);
-  background: #fff;
+  background: var(--card);
 }
 
 /* CONTROLES */
@@ -316,7 +340,9 @@ body {
 .btn-plus,
 .btn-remove {
   background: none;
-  color: var(--primary);
+  /* Mismo motivo que en .producto button: texto de la página, no el color de
+     marca crudo (podía quedar ilegible según el color y el tema). */
+  color: var(--text);
   font-size: 1rem;
 }
 
@@ -347,7 +373,7 @@ body {
   left: 0;
   width: 100%;
 
-  background: #fff;
+  background: var(--card);
   border-top: 1px solid var(--border);
 
   padding: 15px;
@@ -448,6 +474,9 @@ body {
 
   background: var(--primary);
   color: var(--on-brand, #fff);
+  /* Un borde translúcido: sin esto, un color de marca oscuro se perdía contra
+     un fondo de página también oscuro (tema oscuro). */
+  border: 1px solid var(--border);
 
   border-radius: 4px;
   padding: 10px 14px;
@@ -478,7 +507,7 @@ body {
   width: 320px;
   height: 100%;
 
-  background: #fff;
+  background: var(--card);
 
   transform: translateX(100%);
   transition: transform 0.25s ease;
