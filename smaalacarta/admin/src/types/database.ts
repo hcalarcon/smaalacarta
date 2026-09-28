@@ -58,6 +58,7 @@ export type Database = {
           tagline: string | null
           template: string
           temporarily_closed: boolean
+          theme: string
           updated_at: string
         }
         Insert: {
@@ -78,6 +79,7 @@ export type Database = {
           tagline?: string | null
           template?: string
           temporarily_closed?: boolean
+          theme?: string
           updated_at?: string
         }
         Update: {
@@ -98,6 +100,7 @@ export type Database = {
           tagline?: string | null
           template?: string
           temporarily_closed?: boolean
+          theme?: string
           updated_at?: string
         }
         Relationships: [
@@ -681,6 +684,7 @@ export type Database = {
           p_tagline: string
           p_template: string
           p_temporarily_closed: boolean
+          p_theme: string
           p_whatsapp: string
         }
         Returns: undefined

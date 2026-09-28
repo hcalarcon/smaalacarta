@@ -135,6 +135,13 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   contraste— y un tono de la marca oscurecido para escribir sobre blanco (mínimo 4.5:1). Las
   plantillas usan `--on-brand`, `--on-brand-mix` y `--on-header` en vez de blanco fijo. Un
   valor que no sea un color hexadecimal válido no llega al estilo.
+- **PUBLICO-16** El menú entrega el tema en `config.tema` (`"claro"` o `"oscuro"`,
+  ADMIN-CONFIG-9); el interactivo lo pone en `data-tema` del `<html>` (`app.js`) y
+  el estático lo arma en el HTML (`static-page.js`). Las tres plantillas leen
+  `[data-tema="oscuro"]` para redefinir sus variables de fondo, tarjeta, texto y
+  borde; los colores de marca del negocio y los fijos (promo, WhatsApp) no
+  cambian con el tema: ya se calculan para leerse sobre sí mismos. Sin tema
+  cargado (las demos, hoy), se ve como siempre: claro.
 
 ## BUSQUEDA — Buscador
 
@@ -435,7 +442,7 @@ Cubierto por: `src/lib/menu/product-fields.test.ts` (ADMIN-MENU-1 y 2),
 
 *Aplicado por `supabase/migrations/*_configuracion_y_menu_publico.sql`,
 `src/lib/settings/`, `src/lib/db/settings.ts` y `app/dashboard/settings`. Cubierto
-por: `src/lib/db/settings.test.ts` (ADMIN-CONFIG-1 a 6, contra Postgres real),
+por: `src/lib/db/settings.test.ts` (ADMIN-CONFIG-1 a 6 y 9, contra Postgres real),
 `src/lib/db/storage.test.ts` (ADMIN-CONFIG-7), `src/lib/settings/*.test.ts` (formatos
 y redes) y `src/lib/storage/images.test.ts`.*
 
@@ -459,6 +466,10 @@ y redes) y `src/lib/storage/images.test.ts`.*
   de su carpeta del bucket de imágenes; solo se aceptan JPG, PNG y WebP de hasta
   2 MB. Nadie puede escribir fuera de la carpeta de su negocio.
 - **ADMIN-CONFIG-8** El negocio puede cargar un logo cuadrado (opcional, una imagen https).
+- **ADMIN-CONFIG-9** El negocio elige el tema de su plantilla, `claro` u `oscuro`
+  (columna `theme`, por defecto `claro`); no sigue el modo del sistema del
+  visitante. Se guarda junto con el resto de Configuración y `public_menu` lo
+  entrega en `config.tema` (PUBLICO-16).
   Se usa como ícono al instalar el menú en el celular; sin logo se usa el ícono general.
 
 ## ADMIN-PEDIDOS — Pedidos

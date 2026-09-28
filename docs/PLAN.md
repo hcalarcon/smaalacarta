@@ -346,11 +346,37 @@ Requisitos en `docs/SPEC.md` (ADMIN-SUPER-13 a 16).
       login ("Vercel Authentication"), así que no se pueden probar con `curl`, solo
       en el navegador ya logueado — en producción no debería pasar, pero conviene
       confirmarlo una vez que esto llegue a `main`
-- [ ] [herni] Confirmar que el path funcione en producción real (`smaalacarta.com.ar`)
-      una vez mergeado a `main`, con el dominio `democlientes-git-main-smaalacarta.vercel.app`
-      hardcodeado en `landing/vercel.json`
+- [x] [herni] Confirmado en producción real (`smaalacarta.com.ar/kukarachos/menu.html`
+      y `/pdf`, ambos 200 con el contenido correcto). Encontró y resolvió de paso un
+      problema real: el deploy de `web/` tenía la protección de Vercel
+      ("Vercel Authentication") activa también en producción, así que cualquier
+      visitante sin sesión de Vercel se quedaba en una pantalla de login — quedó
+      desactivada para producción
 - [ ] [por asignar] Historial de pagos o fecha de vencimiento (quedó afuera de esta
       vuelta: por ahora es un interruptor manual, sin fechas)
+
+## Etapa 6h — Tema claro/oscuro por plantilla
+
+**Diseño.** Una variante más de cada plantilla (`moderno`, `clasico`, `minimal`),
+elegida a mano en Configuración (`business_settings.theme`, ADMIN-CONFIG-9): no
+sigue el modo del sistema del visitante. `public_menu` la entrega en
+`config.tema`; el interactivo (`app.js`) y el estático (`static-page.js`) la
+ponen en `data-tema` del `<html>`, y cada plantilla redefine sus variables de
+fondo/tarjeta/texto/borde bajo `[data-tema="oscuro"]`. Los colores de marca del
+negocio y los fijos (promo, WhatsApp) no cambian con el tema. Requisitos en
+`docs/SPEC.md` (ADMIN-CONFIG-9, PUBLICO-16).
+
+- [x] [herni] Migración `20260930000800_tema_claro_oscuro.sql`, selector en
+      Configuración → Apariencia, y el resto de la cadena (`public_menu`, `app.js`,
+      `static-page.js`)
+- [x] [herni] Variables de tema en las tres plantillas (`--bg`, `--card`/`--veil`
+      según la plantilla, `--text`, `--muted`, `--border`, y en clásico además
+      `--tint-ok-*`/`--tint-bad-*` para Destacados/Ofertas y el estado abierto/cerrado)
+- [ ] [herni] **Mirar las tres plantillas en oscuro, en el navegador**: no hay forma
+      de probar esto sin ojos humanos, así que no está verificado más allá de la
+      lectura del CSS. Para probar rápido: Configuración → Apariencia → Oscuro →
+      Guardar, en un negocio real, o editar a mano `tema: "oscuro"` en el
+      `config.json` de una demo
 
 ## Etapa 7 — Pendientes técnicos (backlog)
 

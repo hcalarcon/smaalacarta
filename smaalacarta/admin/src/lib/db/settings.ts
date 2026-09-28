@@ -30,6 +30,7 @@ export async function getSettings(
   return {
     published: data.published,
     template: data.template,
+    theme: data.theme,
     tagline: data.tagline ?? "",
     primaryColor: data.primary_color,
     secondaryColor: data.secondary_color,
@@ -73,6 +74,7 @@ export async function saveSettings(
     p_reopens_on: (input.reopensOn || null) as string,
     p_logo_url: input.logoUrl,
     p_menu_pdf_url: input.menuPdfUrl,
+    p_theme: input.theme,
   });
 
   return error ? { error: { code: error.code, message: error.message } } : {};

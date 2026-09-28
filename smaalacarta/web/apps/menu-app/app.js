@@ -182,6 +182,7 @@ async function init() {
 
     window.CONFIG = config;
     document.documentElement.dataset.template = config.template || "";
+    document.documentElement.dataset.tema = config.tema || "claro";
 
     // App instalable: manifest, ícono y color del negocio (PWA-1 a 3).
     PWA.applyPwa(document, { type, slug, config });

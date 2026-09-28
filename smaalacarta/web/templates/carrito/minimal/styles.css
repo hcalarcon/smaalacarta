@@ -3,8 +3,23 @@
   --text: #111;
   --muted: #6b6b6b;
   --border: #ececec;
+  /* Velo sobre la foto del encabezado y fondo de la barra de categorías: una
+     versión translúcida de --bg, para que se note el fondo debajo al deslizar. */
+  --veil: rgba(255, 255, 255, 0.94);
 
   --primary: var(--color-primary, #111);
+}
+
+/* Tema oscuro (ADMIN-CONFIG-9): se elige a mano en Configuración, no sigue el
+   modo del sistema del visitante. --primary queda igual: es el color de marca,
+   ya se lee bien sobre sí mismo, no sobre la página. Minimal no distingue
+   tarjeta de fondo (es su estilo): todo lo que era blanco pasa a --bg. */
+:root[data-tema="oscuro"] {
+  --bg: #121212;
+  --text: #f0f0f0;
+  --muted: #9a9a9a;
+  --border: rgba(255, 255, 255, 0.12);
+  --veil: rgba(18, 18, 18, 0.88);
 }
 
 /* BASE */
@@ -18,7 +33,7 @@ body {
 .header {
   position: relative;
   isolation: isolate;
-  background-color: #fff;
+  background-color: var(--bg);
   background-size: cover;
   background-position: center;
   color: var(--text);
@@ -32,7 +47,7 @@ body {
   inset: 0;
   z-index: -1;
   border-radius: inherit;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--veil);
 }
 
 .header h1 {
@@ -52,7 +67,7 @@ body {
   width: 100%;
   border-bottom: 1px solid var(--border);
   background: transparent;
-  color: #111;
+  color: var(--text);
 }
 
 .header input::placeholder {
@@ -85,7 +100,7 @@ body {
 .categorias {
   gap: 18px;
   padding: 12px 15px 0;
-  background: rgba(255, 255, 255, 0.96);
+  background: var(--veil);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border);
 }
@@ -192,7 +207,7 @@ body {
   font-weight: 600;
   color: var(--text);
 
-  background: #fff;
+  background: var(--bg);
   border: 1px solid var(--border);
   padding: 2px 6px;
   border-radius: 4px;
@@ -238,7 +253,7 @@ body {
   width: 320px;
   height: 100%;
 
-  background: #fff;
+  background: var(--bg);
 
   transform: translateX(100%);
   transition: transform 0.25s ease;
@@ -302,7 +317,7 @@ body {
 .carrito-footer {
   padding: 15px;
   border-top: 1px solid var(--border);
-  background: #fff;
+  background: var(--bg);
 }
 
 /* CONTROLES */
@@ -347,7 +362,7 @@ body {
   left: 0;
   width: 100%;
 
-  background: #fff;
+  background: var(--bg);
   border-top: 1px solid var(--border);
 
   padding: 15px;
@@ -478,7 +493,7 @@ body {
   width: 320px;
   height: 100%;
 
-  background: #fff;
+  background: var(--bg);
 
   transform: translateX(100%);
   transition: transform 0.25s ease;

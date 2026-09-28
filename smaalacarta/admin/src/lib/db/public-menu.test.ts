@@ -267,6 +267,7 @@ describe("configuración — PUBLICO-4", () => {
       nombre: "Ana Resto",
       descripcion: "Cocina casera",
       template: "clasico",
+      tema: "claro",
       tipo: "cliente",
       telefono: "5493510000001",
       colores: { primary: "#112233", secondary: "#445566" },

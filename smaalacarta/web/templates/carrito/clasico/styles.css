@@ -5,11 +5,38 @@
   --muted: #6b6560;
   --border: #e5e0d9;
 
+  /* Tarjetas de Destacados y el estado "Abierto" */
+  --tint-ok-bg: #f1fdf3;
+  --tint-ok-border: #c8e6c9;
+  --tint-ok-text: #2e7d32;
+  /* Tarjetas de Ofertas y el estado "Cerrado" */
+  --tint-bad-bg: #fff5f5;
+  --tint-bad-border: #f5c6c6;
+  --tint-bad-text: #a93226;
+
   --primary: var(--color-primary, #8b0000);
   --secondary: var(--color-secondary, #c0392b);
 
   /* La letra de la carta de siempre: títulos y nombres de los platos con serif */
   --serif: Georgia, "Times New Roman", serif;
+}
+
+/* Tema oscuro (ADMIN-CONFIG-9): se elige a mano en Configuración, no sigue el
+   modo del sistema del visitante. --primary/--secondary quedan igual: son el
+   color de marca, ya se leen bien sobre sí mismos, no sobre la página. */
+:root[data-tema="oscuro"] {
+  --bg: #17140f;
+  --card: #241f19;
+  --text: #f2ede6;
+  --muted: #b3a89c;
+  --border: rgba(255, 255, 255, 0.1);
+
+  --tint-ok-bg: rgba(46, 125, 50, 0.18);
+  --tint-ok-border: rgba(46, 125, 50, 0.4);
+  --tint-ok-text: #7cd992;
+  --tint-bad-bg: rgba(169, 50, 38, 0.2);
+  --tint-bad-border: rgba(169, 50, 38, 0.45);
+  --tint-bad-text: #f28b82;
 }
 
 /* BASE */
@@ -110,13 +137,13 @@ body {
 }
 
 .categoria-destacados .producto {
-  background: #f8fff9;
-  border: 1px solid #d6f5dd;
+  background: var(--tint-ok-bg);
+  border: 1px solid var(--tint-ok-border);
 }
 
 .categoria-ofertas .producto {
-  border: 1px solid #f5c6c6;
-  background: #fffafa;
+  border: 1px solid var(--tint-bad-border);
+  background: var(--tint-bad-bg);
 }
 
 .producto .btn-add {
@@ -215,7 +242,7 @@ body {
   font-weight: 600;
 
   border: 1px solid var(--border);
-  background: #fff;
+  background: var(--card);
   color: var(--text);
 }
 
@@ -228,24 +255,24 @@ body {
 
 /* abierto */
 .badge-estado.abierto {
-  border-color: #c8e6c9;
-  background: #f1fdf3;
-  color: #2e7d32;
+  border-color: var(--tint-ok-border);
+  background: var(--tint-ok-bg);
+  color: var(--tint-ok-text);
 }
 
 .badge-estado.abierto .dot {
-  background: #2e7d32;
+  background: var(--tint-ok-text);
 }
 
 /* cerrado */
 .badge-estado.cerrado {
-  border-color: #f5c6c6;
-  background: #fff5f5;
-  color: #a93226;
+  border-color: var(--tint-bad-border);
+  background: var(--tint-bad-bg);
+  color: var(--tint-bad-text);
 }
 
 .badge-estado.cerrado .dot {
-  background: #a93226;
+  background: var(--tint-bad-text);
 }
 
 /* MENÚ */
@@ -490,7 +517,7 @@ body {
 
 /* contador */
 #carrito-count {
-  background: #fff;
+  background: var(--card);
   color: var(--primary);
   border-radius: 4px;
   padding: 2px 6px;

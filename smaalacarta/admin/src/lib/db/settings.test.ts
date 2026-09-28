@@ -30,6 +30,7 @@ type Settings = {
   reopensOn?: string | null;
   logo?: string | null;
   pdf?: string | null;
+  theme?: string;
 };
 
 const sqlText = (value: string | null | undefined, fallback: string | null) => {
@@ -60,7 +61,8 @@ function save(user: string | null, s: Settings = {}) {
        ${sqlText(s.closedMessage, "")},
        ${sqlText(s.reopensOn, null)}::date,
        ${sqlText(s.logo, null)},
-       ${sqlText(s.pdf, null)})`,
+       ${sqlText(s.pdf, null)},
+       '${s.theme ?? "claro"}')`,
   );
 }
 
@@ -107,6 +109,21 @@ describe("guardar la configuración — ADMIN-CONFIG-1 y 3", () => {
       `select whatsapp from businesses where id = '${NEG_ANA}'`,
     );
     expect(b.rows[0].whatsapp).toBe("5493510000000");
+  });
+
+  it("guarda el tema (ADMIN-CONFIG-9); por defecto es claro", async () => {
+    const s1 = await db.query<{ theme: string }>(
+      `select theme from business_settings where business_id = '${NEG_ANA}'`,
+    );
+    expect(s1.rows[0].theme).toBe("claro");
+
+    await save(ANA, { theme: "oscuro" });
+    const s2 = await db.query<{ theme: string }>(
+      `select theme from business_settings where business_id = '${NEG_ANA}'`,
+    );
+    expect(s2.rows[0].theme).toBe("oscuro");
+
+    await save(ANA, { theme: "claro" });
   });
 
   it("guardar de nuevo actualiza la misma fila (no duplica)", async () => {

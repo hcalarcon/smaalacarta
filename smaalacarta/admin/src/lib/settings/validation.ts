@@ -12,9 +12,19 @@ export const TEMPLATES = [
 
 export type TemplateKey = (typeof TEMPLATES)[number]["key"];
 
+// Variante de color de la plantilla: se elige a mano acá, no sigue el modo del
+// sistema del visitante (ADMIN-CONFIG-9).
+export const THEMES = [
+  { key: "claro", label: "Claro" },
+  { key: "oscuro", label: "Oscuro" },
+] as const;
+
+export type ThemeKey = (typeof THEMES)[number]["key"];
+
 export type SettingsInput = {
   published: boolean;
   template: string;
+  theme: string;
   tagline: string;
   primaryColor: string;
   secondaryColor: string;
@@ -39,6 +49,7 @@ export type SettingsInput = {
 export const DEFAULT_SETTINGS: SettingsInput = {
   published: false,
   template: "moderno",
+  theme: "claro",
   tagline: "",
   primaryColor: "#5a4a3a",
   secondaryColor: "#d97706",
@@ -57,6 +68,7 @@ export const DEFAULT_SETTINGS: SettingsInput = {
 
 type Field =
   | "template"
+  | "theme"
   | "tagline"
   | "primaryColor"
   | "secondaryColor"
@@ -112,6 +124,10 @@ export function validateSettings(input: SettingsInput): ValidationResult<Field> 
 
   if (!TEMPLATES.some((t) => t.key === input.template)) {
     errors.template = "Elegí una de las plantillas.";
+  }
+
+  if (!THEMES.some((t) => t.key === input.theme)) {
+    errors.theme = "Elegí un tema.";
   }
 
   if (!COLOR.test(input.primaryColor)) {
