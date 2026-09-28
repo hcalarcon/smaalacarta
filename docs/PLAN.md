@@ -271,13 +271,13 @@ siempre (JS plano, lógica en `lib/*.js` con tests, funciones en `web/api/`).
       rutas "bare" (`/pdf`, `/menu.html`, sin `:cliente`)
 - [ ] [herni] Probar de nuevo en producción con `kukarachos` (o el negocio de prueba
       que uses) que `<slug>.smaalacarta.com.ar/pdf` y `/menu.html` respondan bien
-- [ ] [por asignar] El menú estático (`static-menu.js`) todavía no tiene respaldo en
-      JSON para las demos (a diferencia del interactivo y el PDF, que sí caen a
-      `data/demos/*`): por eso el modal de demos de la landing, en "Menú Web", sigue
-      mostrando el menú interactivo (con carrito) en vez de una vista de solo lectura.
-      Para agregarlo con cuidado: los JSON de cada demo tendrían que importarse
-      estáticos en `static-menu.js` (no `fs.readFileSync` con un path armado en
-      tiempo de ejecución, que el empaquetado de Vercel puede no incluir)
+- [x] [herni] El menú estático sirve las demos (ESTATICO-6): `getDemoMenu()`
+      (`apps/menu-app/lib/demo-menu.js`) trae los JSON de `data/demos/<slug>/` con
+      un `require` literal por demo (no un path armado en tiempo de ejecución, que
+      el empaquetado de Vercel para funciones serverless podría no incluir). El
+      modal de demos de la landing, en "Menú Web", ahora enlaza a
+      `<demo>.smaalacarta.com.ar/menu.html` (antes iba a `demo.smaalacarta.com.ar/<demo>`,
+      la demo interactiva)
 - [ ] [por asignar] El admin no tiene ningún lugar que muestre el link (ni un QR)
       del PDF o del menú estático para compartir — solo el interactivo lo tiene, en
       Configuración → Compartir
