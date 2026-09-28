@@ -395,6 +395,12 @@ negocio y los fijos (promo, WhatsApp) no cambian con el tema. Requisitos en
       tiene: por eso el fondo se quedaba blanco con el texto en claro,
       ilegible) — ahora es un chip gris neutro con `color: inherit`, y se movió
       de flotante a la barra de arriba. Transición suave sumada al cambiar de tema
+- [x] [herni] Minimal ganó un `--card` propio (antes no distinguía superficie de
+      fondo a propósito, "es su estilo"): probado, resultaba demasiado plano —
+      "todo blanco", sin poder diferenciar el encabezado, la barra de categorías,
+      el carrito y el checkout de la página. Los productos siguen sin tarjeta
+      propia (solo una línea debajo, es la lista de siempre): el ajuste es en los
+      paneles, no en cada producto
 - [ ] [por asignar] El mismo switch en el menú estático de las demos (hoy no
       tiene nada de JS; requeriría un script chico solo para ese caso)
 
