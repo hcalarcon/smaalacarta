@@ -404,6 +404,23 @@ negocio y los fijos (promo, WhatsApp) no cambian con el tema. Requisitos en
 - [ ] [por asignar] El mismo switch en el menú estático de las demos (hoy no
       tiene nada de JS; requeriría un script chico solo para ese caso)
 
+## Etapa 6i — Plan visible en el resumen, negocio suspendido, menú sin trabarse
+
+- [x] [herni] El interactivo (`app.js`) mostraba el loader para siempre cuando no
+      había nada que mostrar (negocio inexistente, sin `plan_completo`,
+      suspendido): ahora se ve un aviso de "no encontramos este menú". Se notó
+      con kukarachos, que no tiene `plan_completo` y por eso no responde por
+      subdominio
+- [x] [herni] El resumen del panel también muestra el plan del negocio
+      (`PlanBadges`, ADMIN-RESUMEN-4), no solo Configuración → Compartir
+- [x] [herni] Negocio suspendido (`active = false`): además de desaparecer de lo
+      público (Etapa 6g), ahora tampoco se puede editar desde el panel —
+      categorías, productos, promociones, configuración y pedidos, con un
+      trigger por tabla (migración `20260930000900_bloqueo_por_suspension.sql`,
+      ADMIN-SUSPENSION-1) que cubre tanto RLS como las funciones
+      `SECURITY DEFINER`. El borrado no se bloquea. Un aviso fijo en todo el
+      panel explica por qué mientras dure
+
 ## Etapa 7 — Pendientes técnicos (backlog)
 
 - [ ] [por asignar] Permisos por `role` en `businesses`: hoy cualquier miembro puede editar el negocio, incluido el `slug`

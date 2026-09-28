@@ -30,6 +30,21 @@ async function fetchJSON(path) {
   }
 }
 
+// Sin negocio (ni en Supabase ni en los JSON): antes se quedaba trabado en el
+// loader para siempre. Sin plantilla ni marca (no hay negocio del que sacarlas):
+// una pantalla simple, igual de espíritu que la del estático y el PDF.
+function showNotFound() {
+  document.body.classList.remove("loading");
+  document.body.innerHTML = `
+    <div style="display:flex;min-height:100vh;flex-direction:column;align-items:center;
+      justify-content:center;gap:.5rem;padding:2rem;text-align:center;
+      font-family:system-ui,-apple-system,sans-serif;color:#111827;">
+      <h1 style="font-size:1.4rem;margin:0;">No encontramos este menú</h1>
+      <p style="margin:0;color:#6b7280;">Puede que el negocio todavía no esté disponible acá.</p>
+    </div>
+  `;
+}
+
 // Qué negocio abre esta URL (RUTAS-1 y 2).
 function resolveAppConfig(resolveHost, resolveDemo) {
   const params = new URLSearchParams(window.location.search);
@@ -174,10 +189,16 @@ async function init() {
 
     if (!config || !menu) {
       config = await fetchJSON(`${basePath}/${slug}/config.json`);
-      if (!config) return;
+      if (!config) {
+        showNotFound();
+        return;
+      }
 
       menu = await fetchJSON(`${basePath}/${slug}/menu.json`);
-      if (!menu) return;
+      if (!menu) {
+        showNotFound();
+        return;
+      }
     }
 
     window.CONFIG = config;

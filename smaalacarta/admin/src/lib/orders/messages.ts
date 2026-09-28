@@ -9,6 +9,8 @@ export function orderErrorMessage(error: DbError) {
       return "Ese cambio de estado no está permitido.";
     case "P0002":
       return "El pedido no existe.";
+    case "P0010":
+      return "Tu cuenta está suspendida: no se pueden hacer cambios.";
     case "22023":
       return "Revisá los datos del pedido.";
     case "42501":

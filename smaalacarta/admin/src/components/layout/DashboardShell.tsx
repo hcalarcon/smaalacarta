@@ -20,6 +20,9 @@ type DashboardShellProps = {
   menuLink?: { href: string; label: string };
   // El superadmin no tiene Configuración propia: ahí sigue en el header.
   showChangePassword?: boolean;
+  // Aviso de negocio suspendido (ADMIN-SUSPENSION-1): se ve en todo el panel,
+  // no aplica a /superadmin.
+  banner?: React.ReactNode;
   children: React.ReactNode;
 };
 
@@ -32,6 +35,7 @@ export default function DashboardShell({
   switchLink,
   menuLink,
   showChangePassword = true,
+  banner,
   children,
 }: DashboardShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -188,6 +192,8 @@ export default function DashboardShell({
             </div>
           </div>
         </header>
+
+        {banner}
 
         <main className="p-4 md:p-6 lg:p-8">{children}</main>
       </div>

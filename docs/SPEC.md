@@ -107,7 +107,10 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
 - **PUBLICO-5** Quien no tiene sesión puede pedir el menú de un negocio publicado,
   pero no puede leer ninguna tabla del negocio.
 - **PUBLICO-6** El menú web pide el negocio a Supabase; si Supabase no está
-  configurado, no lo tiene o falla, usa los JSON locales como hasta ahora.
+  configurado, no lo tiene o falla, usa los JSON locales como hasta ahora. Si
+  ninguno de los dos tiene nada (negocio inexistente, sin plan_completo, o
+  suspendido), se ve un aviso de "no encontramos este menú" en vez de quedarse
+  trabado en el loader para siempre.
 - **PUBLICO-7** Lo que llega de Supabase se completa con valores por defecto para
   que el menú nunca reciba categorías o ítems sin lista.
 - **PUBLICO-8** La dirección y las redes llegan como `direccion` y `redes`; un cierre
@@ -510,10 +513,27 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
 
 - **ADMIN-RESUMEN-1** "Pedidos hoy" cuenta desde las 00:00 de Argentina, sin importar la zona
   horaria del servidor.
-- **ADMIN-RESUMEN-2** El resumen muestra la dirección pública del menú
-  (`https://<slug>.smaalacarta.com.ar`), si está publicado o no, y permite abrirla y copiarla.
+- **ADMIN-RESUMEN-2** El link y el QR del menú viven en Configuración → Compartir
+  (ADMIN-CONFIG-10), no acá.
 - **ADMIN-RESUMEN-3** Los pedidos nuevos (pendientes) se avisan en el resumen y con un contador
   junto a "Pedidos" en el menú lateral (hasta "9+").
+- **ADMIN-RESUMEN-4** El resumen muestra qué plan tiene el negocio (`PlanBadges`,
+  mismos badges que Configuración → Compartir), de solo lectura.
+
+## ADMIN-SUSPENSION — Negocio suspendido
+
+*Aplicado por `supabase/migrations/20260930000900_bloqueo_por_suspension.sql`,
+`src/components/dashboard/SuspendedBanner.tsx` y `app/dashboard/layout.tsx`.
+Cubierto por `src/lib/db/suspension.test.ts`, contra Postgres real.*
+
+- **ADMIN-SUSPENSION-1** Un negocio con `active = false` no puede crear ni editar
+  categorías, productos, promociones (ni sus ítems), la configuración, ni pedidos
+  (manuales o los que llegan del menú público) — un trigger por tabla
+  (`guard_business_active()`) lo exige aunque la operación pase por una función
+  `SECURITY DEFINER`. Borrar sigue permitido: solo se bloquea alta y edición.
+  El panel muestra un aviso fijo en todo el dashboard mientras dure la
+  suspensión, y cada acción devuelve un mensaje en español (no el error crudo
+  de Postgres) en vez de fallar en silencio.
 
 ## ADMIN-PROMOS — Promociones
 

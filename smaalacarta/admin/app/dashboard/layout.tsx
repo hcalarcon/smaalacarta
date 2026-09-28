@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import SuspendedBanner from "@/components/dashboard/SuspendedBanner";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { dashboardLinks } from "@/components/layout/nav-links";
 import { getSuperAdminStatus } from "@/lib/auth/superadmin";
@@ -49,6 +50,7 @@ export default async function DashboardLayout({
       }
       menuLink={menuHref ? { href: menuHref, label: "Ver mi menú" } : undefined}
       showChangePassword={false}
+      banner={current!.business!.active ? undefined : <SuspendedBanner />}
     >
       {children}
     </DashboardShell>

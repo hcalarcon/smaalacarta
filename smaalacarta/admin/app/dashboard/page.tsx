@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import DashboardCard from "@/components/dashboard/DashboardCard";
+import PlanBadges from "@/components/dashboard/PlanBadges";
 import { getBusinessSummary } from "@/lib/db/summary";
 import { requireBusiness } from "@/lib/get-current-business";
 
@@ -20,6 +21,19 @@ export default async function DashboardPage() {
         <p className="mt-2 text-stone-500">
           Así está {business.name} en este momento.
         </p>
+      </section>
+
+      <section className="rounded-3xl border border-line bg-white p-5 shadow-sm">
+        <p className="text-sm text-stone-500">Tu plan</p>
+        <div className="mt-2">
+          <PlanBadges
+            plan={{
+              planPdf: business.plan_pdf,
+              planWeb: business.plan_web,
+              planCompleto: business.plan_completo,
+            }}
+          />
+        </div>
       </section>
 
       {summary.pendingOrders > 0 ? (

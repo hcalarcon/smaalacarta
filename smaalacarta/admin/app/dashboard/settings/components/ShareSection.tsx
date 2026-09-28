@@ -5,15 +5,10 @@ import { useState } from "react";
 import { saveBusinessProfileAction } from "../actions";
 import ShareQrCode from "./ShareQrCode";
 import CopyLinkButton from "@/components/dashboard/CopyLinkButton";
+import PlanBadges from "@/components/dashboard/PlanBadges";
 import Section from "@/components/ui/Section";
 import { menuLinks } from "@/lib/menu-url";
 import { slugify } from "@/lib/superadmin/validation";
-
-const PLAN_LABELS = [
-  { key: "planPdf", label: "QR + PDF" },
-  { key: "planWeb", label: "Menú Web" },
-  { key: "planCompleto", label: "Subdominio Completo" },
-] as const;
 
 const LINK_LABELS = {
   interactivo: "Menú interactivo (con carrito)",
@@ -78,7 +73,6 @@ export default function ShareSection({
 
   const plan = { planPdf, planWeb, planCompleto };
   const links = menuLinks(currentSlug, plan);
-  const activePlans = PLAN_LABELS.filter((p) => plan[p.key]);
   const activeLinks = (Object.entries(links) as [keyof typeof links, string | null][]).filter(
     (entry): entry is [keyof typeof links, string] => entry[1] !== null,
   );
@@ -90,22 +84,7 @@ export default function ShareSection({
     >
       <div>
         <span className="mb-1.5 block text-sm font-medium text-brand">Tu plan</span>
-        <div className="flex flex-wrap gap-1.5">
-          {activePlans.length > 0 ? (
-            activePlans.map((p) => (
-              <span
-                key={p.key}
-                className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-600"
-              >
-                {p.label}
-              </span>
-            ))
-          ) : (
-            <span className="text-sm text-stone-500">
-              Todavía no tenés ningún plan asignado: pedile a SMA a la Carta que te lo active.
-            </span>
-          )}
-        </div>
+        <PlanBadges plan={plan} />
       </div>
 
       {activeLinks.length === 0 ? null : (

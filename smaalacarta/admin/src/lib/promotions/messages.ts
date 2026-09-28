@@ -14,6 +14,8 @@ export function promotionErrorMessage(error: DbError) {
       return "Agregá al menos un producto a la promoción.";
     case "P0002":
       return "La promoción ya no existe.";
+    case "P0010":
+      return "Tu cuenta está suspendida: no se pueden hacer cambios.";
     case "42501":
       return "No tenés permiso para hacer esto.";
     default:
