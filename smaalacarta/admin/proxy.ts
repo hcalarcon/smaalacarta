@@ -16,7 +16,11 @@ export async function proxy(request: NextRequest) {
     return response;
   }
 
-  const redirect = NextResponse.redirect(new URL(destination, request.url));
+  // `destination` es relativo a la app (sin basePath, igual que `pathname`
+  // más abajo): hay que agregarlo a mano, `new URL` no lo hace sola.
+  const redirect = NextResponse.redirect(
+    new URL(request.nextUrl.basePath + destination, request.url),
+  );
 
   // Conserva las cookies de sesión renovadas en el redirect.
   response.cookies.getAll().forEach((cookie) => redirect.cookies.set(cookie));

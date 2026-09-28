@@ -160,6 +160,14 @@ negocio nuevo funciona apenas existe y está publicado, sin tocar código.
 
 ### admin/
 
+- **Vive en `smaalacarta.com.ar/admin`** (`basePath: "/admin"` en
+  `next.config.ts` + un rewrite externo en `landing/vercel.json` hacia el
+  deploy propio de `admin/`, mismo patrón que `web/`). La URL directa de Vercel
+  del proyecto (`smaalacarta-admin.vercel.app`) ya no sirve nada en la raíz:
+  todo vive bajo `/admin`. Cualquier redirect armado a mano (como en
+  `proxy.ts`) tiene que sumar `request.nextUrl.basePath`; `next/link` y
+  `redirect()` de `next/navigation` ya lo hacen solos, pero `next/image` no lo
+  suma al `src`.
 - **Antes de escribir código de Next.js**, leé la guía en
   `admin/node_modules/next/dist/docs/`: esta versión (16) cambió convenciones. Por
   ejemplo, `middleware` se llama `proxy.ts`. Ver `admin/AGENTS.md`.

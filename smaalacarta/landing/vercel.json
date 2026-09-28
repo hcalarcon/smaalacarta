@@ -1,6 +1,16 @@
 {
   "rewrites": [
     {
+      "source": "/admin",
+      "destination": "https://smaalacarta-admin.vercel.app/admin"
+    },
+
+    {
+      "source": "/admin/:path*",
+      "destination": "https://smaalacarta-admin.vercel.app/admin/:path*"
+    },
+
+    {
       "source": "/:slug/pdf",
       "destination": "https://democlientes-git-main-smaalacarta.vercel.app/pdf"
     },
