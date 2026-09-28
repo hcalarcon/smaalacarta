@@ -38,9 +38,9 @@ comportamiento que ya existe, una app por rama:
 
 ## RUTAS — Qué negocio y qué vista abre cada URL
 
-*Aplicado por `web/vercel.json`, `web/apps/menu-app/app.js` y
-`web/apps/menu-app/lib/hostname.js`. Cubierto por: `lib/hostname.test.js`
-(RUTAS-1 a 3).*
+*Aplicado por `web/vercel.json`, `landing/vercel.json`,
+`web/apps/menu-app/app.js` y `web/apps/menu-app/lib/hostname.js`. Cubierto por:
+`lib/hostname.test.js` (RUTAS-1 a 4).*
 
 - **RUTAS-1** Un negocio se abre desde `<slug>.smaalacarta.com.ar` (o
   `.smaalacarta.online`) sin declararlo en el código: el subdominio es su slug. El
@@ -52,6 +52,16 @@ comportamiento que ya existe, una app por rama:
   demo con el mismo menú y las mismas plantillas que un negocio real: no hay páginas
   aparte para las demos. Solo cuenta el primer segmento del path y solo las demos
   conocidas; una demo pedida por `?demo=` o por subdominio tiene prioridad.
+- **RUTAS-4** Un negocio sin `plan_completo` también se sirve por el path del
+  dominio raíz: `smaalacarta.com.ar/<slug>/pdf` y `/menu.html`, vía un rewrite
+  externo desde `landing/vercel.json` hacia este proyecto (el negocio nunca deja
+  el dominio de la landing: el rewrite es transparente para el navegador). Ese
+  camino exige el plan del servicio (`plan_pdf`/`plan_web`) y que el negocio NO
+  tenga `plan_completo` — si lo tiene, se sirve por subdominio, no por path. El
+  slug llega distinto según el caso: por query (`?ruta=<slug>`) en el estático,
+  que corre del lado del servidor; por el propio `pathname` del navegador
+  (`/<slug>/pdf`) en el PDF, que corre del lado del cliente y nunca ve la query
+  del rewrite. Por subdominio sigue el criterio de siempre, sin mirar el plan.
 
 ## HORARIO — Abierto o cerrado
 
@@ -225,6 +235,8 @@ en PDF" de Configuración (`app/dashboard/settings`) y `web/apps/pdf`. Cubierto 
 - **PDF-4** Un subdominio `demo.*` (o `?demo=<slug>`) siempre muestra el mismo PDF
   de ejemplo, sin pedir nada a Supabase ni al JSON: es solo para mostrar cómo se ve
   el plan "QR + PDF", no depende de ningún negocio real.
+- **PDF-5** `smaalacarta.com.ar/<slug>/pdf` (RUTAS-4) exige `plan_pdf` y que el
+  negocio no tenga `plan_completo`; por subdominio no cambia nada.
 
 ## ESTATICO — Menú web de solo lectura
 
@@ -248,6 +260,8 @@ Cubierto por `web/apps/menu-app/lib/static-page.test.js`, en JS puro.*
 - **ESTATICO-4** El menú estático se ve como el interactivo con la misma plantilla:
   arma las mismas secciones (Destacados y Ofertas, MENU-1 a 3), pone la etiqueta de
   promo en el producto y usa el mismo encabezado (estado dentro de `.header-top`).
+- **ESTATICO-5** `smaalacarta.com.ar/<slug>/menu.html` (RUTAS-4) exige `plan_web` y
+  que el negocio no tenga `plan_completo`; por subdominio no cambia nada.
 
 ---
 

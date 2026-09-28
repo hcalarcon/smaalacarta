@@ -3,36 +3,42 @@
 // (`public_business_pdf`, no depende de si el negocio publicó su menú digital), el
 // JSON local de siempre como respaldo.
 
-import { resolveBusinessFromHost } from "../../menu-app/lib/hostname.js";
+import { resolveSlugFromPath, resolveTarget } from "../../menu-app/lib/hostname.js";
 
 const DEMO_PDF = "/data/demos/demomenu.pdf";
 
-// A quién pedirle el PDF. El negocio va en el SUBDOMINIO (`<slug>.smaalacarta.com.ar/pdf`),
-// igual que el menú interactivo y el seguimiento de pedidos: el dominio raíz
-// (`smaalacarta.com.ar` y `www.`) es el sitio de la landing, no llega acá, así que
-// una ruta con el negocio en el path (`/:cliente/pdf`) nunca funcionó en producción.
-// Primero query (para probar en local, donde no hay subdominios ni los rewrites de
-// `vercel.json`), después el subdominio, y por último el subdominio legado `demo.*`
-// (sin nombre de demo: siempre la misma).
-export function resolvePdfTarget({ hostname, search } = {}) {
-  const params = new URLSearchParams(search ?? "");
-
-  if (params.get("demo")) return { type: "demo", slug: params.get("demo") };
-  if (params.get("cliente")) return { type: "cliente", slug: params.get("cliente") };
-
-  const fromHost = resolveBusinessFromHost(hostname);
-  if (fromHost) return fromHost;
+// A quién pedirle el PDF: por subdominio (`<slug>.smaalacarta.com.ar/pdf`), igual
+// que el menú interactivo, o por el path de la landing (`smaalacarta.com.ar/<slug>/pdf`,
+// RUTAS-4) para un negocio sin `plan_completo` — ese caso corre en el navegador, que
+// nunca deja el dominio de la landing (el rewrite es transparente), así que acá el
+// slug sale del propio `pathname`, no de una query que nunca llega. Por último, el
+// subdominio legado `demo.*` (sin nombre de demo: siempre la misma).
+export function resolvePdfTarget({ hostname, search, pathname } = {}) {
+  const target = resolveTarget({ hostname, search });
+  if (target) return target;
 
   if (String(hostname ?? "").startsWith("demo.")) {
-    return { type: "demo", slug: null };
+    return { type: "demo", slug: null, viaPath: false };
   }
+
+  const fromPath = resolveSlugFromPath(pathname);
+  if (fromPath) return { type: "cliente", slug: fromPath, viaPath: true };
 
   return null;
 }
 
-// Pide `public_business_pdf(slug)` a Supabase, sin sesión. Devuelve null si no hay
-// nada configurado, no hay PDF cargado, o algo falla: ahí se cae al JSON local.
-export async function fetchBusinessPdf({ url, key, slug, fetchImpl = globalThis.fetch }) {
+// Pide `public_business_pdf(slug)` a Supabase, sin sesión. `viaPath` avisa que se
+// llegó por el path de la landing: la función exige `plan_pdf` y que el negocio no
+// tenga `plan_completo` (RUTAS-4); por subdominio sigue el criterio de siempre
+// (`active`). Devuelve null si no hay nada configurado, no hay PDF cargado, el plan
+// no lo permite, o algo falla: ahí se cae al JSON local.
+export async function fetchBusinessPdf({
+  url,
+  key,
+  slug,
+  viaPath = false,
+  fetchImpl = globalThis.fetch,
+}) {
   if (!url?.trim() || !key?.trim() || !slug) return null;
 
   const headers = { apikey: key, "Content-Type": "application/json" };
@@ -44,7 +50,7 @@ export async function fetchBusinessPdf({ url, key, slug, fetchImpl = globalThis.
       {
         method: "POST",
         headers,
-        body: JSON.stringify({ p_slug: slug }),
+        body: JSON.stringify({ p_slug: slug, p_via_path: viaPath }),
         signal:
           typeof AbortSignal !== "undefined" && AbortSignal.timeout
             ? AbortSignal.timeout(8000)
@@ -70,7 +76,7 @@ export async function resolvePdf(target, { fetchRemote, fetchJSON }) {
     return { url: DEMO_PDF, title: "Menú demo" };
   }
 
-  const remote = await fetchRemote(target.slug);
+  const remote = await fetchRemote(target.slug, target.viaPath);
   if (remote) {
     return { url: remote.pdf, title: `Menú - ${remote.nombre}` };
   }

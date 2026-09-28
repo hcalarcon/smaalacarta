@@ -116,9 +116,18 @@ describe("fetchPublicMenu — PUBLICO-6", () => {
     const [url, init] = fetchImpl.mock.calls[0];
     expect(url).toBe("https://x.supabase.co/rest/v1/rpc/public_menu");
     expect(init.method).toBe("POST");
-    expect(JSON.parse(init.body)).toEqual({ p_slug: "ana" });
+    expect(JSON.parse(init.body)).toEqual({ p_slug: "ana", p_via_path: false });
     expect(init.headers.apikey).toBe("sb_publishable_abc");
     expect(init.headers["Content-Type"]).toBe("application/json");
+  });
+
+  it("manda p_via_path en true cuando el negocio llegó por el path de la landing (RUTAS-4)", async () => {
+    const fetchImpl = fakeFetch(respuesta);
+    await fetchPublicMenu({ ...base, viaPath: true, fetchImpl });
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({
+      p_slug: "ana",
+      p_via_path: true,
+    });
   });
 
   it("acepta una dirección con barra final", async () => {

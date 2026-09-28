@@ -321,15 +321,20 @@ Requisitos en `docs/SPEC.md` (ADMIN-SUPER-13 a 16).
 - [x] [herni] Elegir el plan (combinable) al dar de alta un negocio, desde `/superadmin/negocios/nuevo`
 - [x] [herni] Cambiar el plan y activar/suspender un negocio desde `/superadmin/negocios/[id]`
 - [x] [herni] `active = false` saca al negocio de los tres servicios públicos
-- [ ] [herni] **Diseñar** la regla de enrutamiento de `web/` según el plan: hoy
-      cualquier negocio publicado responde por subdominio
-      (`<slug>.smaalacarta.com.ar`), sin mirar el plan. La regla de negocio real
-      (a definir e implementar en una etapa aparte, porque cambia `web/` y
-      probablemente `vercel.json`): con `plan_completo`, todo por subdominio
-      (interactivo, y también PDF/estático si además tiene esos planes); sin
-      `plan_completo`, por path en el dominio raíz de la landing
-      (`smaalacarta.com.ar/<slug>/menu.html`, `/pdf`) — que hoy no está resuelto,
-      porque `smaalacarta.com.ar` es el proyecto de `landing/`, no llega a `web/`
+- [x] [herni] Enrutamiento de `web/` según el plan: un negocio sin `plan_completo`
+      se sirve por el path del dominio raíz (`smaalacarta.com.ar/<slug>/pdf` y
+      `/menu.html`), vía un rewrite externo en `landing/vercel.json` hacia el
+      deploy de `web/`; con `plan_completo`, sigue por subdominio, como siempre.
+      `public_menu` y `public_business_pdf` ganan `p_via_path` (migración
+      `20260930000600_ruteo_por_plan.sql`) y exigen el plan del servicio y que el
+      negocio no tenga `plan_completo` cuando se llega por path. Requisitos en
+      `docs/SPEC.md` (RUTAS-4, PDF-5, ESTATICO-5)
+- [ ] [herni] Probar en producción el path (`smaalacarta.com.ar/<slug>/pdf` y
+      `/menu.html`, con un negocio de prueba sin `plan_completo`): el dominio de
+      `web/` está hardcodeado en `landing/vercel.json`
+      (`democlientes-git-main-smaalacarta.vercel.app`) y ese deploy no debería
+      tener "Vercel Authentication"/protección de preview activada, o el rewrite
+      externo va a devolver una pantalla de login en vez del contenido
 - [ ] [por asignar] Historial de pagos o fecha de vencimiento (quedó afuera de esta
       vuelta: por ahora es un interruptor manual, sin fechas)
 

@@ -654,8 +654,11 @@ export type Database = {
       is_valid_schedule: { Args: { p_schedule: Json }; Returns: boolean }
       new_tracking_code: { Args: never; Returns: string }
       next_order_number: { Args: { p_business_id: string }; Returns: number }
-      public_business_pdf: { Args: { p_slug: string }; Returns: Json }
-      public_menu: { Args: { p_slug: string }; Returns: Json }
+      public_business_pdf: {
+        Args: { p_slug: string; p_via_path?: boolean }
+        Returns: Json
+      }
+      public_menu: { Args: { p_slug: string; p_via_path?: boolean }; Returns: Json }
       public_order_tracking: { Args: { p_code: string }; Returns: Json }
       save_business_settings: {
         Args: {

@@ -14,7 +14,7 @@ async function init() {
   const target = resolvePdfTarget(window.location);
 
   const result = await resolvePdf(target, {
-    fetchRemote: (slug) => fetchBusinessPdf({ ...SUPABASE, slug }),
+    fetchRemote: (slug, viaPath) => fetchBusinessPdf({ ...SUPABASE, slug, viaPath }),
     fetchJSON,
   });
 

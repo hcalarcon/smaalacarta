@@ -5,6 +5,8 @@ import {
   RESERVED_SUBDOMAINS,
   resolveBusinessFromHost,
   resolveDemoFromPath,
+  resolveSlugFromPath,
+  resolveTarget,
 } from "./hostname.js";
 
 describe("resolveBusinessFromHost — RUTAS-1", () => {
@@ -97,5 +99,64 @@ describe("resolveDemoFromPath — RUTAS-2", () => {
 
   it("acepta otra lista de demos", () => {
     expect(resolveDemoFromPath("/otra", ["otra"])).toEqual({ type: "demo", slug: "otra" });
+  });
+});
+
+describe("resolveSlugFromPath — RUTAS-4", () => {
+  it("lee el primer segmento de un negocio real", () => {
+    expect(resolveSlugFromPath("/santa-julia-resto/pdf")).toBe("santa-julia-resto");
+    expect(resolveSlugFromPath("/santa-julia-resto/menu.html")).toBe("santa-julia-resto");
+  });
+
+  it.each(["", "/", undefined, null])("%j no tiene slug", (pathname) => {
+    expect(resolveSlugFromPath(pathname)).toBeNull();
+  });
+
+  it.each(DEMO_SLUGS)("una demo (%s) no cuenta como negocio", (slug) => {
+    expect(resolveSlugFromPath(`/${slug}/pdf`)).toBeNull();
+  });
+
+  it.each(RESERVED_SUBDOMAINS)("un nombre reservado (%s) no cuenta como negocio", (name) => {
+    expect(resolveSlugFromPath(`/${name}/pdf`)).toBeNull();
+  });
+
+  it("rechaza un segmento con formato inválido", () => {
+    expect(resolveSlugFromPath("/Slug Malo/pdf")).toBeNull();
+  });
+});
+
+describe("resolveTarget — RUTAS-4", () => {
+  it("prioriza ?demo= y ?cliente= (para probar en local), sin marcar viaPath", () => {
+    expect(resolveTarget({ search: "?demo=moderno" })).toEqual({
+      type: "demo",
+      slug: "moderno",
+      viaPath: false,
+    });
+    expect(resolveTarget({ search: "?cliente=ana" })).toEqual({
+      type: "cliente",
+      slug: "ana",
+      viaPath: false,
+    });
+  });
+
+  it("usa ?ruta= (el rewrite de landing/) y lo marca viaPath", () => {
+    expect(resolveTarget({ search: "?ruta=santa-julia-resto" })).toEqual({
+      type: "cliente",
+      slug: "santa-julia-resto",
+      viaPath: true,
+    });
+  });
+
+  it("sin query, resuelve por el subdominio, sin viaPath", () => {
+    expect(resolveTarget({ hostname: "ana.smaalacarta.com.ar" })).toEqual({
+      type: "cliente",
+      slug: "ana",
+      viaPath: false,
+    });
+  });
+
+  it("sin nada, no hay nada que resolver", () => {
+    expect(resolveTarget({ hostname: "smaalacarta.com.ar" })).toBeNull();
+    expect(resolveTarget()).toBeNull();
   });
 });
