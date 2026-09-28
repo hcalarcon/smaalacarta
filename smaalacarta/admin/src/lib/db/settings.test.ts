@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { asUser, createTestDb, createUser, type TestDb } from "@/test/db";
 
 // ADMIN-CONFIG-1, 3 y 4 (y el formato de ADMIN-CONFIG-2 en la base) contra Postgres real.
+const SUPER = "5a5a5a5a-0000-0000-0000-000000000009";
 const ANA = "aaaaaaaa-0000-0000-0000-000000000001";
 const BETO = "bbbbbbbb-0000-0000-0000-000000000002";
 const NEG_ANA = "a1a1a1a1-0000-0000-0000-000000000001";
@@ -63,8 +64,10 @@ function save(user: string | null, s: Settings = {}) {
   );
 }
 
-async function publicPdf(slug: string, user: string | null = null) {
-  const r = await asUser(db, user, `select public.public_business_pdf('${slug}') as pdf`);
+async function publicPdf(slug: string, user: string | null = null, viaPath = false) {
+  const r = await asUser(
+    db, user, `select public.public_business_pdf('${slug}', ${viaPath}) as pdf`,
+  );
   if (!r.ok) throw new Error(r.error);
   return r.rows[0].pdf as { nombre: string; pdf: string } | null;
 }
@@ -72,10 +75,12 @@ async function publicPdf(slug: string, user: string | null = null) {
 beforeAll(async () => {
   db = await createTestDb();
 
+  await createUser(db, { id: SUPER, email: "super@sma.com" });
   await createUser(db, { id: ANA, email: "ana@x.com" });
   await createUser(db, { id: BETO, email: "beto@x.com" });
 
   await db.exec(`
+    insert into super_admins (user_id) values ('${SUPER}');
     insert into businesses (id, name, slug) values
       ('${NEG_ANA}', 'Ana', 'ana'), ('${NEG_BETO}', 'Beto', 'beto');
     insert into business_users (business_id, user_id) values
@@ -365,5 +370,30 @@ describe("PDF del menú — PDF-1", () => {
 
   it("no devuelve nada para un slug que no existe", async () => {
     expect(await publicPdf("no-existe")).toBeNull();
+  });
+});
+
+describe("ruteo por plan — RUTAS-4 y PDF-5", () => {
+  it("por subdominio (p_via_path = false) no le importa el plan", async () => {
+    expect(await publicPdf("ana", null, false)).not.toBeNull();
+  });
+
+  it("por path, sin plan_pdf no responde", async () => {
+    expect(await publicPdf("ana", null, true)).toBeNull();
+  });
+
+  it("por path, con plan_pdf y sin plan_completo sí responde", async () => {
+    await asUser(db, SUPER, `update businesses set plan_pdf = true where id = '${NEG_ANA}'`);
+    expect(await publicPdf("ana", null, true)).not.toBeNull();
+  });
+
+  it("por path, con plan_completo no responde: ese negocio va por subdominio", async () => {
+    await asUser(db, SUPER, `update businesses set plan_completo = true where id = '${NEG_ANA}'`);
+    expect(await publicPdf("ana", null, true)).toBeNull();
+    expect(await publicPdf("ana", null, false)).not.toBeNull();
+
+    await asUser(
+      db, SUPER, `update businesses set plan_pdf = false, plan_completo = false where id = '${NEG_ANA}'`,
+    );
   });
 });

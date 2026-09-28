@@ -1,0 +1,28 @@
+{
+  "rewrites": [
+    {
+      "source": "/:slug/pdf",
+      "destination": "https://democlientes-git-main-smaalacarta.vercel.app/pdf"
+    },
+
+    {
+      "source": "/:slug/menu.html",
+      "destination": "https://democlientes-git-main-smaalacarta.vercel.app/menu.html?ruta=:slug"
+    },
+
+    {
+      "source": "/apps/:path*",
+      "destination": "https://democlientes-git-main-smaalacarta.vercel.app/apps/:path*"
+    },
+
+    {
+      "source": "/data/:path*",
+      "destination": "https://democlientes-git-main-smaalacarta.vercel.app/data/:path*"
+    },
+
+    {
+      "source": "/templates/:path*",
+      "destination": "https://democlientes-git-main-smaalacarta.vercel.app/templates/:path*"
+    }
+  ]
+}

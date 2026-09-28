@@ -45,10 +45,38 @@ export default async function SuperAdminHomePage() {
                   href={`/superadmin/negocios/${business.id}`}
                   className="block h-full rounded-3xl border border-line bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                 >
-                  <h2 className="text-lg font-semibold text-brand">
-                    {business.name}
-                  </h2>
+                  <div className="flex items-start justify-between gap-2">
+                    <h2 className="text-lg font-semibold text-brand">
+                      {business.name}
+                    </h2>
+                    {!business.active ? (
+                      <span className="shrink-0 rounded-full bg-red-100 px-2.5 py-0.5 text-xs font-semibold text-red-700">
+                        Suspendido
+                      </span>
+                    ) : null}
+                  </div>
                   <p className="mt-1 text-sm text-stone-500">{business.slug}</p>
+
+                  <p className="mt-2 flex flex-wrap gap-1.5">
+                    {business.plan_pdf ? (
+                      <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-600">
+                        QR + PDF
+                      </span>
+                    ) : null}
+                    {business.plan_web ? (
+                      <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-600">
+                        Menú Web
+                      </span>
+                    ) : null}
+                    {business.plan_completo ? (
+                      <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-600">
+                        Subdominio Completo
+                      </span>
+                    ) : null}
+                    {!business.plan_pdf && !business.plan_web && !business.plan_completo ? (
+                      <span className="text-xs text-stone-400">Sin plan</span>
+                    ) : null}
+                  </p>
 
                   <dl className="mt-4 space-y-1 text-sm text-stone-600">
                     <div className="flex gap-2">

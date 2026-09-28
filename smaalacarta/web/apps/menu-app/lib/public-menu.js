@@ -35,7 +35,16 @@ export function normalizePublicMenu(data) {
   };
 }
 
-export async function fetchPublicMenu({ url, key, slug, fetchImpl = globalThis.fetch }) {
+// `viaPath` avisa que se llegó por el path de la landing (RUTAS-4, el rewrite hacia
+// `/menu.html?ruta=<slug>`): la función exige `plan_web` y que el negocio no tenga
+// `plan_completo`. Por subdominio sigue el criterio de siempre (`published` y `active`).
+export async function fetchPublicMenu({
+  url,
+  key,
+  slug,
+  viaPath = false,
+  fetchImpl = globalThis.fetch,
+}) {
   if (!isSupabaseConfigured({ url, key }) || !slug) return null;
 
   const headers = { apikey: key, "Content-Type": "application/json" };
@@ -47,7 +56,7 @@ export async function fetchPublicMenu({ url, key, slug, fetchImpl = globalThis.f
     const res = await fetchImpl(`${url.trim().replace(/\/+$/, "")}/rest/v1/rpc/public_menu`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ p_slug: slug }),
+      body: JSON.stringify({ p_slug: slug, p_via_path: viaPath }),
       // Un menú que no responde no puede dejar la pantalla en blanco.
       signal:
         typeof AbortSignal !== "undefined" && AbortSignal.timeout

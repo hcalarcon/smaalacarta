@@ -37,6 +37,9 @@ describe("slugify — ADMIN-SUPER-5", () => {
           whatsapp: "",
           ownerEmail: "a@b.com",
           ownerName: "",
+          planPdf: false,
+          planWeb: false,
+          planCompleto: true,
         }),
       ).toEqual({ ok: true });
     }
@@ -60,6 +63,9 @@ describe("validateNewBusiness — ADMIN-SUPER-5", () => {
     whatsapp: "5493510000001",
     ownerEmail: "dueno@negocio.com",
     ownerName: "Ana",
+    planPdf: false,
+    planWeb: false,
+    planCompleto: true,
   };
 
   it("acepta datos válidos", () => {
@@ -110,6 +116,25 @@ describe("validateNewBusiness — ADMIN-SUPER-5", () => {
     const r = validateNewBusiness({ ...base, ownerEmail: "dueno@" });
     expect(r.ok === false && r.errors.ownerEmail).toBeTruthy();
   });
+
+  it("pide al menos un plan", () => {
+    const r = validateNewBusiness({
+      ...base,
+      planPdf: false,
+      planWeb: false,
+      planCompleto: false,
+    });
+    expect(r.ok === false && r.errors.plan).toBeTruthy();
+  });
+
+  it("acepta cualquier combinación de planes, con al menos uno marcado", () => {
+    expect(
+      validateNewBusiness({ ...base, planPdf: true, planWeb: false, planCompleto: false }),
+    ).toEqual({ ok: true });
+    expect(
+      validateNewBusiness({ ...base, planPdf: true, planWeb: true, planCompleto: true }),
+    ).toEqual({ ok: true });
+  });
 });
 
 describe("validateMember — ADMIN-SUPER-4", () => {
@@ -143,6 +168,9 @@ describe("slugs reservados — ADMIN-SUPER-12", () => {
         whatsapp: "",
         ownerEmail: "a@b.com",
         ownerName: "",
+        planPdf: false,
+        planWeb: false,
+        planCompleto: true,
       });
       expect(r.ok === false && r.errors.slug).toMatch(/reservad/i);
     },
@@ -164,6 +192,9 @@ describe("slugs reservados — ADMIN-SUPER-12", () => {
       whatsapp: "",
       ownerEmail: "a@b.com",
       ownerName: "",
+      planPdf: false,
+      planWeb: false,
+      planCompleto: true,
     });
     expect(r).toEqual({ ok: true });
   });

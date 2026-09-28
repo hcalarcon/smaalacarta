@@ -110,12 +110,14 @@ describe("crear negocio con su dueño — ADMIN-SUPER-3 y 5", () => {
     user: string | null,
     slug = "panaderia",
     owner: string = NUEVA,
+    plan: { pdf?: boolean; web?: boolean; completo?: boolean } = {},
   ) =>
     asUser(
       db,
       user,
       `select public.create_business_with_owner(
-         'Panadería', '${slug}', '5493510000001', '${owner}') as id`,
+         'Panadería', '${slug}', '5493510000001', '${owner}',
+         ${plan.pdf ?? false}, ${plan.web ?? false}, ${plan.completo ?? true}) as id`,
     );
 
   it("un superadmin crea el negocio y su dueño en un solo paso", async () => {
@@ -127,6 +129,22 @@ describe("crear negocio con su dueño — ADMIN-SUPER-3 y 5", () => {
       `select user_id, role from business_users where business_id = '${id}'`,
     );
     expect(miembro.rows).toEqual([{ user_id: NUEVA, role: "owner" }]);
+  });
+
+  it("guarda el plan elegido al alta (ADMIN-SUPER-13)", async () => {
+    const r = await crear(SUPER, "con-plan", NUEVA, { pdf: true, web: true, completo: false });
+
+    expect(r.ok).toBe(true);
+    const id = r.ok ? (r.rows[0].id as string) : "";
+    const negocio = await db.query<{
+      plan_pdf: boolean;
+      plan_web: boolean;
+      plan_completo: boolean;
+      active: boolean;
+    }>(`select plan_pdf, plan_web, plan_completo, active from businesses where id = '${id}'`);
+    expect(negocio.rows).toEqual([
+      { plan_pdf: true, plan_web: true, plan_completo: false, active: true },
+    ]);
   });
 
   it("un usuario común no puede crear negocios", async () => {
@@ -215,5 +233,54 @@ describe("asignar y quitar miembros — ADMIN-SUPER-4", () => {
     );
     expect(r.ok && r.affected).toBe(0);
     expect(await count(`select count(*) as n from business_users where user_id = '${BETO}'`)).toBe(1);
+  });
+});
+
+describe("plan y estado — ADMIN-SUPER-14 y 15", () => {
+  it("un superadmin cambia el plan y suspende un negocio", async () => {
+    const r = await asUser(
+      db, SUPER,
+      `update businesses
+       set plan_pdf = true, plan_web = true, plan_completo = false, active = false
+       where id = '${NEG_ANA}'`,
+    );
+    expect(r.ok && r.affected).toBe(1);
+
+    const fila = await db.query<{
+      plan_pdf: boolean;
+      plan_web: boolean;
+      plan_completo: boolean;
+      active: boolean;
+    }>(`select plan_pdf, plan_web, plan_completo, active from businesses where id = '${NEG_ANA}'`);
+    expect(fila.rows).toEqual([
+      { plan_pdf: true, plan_web: true, plan_completo: false, active: false },
+    ]);
+
+    // Se deja como estaba para no afectar otros tests de este archivo.
+    await asUser(
+      db, SUPER,
+      `update businesses
+       set plan_pdf = false, plan_web = false, plan_completo = true, active = true
+       where id = '${NEG_ANA}'`,
+    );
+  });
+
+  it("el dueño de un negocio no puede cambiar su propio plan ni reactivarse", async () => {
+    const plan = await asUser(
+      db, ANA, `update businesses set plan_completo = false where id = '${NEG_ANA}'`,
+    );
+    const activo = await asUser(
+      db, ANA, `update businesses set active = false where id = '${NEG_ANA}'`,
+    );
+
+    expect(plan.ok).toBe(false);
+    expect(activo.ok).toBe(false);
+  });
+
+  it("el dueño de un negocio sigue pudiendo cambiar datos que no son de plan", async () => {
+    const r = await asUser(
+      db, ANA, `update businesses set whatsapp = '5493510000009' where id = '${NEG_ANA}'`,
+    );
+    expect(r.ok && r.affected).toBe(1);
   });
 });

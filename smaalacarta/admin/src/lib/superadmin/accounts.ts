@@ -26,6 +26,9 @@ export type AccountDeps = {
     slug: string;
     whatsapp: string;
     ownerId: string;
+    planPdf: boolean;
+    planWeb: boolean;
+    planCompleto: boolean;
   }): Promise<{ id: string } | { error: DbError }>;
   addMember(input: {
     businessId: string;
@@ -95,6 +98,9 @@ export async function createBusinessWithOwner(
     whatsapp: string;
     ownerEmail: string;
     ownerName: string;
+    planPdf: boolean;
+    planWeb: boolean;
+    planCompleto: boolean;
   },
 ): Promise<
   | { ok: true; businessId: string; credentials: Credentials | null }
@@ -111,6 +117,9 @@ export async function createBusinessWithOwner(
     whatsapp: raw.whatsapp,
     ownerEmail: normalizeEmail(raw.ownerEmail),
     ownerName: raw.ownerName.trim(),
+    planPdf: raw.planPdf,
+    planWeb: raw.planWeb,
+    planCompleto: raw.planCompleto,
   };
 
   const validation = validateNewBusiness(input);
@@ -141,6 +150,9 @@ export async function createBusinessWithOwner(
     slug: input.slug,
     whatsapp: normalizeWhatsapp(input.whatsapp),
     ownerId: owner.userId,
+    planPdf: input.planPdf,
+    planWeb: input.planWeb,
+    planCompleto: input.planCompleto,
   });
 
   if ("error" in created) {

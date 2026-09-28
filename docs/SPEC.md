@@ -38,9 +38,9 @@ comportamiento que ya existe, una app por rama:
 
 ## RUTAS — Qué negocio y qué vista abre cada URL
 
-*Aplicado por `web/vercel.json`, `web/apps/menu-app/app.js` y
-`web/apps/menu-app/lib/hostname.js`. Cubierto por: `lib/hostname.test.js`
-(RUTAS-1 a 3).*
+*Aplicado por `web/vercel.json`, `landing/vercel.json`,
+`web/apps/menu-app/app.js` y `web/apps/menu-app/lib/hostname.js`. Cubierto por:
+`lib/hostname.test.js` (RUTAS-1 a 4).*
 
 - **RUTAS-1** Un negocio se abre desde `<slug>.smaalacarta.com.ar` (o
   `.smaalacarta.online`) sin declararlo en el código: el subdominio es su slug. El
@@ -52,6 +52,16 @@ comportamiento que ya existe, una app por rama:
   demo con el mismo menú y las mismas plantillas que un negocio real: no hay páginas
   aparte para las demos. Solo cuenta el primer segmento del path y solo las demos
   conocidas; una demo pedida por `?demo=` o por subdominio tiene prioridad.
+- **RUTAS-4** Un negocio sin `plan_completo` también se sirve por el path del
+  dominio raíz: `smaalacarta.com.ar/<slug>/pdf` y `/menu.html`, vía un rewrite
+  externo desde `landing/vercel.json` hacia este proyecto (el negocio nunca deja
+  el dominio de la landing: el rewrite es transparente para el navegador). Ese
+  camino exige el plan del servicio (`plan_pdf`/`plan_web`) y que el negocio NO
+  tenga `plan_completo` — si lo tiene, se sirve por subdominio, no por path. El
+  slug llega distinto según el caso: por query (`?ruta=<slug>`) en el estático,
+  que corre del lado del servidor; por el propio `pathname` del navegador
+  (`/<slug>/pdf`) en el PDF, que corre del lado del cliente y nunca ve la query
+  del rewrite. Por subdominio sigue el criterio de siempre, sin mirar el plan.
 
 ## HORARIO — Abierto o cerrado
 
@@ -225,6 +235,8 @@ en PDF" de Configuración (`app/dashboard/settings`) y `web/apps/pdf`. Cubierto 
 - **PDF-4** Un subdominio `demo.*` (o `?demo=<slug>`) siempre muestra el mismo PDF
   de ejemplo, sin pedir nada a Supabase ni al JSON: es solo para mostrar cómo se ve
   el plan "QR + PDF", no depende de ningún negocio real.
+- **PDF-5** `smaalacarta.com.ar/<slug>/pdf` (RUTAS-4) exige `plan_pdf` y que el
+  negocio no tenga `plan_completo`; por subdominio no cambia nada.
 
 ## ESTATICO — Menú web de solo lectura
 
@@ -248,6 +260,8 @@ Cubierto por `web/apps/menu-app/lib/static-page.test.js`, en JS puro.*
 - **ESTATICO-4** El menú estático se ve como el interactivo con la misma plantilla:
   arma las mismas secciones (Destacados y Ofertas, MENU-1 a 3), pone la etiqueta de
   promo en el producto y usa el mismo encabezado (estado dentro de `.header-top`).
+- **ESTATICO-5** `smaalacarta.com.ar/<slug>/menu.html` (RUTAS-4) exige `plan_web` y
+  que el negocio no tenga `plan_completo`; por subdominio no cambia nada.
 
 ---
 
@@ -366,6 +380,22 @@ primer ingreso.
 - **ADMIN-SUPER-12** Un negocio no puede llamarse con un slug reservado (`www`,
   `admin`, `app`, `api`, `demo`, `moderno`, `clasico`, `minimal`…): serían
   subdominios que no abren un negocio.
+- **ADMIN-SUPER-13** El plan de un negocio no es un valor único: son tres
+  capacidades combinables (`plan_pdf`, `plan_web`, `plan_completo`, una por cada
+  servicio de `web/`). El superadmin elige el plan (al menos uno) al dar de alta
+  el negocio, y puede cambiarlo después desde `/superadmin/negocios/[id]`.
+- **ADMIN-SUPER-14** Solo un superadmin puede cambiar el plan o el estado
+  (`active`) de un negocio; un dueño no puede tocar esas columnas ni con un
+  `UPDATE` directo a `businesses`, aunque sí siga editando el resto de sus datos
+  (nombre, slug, WhatsApp, logo).
+- **ADMIN-SUPER-15** `active = false` es el interruptor de alta/baja según pago:
+  saca al negocio de los tres servicios públicos (`public_menu`,
+  `public_business_pdf`, `create_public_order`), sin publicarlo ni borrar nada.
+  Un negocio nuevo nace activo.
+- **ADMIN-SUPER-16** Los negocios que ya existían antes de esta funcionalidad
+  quedaron con `plan_completo = true` (es lo que ya tenían de hecho: subdominio
+  sin restricción de plan); solo un negocio nuevo arranca sin plan hasta que el
+  superadmin elija uno.
 
 ## ADMIN-MENU — Categorías y productos
 

@@ -4,6 +4,7 @@ import { beforeAll, describe, expect, it } from "vitest";
 import { asUser, createTestDb, createUser, type TestDb } from "@/test/db";
 
 // PUBLICO-1 a 5 contra Postgres real: la función `public_menu`.
+const SUPER = "5a5a5a5a-0000-0000-0000-000000000009";
 const ANA = "aaaaaaaa-0000-0000-0000-000000000001";
 const BETO = "bbbbbbbb-0000-0000-0000-000000000002";
 const NEG_ANA = "a1a1a1a1-0000-0000-0000-000000000001";
@@ -32,8 +33,8 @@ type Menu = {
   menu: { categorias: { nombre: string; tipo?: string; descripcion?: string; items: Item[] }[] };
 };
 
-async function publicMenu(slug: string, user: string | null = null) {
-  const r = await asUser(db, user, `select public.public_menu('${slug}') as menu`);
+async function publicMenu(slug: string, user: string | null = null, viaPath = false) {
+  const r = await asUser(db, user, `select public.public_menu('${slug}', ${viaPath}) as menu`);
   if (!r.ok) throw new Error(r.error);
   return r.rows[0].menu as Menu | null;
 }
@@ -41,10 +42,12 @@ async function publicMenu(slug: string, user: string | null = null) {
 beforeAll(async () => {
   db = await createTestDb();
 
+  await createUser(db, { id: SUPER, email: "super@sma.com" });
   await createUser(db, { id: ANA, email: "ana@x.com" });
   await createUser(db, { id: BETO, email: "beto@x.com" });
 
   await db.exec(`
+    insert into super_admins (user_id) values ('${SUPER}');
     insert into businesses (id, name, slug, whatsapp) values
       ('${NEG_ANA}', 'Ana Resto', 'ana', '5493510000001'),
       ('${NEG_BETO}', 'Beto Bar', 'beto', '5493510000002'),
@@ -359,6 +362,40 @@ describe("permisos — PUBLICO-5", () => {
   it("la función no filtra un negocio sin publicar aunque se conozca su id", async () => {
     const r = await asUser(db, null, `select public.public_menu('${NEG_PRIVADO}') as menu`);
     expect(r.ok && r.rows[0].menu).toBeNull();
+  });
+});
+
+describe("ruteo por plan — RUTAS-4 y ESTATICO-5", () => {
+  const NEG_PLAN = "d4d4d4d4-0000-0000-0000-000000000004";
+
+  beforeAll(async () => {
+    await db.exec(`
+      insert into businesses (id, name, slug, plan_web, plan_completo) values
+        ('${NEG_PLAN}', 'Con Plan Web', 'con-plan-web', true, false);
+      insert into business_settings (business_id, published, template) values
+        ('${NEG_PLAN}', true, 'moderno');
+    `);
+  });
+
+  it("por subdominio (p_via_path = false) no le importa el plan", async () => {
+    expect(await publicMenu("con-plan-web", null, false)).not.toBeNull();
+  });
+
+  it("por path (p_via_path = true), con plan_web y sin plan_completo, sí responde", async () => {
+    expect(await publicMenu("con-plan-web", null, true)).not.toBeNull();
+  });
+
+  it("por path, sin plan_web no responde", async () => {
+    await asUser(db, SUPER, `update businesses set plan_web = false where id = '${NEG_PLAN}'`);
+    expect(await publicMenu("con-plan-web", null, true)).toBeNull();
+    await asUser(db, SUPER, `update businesses set plan_web = true where id = '${NEG_PLAN}'`);
+  });
+
+  it("por path, con plan_completo no responde: ese negocio va por subdominio", async () => {
+    await asUser(db, SUPER, `update businesses set plan_completo = true where id = '${NEG_PLAN}'`);
+    expect(await publicMenu("con-plan-web", null, true)).toBeNull();
+    expect(await publicMenu("con-plan-web", null, false)).not.toBeNull();
+    await asUser(db, SUPER, `update businesses set plan_completo = false where id = '${NEG_PLAN}'`);
   });
 });
 

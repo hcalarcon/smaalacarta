@@ -30,6 +30,9 @@ const negocio = {
   whatsapp: "+54 9 351 000-0001",
   ownerEmail: "  Dueno@Negocio.com ",
   ownerName: "Ana",
+  planPdf: false,
+  planWeb: false,
+  planCompleto: true,
 };
 
 function nothingWasCalled(deps: ReturnType<typeof makeDeps>) {
@@ -101,7 +104,24 @@ describe("createBusinessWithOwner", () => {
       slug: "panaderia",
       whatsapp: "5493510000001",
       ownerId: "nuevo-usuario",
+      planPdf: false,
+      planWeb: false,
+      planCompleto: true,
     });
+  });
+
+  it("pide al menos un plan y no toca nada", async () => {
+    const deps = makeDeps();
+
+    const result = await createBusinessWithOwner(deps, {
+      ...negocio,
+      planPdf: false,
+      planWeb: false,
+      planCompleto: false,
+    });
+
+    expect(!result.ok && result.fieldErrors?.plan).toBeTruthy();
+    nothingWasCalled(deps);
   });
 
   it("ADMIN-SUPER-6: si el email ya tiene cuenta la reutiliza y no genera contraseña", async () => {

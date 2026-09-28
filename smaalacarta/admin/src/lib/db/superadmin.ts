@@ -12,11 +12,15 @@ export type BusinessWithMembers = {
   slug: string;
   whatsapp: string | null;
   created_at: string | null;
+  plan_pdf: boolean;
+  plan_web: boolean;
+  plan_completo: boolean;
+  active: boolean;
   business_users: Member[];
 };
 
 const SELECT =
-  "id, name, slug, whatsapp, created_at, business_users(user_id, role, profiles(email, full_name))";
+  "id, name, slug, whatsapp, created_at, plan_pdf, plan_web, plan_completo, active, business_users(user_id, role, profiles(email, full_name))";
 
 // Estas consultas corren con la sesión del superadmin: es el RLS de la base
 // (políticas *_super_admin) el que le deja ver todos los negocios, no la app.
@@ -51,6 +55,37 @@ export async function getBusinessWithMembers(
   }
 
   return data as unknown as BusinessWithMembers | null;
+}
+
+// El plan y el estado de pago de un negocio (ADMIN-SUPER-14 y 15). El trigger
+// `businesses_guard_admin_columns` es quien realmente exige superadmin: acá solo
+// se traduce el error de permiso a un mensaje.
+export async function updateBusinessPlan(
+  businessId: string,
+  plan: {
+    planPdf: boolean;
+    planWeb: boolean;
+    planCompleto: boolean;
+    active: boolean;
+  },
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("businesses")
+    .update({
+      plan_pdf: plan.planPdf,
+      plan_web: plan.planWeb,
+      plan_completo: plan.planCompleto,
+      active: plan.active,
+    })
+    .eq("id", businessId);
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  return { ok: true };
 }
 
 export async function removeMember(businessId: string, userId: string) {

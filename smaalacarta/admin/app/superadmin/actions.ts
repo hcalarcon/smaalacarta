@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { requireSuperAdmin } from "@/lib/auth/superadmin";
-import { removeMember } from "@/lib/db/superadmin";
+import { removeMember, updateBusinessPlan } from "@/lib/db/superadmin";
 import {
   addMemberByEmail,
   createBusinessWithOwner,
@@ -30,25 +30,68 @@ function text(formData: FormData, name: string) {
   return typeof value === "string" ? value : "";
 }
 
+function checkbox(formData: FormData, name: string) {
+  return formData.get(name) === "on";
+}
+
 export async function createBusinessAction(
   _prev: SuperAdminFormState,
   formData: FormData,
 ): Promise<SuperAdminFormState> {
+  const planPdf = checkbox(formData, "planPdf");
+  const planWeb = checkbox(formData, "planWeb");
+  const planCompleto = checkbox(formData, "planCompleto");
+
   const values = {
     name: text(formData, "name"),
     slug: text(formData, "slug"),
     whatsapp: text(formData, "whatsapp"),
     ownerName: text(formData, "ownerName"),
     ownerEmail: text(formData, "ownerEmail"),
+    // Se guardan como texto para poder reconstruir los checkboxes si falla el alta.
+    planPdf: planPdf ? "on" : "",
+    planWeb: planWeb ? "on" : "",
+    planCompleto: planCompleto ? "on" : "",
   };
 
-  const result = await createBusinessWithOwner(await buildAccountDeps(), values);
+  const result = await createBusinessWithOwner(await buildAccountDeps(), {
+    ...values,
+    planPdf,
+    planWeb,
+    planCompleto,
+  });
 
   if (!result.ok) {
     return { error: result.error, fieldErrors: result.fieldErrors, values };
   }
 
   return { businessId: result.businessId, credentials: result.credentials };
+}
+
+export async function updatePlanAction(
+  _prev: SuperAdminFormState,
+  formData: FormData,
+): Promise<SuperAdminFormState> {
+  // Además del trigger que lo exige en la base, se comprueba acá (mismo criterio
+  // que removeMemberAction).
+  await requireSuperAdmin();
+
+  const businessId = text(formData, "businessId");
+
+  const result = await updateBusinessPlan(businessId, {
+    planPdf: checkbox(formData, "planPdf"),
+    planWeb: checkbox(formData, "planWeb"),
+    planCompleto: checkbox(formData, "planCompleto"),
+    active: checkbox(formData, "active"),
+  });
+
+  if (!result.ok) {
+    return { error: result.error };
+  }
+
+  revalidatePath(`/superadmin/negocios/${businessId}`);
+
+  return { message: "Plan y estado actualizados." };
 }
 
 export async function addMemberAction(

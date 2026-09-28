@@ -151,26 +151,38 @@ export type Database = {
       }
       businesses: {
         Row: {
+          active: boolean
           created_at: string | null
           id: string
           logo_url: string | null
           name: string
+          plan_completo: boolean
+          plan_pdf: boolean
+          plan_web: boolean
           slug: string
           whatsapp: string | null
         }
         Insert: {
+          active?: boolean
           created_at?: string | null
           id?: string
           logo_url?: string | null
           name: string
+          plan_completo?: boolean
+          plan_pdf?: boolean
+          plan_web?: boolean
           slug: string
           whatsapp?: string | null
         }
         Update: {
+          active?: boolean
           created_at?: string | null
           id?: string
           logo_url?: string | null
           name?: string
+          plan_completo?: boolean
+          plan_pdf?: boolean
+          plan_web?: boolean
           slug?: string
           whatsapp?: string | null
         }
@@ -604,6 +616,9 @@ export type Database = {
         Args: {
           p_name: string
           p_owner_id: string
+          p_plan_completo: boolean
+          p_plan_pdf: boolean
+          p_plan_web: boolean
           p_slug: string
           p_whatsapp: string
         }
@@ -639,8 +654,14 @@ export type Database = {
       is_valid_schedule: { Args: { p_schedule: Json }; Returns: boolean }
       new_tracking_code: { Args: never; Returns: string }
       next_order_number: { Args: { p_business_id: string }; Returns: number }
-      public_business_pdf: { Args: { p_slug: string }; Returns: Json }
-      public_menu: { Args: { p_slug: string }; Returns: Json }
+      public_business_pdf: {
+        Args: { p_slug: string; p_via_path?: boolean }
+        Returns: Json
+      }
+      public_menu: {
+        Args: { p_slug: string; p_via_path?: boolean }
+        Returns: Json
+      }
       public_order_tracking: { Args: { p_code: string }; Returns: Json }
       save_business_settings: {
         Args: {

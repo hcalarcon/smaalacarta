@@ -51,3 +51,38 @@ export function resolveBusinessFromHost(hostname, baseDomains = BASE_DOMAINS) {
 
   return null;
 }
+
+// El slug de un negocio real leído del primer segmento del path (RUTAS-4): un
+// negocio sin `plan_completo` se sirve por `smaalacarta.com.ar/<slug>/pdf` o
+// `/menu.html`, vía un rewrite externo desde `landing/` hacia este proyecto. Ni
+// demos ni nombres reservados: esos casos ya los resuelve otra ruta.
+export function resolveSlugFromPath(pathname) {
+  const [first] = String(pathname ?? "").split("/").filter(Boolean);
+
+  if (!first || !SLUG.test(first)) return null;
+  if (DEMO_SLUGS.includes(first) || RESERVED_SUBDOMAINS.includes(first)) return null;
+
+  return first;
+}
+
+// A quién pedirle el menú o el PDF, y si llegó por el path de la landing —donde
+// hay que exigir el plan del servicio y que el negocio no tenga `plan_completo`,
+// RUTAS-4— o por el subdominio, como siempre. Orden: `?demo=`/`?cliente=` (para
+// probar en local, sin filtrar por plan); `?ruta=` (el rewrite externo de
+// `landing/`, ya con el slug resuelto); subdominio.
+export function resolveTarget({ hostname, search } = {}) {
+  const params = new URLSearchParams(search ?? "");
+
+  if (params.get("demo")) return { type: "demo", slug: params.get("demo"), viaPath: false };
+  if (params.get("cliente")) {
+    return { type: "cliente", slug: params.get("cliente"), viaPath: false };
+  }
+
+  const ruta = params.get("ruta");
+  if (ruta) return { type: "cliente", slug: ruta, viaPath: true };
+
+  const fromHost = resolveBusinessFromHost(hostname);
+  if (fromHost) return { ...fromHost, viaPath: false };
+
+  return null;
+}

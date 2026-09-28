@@ -10,13 +10,14 @@ describe("resolvePdfTarget — PDF-1", () => {
   it("prioriza ?demo= sobre todo lo demás", () => {
     expect(
       resolvePdfTarget({ hostname: "ana.smaalacarta.com.ar", search: "?demo=moderno&cliente=ana" }),
-    ).toEqual({ type: "demo", slug: "moderno" });
+    ).toEqual({ type: "demo", slug: "moderno", viaPath: false });
   });
 
   it("usa ?cliente= si no hay ?demo=", () => {
     expect(resolvePdfTarget({ search: "?cliente=ana" })).toEqual({
       type: "cliente",
       slug: "ana",
+      viaPath: false,
     });
   });
 
@@ -24,6 +25,7 @@ describe("resolvePdfTarget — PDF-1", () => {
     expect(resolvePdfTarget({ hostname: "demo.smaalacarta.com.ar" })).toEqual({
       type: "demo",
       slug: null,
+      viaPath: false,
     });
   });
 
@@ -31,6 +33,7 @@ describe("resolvePdfTarget — PDF-1", () => {
     expect(resolvePdfTarget({ hostname: "santa-julia-resto.smaalacarta.com.ar" })).toEqual({
       type: "cliente",
       slug: "santa-julia-resto",
+      viaPath: false,
     });
   });
 
@@ -38,7 +41,23 @@ describe("resolvePdfTarget — PDF-1", () => {
     expect(resolvePdfTarget({ hostname: "moderno.smaalacarta.com.ar" })).toEqual({
       type: "demo",
       slug: "moderno",
+      viaPath: false,
     });
+  });
+
+  it("sin subdominio ni query, lee el slug del path (RUTAS-4: un negocio sin plan_completo, servido por el rewrite de landing/)", () => {
+    expect(
+      resolvePdfTarget({ hostname: "smaalacarta.com.ar", pathname: "/santa-julia-resto/pdf" }),
+    ).toEqual({ type: "cliente", slug: "santa-julia-resto", viaPath: true });
+  });
+
+  it("el path no sirve si es una demo o un nombre reservado (esos casos no pasan por acá)", () => {
+    expect(
+      resolvePdfTarget({ hostname: "smaalacarta.com.ar", pathname: "/moderno/pdf" }),
+    ).toBeNull();
+    expect(
+      resolvePdfTarget({ hostname: "smaalacarta.com.ar", pathname: "/admin/pdf" }),
+    ).toBeNull();
   });
 
   it("sin negocio en ningún lado, no hay nada que resolver", () => {
@@ -60,6 +79,19 @@ describe("fetchBusinessPdf — PDF-1", () => {
       "https://x.supabase.co/rest/v1/rpc/public_business_pdf",
       expect.objectContaining({ method: "POST" }),
     );
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({
+      p_slug: "ana",
+      p_via_path: false,
+    });
+  });
+
+  it("manda p_via_path en true cuando el negocio llegó por el path de la landing (RUTAS-4)", async () => {
+    const fetchImpl = fakeFetch({ nombre: "Ana Resto", pdf: "https://cdn.example.com/menu.pdf" });
+    await fetchBusinessPdf({ ...base, viaPath: true, fetchImpl });
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({
+      p_slug: "ana",
+      p_via_path: true,
+    });
   });
 
   it("manda Authorization solo con una clave JWT", async () => {
@@ -118,10 +150,14 @@ describe("resolvePdf — PDF-1 y PDF-2", () => {
   it("un negocio con PDF en Supabase no consulta el JSON local", async () => {
     const fetchRemote = vi.fn(async () => ({ nombre: "Ana Resto", pdf: "https://cdn.example.com/menu.pdf" }));
     const fetchJSON = vi.fn();
-    const result = await resolvePdf({ type: "cliente", slug: "ana" }, { fetchRemote, fetchJSON });
+    const result = await resolvePdf(
+      { type: "cliente", slug: "ana", viaPath: true },
+      { fetchRemote, fetchJSON },
+    );
 
     expect(result).toEqual({ url: "https://cdn.example.com/menu.pdf", title: "Menú - Ana Resto" });
     expect(fetchJSON).not.toHaveBeenCalled();
+    expect(fetchRemote).toHaveBeenCalledWith("ana", true);
   });
 
   it("sin nada en Supabase, cae al JSON local (el cliente estático de siempre)", async () => {
