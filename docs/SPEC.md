@@ -142,8 +142,10 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   borde; los colores de marca del negocio y los fijos (promo, WhatsApp) no
   cambian con el tema: ya se calculan para leerse sobre sí mismos. Sin tema
   cargado (las demos, hoy), se ve como siempre: claro. En el interactivo, las
-  demos tienen además un botón flotante (`#btn-tema`) para alternar entre los
-  dos temas sin recargar; no existe en negocios reales ni en el estático.
+  demos tienen además un switch (`#btn-tema`, junto al estado abierto/cerrado)
+  para alternar entre los dos temas sin recargar; no existe en negocios reales
+  ni en el estático. El cambio de tema anima suave (transición en fondo, texto
+  y borde), salvo con `prefers-reduced-motion`.
 
 ## BUSQUEDA — Buscador
 

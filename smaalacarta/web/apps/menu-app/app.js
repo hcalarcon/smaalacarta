@@ -203,13 +203,23 @@ async function init() {
     if (btnTema) {
       btnTema.hidden = !demo;
       if (demo) {
-        const label = () =>
-          document.documentElement.dataset.tema === "oscuro" ? "☀️ Claro" : "🌙 Oscuro";
-        btnTema.textContent = label();
+        // Sol (pasar a claro) y luna (pasar a oscuro): el ícono muestra el
+        // tema al que se pasaría al tocar, no el actual.
+        const SOL =
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>';
+        const LUNA =
+          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>';
+
+        const sync = () => {
+          const oscuro = document.documentElement.dataset.tema === "oscuro";
+          btnTema.innerHTML = oscuro ? SOL : LUNA;
+          btnTema.setAttribute("aria-label", oscuro ? "Cambiar a tema claro" : "Cambiar a tema oscuro");
+        };
+        sync();
         btnTema.addEventListener("click", () => {
           document.documentElement.dataset.tema =
             document.documentElement.dataset.tema === "oscuro" ? "claro" : "oscuro";
-          btnTema.textContent = label();
+          sync();
         });
       }
     }

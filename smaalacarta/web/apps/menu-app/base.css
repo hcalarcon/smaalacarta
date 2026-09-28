@@ -151,7 +151,10 @@ body.no-scroll {
 }
 
 /* Sin "Volver" (negocios reales) el estado sigue a la derecha */
-.header-top .badge-estado {
+.header-top .header-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   margin-left: auto;
 }
 
@@ -207,37 +210,53 @@ body.no-scroll {
   display: none !important;
 }
 
-/* Switch de tema, solo en las demos (lo muestra/oculta app.js). Colores
-   genéricos con var(), no de una plantilla en particular: así funciona igual
-   en las tres. */
+/* Switch de tema, junto al estado (Abierto/Cerrado), solo en las demos (lo
+   muestra/oculta app.js). `color: inherit` para seguir el color de texto del
+   encabezado de cada plantilla (blanco sobre foto, oscuro sobre claro): no hace
+   falta adaptarlo plantilla por plantilla. El fondo es un gris neutro
+   translúcido, para que se note como un botón sobre cualquier foto o color. */
 .btn-tema {
-  position: fixed;
-  left: 1rem;
-  bottom: 1rem;
-  z-index: 50;
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.55rem 0.95rem;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
   border-radius: 999px;
-  background: var(--card, #fff);
-  color: var(--text, #111);
-  border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  font-weight: 600;
-  font-size: 0.85rem;
+  color: inherit;
+  background: rgba(127, 127, 127, 0.22);
+  border: 1px solid rgba(127, 127, 127, 0.35);
   transition:
     transform 0.15s ease,
-    background 0.2s ease,
-    color 0.2s ease;
+    background 0.2s ease;
 }
 
 .btn-tema:hover {
-  transform: translateY(-2px);
+  background: rgba(127, 127, 127, 0.32);
+  transform: scale(1.06);
+}
+
+.btn-tema svg {
+  width: 1.05rem;
+  height: 1.05rem;
 }
 
 .btn-tema[hidden] {
   display: none !important;
+}
+
+/* Transición suave al cambiar de tema (respeta prefers-reduced-motion, más abajo). */
+body,
+.header,
+.categorias,
+.producto,
+.carrito-panel,
+.checkout,
+.badge-estado,
+#carrito-count {
+  transition:
+    background-color 0.25s ease,
+    color 0.25s ease,
+    border-color 0.25s ease;
 }
 
 /* ==========================================================================

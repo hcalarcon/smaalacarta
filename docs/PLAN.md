@@ -382,10 +382,19 @@ negocio y los fijos (promo, WhatsApp) no cambian con el tema. Requisitos en
       de probar esto sin ojos humanos, así que no está verificado más allá de la
       lectura del CSS. Para probar rápido: Configuración → Apariencia → Oscuro →
       Guardar, en un negocio real, o el switch de tema de las demos (siguiente ítem)
-- [x] [herni] Switch de tema en las demos del interactivo (`#btn-tema`, solo
-      visible ahí): alterna `data-tema` al toque, sin recargar, para mirar cómo
-      se ve cada plantilla en los dos temas. No está en el estático ni en negocios
-      reales
+- [x] [herni] Switch de tema en las demos del interactivo (`#btn-tema`, junto al
+      estado abierto/cerrado): alterna `data-tema` al toque, sin recargar, para
+      mirar cómo se ve cada plantilla en los dos temas. No está en el estático ni
+      en negocios reales
+- [x] [herni] Arreglos tras mirarlo en el navegador (minimal): el "+" y los
+      botones del carrito usaban el color de marca crudo como texto
+      (`color: var(--primary)`), que podía quedar ilegible según el color elegido
+      y el tema — pasan a `var(--text)`; el botón flotante del carrito suma un
+      borde translúcido para no perderse contra un fondo de página del mismo
+      tono. El switch de tema en sí ya no depende de `--card` (minimal no lo
+      tiene: por eso el fondo se quedaba blanco con el texto en claro,
+      ilegible) — ahora es un chip gris neutro con `color: inherit`, y se movió
+      de flotante a la barra de arriba. Transición suave sumada al cambiar de tema
 - [ ] [por asignar] El mismo switch en el menú estático de las demos (hoy no
       tiene nada de JS; requeriría un script chico solo para ese caso)
 

@@ -224,7 +224,11 @@ body {
   border: 1px solid var(--border);
   border-radius: 50%;
   background: none;
-  color: var(--primary);
+  /* Texto de la página, no el color de marca crudo: un color de marca claro
+     (o cercano al fondo en tema oscuro) dejaba el "+" ilegible. Al tocar, sí
+     pasa a los colores de marca (fondo + on-brand, ya pensados para leerse
+     entre sí). */
+  color: var(--text);
   font-size: 1.25rem;
   line-height: 1;
   transition:
@@ -331,7 +335,9 @@ body {
 .btn-plus,
 .btn-remove {
   background: none;
-  color: var(--primary);
+  /* Mismo motivo que en .producto button: texto de la página, no el color de
+     marca crudo (podía quedar ilegible según el color y el tema). */
+  color: var(--text);
   font-size: 1rem;
 }
 
@@ -463,6 +469,9 @@ body {
 
   background: var(--primary);
   color: var(--on-brand, #fff);
+  /* Un borde translúcido: sin esto, un color de marca oscuro se perdía contra
+     un fondo de página también oscuro (tema oscuro). */
+  border: 1px solid var(--border);
 
   border-radius: 4px;
   padding: 10px 14px;
