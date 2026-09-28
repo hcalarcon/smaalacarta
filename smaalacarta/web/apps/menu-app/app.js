@@ -197,6 +197,23 @@ async function init() {
     const volver = document.querySelector(".btn-volver");
     if (volver) volver.hidden = !demo;
 
+    // Switch de tema: solo en las demos, para mostrar cómo se ve cada plantilla
+    // en los dos temas sin tener que cargar un negocio real en oscuro.
+    const btnTema = document.getElementById("btn-tema");
+    if (btnTema) {
+      btnTema.hidden = !demo;
+      if (demo) {
+        const label = () =>
+          document.documentElement.dataset.tema === "oscuro" ? "☀️ Claro" : "🌙 Oscuro";
+        btnTema.textContent = label();
+        btnTema.addEventListener("click", () => {
+          document.documentElement.dataset.tema =
+            document.documentElement.dataset.tema === "oscuro" ? "claro" : "oscuro";
+          btnTema.textContent = label();
+        });
+      }
+    }
+
     // 🎨 Colores dinámicos
     // (con el texto que se lee sobre ellos: un negocio puede elegir colores claros)
     const brandVars = COLORS.brandVariables(config.colores);

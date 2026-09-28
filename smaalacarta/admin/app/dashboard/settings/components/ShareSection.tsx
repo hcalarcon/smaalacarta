@@ -6,15 +6,33 @@ import { saveBusinessProfileAction } from "../actions";
 import ShareQrCode from "./ShareQrCode";
 import CopyLinkButton from "@/components/dashboard/CopyLinkButton";
 import Section from "@/components/ui/Section";
-import { menuUrl } from "@/lib/menu-url";
+import { menuLinks } from "@/lib/menu-url";
 import { slugify } from "@/lib/superadmin/validation";
+
+const PLAN_LABELS = [
+  { key: "planPdf", label: "QR + PDF" },
+  { key: "planWeb", label: "Menú Web" },
+  { key: "planCompleto", label: "Subdominio Completo" },
+] as const;
+
+const LINK_LABELS = {
+  interactivo: "Menú interactivo (con carrito)",
+  estatico: "Menú web (solo lectura)",
+  pdf: "PDF",
+} as const;
 
 export default function ShareSection({
   name,
   slug,
+  planPdf,
+  planWeb,
+  planCompleto,
 }: {
   name: string;
   slug: string;
+  planPdf: boolean;
+  planWeb: boolean;
+  planCompleto: boolean;
 }) {
   const [currentSlug, setCurrentSlug] = useState(slug);
 
@@ -58,19 +76,52 @@ export default function ShareSection({
     }
   }
 
+  const plan = { planPdf, planWeb, planCompleto };
+  const links = menuLinks(currentSlug, plan);
+  const activePlans = PLAN_LABELS.filter((p) => plan[p.key]);
+  const activeLinks = (Object.entries(links) as [keyof typeof links, string | null][]).filter(
+    (entry): entry is [keyof typeof links, string] => entry[1] !== null,
+  );
+
   return (
     <Section
       title="Compartir"
       description="El código QR de tu menú, para imprimir o pegar en el local."
     >
-      <p className="break-all font-mono text-sm text-stone-600">
-        {menuUrl(currentSlug)}
-      </p>
-
-      <div className="flex flex-wrap items-center gap-4">
-        <ShareQrCode value={menuUrl(currentSlug)} />
-        <CopyLinkButton value={menuUrl(currentSlug)} />
+      <div>
+        <span className="mb-1.5 block text-sm font-medium text-brand">Tu plan</span>
+        <div className="flex flex-wrap gap-1.5">
+          {activePlans.length > 0 ? (
+            activePlans.map((p) => (
+              <span
+                key={p.key}
+                className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-600"
+              >
+                {p.label}
+              </span>
+            ))
+          ) : (
+            <span className="text-sm text-stone-500">
+              Todavía no tenés ningún plan asignado: pedile a SMA a la Carta que te lo active.
+            </span>
+          )}
+        </div>
       </div>
+
+      {activeLinks.length === 0 ? null : (
+        <div className="space-y-5">
+          {activeLinks.map(([key, url]) => (
+            <div key={key}>
+              <p className="mb-1.5 text-sm font-medium text-brand">{LINK_LABELS[key]}</p>
+              <p className="break-all font-mono text-sm text-stone-600">{url}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-4">
+                <ShareQrCode value={url} />
+                <CopyLinkButton value={url} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div>
         <button
@@ -88,7 +139,7 @@ export default function ShareSection({
 
         {status === "done" ? (
           <span role="status" className="ml-3 text-sm font-medium text-emerald-700">
-            ¡Listo! Se actualizó el link y el QR.
+            ¡Listo! Se actualizaron los links y los QR.
           </span>
         ) : null}
 

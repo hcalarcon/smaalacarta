@@ -321,6 +321,12 @@ Requisitos en `docs/SPEC.md` (ADMIN-SUPER-13 a 16).
 - [x] [herni] Elegir el plan (combinable) al dar de alta un negocio, desde `/superadmin/negocios/nuevo`
 - [x] [herni] Cambiar el plan y activar/suspender un negocio desde `/superadmin/negocios/[id]`
 - [x] [herni] `active = false` saca al negocio de los tres servicios públicos
+- [x] [herni] En el panel del propio negocio (no el superadmin): "Compartir" y el
+      botón "Ver mi menú" ahora muestran solo las direcciones que responden según
+      el plan, y qué plan tiene (badges, de solo lectura). Antes siempre mostraban
+      el link del subdominio, aunque el negocio no tuviera `plan_completo` y por
+      lo tanto no respondiera ahí — se notó con kukarachos. `src/lib/menu-url.ts`
+      (`menuLinks()`/`primaryMenuLink()`, ADMIN-CONFIG-10)
 - [x] [herni] Enrutamiento de `web/` según el plan: un negocio sin `plan_completo`
       se sirve por el path del dominio raíz (`smaalacarta.com.ar/<slug>/pdf` y
       `/menu.html`), vía un rewrite externo en `landing/vercel.json` hacia el
@@ -375,8 +381,13 @@ negocio y los fijos (promo, WhatsApp) no cambian con el tema. Requisitos en
 - [ ] [herni] **Mirar las tres plantillas en oscuro, en el navegador**: no hay forma
       de probar esto sin ojos humanos, así que no está verificado más allá de la
       lectura del CSS. Para probar rápido: Configuración → Apariencia → Oscuro →
-      Guardar, en un negocio real, o editar a mano `tema: "oscuro"` en el
-      `config.json` de una demo
+      Guardar, en un negocio real, o el switch de tema de las demos (siguiente ítem)
+- [x] [herni] Switch de tema en las demos del interactivo (`#btn-tema`, solo
+      visible ahí): alterna `data-tema` al toque, sin recargar, para mirar cómo
+      se ve cada plantilla en los dos temas. No está en el estático ni en negocios
+      reales
+- [ ] [por asignar] El mismo switch en el menú estático de las demos (hoy no
+      tiene nada de JS; requeriría un script chico solo para ese caso)
 
 ## Etapa 7 — Pendientes técnicos (backlog)
 

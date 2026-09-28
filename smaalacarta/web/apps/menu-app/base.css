@@ -207,6 +207,39 @@ body.no-scroll {
   display: none !important;
 }
 
+/* Switch de tema, solo en las demos (lo muestra/oculta app.js). Colores
+   genéricos con var(), no de una plantilla en particular: así funciona igual
+   en las tres. */
+.btn-tema {
+  position: fixed;
+  left: 1rem;
+  bottom: 1rem;
+  z-index: 50;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.55rem 0.95rem;
+  border-radius: 999px;
+  background: var(--card, #fff);
+  color: var(--text, #111);
+  border: 1px solid var(--border, rgba(0, 0, 0, 0.1));
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition:
+    transform 0.15s ease,
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.btn-tema:hover {
+  transform: translateY(-2px);
+}
+
+.btn-tema[hidden] {
+  display: none !important;
+}
+
 /* ==========================================================================
    Calidad pareja entre las tres plantillas (moderno, clásico y minimal), en el menú
    interactivo y en el estático. Se carga antes que la plantilla: ella puede pisarlo.

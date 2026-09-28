@@ -28,7 +28,13 @@ export default async function SettingsPage() {
         initialSlug={business.slug}
       />
 
-      <ShareSection name={business.name} slug={business.slug} />
+      <ShareSection
+        name={business.name}
+        slug={business.slug}
+        planPdf={business.plan_pdf}
+        planWeb={business.plan_web}
+        planCompleto={business.plan_completo}
+      />
 
       <SettingsForm businessId={business.id} initial={settings} />
 

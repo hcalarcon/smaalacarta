@@ -141,7 +141,9 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   `[data-tema="oscuro"]` para redefinir sus variables de fondo, tarjeta, texto y
   borde; los colores de marca del negocio y los fijos (promo, WhatsApp) no
   cambian con el tema: ya se calculan para leerse sobre sí mismos. Sin tema
-  cargado (las demos, hoy), se ve como siempre: claro.
+  cargado (las demos, hoy), se ve como siempre: claro. En el interactivo, las
+  demos tienen además un botón flotante (`#btn-tema`) para alternar entre los
+  dos temas sin recargar; no existe en negocios reales ni en el estático.
 
 ## BUSQUEDA — Buscador
 
@@ -444,7 +446,7 @@ Cubierto por: `src/lib/menu/product-fields.test.ts` (ADMIN-MENU-1 y 2),
 `src/lib/settings/`, `src/lib/db/settings.ts` y `app/dashboard/settings`. Cubierto
 por: `src/lib/db/settings.test.ts` (ADMIN-CONFIG-1 a 6 y 9, contra Postgres real),
 `src/lib/db/storage.test.ts` (ADMIN-CONFIG-7), `src/lib/settings/*.test.ts` (formatos
-y redes) y `src/lib/storage/images.test.ts`.*
+y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-CONFIG-10).*
 
 - **ADMIN-CONFIG-1** Cada negocio tiene una configuración propia (plantilla, colores,
   imagen de cabecera, descripción, horarios y si el menú es público); solo sus
@@ -466,11 +468,18 @@ y redes) y `src/lib/storage/images.test.ts`.*
   de su carpeta del bucket de imágenes; solo se aceptan JPG, PNG y WebP de hasta
   2 MB. Nadie puede escribir fuera de la carpeta de su negocio.
 - **ADMIN-CONFIG-8** El negocio puede cargar un logo cuadrado (opcional, una imagen https).
+  Se usa como ícono al instalar el menú en el celular; sin logo se usa el ícono general.
 - **ADMIN-CONFIG-9** El negocio elige el tema de su plantilla, `claro` u `oscuro`
   (columna `theme`, por defecto `claro`); no sigue el modo del sistema del
   visitante. Se guarda junto con el resto de Configuración y `public_menu` lo
   entrega en `config.tema` (PUBLICO-16).
-  Se usa como ícono al instalar el menú en el celular; sin logo se usa el ícono general.
+- **ADMIN-CONFIG-10** "Compartir" y el botón "Ver mi menú" del header muestran
+  solo las direcciones que de verdad responden, según el plan del negocio
+  (`src/lib/menu-url.ts`, `menuLinks()`/`primaryMenuLink()`, mismo criterio que
+  RUTAS-4): con `plan_completo`, el subdominio (interactivo, y estático/PDF si
+  además los tiene); sin él, el path del dominio raíz para el estático y el PDF,
+  si los tiene, y ningún link para el interactivo. También muestra qué plan
+  tiene el negocio (badges), de solo lectura: solo el superadmin lo cambia.
 
 ## ADMIN-PEDIDOS — Pedidos
 
