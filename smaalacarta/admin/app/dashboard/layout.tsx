@@ -6,7 +6,8 @@ import { dashboardLinks } from "@/components/layout/nav-links";
 import { getSuperAdminStatus } from "@/lib/auth/superadmin";
 import { countPendingOrders } from "@/lib/db/summary";
 import { resolveAccess } from "@/lib/get-current-business";
-import { menuLinks, primaryMenuLink } from "@/lib/menu-url";
+import { menuLinks } from "@/lib/menu-url";
+import { hasDigitalMenu, hasOrders } from "@/lib/plan-access";
 
 export default async function DashboardLayout({
   children,
@@ -22,21 +23,39 @@ export default async function DashboardLayout({
   // Un superadmin que además tiene negocio puede pasar a /superadmin.
   const { isSuperAdmin } = await getSuperAdminStatus();
 
-  // Pedidos nuevos: el contador junto a "Pedidos" (ADMIN-RESUMEN-3).
-  const pending = await countPendingOrders(current!.business!.id);
-  const links = dashboardLinks.map((link) =>
-    link.href === "/dashboard/orders" ? { ...link, badge: pending } : link,
+  const plan = {
+    planPdf: current!.business!.plan_pdf,
+    planWeb: current!.business!.plan_web,
+    planCompleto: current!.business!.plan_completo,
+  };
+  const digitalMenu = hasDigitalMenu(plan);
+  const orders = hasOrders(plan);
+
+  // Menú y Promociones solo tienen sentido con un menú digital; Pedidos, solo
+  // con carrito (plan_completo) — ver src/lib/plan-access.ts.
+  const HIDDEN_WITHOUT_DIGITAL_MENU = ["/dashboard/menu", "/dashboard/promotions"];
+  let links = dashboardLinks.filter(
+    (link) =>
+      (digitalMenu || !HIDDEN_WITHOUT_DIGITAL_MENU.includes(link.href)) &&
+      (orders || link.href !== "/dashboard/orders"),
   );
 
-  // La más completa que tenga el negocio, según su plan (RUTAS-4); sin ninguna
-  // (caso raro: un negocio sin plan cargado) no se muestra el botón.
-  const menuHref = primaryMenuLink(
-    menuLinks(current!.business!.slug, {
-      planPdf: current!.business!.plan_pdf,
-      planWeb: current!.business!.plan_web,
-      planCompleto: current!.business!.plan_completo,
-    }),
-  );
+  if (orders) {
+    // Pedidos nuevos: el contador junto a "Pedidos" (ADMIN-RESUMEN-3).
+    const pending = await countPendingOrders(current!.business!.id);
+    links = links.map((link) =>
+      link.href === "/dashboard/orders" ? { ...link, badge: pending } : link,
+    );
+  }
+
+  // Un botón por cada servicio que el negocio realmente tenga (RUTAS-4): el
+  // que no tiene plan_completo no ve "Ver carrito", etc.
+  const { interactivo, estatico, pdf } = menuLinks(current!.business!.slug, plan);
+  const quickLinks = [
+    interactivo ? { href: interactivo, label: "Ver carrito", short: "Carrito" } : null,
+    estatico ? { href: estatico, label: "Ver menú", short: "Menú" } : null,
+    pdf ? { href: pdf, label: "Ver QR", short: "QR" } : null,
+  ].filter((link) => link !== null);
 
   return (
     <DashboardShell
@@ -48,7 +67,7 @@ export default async function DashboardLayout({
       switchLink={
         isSuperAdmin ? { href: "/superadmin", label: "Superadmin" } : undefined
       }
-      menuLink={menuHref ? { href: menuHref, label: "Ver mi menú" } : undefined}
+      quickLinks={quickLinks}
       showChangePassword={false}
       banner={current!.business!.active ? undefined : <SuspendedBanner />}
     >

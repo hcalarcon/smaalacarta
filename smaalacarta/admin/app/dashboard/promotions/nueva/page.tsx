@@ -1,14 +1,27 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import PromotionEditor from "../components/PromotionEditor";
 import { listProductsForPromotions } from "@/lib/db/promotions";
 import { requireBusiness } from "@/lib/get-current-business";
+import { hasDigitalMenu } from "@/lib/plan-access";
 
 export const metadata: Metadata = { title: "Nueva promoción" };
 
 export default async function NewPromotionPage() {
   const { business } = await requireBusiness();
+
+  if (
+    !hasDigitalMenu({
+      planPdf: business.plan_pdf,
+      planWeb: business.plan_web,
+      planCompleto: business.plan_completo,
+    })
+  ) {
+    redirect("/dashboard");
+  }
+
   const products = await listProductsForPromotions(business.id);
 
   return (

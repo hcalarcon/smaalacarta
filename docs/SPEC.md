@@ -535,6 +535,27 @@ Cubierto por `src/lib/db/suspension.test.ts`, contra Postgres real.*
   suspensión, y cada acción devuelve un mensaje en español (no el error crudo
   de Postgres) en vez de fallar en silencio.
 
+## ADMIN-PLAN — El panel según el plan
+
+*Aplicado por `src/lib/plan-access.ts`, `app/dashboard/layout.tsx`,
+`app/dashboard/page.tsx`, `app/dashboard/{menu,orders,promotions}/page.tsx` y
+`app/dashboard/settings/components/SettingsForm.tsx`. Cubierto por
+`src/lib/plan-access.test.ts`, en JS puro.*
+
+- **ADMIN-PLAN-1** Sin `plan_web` ni `plan_completo` (`hasDigitalMenu()`), el
+  negocio no tiene un menú digital: no ve Menú ni Promociones en el menú
+  lateral (ni pueden entrar por la URL directa, redirige a `/dashboard`), y
+  Configuración solo muestra "Menú en PDF" (con Compartir y Contraseña, que no
+  dependen del plan) — nada de Publicación, Apariencia, Horarios, Cierre
+  temporal ni Contacto, que solo tienen sentido con un menú digital.
+- **ADMIN-PLAN-2** Sin `plan_completo` (`hasOrders()`), el negocio no tiene
+  carrito: no ve Pedidos en el menú lateral (ni puede entrar por la URL
+  directa), y el resumen no muestra el aviso de pedidos nuevos ni la tarjeta
+  "Pedidos hoy".
+- **ADMIN-PLAN-3** El header muestra un botón por cada servicio público que el
+  negocio realmente tenga ("Ver carrito", "Ver menú", "Ver QR" — mismas
+  direcciones que `menuLinks()`, RUTAS-4), no uno solo fijo.
+
 ## ADMIN-PROMOS — Promociones
 
 *Aplicado por `supabase/migrations/*_orden_y_promociones.sql`,

@@ -421,6 +421,27 @@ negocio y los fijos (promo, WhatsApp) no cambian con el tema. Requisitos en
       `SECURITY DEFINER`. El borrado no se bloquea. Un aviso fijo en todo el
       panel explica por qué mientras dure
 
+## Etapa 6j — El panel según el plan
+
+**Diseño.** No solo lo público cambia según el plan (Etapa 6g): el panel
+también. Sin `plan_web` ni `plan_completo` no hay menú digital (Menú y
+Promociones no tienen sentido, y Configuración se reduce a "Menú en PDF");
+sin `plan_completo` no hay carrito (Pedidos no tiene sentido, tampoco el aviso
+de pedidos nuevos ni "Pedidos hoy" en el resumen). El header muestra un botón
+por cada servicio que el negocio realmente tenga, no uno solo. Lógica en
+`src/lib/plan-access.ts` (`hasDigitalMenu()`, `hasOrders()`); requisitos en
+`docs/SPEC.md` (ADMIN-PLAN-1 a 3).
+
+- [x] [herni] Menú lateral, header (botones "Ver carrito"/"Ver menú"/"Ver QR"),
+      resumen y Configuración reducida, todos según el plan. Menú, Pedidos y
+      Promociones también redirigen a `/dashboard` si se entra por la URL
+      directa sin el plan que corresponde
+- [ ] [por asignar] Lo mismo pero exigido en la base (como la suspensión,
+      Etapa 6i): hoy `save_promotion()`, `create_manual_order()` y las tablas de
+      categorías/productos no miran el plan, solo el panel esconde los botones.
+      Alguien con la sesión y las herramientas para pegarle directo a la acción
+      podría saltarse el filtro
+
 ## Etapa 7 — Pendientes técnicos (backlog)
 
 - [ ] [por asignar] Permisos por `role` en `businesses`: hoy cualquier miembro puede editar el negocio, incluido el `slug`
