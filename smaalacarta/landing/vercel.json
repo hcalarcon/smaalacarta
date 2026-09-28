@@ -2,12 +2,12 @@
   "rewrites": [
     {
       "source": "/admin",
-      "destination": "https://smaalacarta-admin-git-dev-herni-smaalacarta.vercel.app/admin"
+      "destination": "https://smaalacarta-admin.vercel.app/admin"
     },
 
     {
       "source": "/admin/:path*",
-      "destination": "https://smaalacarta-admin-git-dev-herni-smaalacarta.vercel.app/admin/:path*"
+      "destination": "https://smaalacarta-admin.vercel.app/admin/:path*"
     },
 
     {
