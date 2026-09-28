@@ -448,6 +448,10 @@ por cada servicio que el negocio realmente tenga, no uno solo. Lógica en
 
 ## Etapa 7 — Pendientes técnicos (backlog)
 
+- [ ] [por asignar] **Marketplace** ("un lugar donde encontrar de todo para
+      comer", negocios clientes y no clientes): en análisis, ver
+      `docs/MARKETPLACE.md`. Todavía no es una tarea tomada — no empezar sin que
+      Herni lo decida primero
 - [ ] [por asignar] Permisos por `role` en `businesses`: hoy cualquier miembro puede editar el negocio, incluido el `slug`
 - [ ] [por asignar] Políticas RLS para `anon` (lectura del menú público), junto con la Etapa 6
 - [ ] [por asignar] `getCurrentBusiness()` con varios negocios por usuario: hoy `.maybeSingle()` falla y redirige a `/login`
