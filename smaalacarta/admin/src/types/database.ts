@@ -658,7 +658,10 @@ export type Database = {
         Args: { p_slug: string; p_via_path?: boolean }
         Returns: Json
       }
-      public_menu: { Args: { p_slug: string; p_via_path?: boolean }; Returns: Json }
+      public_menu: {
+        Args: { p_slug: string; p_via_path?: boolean }
+        Returns: Json
+      }
       public_order_tracking: { Args: { p_code: string }; Returns: Json }
       save_business_settings: {
         Args: {
