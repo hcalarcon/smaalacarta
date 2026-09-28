@@ -65,10 +65,11 @@ beforeAll(async () => {
   await createUser(db, { id: BETO, email: "beto@x.com" });
 
   await db.exec(`
-    insert into businesses (id, name, slug, whatsapp) values
-      ('${NEG_ANA}', 'Ana Resto', 'ana', '5493510000001'),
-      ('${NEG_BETO}', 'Beto Bar', 'beto', '5493510000002'),
-      ('c3c3c3c3-0000-0000-0000-000000000003', 'Privado', 'privado', null);
+    -- plan_completo: create_public_order (siempre por subdominio) ahora lo exige.
+    insert into businesses (id, name, slug, whatsapp, plan_completo) values
+      ('${NEG_ANA}', 'Ana Resto', 'ana', '5493510000001', true),
+      ('${NEG_BETO}', 'Beto Bar', 'beto', '5493510000002', true),
+      ('c3c3c3c3-0000-0000-0000-000000000003', 'Privado', 'privado', null, true);
     insert into business_users (business_id, user_id) values
       ('${NEG_ANA}', '${ANA}'), ('${NEG_BETO}', '${BETO}');
     insert into business_settings (business_id, published) values
@@ -696,7 +697,7 @@ describe("historial — ADMIN-PEDIDOS-5", () => {
   it("borrar el negocio borra sus pedidos, ítems, eventos y contador", async () => {
     const otro = "c9c9c9c9-0000-0000-0000-000000000009";
     await db.exec(`
-      insert into businesses (id, name, slug) values ('${otro}', 'Efímero', 'efimero');
+      insert into businesses (id, name, slug, plan_completo) values ('${otro}', 'Efímero', 'efimero', true);
       insert into business_settings (business_id, published) values ('${otro}', true);
       insert into categories (id, business_id, name) values ('c9000000-0000-0000-0000-000000000001', '${otro}', 'C');
       insert into products (id, business_id, category_id, name, price) values ('d9000000-0000-0000-0000-000000000001', '${otro}', 'c9000000-0000-0000-0000-000000000001', 'P', 10);

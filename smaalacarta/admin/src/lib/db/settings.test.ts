@@ -81,8 +81,9 @@ beforeAll(async () => {
 
   await db.exec(`
     insert into super_admins (user_id) values ('${SUPER}');
-    insert into businesses (id, name, slug) values
-      ('${NEG_ANA}', 'Ana', 'ana'), ('${NEG_BETO}', 'Beto', 'beto');
+    -- plan_completo: el PDF por subdominio (p_via_path = false) ahora lo exige.
+    insert into businesses (id, name, slug, plan_completo) values
+      ('${NEG_ANA}', 'Ana', 'ana', true), ('${NEG_BETO}', 'Beto', 'beto', true);
     insert into business_users (business_id, user_id) values
       ('${NEG_ANA}', '${ANA}'), ('${NEG_BETO}', '${BETO}');
   `);
@@ -374,8 +375,13 @@ describe("PDF del menú — PDF-1", () => {
 });
 
 describe("ruteo por plan — RUTAS-4 y PDF-5", () => {
-  it("por subdominio (p_via_path = false) no le importa el plan", async () => {
+  it("por subdominio (p_via_path = false), con plan_completo, responde", async () => {
     expect(await publicPdf("ana", null, false)).not.toBeNull();
+  });
+
+  it("por subdominio, sin plan_completo no responde", async () => {
+    await asUser(db, SUPER, `update businesses set plan_completo = false where id = '${NEG_ANA}'`);
+    expect(await publicPdf("ana", null, false)).toBeNull();
   });
 
   it("por path, sin plan_pdf no responde", async () => {
@@ -387,13 +393,13 @@ describe("ruteo por plan — RUTAS-4 y PDF-5", () => {
     expect(await publicPdf("ana", null, true)).not.toBeNull();
   });
 
-  it("por path, con plan_completo no responde: ese negocio va por subdominio", async () => {
+  it("con plan_completo: responde por subdominio y ya no por path", async () => {
     await asUser(db, SUPER, `update businesses set plan_completo = true where id = '${NEG_ANA}'`);
-    expect(await publicPdf("ana", null, true)).toBeNull();
     expect(await publicPdf("ana", null, false)).not.toBeNull();
+    expect(await publicPdf("ana", null, true)).toBeNull();
 
     await asUser(
-      db, SUPER, `update businesses set plan_pdf = false, plan_completo = false where id = '${NEG_ANA}'`,
+      db, SUPER, `update businesses set plan_pdf = false where id = '${NEG_ANA}'`,
     );
   });
 });

@@ -329,6 +329,17 @@ Requisitos en `docs/SPEC.md` (ADMIN-SUPER-13 a 16).
       `20260930000600_ruteo_por_plan.sql`) y exigen el plan del servicio y que el
       negocio no tenga `plan_completo` cuando se llega por path. Requisitos en
       `docs/SPEC.md` (RUTAS-4, PDF-5, ESTATICO-5)
+- [x] [herni] El subdominio también quedó atado al plan (migración
+      `20260930000700_subdominio_exige_plan_completo.sql`): sin `plan_completo`, un
+      negocio no responde por subdominio en nada (interactivo, estático, PDF ni
+      `create_public_order`), solo por path. Antes de esta migración, cualquier
+      negocio publicado y activo seguía respondiendo por subdominio sin mirar el
+      plan — se notó porque `kukarachos.smaalacarta.com.ar` (solo con `plan_pdf` y
+      `plan_web`) seguía sirviendo el menú interactivo. **Importante**: cualquier
+      negocio real que ya estuviera usando su subdominio y no tenga `plan_completo`
+      va a dejar de responder ahí apenas se aplique esta migración — hay que
+      revisar en `/superadmin` qué negocios necesitan `plan_completo` antes o
+      justo después de aplicarla
 - [x] [herni] Probado en preview (`landing` y `web` de `dev-herni`, apuntando
       momentáneamente uno al otro) con kukarachos sin `plan_completo`: el path
       (`/<slug>/pdf` y `/menu.html`) funciona. Ojo: los previews de Vercel piden

@@ -61,7 +61,9 @@ comportamiento que ya existe, una app por rama:
   slug llega distinto según el caso: por query (`?ruta=<slug>`) en el estático,
   que corre del lado del servidor; por el propio `pathname` del navegador
   (`/<slug>/pdf`) en el PDF, que corre del lado del cliente y nunca ve la query
-  del rewrite. Por subdominio sigue el criterio de siempre, sin mirar el plan.
+  del rewrite. El subdominio, a su vez, exige `plan_completo`: sin él, un negocio
+  no responde por subdominio en ningún servicio (interactivo, estático ni PDF),
+  solo por path.
 
 ## HORARIO — Abierto o cerrado
 
@@ -236,7 +238,8 @@ en PDF" de Configuración (`app/dashboard/settings`) y `web/apps/pdf`. Cubierto 
   de ejemplo, sin pedir nada a Supabase ni al JSON: es solo para mostrar cómo se ve
   el plan "QR + PDF", no depende de ningún negocio real.
 - **PDF-5** `smaalacarta.com.ar/<slug>/pdf` (RUTAS-4) exige `plan_pdf` y que el
-  negocio no tenga `plan_completo`; por subdominio no cambia nada.
+  negocio no tenga `plan_completo`; `<slug>.smaalacarta.com.ar/pdf` (subdominio)
+  exige `plan_completo`, tenga o no `plan_pdf`.
 
 ## ESTATICO — Menú web de solo lectura
 
@@ -261,7 +264,10 @@ en JS puro.*
   arma las mismas secciones (Destacados y Ofertas, MENU-1 a 3), pone la etiqueta de
   promo en el producto y usa el mismo encabezado (estado dentro de `.header-top`).
 - **ESTATICO-5** `smaalacarta.com.ar/<slug>/menu.html` (RUTAS-4) exige `plan_web` y
-  que el negocio no tenga `plan_completo`; por subdominio no cambia nada.
+  que el negocio no tenga `plan_completo`; `<slug>.smaalacarta.com.ar/menu.html`
+  (subdominio) exige `plan_completo`, tenga o no `plan_web`. Mismo criterio para
+  el menú interactivo (`<slug>.smaalacarta.com.ar`) y para crear un pedido: sin
+  `plan_completo`, no responden.
 - **ESTATICO-6** `moderno.smaalacarta.com.ar/menu.html` (también `clasico` y
   `minimal`) muestra la demo de solo lectura, sin pedir nada a Supabase: sale de
   los mismos JSON que usa el menú interactivo para las demos
