@@ -329,12 +329,15 @@ Requisitos en `docs/SPEC.md` (ADMIN-SUPER-13 a 16).
       `20260930000600_ruteo_por_plan.sql`) y exigen el plan del servicio y que el
       negocio no tenga `plan_completo` cuando se llega por path. Requisitos en
       `docs/SPEC.md` (RUTAS-4, PDF-5, ESTATICO-5)
-- [ ] [herni] Probar en producción el path (`smaalacarta.com.ar/<slug>/pdf` y
-      `/menu.html`, con un negocio de prueba sin `plan_completo`): el dominio de
-      `web/` está hardcodeado en `landing/vercel.json`
-      (`democlientes-git-main-smaalacarta.vercel.app`) y ese deploy no debería
-      tener "Vercel Authentication"/protección de preview activada, o el rewrite
-      externo va a devolver una pantalla de login en vez del contenido
+- [x] [herni] Probado en preview (`landing` y `web` de `dev-herni`, apuntando
+      momentáneamente uno al otro) con kukarachos sin `plan_completo`: el path
+      (`/<slug>/pdf` y `/menu.html`) funciona. Ojo: los previews de Vercel piden
+      login ("Vercel Authentication"), así que no se pueden probar con `curl`, solo
+      en el navegador ya logueado — en producción no debería pasar, pero conviene
+      confirmarlo una vez que esto llegue a `main`
+- [ ] [herni] Confirmar que el path funcione en producción real (`smaalacarta.com.ar`)
+      una vez mergeado a `main`, con el dominio `democlientes-git-main-smaalacarta.vercel.app`
+      hardcodeado en `landing/vercel.json`
 - [ ] [por asignar] Historial de pagos o fecha de vencimiento (quedó afuera de esta
       vuelta: por ahora es un interruptor manual, sin fechas)
 
