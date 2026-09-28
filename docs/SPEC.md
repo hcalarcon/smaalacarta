@@ -366,6 +366,22 @@ primer ingreso.
 - **ADMIN-SUPER-12** Un negocio no puede llamarse con un slug reservado (`www`,
   `admin`, `app`, `api`, `demo`, `moderno`, `clasico`, `minimal`…): serían
   subdominios que no abren un negocio.
+- **ADMIN-SUPER-13** El plan de un negocio no es un valor único: son tres
+  capacidades combinables (`plan_pdf`, `plan_web`, `plan_completo`, una por cada
+  servicio de `web/`). El superadmin elige el plan (al menos uno) al dar de alta
+  el negocio, y puede cambiarlo después desde `/superadmin/negocios/[id]`.
+- **ADMIN-SUPER-14** Solo un superadmin puede cambiar el plan o el estado
+  (`active`) de un negocio; un dueño no puede tocar esas columnas ni con un
+  `UPDATE` directo a `businesses`, aunque sí siga editando el resto de sus datos
+  (nombre, slug, WhatsApp, logo).
+- **ADMIN-SUPER-15** `active = false` es el interruptor de alta/baja según pago:
+  saca al negocio de los tres servicios públicos (`public_menu`,
+  `public_business_pdf`, `create_public_order`), sin publicarlo ni borrar nada.
+  Un negocio nuevo nace activo.
+- **ADMIN-SUPER-16** Los negocios que ya existían antes de esta funcionalidad
+  quedaron con `plan_completo = true` (es lo que ya tenían de hecho: subdominio
+  sin restricción de plan); solo un negocio nuevo arranca sin plan hasta que el
+  superadmin elija uno.
 
 ## ADMIN-MENU — Categorías y productos
 

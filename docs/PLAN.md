@@ -282,8 +282,8 @@ siempre (JS plano, lógica en `lib/*.js` con tests, funciones en `web/api/`).
       del PDF o del menú estático para compartir — solo el interactivo lo tiene, en
       Configuración → Compartir
 - [ ] [por asignar] Generar el PDF automáticamente desde el menú del admin (idea a futuro)
-- [ ] [por asignar] Diferenciar en el admin qué plan tiene cada negocio (hoy todo
-      es un único flag `published`; la landing ya vende 3 planes distintos)
+- [x] [herni] Diferenciar en el admin qué plan tiene cada negocio: resuelto en la
+      Etapa 6g (`plan_pdf`/`plan_web`/`plan_completo` + alta/baja por pago)
 
 ## Etapa 6f — Una sola familia de plantillas (demos y clientes)
 
@@ -304,6 +304,34 @@ demos y negocios reales, en el menú interactivo y en el estático
       vio en capturas headless) y probar colores claros en clásico y minimal con un negocio real
 - [ ] [por asignar] Precios con formato es-AR (`$12.000`; hoy `$12000`): toca el carrito
 - [ ] [por asignar] Mostrar la descripción de cada categoría en el menú (llega en `public_menu`, no se pinta)
+
+## Etapa 6g — Plan de cada negocio y alta/baja por pago
+
+**Diseño.** El plan no es un valor único: son tres capacidades combinables
+(`businesses.plan_pdf`, `plan_web`, `plan_completo` — uno por servicio de
+`web/`, Etapa 6e). `businesses.active` es el interruptor de alta/baja según
+pago: en `false`, el negocio deja de mostrarse en los tres servicios públicos
+(`public_menu`, `public_business_pdf`, `create_public_order`), sin borrar nada.
+Solo el superadmin cambia estas columnas (trigger `businesses_guard_admin_columns`,
+migración `20260930000500_planes_y_estado.sql`); un dueño no puede tocarlas ni
+con un `UPDATE` directo. Los negocios que ya existían quedaron con
+`plan_completo = true` para no cortarles nada (es lo que ya tenían de hecho).
+Requisitos en `docs/SPEC.md` (ADMIN-SUPER-13 a 16).
+
+- [x] [herni] Elegir el plan (combinable) al dar de alta un negocio, desde `/superadmin/negocios/nuevo`
+- [x] [herni] Cambiar el plan y activar/suspender un negocio desde `/superadmin/negocios/[id]`
+- [x] [herni] `active = false` saca al negocio de los tres servicios públicos
+- [ ] [herni] **Diseñar** la regla de enrutamiento de `web/` según el plan: hoy
+      cualquier negocio publicado responde por subdominio
+      (`<slug>.smaalacarta.com.ar`), sin mirar el plan. La regla de negocio real
+      (a definir e implementar en una etapa aparte, porque cambia `web/` y
+      probablemente `vercel.json`): con `plan_completo`, todo por subdominio
+      (interactivo, y también PDF/estático si además tiene esos planes); sin
+      `plan_completo`, por path en el dominio raíz de la landing
+      (`smaalacarta.com.ar/<slug>/menu.html`, `/pdf`) — que hoy no está resuelto,
+      porque `smaalacarta.com.ar` es el proyecto de `landing/`, no llega a `web/`
+- [ ] [por asignar] Historial de pagos o fecha de vencimiento (quedó afuera de esta
+      vuelta: por ahora es un interruptor manual, sin fechas)
 
 ## Etapa 7 — Pendientes técnicos (backlog)
 

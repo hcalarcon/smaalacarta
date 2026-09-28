@@ -67,12 +67,23 @@ export async function buildAccountDeps(): Promise<AccountDeps> {
       return { id: data.user.id };
     },
 
-    createBusiness: async ({ name, slug, whatsapp, ownerId }) => {
+    createBusiness: async ({
+      name,
+      slug,
+      whatsapp,
+      ownerId,
+      planPdf,
+      planWeb,
+      planCompleto,
+    }) => {
       const { data, error } = await supabase.rpc("create_business_with_owner", {
         p_name: name,
         p_slug: slug,
         p_whatsapp: whatsapp,
         p_owner_id: ownerId,
+        p_plan_pdf: planPdf,
+        p_plan_web: planWeb,
+        p_plan_completo: planCompleto,
       });
 
       if (error) {

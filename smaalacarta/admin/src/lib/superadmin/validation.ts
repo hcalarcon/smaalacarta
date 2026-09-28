@@ -69,9 +69,12 @@ export function validateNewBusiness(input: {
   whatsapp: string;
   ownerEmail: string;
   ownerName: string;
-}): ValidationResult<"name" | "slug" | "whatsapp" | "ownerEmail"> {
+  planPdf: boolean;
+  planWeb: boolean;
+  planCompleto: boolean;
+}): ValidationResult<"name" | "slug" | "whatsapp" | "ownerEmail" | "plan"> {
   const errors: Partial<
-    Record<"name" | "slug" | "whatsapp" | "ownerEmail", string>
+    Record<"name" | "slug" | "whatsapp" | "ownerEmail" | "plan", string>
   > = {};
 
   if (input.name.trim().length < 2) {
@@ -94,6 +97,10 @@ export function validateNewBusiness(input: {
 
   if (!isValidEmail(input.ownerEmail)) {
     errors.ownerEmail = "Ingresá un email válido para el dueño.";
+  }
+
+  if (!input.planPdf && !input.planWeb && !input.planCompleto) {
+    errors.plan = "Elegí al menos un plan.";
   }
 
   return Object.keys(errors).length ? { ok: false, errors } : { ok: true };

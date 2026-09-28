@@ -89,6 +89,42 @@ export default function NewBusinessForm() {
         error={state.fieldErrors?.whatsapp}
       />
 
+      <div>
+        <p className="mb-1.5 text-sm font-medium text-brand">Plan</p>
+        <div className="flex flex-col gap-2">
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="planPdf"
+              defaultChecked={state.values?.planPdf === "on"}
+            />
+            QR + PDF
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="planWeb"
+              defaultChecked={state.values?.planWeb === "on"}
+            />
+            Menú Web
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              name="planCompleto"
+              defaultChecked={state.values?.planCompleto === "on"}
+            />
+            Subdominio Completo
+          </label>
+        </div>
+        <p className="mt-1.5 text-sm text-stone-500">
+          Se pueden combinar. Después se puede cambiar desde este mismo negocio.
+        </p>
+        {state.fieldErrors?.plan ? (
+          <p className="mt-1.5 text-sm text-red-600">{state.fieldErrors.plan}</p>
+        ) : null}
+      </div>
+
       <hr className="border-line" />
 
       <Field

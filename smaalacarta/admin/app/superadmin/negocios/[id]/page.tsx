@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import AddMemberForm from "../../components/AddMemberForm";
+import PlanForm from "../../components/PlanForm";
 import RemoveMemberButton from "../../components/RemoveMemberButton";
 import ResetPasswordButton from "../../components/ResetPasswordButton";
 import { getBusinessWithMembers } from "@/lib/db/superadmin";
@@ -44,6 +45,19 @@ export default async function BusinessDetailPage({
           {business.slug}
           {business.whatsapp ? ` · WhatsApp ${business.whatsapp}` : ""}
         </p>
+      </section>
+
+      <section className="rounded-3xl border border-line bg-white p-6 shadow-sm">
+        <h2 className="text-xl font-semibold text-brand">Plan y estado</h2>
+        <div className="mt-4">
+          <PlanForm
+            businessId={business.id}
+            planPdf={business.plan_pdf}
+            planWeb={business.plan_web}
+            planCompleto={business.plan_completo}
+            active={business.active}
+          />
+        </div>
       </section>
 
       <section className="rounded-3xl border border-line bg-white p-6 shadow-sm">
