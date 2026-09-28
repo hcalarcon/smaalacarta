@@ -3,6 +3,7 @@
 // `landing/` (`smaalacarta.com.ar/<slug>/menu.html?ruta=<slug>`, RUTAS-4). Mismo
 // dato que el menú interactivo (`public_menu`, sin sesión) pero como HTML de solo
 // lectura, armado en el momento — sin build ni JS de carrito.
+import { getDemoMenu } from "../apps/menu-app/lib/demo-menu.js";
 import { fetchPublicMenu, isSupabaseConfigured } from "../apps/menu-app/lib/public-menu.js";
 import { resolveTarget } from "../apps/menu-app/lib/hostname.js";
 import { renderStaticMenuPage } from "../apps/menu-app/lib/static-page.js";
@@ -15,18 +16,22 @@ export default async function handler(req, res) {
   const url = new URL(req.url ?? "", "http://internal");
   const target = resolveTarget({ hostname: req.headers?.host, search: url.search });
 
-  // Por ahora, solo negocios reales: el menú estático de las demos todavía no
-  // tiene un respaldo en JSON (a diferencia del interactivo y el PDF).
-  if (!target || target.type !== "cliente" || !isSupabaseConfigured(SUPABASE)) {
+  if (!target) {
     res.status(404).send(NOT_FOUND);
     return;
   }
 
+  // Las demos salen de los mismos JSON que el interactivo (ESTATICO-6), sin
+  // pasar por Supabase ni por el plan: no son negocios reales.
   let remote = null;
-  try {
-    remote = await fetchPublicMenu({ ...SUPABASE, slug: target.slug, viaPath: target.viaPath });
-  } catch {
-    remote = null;
+  if (target.type === "demo") {
+    remote = getDemoMenu(target.slug);
+  } else if (isSupabaseConfigured(SUPABASE)) {
+    try {
+      remote = await fetchPublicMenu({ ...SUPABASE, slug: target.slug, viaPath: target.viaPath });
+    } catch {
+      remote = null;
+    }
   }
 
   if (!remote) {

@@ -240,8 +240,9 @@ en PDF" de Configuración (`app/dashboard/settings`) y `web/apps/pdf`. Cubierto 
 
 ## ESTATICO — Menú web de solo lectura
 
-*Aplicado por `web/api/static-menu.js` y `web/apps/menu-app/lib/static-page.js`.
-Cubierto por `web/apps/menu-app/lib/static-page.test.js`, en JS puro.*
+*Aplicado por `web/api/static-menu.js`, `web/apps/menu-app/lib/static-page.js` y
+`lib/demo-menu.js`. Cubierto por `lib/static-page.test.js` y `lib/demo-menu.test.js`,
+en JS puro.*
 
 - **ESTATICO-1** `<slug>.smaalacarta.com.ar/menu.html` (el negocio sale del
   subdominio, no hay `:cliente` en el path: el dominio raíz es la landing y no
@@ -249,8 +250,7 @@ Cubierto por `web/apps/menu-app/lib/static-page.test.js`, en JS puro.*
   colores, plantilla, horarios y cierre temporal) pero de solo lectura: sin
   carrito, sin formulario de pedido, un link de WhatsApp fijo en vez de un
   checkout. Comparte la bandera `published` con el interactivo. Sin negocio, sin
-  Supabase configurado o sin publicar, la ruta responde 404. Todavía no tiene
-  respaldo en JSON: por ahora solo funciona con negocios reales, no con las demos.
+  Supabase configurado o sin publicar, la ruta responde 404.
 - **ESTATICO-2** El HTML se arma en el momento (`web/api/static-menu.js`, función
   serverless, sin build); el texto del negocio se escapa igual que en el menú
   interactivo (PUBLICO-9): un nombre o descripción con HTML no se ejecuta.
@@ -262,6 +262,10 @@ Cubierto por `web/apps/menu-app/lib/static-page.test.js`, en JS puro.*
   promo en el producto y usa el mismo encabezado (estado dentro de `.header-top`).
 - **ESTATICO-5** `smaalacarta.com.ar/<slug>/menu.html` (RUTAS-4) exige `plan_web` y
   que el negocio no tenga `plan_completo`; por subdominio no cambia nada.
+- **ESTATICO-6** `moderno.smaalacarta.com.ar/menu.html` (también `clasico` y
+  `minimal`) muestra la demo de solo lectura, sin pedir nada a Supabase: sale de
+  los mismos JSON que usa el menú interactivo para las demos
+  (`web/data/demos/<slug>/`), no del plan de un negocio.
 
 ---
 
