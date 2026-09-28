@@ -421,6 +421,9 @@ body {
   padding: 8px;
   font-size: 0.9rem;
   background: transparent;
+  /* Los campos de formulario no heredan el color de texto solos: sin esto
+     quedaban en negro fijo, invisibles sobre el fondo oscuro del checkout. */
+  color: var(--text);
 }
 
 /* BOTÓN */

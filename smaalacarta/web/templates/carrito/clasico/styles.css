@@ -436,6 +436,10 @@ body {
   border: 1px solid var(--border);
   border-radius: 4px;
   font-size: 0.9rem;
+  /* Los campos de formulario no heredan fondo ni color de texto solos: sin
+     esto, en tema oscuro quedaban en negro sobre negro. */
+  background: var(--card);
+  color: var(--text);
 }
 
 .checkout button[type="submit"] {

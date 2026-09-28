@@ -378,10 +378,14 @@ negocio y los fijos (promo, WhatsApp) no cambian con el tema. Requisitos en
 - [x] [herni] Variables de tema en las tres plantillas (`--bg`, `--card`/`--veil`
       según la plantilla, `--text`, `--muted`, `--border`, y en clásico además
       `--tint-ok-*`/`--tint-bad-*` para Destacados/Ofertas y el estado abierto/cerrado)
-- [ ] [herni] **Mirar las tres plantillas en oscuro, en el navegador**: no hay forma
-      de probar esto sin ojos humanos, así que no está verificado más allá de la
-      lectura del CSS. Para probar rápido: Configuración → Apariencia → Oscuro →
-      Guardar, en un negocio real, o el switch de tema de las demos (siguiente ítem)
+- [x] [herni] Los campos del formulario de checkout (input/select/textarea) no
+      heredan fondo ni color de texto solos: en clásico y minimal quedaban en
+      negro fijo sobre negro al confirmar el carrito en tema oscuro (moderno ya
+      los tenía explícitos). Se notó probándolo en el navegador
+- [ ] [herni] **Seguir mirando las tres plantillas en oscuro, en el navegador**:
+      recién arrancó la revisión a ojo (salió el bug de arriba); puede haber más.
+      Para probar rápido: Configuración → Apariencia → Oscuro → Guardar, en un
+      negocio real, o el switch de tema de las demos (siguiente ítem)
 - [x] [herni] Switch de tema en las demos del interactivo (`#btn-tema`, junto al
       estado abierto/cerrado): alterna `data-tema` al toque, sin recargar, para
       mirar cómo se ve cada plantilla en los dos temas. No está en el estático ni
