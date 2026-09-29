@@ -411,3 +411,28 @@ describe("logo — PUBLICO-13", () => {
     expect(((await publicMenu("beto"))!.config as Record<string, unknown>).logo).toBe("https://cdn.example.com/beto.png");
   });
 });
+
+describe("traducciones — IDIOMA-10", () => {
+  it("llegan solo las que el negocio cargó; las vacías no se entregan", async () => {
+    await db.exec(`
+      update categories set name_en = 'Drinks', name_pt = '   ' where business_id = '${NEG_BETO}';
+      update products set name_en = 'Coffee', description_pt = 'Com leite'
+      where business_id = '${NEG_BETO}';
+    `);
+
+    const categoria = (await publicMenu("beto"))!.menu.categorias[0] as Record<string, unknown> & {
+      items: Record<string, unknown>[];
+    };
+
+    expect(categoria.nombre_en).toBe("Drinks");
+    expect(categoria).not.toHaveProperty("nombre_pt");
+    expect(categoria.items[0].nombre_en).toBe("Coffee");
+    expect(categoria.items[0].descripcion_pt).toBe("Com leite");
+    expect(categoria.items[0]).not.toHaveProperty("descripcion_en");
+
+    await db.exec(`
+      update categories set name_en = null, name_pt = null where business_id = '${NEG_BETO}';
+      update products set name_en = null, description_pt = null where business_id = '${NEG_BETO}';
+    `);
+  });
+});

@@ -22,6 +22,10 @@ export type Product = {
   active: boolean;
   image_url: string | null;
   featured: boolean;
+  name_en: string | null;
+  name_pt: string | null;
+  description_en: string | null;
+  description_pt: string | null;
   created_at: string;
   updated_at: string;
 };

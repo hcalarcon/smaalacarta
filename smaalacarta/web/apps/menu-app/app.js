@@ -868,7 +868,7 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
 
     total += subtotal;
 
-    msg += `• ${i.nombre} x${i.cantidad}\n`;
+    msg += `• ${i.nombreEs ?? i.nombre} x${i.cantidad}\n`;
     msg += `  $${formatPrice(precio)} c/u → $${formatPrice(subtotal)}\n\n`;
   });
 

@@ -21,6 +21,10 @@ describe("toProductInsert — ADMIN-MENU-1", () => {
       active: false,
       image_url: null,
       featured: false,
+      name_en: null,
+      name_pt: null,
+      description_en: null,
+      description_pt: null,
     });
   });
 

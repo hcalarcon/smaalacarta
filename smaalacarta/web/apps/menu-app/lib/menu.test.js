@@ -80,3 +80,35 @@ describe("buildEnhancedMenu en otros idiomas — IDIOMA-1", () => {
     expect(buildEnhancedMenu(menu).categorias[0].nombre).toBe("Ofertas");
   });
 });
+
+describe("buildEnhancedMenu — traducciones (IDIOMA-10)", () => {
+  const menu = {
+    categorias: [
+      {
+        nombre: "Bebidas",
+        nombre_en: "Drinks",
+        items: [{ nombre: "Café", nombre_en: "Coffee", precio: 1000, destacado: true }],
+      },
+    ],
+  };
+
+  it("muestra categorías y productos en el idioma elegido, también en Destacados", () => {
+    const result = buildEnhancedMenu(menu, "en");
+
+    expect(result.categorias.map((c) => c.nombre)).toEqual(["Featured", "Drinks"]);
+    expect(result.categorias[0].items[0].nombre).toBe("Coffee");
+  });
+
+  it("sin traducción al portugués deja el español", () => {
+    const result = buildEnhancedMenu(menu, "pt");
+
+    expect(result.categorias.at(-1).nombre).toBe("Bebidas");
+    expect(result.categorias.at(-1).items[0].nombre).toBe("Café");
+  });
+
+  it("no modifica el menú original", () => {
+    buildEnhancedMenu(menu, "en");
+
+    expect(menu.categorias[0].nombre).toBe("Bebidas");
+  });
+});

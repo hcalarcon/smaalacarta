@@ -292,7 +292,8 @@ en JS puro.*
 *Aplicado por `web/apps/menu-app/lib/i18n.js` (diccionario, `t()` y `resolveLang()`),
 `app.js`, `lib/static-page.js`, `web/api/static-menu.js` y `web/apps/tracker/`. Cubierto
 por `lib/i18n.test.js`, `lib/schedule.test.js`, `lib/static-page.test.js` y
-`tracker/lib/tracker.test.js`, en JS puro.*
+`tracker/lib/tracker.test.js`, en JS puro. Las traducciones del contenido (IDIOMA-8 a 11)
+se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib/db/`.*
 
 - **IDIOMA-1** Se traducen solo los textos de la interfaz (botones, carrito, checkout,
   "Destacados", "Ofertas", abierto/cerrado, próximo horario, avisos y seguimiento), a
@@ -313,6 +314,17 @@ por `lib/i18n.test.js`, `lib/schedule.test.js`, `lib/static-page.test.js` y
   sin mirar el idioma del navegador) y marca el idioma en `<html lang>`.
 - **IDIOMA-7** La página de seguimiento usa el mismo criterio que IDIOMA-2; el menú
   interactivo le pasa `?lang=` al link "Seguir mi pedido".
+- **IDIOMA-8** Categorías y productos tienen nombre y descripción opcionales en inglés
+  y portugués (`name_en`, `name_pt`, `description_en`, `description_pt`). Vacíos, se
+  guardan como nulos; no hay traducción automática.
+- **IDIOMA-9** En los formularios de categoría y de producto, una sección plegable
+  "Traducciones (opcional)" carga esos cuatro campos; se abre sola si ya hay alguno.
+- **IDIOMA-10** `public_menu` entrega los textos traducidos (`nombre_en`, `nombre_pt`,
+  `descripcion_en`, `descripcion_pt`) sin la cadena vacía, y `web/` elige según el idioma
+  (`localized()` en `i18n.js`, aplicado en `buildEnhancedMenu`, así vale para el
+  interactivo y el estático). Si falta la traducción, se usa el español.
+- **IDIOMA-11** El mensaje de WhatsApp sigue en español (IDIOMA-5): usa el nombre original
+  del producto (`nombreEs`).
 
 ---
 

@@ -197,8 +197,12 @@ export type Database = {
           business_id: string
           created_at: string
           description: string | null
+          description_en: string | null
+          description_pt: string | null
           id: string
           name: string
+          name_en: string | null
+          name_pt: string | null
           slug: string | null
           sort_order: number | null
           updated_at: string
@@ -208,8 +212,12 @@ export type Database = {
           business_id: string
           created_at?: string
           description?: string | null
+          description_en?: string | null
+          description_pt?: string | null
           id?: string
           name: string
+          name_en?: string | null
+          name_pt?: string | null
           slug?: string | null
           sort_order?: number | null
           updated_at?: string
@@ -219,8 +227,12 @@ export type Database = {
           business_id?: string
           created_at?: string
           description?: string | null
+          description_en?: string | null
+          description_pt?: string | null
           id?: string
           name?: string
+          name_en?: string | null
+          name_pt?: string | null
           slug?: string | null
           sort_order?: number | null
           updated_at?: string
@@ -427,10 +439,14 @@ export type Database = {
           category_id: string | null
           created_at: string
           description: string | null
+          description_en: string | null
+          description_pt: string | null
           featured: boolean | null
           id: string
           image_url: string | null
           name: string
+          name_en: string | null
+          name_pt: string | null
           price: number
           sort_order: number | null
           updated_at: string
@@ -441,10 +457,14 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           description?: string | null
+          description_en?: string | null
+          description_pt?: string | null
           featured?: boolean | null
           id?: string
           image_url?: string | null
           name: string
+          name_en?: string | null
+          name_pt?: string | null
           price?: number
           sort_order?: number | null
           updated_at?: string
@@ -455,10 +475,14 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           description?: string | null
+          description_en?: string | null
+          description_pt?: string | null
           featured?: boolean | null
           id?: string
           image_url?: string | null
           name?: string
+          name_en?: string | null
+          name_pt?: string | null
           price?: number
           sort_order?: number | null
           updated_at?: string

@@ -326,3 +326,23 @@ export function resolveLang({ search = "", navigatorLanguage = "" } = {}) {
     DEFAULT_LANG
   );
 }
+
+// Nombre y descripción de una categoría o producto en el idioma elegido (IDIOMA-10):
+// `nombre_en`/`nombre_pt` y `descripcion_en`/`descripcion_pt`. Si esa traducción falta o
+// está vacía, cae al español (`nombre`/`descripcion`). Sin traducción devuelve el mismo
+// objeto; con ella, una copia que guarda el nombre original en `nombreEs`.
+export function localized(entry, lang) {
+  const code = normalizeLang(lang);
+  if (!entry || !code || code === DEFAULT_LANG) return entry;
+
+  const pick = (value) => (typeof value === "string" && value.trim() ? value.trim() : null);
+  const nombre = pick(entry[`nombre_${code}`]);
+  const descripcion = pick(entry[`descripcion_${code}`]);
+  if (!nombre && !descripcion) return entry;
+
+  return {
+    ...entry,
+    ...(nombre && { nombre, nombreEs: entry.nombre }),
+    ...(descripcion && { descripcion }),
+  };
+}

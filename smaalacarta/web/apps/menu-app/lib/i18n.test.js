@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { DICTIONARY, LANGS, resolveLang, t } from "./i18n.js";
+import { DICTIONARY, LANGS, localized, resolveLang, t } from "./i18n.js";
 
 describe("t — IDIOMA-3", () => {
   it("devuelve el texto en el idioma pedido", () => {
@@ -46,5 +46,27 @@ describe("resolveLang — IDIOMA-2", () => {
   it("si no es ninguno de los tres, español", () => {
     expect(resolveLang({ search: "", navigatorLanguage: "fr-FR" })).toBe("es");
     expect(resolveLang({})).toBe("es");
+  });
+});
+
+// IDIOMA-10
+describe("localized — IDIOMA-10", () => {
+  const item = { nombre: "Hamburguesa", descripcion: "Con queso", nombre_en: "Burger", descripcion_pt: "Com queijo" };
+
+  it("en español devuelve el mismo objeto", () => {
+    expect(localized(item, "es")).toBe(item);
+  });
+
+  it("usa la traducción y guarda el nombre original", () => {
+    expect(localized(item, "en")).toMatchObject({ nombre: "Burger", nombreEs: "Hamburguesa", descripcion: "Con queso" });
+  });
+
+  it("cae al español si la traducción falta o está vacía", () => {
+    expect(localized(item, "pt")).toMatchObject({ nombre: "Hamburguesa", descripcion: "Com queijo" });
+    expect(localized({ nombre: "Café", nombre_en: "  " }, "en")).toEqual({ nombre: "Café", nombre_en: "  " });
+  });
+
+  it("un idioma desconocido se trata como español", () => {
+    expect(localized(item, "fr")).toBe(item);
   });
 });

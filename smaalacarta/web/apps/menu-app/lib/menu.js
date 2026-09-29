@@ -3,10 +3,22 @@
 // precio anterior o promo. Las usan el menú interactivo y el estático, para que los dos
 // muestren lo mismo.
 
-import { t } from "./i18n.js";
+import { localized, t } from "./i18n.js";
 
-export function buildEnhancedMenu(menu, lang) {
-  if (!menu?.categorias) return menu;
+// Categorías y productos con nombre y descripción en el idioma elegido, con el español
+// de respaldo (IDIOMA-10).
+function localizeCategories(categorias, lang) {
+  return categorias.map((cat) => {
+    const items = cat.items?.map((item) => localized(item, lang));
+    const sinCambios = !items || items.every((item, i) => item === cat.items[i]);
+    return localized(sinCambios ? cat : { ...cat, items }, lang);
+  });
+}
+
+export function buildEnhancedMenu(original, lang) {
+  if (!original?.categorias) return original;
+
+  const menu = { ...original, categorias: localizeCategories(original.categorias, lang) };
 
   const destacados = [];
   const ofertas = [];
