@@ -138,3 +138,29 @@ describe("destacado — ADMIN-MENU-7", () => {
     expect(toProductUpdate({ name: "A", price: 1, featured: false }).featured).toBe(false);
   });
 });
+
+describe("traducciones — IDIOMA-8 y IDIOMA-9", () => {
+  it("guarda las traducciones sin espacios de sobra", () => {
+    const row = toProductInsert("b1", {
+      category_id: "c1",
+      name: "Café",
+      price: 1,
+      name_en: "  Coffee ",
+      description_pt: " Com leite ",
+    });
+    expect(row.name_en).toBe("Coffee");
+    expect(row.description_pt).toBe("Com leite");
+    expect(row.name_pt).toBeNull();
+  });
+
+  it("al editar, una traducción vacía o solo espacios queda nula", () => {
+    const row = toProductUpdate({
+      name: "A",
+      price: 1,
+      name_en: "",
+      description_en: "   ",
+    });
+    expect(row.name_en).toBeNull();
+    expect(row.description_en).toBeNull();
+  });
+});
