@@ -1,12 +1,12 @@
 :root {
-  --bg: #ffffff;
-  --card: #f6f6f4;
+  --bg: #f1f1ee;
+  --card: #e4e4e0;
   --text: #111;
-  --muted: #6b6b6b;
-  --border: #e5e5e2;
+  --muted: #55554f;
+  --border: #cfcfc9;
   /* Velo sobre la foto del encabezado y fondo de la barra de categorías: una
      versión translúcida de --card, para que se note el fondo debajo al deslizar. */
-  --veil: rgba(246, 246, 244, 0.94);
+  --veil: rgba(228, 228, 224, 0.94);
 
   --primary: var(--color-primary, #111);
 }
