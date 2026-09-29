@@ -3,7 +3,9 @@
 // precio anterior o promo. Las usan el menú interactivo y el estático, para que los dos
 // muestren lo mismo.
 
-export function buildEnhancedMenu(menu) {
+import { t } from "./i18n.js";
+
+export function buildEnhancedMenu(menu, lang) {
   if (!menu?.categorias) return menu;
 
   const destacados = [];
@@ -25,7 +27,7 @@ export function buildEnhancedMenu(menu) {
 
   if (destacados.length > 0) {
     nuevasCategorias.push({
-      nombre: "Destacados",
+      nombre: t("menu.destacados", lang),
       tipo: "destacados",
       items: destacados,
     });
@@ -37,13 +39,18 @@ export function buildEnhancedMenu(menu) {
 
   if (ofertas.length > 0 && !yaTieneOfertas) {
     nuevasCategorias.push({
-      nombre: "Ofertas",
+      nombre: t("menu.ofertas", lang),
       tipo: "ofertas",
       items: ofertas,
     });
   }
 
-  nuevasCategorias.push(...menu.categorias);
+  // La categoría de ofertas que ya trae el menú también se muestra en el idioma elegido
+  // (en español queda como la escribió el negocio).
+  const traducida = (cat) =>
+    lang && lang !== "es" && cat.tipo === "ofertas" ? { ...cat, nombre: t("menu.ofertas", lang) } : cat;
+
+  nuevasCategorias.push(...menu.categorias.map(traducida));
 
   return {
     ...menu,

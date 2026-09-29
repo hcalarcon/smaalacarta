@@ -63,3 +63,20 @@ describe("buildEnhancedMenu — MENU-1 a 3", () => {
     expect(buildEnhancedMenu(menu)).toBe(menu);
   });
 });
+
+describe("buildEnhancedMenu en otros idiomas — IDIOMA-1", () => {
+  it("traduce los nombres de Destacados y Ofertas, no el contenido del negocio", () => {
+    const menu = {
+      categorias: [{ nombre: "Pizzas", items: [{ nombre: "Muzza", destacado: true, promo: "2x1" }] }],
+    };
+    const result = buildEnhancedMenu(menu, "en");
+    expect(result.categorias.map((c) => c.nombre)).toEqual(["Featured", "Deals", "Pizzas"]);
+    expect(buildEnhancedMenu(menu, "pt").categorias[0].nombre).toBe("Destaques");
+  });
+
+  it("traduce también la categoría de ofertas que ya trae el menú", () => {
+    const menu = { categorias: [{ nombre: "Ofertas", tipo: "ofertas", items: [{ nombre: "x" }] }] };
+    expect(buildEnhancedMenu(menu, "en").categorias[0].nombre).toBe("Deals");
+    expect(buildEnhancedMenu(menu).categorias[0].nombre).toBe("Ofertas");
+  });
+});

@@ -264,3 +264,37 @@ describe("renderStaticMenuPage — ESTATICO-4 (igual que el interactivo)", () =>
     }
   });
 });
+
+describe("renderStaticMenuPage con ?lang= — IDIOMA-6", () => {
+  const conCierre = {
+    ...base,
+    config: { ...base.config, cierre: { mensaje: "Vacaciones", hasta: "2030-01-15" } },
+    menu: { categorias: [{ nombre: "Bebidas", items: [{ nombre: "Café", precio: 1, destacado: true }] }] },
+  };
+
+  it("sin idioma sigue en español", () => {
+    const html = renderStaticMenuPage(conCierre);
+    expect(html).toContain('<html lang="es"');
+    expect(html).toContain("Cerrado temporalmente");
+    expect(html).toContain("Destacados");
+  });
+
+  it("traduce la interfaz y no el contenido del negocio", () => {
+    const html = renderStaticMenuPage({ ...conCierre, lang: "en" });
+    expect(html).toContain('<html lang="en"');
+    expect(html).toContain("Temporarily closed · Vacaciones · We reopen on 15/01");
+    expect(html).toContain("Featured");
+    expect(html).toContain("Ask us on WhatsApp");
+    expect(html).toContain("Bebidas");
+    expect(html).toContain("Ana Resto");
+  });
+
+  it("un idioma inválido cae a español", () => {
+    expect(renderStaticMenuPage({ ...conCierre, lang: "fr" })).toContain('<html lang="es"');
+  });
+
+  it("el mensaje de WhatsApp al negocio queda en español (IDIOMA-5)", () => {
+    const html = renderStaticMenuPage({ ...conCierre, lang: "pt" });
+    expect(html).toContain(encodeURIComponent("Hola, consulto por el menú de Ana Resto"));
+  });
+});

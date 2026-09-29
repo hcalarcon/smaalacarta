@@ -244,6 +244,31 @@ body.no-scroll {
   display: none !important;
 }
 
+/* Selector de idioma ES/EN/PT, a la izquierda del switch de tema (lo arma app.js).
+   Mismo trato que .btn-tema: hereda el color del encabezado sobre un gris translúcido. */
+.selector-idioma {
+  display: inline-flex;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  background: rgba(127, 127, 127, 0.22);
+}
+
+.selector-idioma button {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  line-height: 1;
+  color: inherit;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+
+.selector-idioma button[aria-pressed="true"] {
+  background: rgba(127, 127, 127, 0.45);
+}
+
 /* Transición suave al cambiar de tema (respeta prefers-reduced-motion, más abajo). */
 body,
 .header,

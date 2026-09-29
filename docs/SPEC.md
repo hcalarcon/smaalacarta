@@ -287,6 +287,35 @@ en JS puro.*
   los mismos JSON que usa el menú interactivo para las demos
   (`web/data/demos/<slug>/`), no del plan de un negocio.
 
+## IDIOMA — Menú público en español, inglés y portugués
+
+*Aplicado por `web/apps/menu-app/lib/i18n.js` (diccionario, `t()` y `resolveLang()`),
+`app.js`, `lib/static-page.js`, `web/api/static-menu.js` y `web/apps/tracker/`. Cubierto
+por `lib/i18n.test.js`, `lib/schedule.test.js`, `lib/static-page.test.js` y
+`tracker/lib/tracker.test.js`, en JS puro.*
+
+- **IDIOMA-1** Se traducen solo los textos de la interfaz (botones, carrito, checkout,
+  "Destacados", "Ofertas", abierto/cerrado, próximo horario, avisos y seguimiento), a
+  español (`es`), inglés (`en`) y portugués (`pt`). El contenido del negocio (nombre,
+  descripción, categorías, productos) no se traduce.
+- **IDIOMA-2** El idioma sale, en este orden, de `?lang=es|en|pt`, del idioma del
+  navegador (`navigator.language`, por ejemplo `pt-BR` → `pt`) y, si no es ninguno de los
+  tres, es español.
+- **IDIOMA-3** `t(clave, idioma)` devuelve el texto en ese idioma; si falta la clave en
+  ese idioma cae al español, y si tampoco está, devuelve la clave. Los tres idiomas
+  tienen las mismas claves.
+- **IDIOMA-4** El menú interactivo tiene un selector ES/EN/PT en la barra de arriba,
+  junto al switch de tema. Cambiar de idioma no recarga la página, no vacía el
+  carrito ni el buscador, y actualiza `?lang=` en la dirección.
+- **IDIOMA-5** El mensaje de WhatsApp que recibe el negocio queda siempre en español,
+  sea cual sea el idioma del cliente: lo lee el dueño.
+- **IDIOMA-6** El menú estático toma `?lang=` del lado del servidor (sin JS nuevo,
+  sin mirar el idioma del navegador) y marca el idioma en `<html lang>`.
+- **IDIOMA-7** La página de seguimiento usa el mismo criterio que IDIOMA-2; el menú
+  interactivo le pasa `?lang=` al link "Seguir mi pedido".
+
+---
+
 ---
 
 # Landing — `smaalacarta/landing`

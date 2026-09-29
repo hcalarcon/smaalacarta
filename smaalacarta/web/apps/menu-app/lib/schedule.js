@@ -2,6 +2,8 @@
 // Argentina: la del celular del cliente no cuenta. La base hace el mismo cálculo
 // (`is_open_now`) para rechazar pedidos fuera de horario, y un test compara los dos.
 
+import { t } from "./i18n.js";
+
 export const TIME_ZONE = "America/Argentina/Buenos_Aires";
 
 const DAYS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
@@ -82,9 +84,11 @@ export function nextOpening(horarios, now = new Date()) {
   return null;
 }
 
-// "Abrimos hoy a las 20:00" / "Abrimos el jueves a las 10:00"; vacío si no hay dato.
-export function openingText(next) {
+// "Abrimos hoy a las 20:00" / "Abrimos el jueves a las 10:00" (o en inglés y portugués,
+// IDIOMA-1); vacío si no hay dato.
+export function openingText(next, lang) {
   if (!next) return "";
-  const when = next.day === "hoy" || next.day === "mañana" ? next.day : `el ${next.day}`;
-  return `Abrimos ${when} a las ${next.time}`;
+  if (next.day === "hoy") return t("open.today", lang, { time: next.time });
+  if (next.day === "mañana") return t("open.tomorrow", lang, { time: next.time });
+  return t("open.day", lang, { day: t(`day.${next.day}`, lang), time: next.time });
 }

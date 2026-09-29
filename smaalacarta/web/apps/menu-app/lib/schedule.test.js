@@ -95,3 +95,12 @@ describe("openingText — SEGUIMIENTO-9", () => {
     expect(openingText(null)).toBe("");
   });
 });
+
+describe("openingText en otros idiomas — IDIOMA-1", () => {
+  it("traduce el aviso y el día", () => {
+    expect(openingText({ day: "hoy", time: "18:00" }, "en")).toBe("We open today at 18:00");
+    expect(openingText({ day: "mañana", time: "20:00" }, "pt")).toBe("Abrimos amanhã às 20:00");
+    expect(openingText({ day: "jueves", time: "10:00" }, "en")).toBe("We open on Thursday at 10:00");
+    expect(openingText({ day: "sabado", time: "10:00" }, "pt")).toBe("Abrimos sábado às 10:00");
+  });
+});
