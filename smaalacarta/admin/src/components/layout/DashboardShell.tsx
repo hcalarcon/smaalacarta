@@ -16,8 +16,11 @@ type DashboardShellProps = {
   links: NavLink[];
   // Enlace para pasar entre el panel de un negocio y /superadmin.
   switchLink?: { href: string; label: string };
-  // Acceso rápido al menú público del negocio (no aplica a /superadmin).
-  menuLink?: { href: string; label: string };
+  // Acceso rápido a los servicios públicos que tenga el negocio (no aplica a
+  // /superadmin): uno por cada uno (carrito, menú, QR), según su plan. `short`
+  // es lo que se ve en el celular, donde no entran los tres con el nombre
+  // completo (y los tres comparten el mismo ícono).
+  quickLinks?: { href: string; label: string; short: string }[];
   // El superadmin no tiene Configuración propia: ahí sigue en el header.
   showChangePassword?: boolean;
   // Aviso de negocio suspendido (ADMIN-SUSPENSION-1): se ve en todo el panel,
@@ -33,7 +36,7 @@ export default function DashboardShell({
   userEmail,
   links,
   switchLink,
-  menuLink,
+  quickLinks,
   showChangePassword = true,
   banner,
   children,
@@ -138,9 +141,10 @@ export default function DashboardShell({
                 {userEmail}
               </span>
 
-              {menuLink ? (
+              {quickLinks?.map((link) => (
                 <a
-                  href={menuLink.href}
+                  key={link.href}
+                  href={link.href}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand-soft px-3 py-2 text-sm font-medium text-brand transition hover:bg-line sm:px-4"
@@ -158,10 +162,10 @@ export default function DashboardShell({
                     <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
                     <path d="M15 3h6v6M10 14L21 3" />
                   </svg>
-                  <span className="hidden sm:inline">{menuLink.label}</span>
-                  <span className="sm:hidden">Web</span>
+                  <span className="hidden sm:inline">{link.label}</span>
+                  <span className="sm:hidden">{link.short}</span>
                 </a>
-              ) : null}
+              ))}
 
               {switchLink ? (
                 <Link

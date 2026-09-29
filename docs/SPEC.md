@@ -75,7 +75,7 @@ _Sin requisitos todavía._
 
 *Destacados, ofertas y categorías. Aplicado por `web/apps/menu-app/lib/menu.js`
 (lo usan el menú interactivo y el estático). Cubierto por: `lib/menu.test.js`
-(MENU-1 a 3). El resto del armado del menú sigue sin especificar.*
+(MENU-1 a 3) y `lib/price.test.js` (MENU-4). El resto del armado del menú sigue sin especificar.*
 
 - **MENU-1** Los productos marcados como destacados se reúnen en una sección
   "Destacados" que va antes de todas las categorías.
@@ -84,6 +84,9 @@ _Sin requisitos todavía._
   promociones del admin), no se arma otra.
 - **MENU-3** Las categorías del negocio siguen a continuación, sin cambios ni
   reordenamientos; un menú sin destacados ni ofertas queda como llegó.
+- **MENU-4** Los precios se muestran con formato es-AR: punto como separador de miles y
+  sin decimales si son enteros (`$12.000`, no `$12000`). Vale igual en el menú
+  interactivo, el estático y el mensaje de WhatsApp (`lib/price.js`).
 
 ## PUBLICO — El menú desde Supabase
 
@@ -286,6 +289,47 @@ en JS puro.*
   `minimal`) muestra la demo de solo lectura, sin pedir nada a Supabase: sale de
   los mismos JSON que usa el menú interactivo para las demos
   (`web/data/demos/<slug>/`), no del plan de un negocio.
+
+## IDIOMA — Menú público en español, inglés y portugués
+
+*Aplicado por `web/apps/menu-app/lib/i18n.js` (diccionario, `t()` y `resolveLang()`),
+`app.js`, `lib/static-page.js`, `web/api/static-menu.js` y `web/apps/tracker/`. Cubierto
+por `lib/i18n.test.js`, `lib/schedule.test.js`, `lib/static-page.test.js` y
+`tracker/lib/tracker.test.js`, en JS puro. Las traducciones del contenido (IDIOMA-8 a 11)
+se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib/db/`.*
+
+- **IDIOMA-1** Se traducen solo los textos de la interfaz (botones, carrito, checkout,
+  "Destacados", "Ofertas", abierto/cerrado, próximo horario, avisos y seguimiento), a
+  español (`es`), inglés (`en`) y portugués (`pt`). El contenido del negocio (nombre,
+  descripción, categorías, productos) no se traduce.
+- **IDIOMA-2** El idioma sale, en este orden, de `?lang=es|en|pt`, del idioma del
+  navegador (`navigator.language`, por ejemplo `pt-BR` → `pt`) y, si no es ninguno de los
+  tres, es español.
+- **IDIOMA-3** `t(clave, idioma)` devuelve el texto en ese idioma; si falta la clave en
+  ese idioma cae al español, y si tampoco está, devuelve la clave. Los tres idiomas
+  tienen las mismas claves.
+- **IDIOMA-4** El menú interactivo tiene un selector ES/EN/PT en la barra de arriba,
+  junto al switch de tema. Cambiar de idioma no recarga la página, no vacía el
+  carrito ni el buscador, y actualiza `?lang=` en la dirección.
+- **IDIOMA-5** El mensaje de WhatsApp que recibe el negocio queda siempre en español,
+  sea cual sea el idioma del cliente: lo lee el dueño.
+- **IDIOMA-6** El menú estático toma `?lang=` del lado del servidor (sin JS nuevo,
+  sin mirar el idioma del navegador) y marca el idioma en `<html lang>`.
+- **IDIOMA-7** La página de seguimiento usa el mismo criterio que IDIOMA-2; el menú
+  interactivo le pasa `?lang=` al link "Seguir mi pedido".
+- **IDIOMA-8** Categorías y productos tienen nombre y descripción opcionales en inglés
+  y portugués (`name_en`, `name_pt`, `description_en`, `description_pt`). Vacíos, se
+  guardan como nulos; no hay traducción automática.
+- **IDIOMA-9** En los formularios de categoría y de producto, una sección plegable
+  "Traducciones (opcional)" carga esos cuatro campos; se abre sola si ya hay alguno.
+- **IDIOMA-10** `public_menu` entrega los textos traducidos (`nombre_en`, `nombre_pt`,
+  `descripcion_en`, `descripcion_pt`) sin la cadena vacía, y `web/` elige según el idioma
+  (`localized()` en `i18n.js`, aplicado en `buildEnhancedMenu`, así vale para el
+  interactivo y el estático). Si falta la traducción, se usa el español.
+- **IDIOMA-11** El mensaje de WhatsApp sigue en español (IDIOMA-5): usa el nombre original
+  del producto (`nombreEs`).
+
+---
 
 ---
 
@@ -534,6 +578,27 @@ Cubierto por `src/lib/db/suspension.test.ts`, contra Postgres real.*
   El panel muestra un aviso fijo en todo el dashboard mientras dure la
   suspensión, y cada acción devuelve un mensaje en español (no el error crudo
   de Postgres) en vez de fallar en silencio.
+
+## ADMIN-PLAN — El panel según el plan
+
+*Aplicado por `src/lib/plan-access.ts`, `app/dashboard/layout.tsx`,
+`app/dashboard/page.tsx`, `app/dashboard/{menu,orders,promotions}/page.tsx` y
+`app/dashboard/settings/components/SettingsForm.tsx`. Cubierto por
+`src/lib/plan-access.test.ts`, en JS puro.*
+
+- **ADMIN-PLAN-1** Sin `plan_web` ni `plan_completo` (`hasDigitalMenu()`), el
+  negocio no tiene un menú digital: no ve Menú ni Promociones en el menú
+  lateral (ni pueden entrar por la URL directa, redirige a `/dashboard`), y
+  Configuración solo muestra "Menú en PDF" (con Compartir y Contraseña, que no
+  dependen del plan) — nada de Publicación, Apariencia, Horarios, Cierre
+  temporal ni Contacto, que solo tienen sentido con un menú digital.
+- **ADMIN-PLAN-2** Sin `plan_completo` (`hasOrders()`), el negocio no tiene
+  carrito: no ve Pedidos en el menú lateral (ni puede entrar por la URL
+  directa), y el resumen no muestra el aviso de pedidos nuevos ni la tarjeta
+  "Pedidos hoy".
+- **ADMIN-PLAN-3** El header muestra un botón por cada servicio público que el
+  negocio realmente tenga ("Ver carrito", "Ver menú", "Ver QR" — mismas
+  direcciones que `menuLinks()`, RUTAS-4), no uno solo fijo.
 
 ## ADMIN-PROMOS — Promociones
 

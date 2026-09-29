@@ -1,14 +1,27 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 
 import OrdersClient from "./components/OrdersClient";
 import { listOrders } from "@/lib/db/orders";
 import { listProductsForPromotions } from "@/lib/db/promotions";
 import { requireBusiness } from "@/lib/get-current-business";
+import { hasOrders } from "@/lib/plan-access";
 
 export const metadata: Metadata = { title: "Pedidos" };
 
 export default async function OrdersPage() {
   const { business } = await requireBusiness();
+
+  // Pedidos (carrito) es exclusivo de plan_completo.
+  if (
+    !hasOrders({
+      planPdf: business.plan_pdf,
+      planWeb: business.plan_web,
+      planCompleto: business.plan_completo,
+    })
+  ) {
+    redirect("/dashboard");
+  }
 
   const [orders, products] = await Promise.all([
     listOrders(business.id),

@@ -1,5 +1,6 @@
 // Página de seguimiento de un pedido (SEGUIMIENTO-8). Todo lo que viene de la base se
 // muestra con textContent: nunca se arma HTML con datos del pedido ni del negocio.
+import { LOCALES, resolveLang, t } from "/apps/menu-app/lib/i18n.js";
 import { markHandoffSent, pendingHandoff } from "/apps/menu-app/lib/orders.js";
 import { SUPABASE } from "/apps/menu-app/supabase-config.js";
 import {
@@ -8,6 +9,7 @@ import {
   isFinalStatus,
   parseTrackingCode,
   statusView,
+  stepLabels,
   timeline,
 } from "/apps/tracker/lib/tracker.js";
 
@@ -16,8 +18,12 @@ const REFRESH_MS = 15000;
 const app = document.getElementById("app");
 const code = parseTrackingCode(window.location.pathname, window.location.search);
 
-const money = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" });
-const time = new Intl.DateTimeFormat("es-AR", {
+// Mismo criterio que el menú (IDIOMA-7): ?lang=, después el idioma del navegador.
+const lang = resolveLang({ search: window.location.search, navigatorLanguage: navigator.language });
+document.documentElement.lang = lang;
+
+const money = new Intl.NumberFormat(LOCALES[lang], { style: "currency", currency: "ARS" });
+const time = new Intl.DateTimeFormat(LOCALES[lang], {
   day: "2-digit",
   month: "2-digit",
   hour: "2-digit",
@@ -25,7 +31,7 @@ const time = new Intl.DateTimeFormat("es-AR", {
   timeZone: "America/Argentina/Buenos_Aires",
 });
 
-const STEP_LABELS = ["Recibido", "Confirmado", "Preparando", "Listo", "Entregado"];
+const STEP_LABELS = stepLabels(lang);
 
 function el(tag, { className, text, href, attrs } = {}, children = []) {
   const node = document.createElement(tag);
@@ -56,17 +62,17 @@ function applyTheme(negocio) {
 }
 
 function render(data, { stale }) {
-  const view = statusView(data.pedido.estado);
+  const view = statusView(data.pedido.estado, lang);
   const theme = applyTheme(data.negocio);
   const nodes = [];
 
   if (stale) {
-    nodes.push(el("p", { className: "notice", text: "No pudimos actualizar. Seguimos intentando…" }));
+    nodes.push(el("p", { className: "notice", text: t("tracker.stale", lang) }));
   }
 
   const headerNode = el("header", { className: `tracker-header ${theme.plain ? "plain" : ""}`.trim() }, [
     el("p", { className: "tracker-business", text: data.negocio.nombre }),
-    el("p", { className: "tracker-number", text: `Pedido #${data.pedido.numero}` }),
+    el("p", { className: "tracker-number", text: t("tracker.order", lang, { n: data.pedido.numero }) }),
   ]);
   if (theme.header) headerNode.style.backgroundImage = theme.header;
   nodes.push(headerNode);
@@ -77,7 +83,7 @@ function render(data, { stale }) {
   if (handoff) {
     const send = el("a", {
       className: "handoff-btn",
-      text: "Enviar por WhatsApp",
+      text: t("checkout.submit", lang),
       href: handoff.url,
       attrs: { target: "_blank", rel: "noopener noreferrer" },
     });
@@ -87,8 +93,8 @@ function render(data, { stale }) {
     });
     nodes.push(
       el("section", { className: "card handoff" }, [
-        el("p", { className: "handoff-title", text: "Falta enviar tu pedido" }),
-        el("p", { className: "handoff-text", text: "El local lo recibe cuando lo mandás por WhatsApp." }),
+        el("p", { className: "handoff-title", text: t("tracker.handoffTitle", lang) }),
+        el("p", { className: "handoff-text", text: t("tracker.handoffText", lang) }),
         send,
       ]),
     );
@@ -120,7 +126,7 @@ function render(data, { stale }) {
   if (Array.isArray(data.items) && data.items.length > 0) {
     nodes.push(
       el("section", { className: "card" }, [
-        el("h2", { text: "Tu pedido" }),
+        el("h2", { text: t("tracker.yourOrder", lang) }),
         el(
           "ul",
           { className: "items" },
@@ -132,7 +138,7 @@ function render(data, { stale }) {
           ),
         ),
         el("p", { className: "total" }, [
-          el("span", { text: "Total" }),
+          el("span", { text: t("tracker.total", lang) }),
           el("span", { text: money.format(Number(data.pedido.total)) }),
         ]),
       ]),
@@ -140,11 +146,11 @@ function render(data, { stale }) {
   }
 
   // Línea de tiempo.
-  const events = timeline(data.eventos);
+  const events = timeline(data.eventos, lang);
   if (events.length > 0) {
     nodes.push(
       el("section", { className: "card" }, [
-        el("h2", { text: "Historial" }),
+        el("h2", { text: t("tracker.history", lang) }),
         el(
           "ul",
           { className: "events" },
@@ -165,11 +171,12 @@ function render(data, { stale }) {
   // Contacto con el local.
   const phone = String(data.negocio.telefono ?? "").replace(/\D/g, "");
   if (phone) {
+    // El mensaje lo lee el negocio: queda siempre en español (IDIOMA-5).
     const message = `Hola, consulto por mi pedido #${data.pedido.numero}`;
     nodes.push(
       el("a", {
         className: "contact",
-        text: "Consultar al local por WhatsApp",
+        text: t("tracker.contact", lang),
         href: `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`,
         attrs: { target: "_blank", rel: "noopener noreferrer" },
       }),
@@ -179,7 +186,7 @@ function render(data, { stale }) {
   nodes.push(
     el("p", {
       className: "footnote",
-      text: view.final ? "Este pedido ya terminó." : "Esta página se actualiza sola.",
+      text: t(view.final ? "tracker.final" : "tracker.autoRefresh", lang),
     }),
   );
 
@@ -189,7 +196,7 @@ function render(data, { stale }) {
 
 async function start() {
   if (!code) {
-    showMessage("Este link no es válido. Revisá que esté completo.");
+    showMessage(t("tracker.invalidLink", lang));
     return;
   }
 
@@ -207,7 +214,7 @@ async function start() {
     // Un código que no existe no se reintenta; un error de red sí, y se sigue
     // mostrando lo último que se vio.
     if (result.reason === "notfound") {
-      showMessage("No encontramos este pedido. Revisá que el link esté completo.");
+      showMessage(t("tracker.notFound", lang));
       return false;
     }
 
@@ -216,7 +223,7 @@ async function start() {
       return true;
     }
 
-    showMessage("No pudimos cargar tu pedido. Probá de nuevo en unos segundos.");
+    showMessage(t("tracker.loadError", lang));
     return true;
   }
 

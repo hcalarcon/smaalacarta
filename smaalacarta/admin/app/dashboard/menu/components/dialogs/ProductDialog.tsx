@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 
+import TranslationsFields from "@/components/menu/TranslationsFields";
 import ImageUploader from "@/components/ui/ImageUploader";
 import { Product } from "@/lib/db/products";
+import type { Translations } from "@/lib/menu/translations";
 
 type ProductDialogProps = {
   open: boolean;
@@ -22,7 +24,7 @@ type ProductDialogProps = {
     active: boolean;
     image_url: string | null;
     featured: boolean;
-  }) => Promise<void>;
+  } & Translations) => Promise<void>;
 };
 
 function ProductDialogForm({
@@ -47,6 +49,12 @@ function ProductDialogForm({
   const [imageUrl, setImageUrl] = useState(
     editing ? (initialData.image_url ?? "") : "",
   );
+  const [translations, setTranslations] = useState<Translations>({
+    name_en: editing ? (initialData.name_en ?? "") : "",
+    name_pt: editing ? (initialData.name_pt ?? "") : "",
+    description_en: editing ? (initialData.description_en ?? "") : "",
+    description_pt: editing ? (initialData.description_pt ?? "") : "",
+  });
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -66,6 +74,7 @@ function ProductDialogForm({
         active,
         image_url: imageUrl || null,
         featured,
+        ...translations,
       });
     } finally {
       setLoading(false);
@@ -165,6 +174,8 @@ function ProductDialogForm({
               Destacado
             </label>
           </div>
+
+          <TranslationsFields value={translations} onChange={setTranslations} />
 
           <div className="flex justify-end gap-3 pt-2">
             <button

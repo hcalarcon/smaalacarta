@@ -7,6 +7,7 @@
 
 import { brandVariables } from "./colors.js";
 import { cssUrl, escapeHtml, safeHttpUrl } from "./html.js";
+import { formatPrice } from "./price.js";
 import {
   closedNotice,
   headerBackground,
@@ -15,6 +16,7 @@ import {
   socialIconPath,
   socialLinks,
 } from "./info.js";
+import { DEFAULT_LANG, normalizeLang, t } from "./i18n.js";
 import { buildEnhancedMenu } from "./menu.js";
 import { isOpenNow, nextOpening, openingText } from "./schedule.js";
 
@@ -49,8 +51,8 @@ function productCard(item) {
     <div class="producto-info">
       <h3>${escapeHtml(item?.nombre)}</h3>
       <p>${escapeHtml(item?.descripcion || "")}</p>
-      ${item?.precioAnterior ? `<span class="precio-anterior">$${escapeHtml(item.precioAnterior)}</span>` : ""}
-      <div class="producto-precio">$${escapeHtml(item?.precio)}</div>
+      ${item?.precioAnterior ? `<span class="precio-anterior">$${escapeHtml(formatPrice(item.precioAnterior))}</span>` : ""}
+      <div class="producto-precio">$${escapeHtml(formatPrice(item?.precio))}</div>
     </div>
   </article>`;
 }
@@ -77,17 +79,17 @@ function categoryNav(categorias) {
   return links ? `<nav class="categorias">${links}</nav>` : "";
 }
 
-function closedBanner(config) {
+function closedBanner(config, lang) {
   const cierre = closedNotice(config);
   if (cierre) {
-    const text = ["Cerrado temporalmente", cierre.message, reopenText(cierre.reopensOn)]
+    const text = [t("closed.temporary", lang), cierre.message, reopenText(cierre.reopensOn, lang)]
       .filter(Boolean)
       .join(" · ");
     return { html: `<div class="cierre-temporal" role="status">${escapeHtml(text)}</div>`, abierto: false };
   }
 
   if (!isOpenNow(config?.horarios)) {
-    const text = ["Cerrado ahora", openingText(nextOpening(config?.horarios))].filter(Boolean).join(" · ");
+    const text = [t("closed.now", lang), openingText(nextOpening(config?.horarios), lang)].filter(Boolean).join(" · ");
     return { html: `<div class="cierre-temporal" role="status">${escapeHtml(text)}</div>`, abierto: false };
   }
 
@@ -119,20 +121,22 @@ function footer(config) {
 }
 
 // Reusa `.btn-cta` (ya con los colores de marca, en los tres templates) en vez
-// de inventar una clase propia sin estilo en este contexto.
-function whatsappContact(config) {
+// de inventar una clase propia sin estilo en este contexto. El mensaje va siempre en
+// español, porque lo lee el negocio (IDIOMA-5); solo el botón se traduce.
+function whatsappContact(config, lang) {
   const phone = String(config?.telefono ?? "").replace(/\D/g, "");
   if (!phone) return "";
 
   const message = `Hola, consulto por el menú de ${config?.nombre ?? ""}`;
-  return `<div class="contacto-estatico"><a class="btn-cta" href="https://api.whatsapp.com/send?phone=${escapeHtml(phone)}&text=${encodeURIComponent(message)}" target="_blank" rel="noopener noreferrer">Consultar por WhatsApp</a></div>`;
+  return `<div class="contacto-estatico"><a class="btn-cta" href="https://api.whatsapp.com/send?phone=${escapeHtml(phone)}&text=${encodeURIComponent(message)}" target="_blank" rel="noopener noreferrer">${escapeHtml(t("static.whatsapp", lang))}</a></div>`;
 }
 
 // El HTML completo del menú estático de un negocio, a partir de lo mismo que
-// devuelve `public_menu` (`{ config, menu }`).
-export function renderStaticMenuPage({ config, menu } = {}) {
+// devuelve `public_menu` (`{ config, menu }`) y el idioma de `?lang=` (IDIOMA-6).
+export function renderStaticMenuPage({ config, menu, lang: requestedLang } = {}) {
+  const lang = normalizeLang(requestedLang) ?? DEFAULT_LANG;
   // Las mismas secciones que el interactivo: Destacados y Ofertas antes de las categorías.
-  const enhanced = buildEnhancedMenu(menu);
+  const enhanced = buildEnhancedMenu(menu, lang);
   const categorias = Array.isArray(enhanced?.categorias) ? enhanced.categorias : [];
   const template = TEMPLATES.includes(config?.template) ? config.template : "moderno";
   const tema = config?.tema === "oscuro" ? "oscuro" : "claro";
@@ -144,7 +148,7 @@ export function renderStaticMenuPage({ config, menu } = {}) {
     .map(([name, value]) => `${name}:${value}`)
     .join(";");
 
-  const { html: aviso, abierto } = closedBanner(config);
+  const { html: aviso, abierto } = closedBanner(config, lang);
   // `cssUrl` devuelve `url("…")`, con comillas adentro: hay que escaparlas para
   // que no corten el atributo `style="…"` a la mitad (rompía toda la cabecera).
   const headerImage = headerBackground(config, cssUrl);
@@ -154,7 +158,7 @@ export function renderStaticMenuPage({ config, menu } = {}) {
   const logo = safeHttpUrl(config?.logo);
 
   return `<!doctype html>
-<html lang="es" data-template="${template}" data-tema="${tema}">
+<html lang="${lang}" data-template="${template}" data-tema="${tema}">
 <head>
 <meta charset="UTF-8">
 <title>${escapeHtml(config?.nombre || "Menú")}</title>
@@ -168,7 +172,7 @@ export function renderStaticMenuPage({ config, menu } = {}) {
 <body class="menu-estatico">
 <header class="header"${headerStyle}>
   <div class="header-top">
-    <span class="badge-estado"><span class="dot" style="background:${abierto ? "#4ade80" : "#ef4444"}"></span>${abierto ? "Abierto" : "Cerrado"}</span>
+    <span class="badge-estado"><span class="dot" style="background:${abierto ? "#4ade80" : "#ef4444"}"></span>${escapeHtml(t(abierto ? "status.open" : "status.closed", lang))}</span>
   </div>
   ${logo ? `<img class="logo-negocio" src="${escapeHtml(logo)}" alt="">` : ""}
   <h1>${escapeHtml(config?.nombre)}</h1>
@@ -178,7 +182,7 @@ ${aviso}
 ${categoryNav(categorias)}
 <main class="menu-container" id="menu">${categorias.map(categorySection).join("")}</main>
 ${footer(config)}
-${whatsappContact(config)}
+${whatsappContact(config, lang)}
 </body>
 </html>`;
 }

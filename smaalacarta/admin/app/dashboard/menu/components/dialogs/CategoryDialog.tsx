@@ -2,25 +2,30 @@
 
 import { useState } from "react";
 
+import TranslationsFields from "@/components/menu/TranslationsFields";
+import type { Translations } from "@/lib/menu/translations";
+
+type Nullable<T> = { [K in keyof T]?: T[K] | null };
+
 type CategoryDialogProps = {
   open: boolean;
   onClose: () => void;
 
   mode: "create" | "edit";
 
-  initialData?: {
+  initialData?: ({
     id: string;
     name: string;
     description?: string | null;
     active?: boolean;
-  } | null;
+  } & Nullable<Translations>) | null;
 
   onSubmit: (data: {
     id?: string;
     name: string;
     description?: string;
     active: boolean;
-  }) => Promise<void>;
+  } & Translations) => Promise<void>;
 };
 
 function CategoryDialogForm({
@@ -34,6 +39,12 @@ function CategoryDialogForm({
     initialData?.description ?? "",
   );
   const [active, setActive] = useState(initialData?.active ?? true);
+  const [translations, setTranslations] = useState<Translations>({
+    name_en: initialData?.name_en ?? "",
+    name_pt: initialData?.name_pt ?? "",
+    description_en: initialData?.description_en ?? "",
+    description_pt: initialData?.description_pt ?? "",
+  });
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
 
@@ -42,6 +53,7 @@ function CategoryDialogForm({
       name,
       description,
       active,
+      ...translations,
     });
 
     onClose();
@@ -94,6 +106,8 @@ function CategoryDialogForm({
               className="min-h-[100px] w-full rounded-2xl border border-line px-4 py-3 outline-none transition focus:border-stone-400"
             />
           </div>
+
+          <TranslationsFields value={translations} onChange={setTranslations} />
 
           <label className="flex items-center gap-3 rounded-2xl border border-line px-4 py-3">
             <input

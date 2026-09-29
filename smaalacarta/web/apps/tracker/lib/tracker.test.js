@@ -7,6 +7,7 @@ import {
   parseTrackingCode,
   safeColor,
   statusView,
+  stepLabels,
   timeline,
 } from "./tracker.js";
 
@@ -197,5 +198,23 @@ describe("safeColor", () => {
     expect(safeColor("#AbCdEf", "#000000")).toBe("#AbCdEf");
     expect(safeColor("#abc", "#000000")).toBe("#000000");
     expect(safeColor(null, "#000000")).toBe("#000000");
+  });
+});
+
+describe("seguimiento en otros idiomas — IDIOMA-7", () => {
+  it("statusView traduce título y texto", () => {
+    expect(statusView("pending", "en")).toMatchObject({ title: "We received your order", step: 0 });
+    expect(statusView("cancelled", "pt")).toMatchObject({ title: "Pedido cancelado", cancelled: true });
+    expect(statusView("volando", "en").title).toBe("Order status");
+  });
+
+  it("timeline traduce las etiquetas pero no las notas del local", () => {
+    const events = [{ estado: "confirmed", nota: "Sin stock" }];
+    expect(timeline(events, "en")[0]).toMatchObject({ label: "Order confirmed", note: "Sin stock" });
+  });
+
+  it("los pasos del camino se traducen", () => {
+    expect(stepLabels("en")).toEqual(["Received", "Confirmed", "Preparing", "Ready", "Delivered"]);
+    expect(stepLabels()).toEqual(["Recibido", "Confirmado", "Preparando", "Listo", "Entregado"]);
   });
 });

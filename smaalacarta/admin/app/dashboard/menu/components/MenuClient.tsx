@@ -24,6 +24,10 @@ import {
   setProductActiveAction,
   updateProductAction,
 } from "../actions/products";
+import {
+  pickTranslations,
+  type Translations,
+} from "@/lib/menu/translations";
 import ProductDialog from "./dialogs/ProductDialog";
 
 type Category = {
@@ -31,6 +35,10 @@ type Category = {
   name: string;
   description?: string | null;
   active?: boolean;
+  name_en?: string | null;
+  name_pt?: string | null;
+  description_en?: string | null;
+  description_pt?: string | null;
   products?: Product[];
 };
 
@@ -172,18 +180,20 @@ export default function MenuClient({
     name: string;
     description?: string;
     active: boolean;
-  }) {
+  } & Translations) {
     if (data.id) {
       await updateCategoryAction(businessId, data.id, {
         name: data.name,
         description: data.description,
         active: data.active,
+        ...pickTranslations(data),
       });
     } else {
       await createCategoryAction(businessId, {
         name: data.name,
         description: data.description,
         active: data.active,
+        ...pickTranslations(data),
       });
     }
 
@@ -242,7 +252,7 @@ export default function MenuClient({
     active: boolean;
     image_url: string | null;
     featured: boolean;
-  }) {
+  } & Translations) {
     if (data.id) {
       await updateProductAction(businessId, data.id, {
         name: data.name,
@@ -251,6 +261,7 @@ export default function MenuClient({
         active: data.active,
         image_url: data.image_url,
         featured: data.featured,
+        ...pickTranslations(data),
       });
     } else {
       // Un producto nuevo siempre nace dentro de una categoría (ADMIN-MENU-1).
@@ -264,6 +275,7 @@ export default function MenuClient({
         active: data.active,
         image_url: data.image_url,
         featured: data.featured,
+        ...pickTranslations(data),
       });
     }
 

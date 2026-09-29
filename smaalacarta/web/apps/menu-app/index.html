@@ -32,9 +32,11 @@
               fill="none"
             />
           </svg>
-          Volver
+          <span data-i18n="back">Volver</span>
         </a>
         <div class="header-status">
+          <!-- SELECTOR DE IDIOMA (IDIOMA-4): lo arma app.js -->
+          <div id="selector-idioma" class="selector-idioma" role="group"></div>
           <!-- SWITCH DE TEMA (solo demos, lo muestra app.js) -->
           <button
             id="btn-tema"
@@ -45,7 +47,7 @@
           ></button>
           <span class="badge-estado">
             <span class="dot"></span>
-            <span id="estado-texto">Abierto</span>
+            <span id="estado-texto" data-i18n="status.open">Abierto</span>
           </span>
         </div>
       </div>
@@ -53,7 +55,7 @@
       <p id="descripcion-negocio"></p>
 
       <!-- BUSCADOR -->
-      <input id="buscador" placeholder="Buscar..." />
+      <input id="buscador" placeholder="Buscar..." data-i18n-placeholder="search" />
     </header>
 
     <!-- CATEGORÍAS -->
@@ -64,14 +66,14 @@
 
     <!-- CTA FINAL -->
     <section class="cta-section" hidden>
-      <h2>¿Querés este menú en tu negocio?</h2>
-      <p>Solicita información sobre nuestro servicio de menú digital</p>
+      <h2 data-i18n="cta.title">¿Querés este menú en tu negocio?</h2>
+      <p data-i18n="cta.text">Solicita información sobre nuestro servicio de menú digital</p>
       <a
         href="https://wa.me/5493644277105?text=Hola,%20me%20interesa%20saber%20más%20sobre%20el%20menú%20digital"
         target="_blank"
         class="btn-cta"
       >
-        Solicitar información
+        <span data-i18n="cta.button">Solicitar información</span>
       </a>
     </section>
 
@@ -87,15 +89,15 @@
     <!-- CARRITO -->
     <div id="carrito-panel" class="carrito-panel">
       <div class="carrito-header">
-        <h2>Tu pedido</h2>
+        <h2 data-i18n="cart.title">Tu pedido</h2>
         <button id="cerrar-carrito">✕</button>
       </div>
 
       <div id="carrito-items"></div>
 
       <div class="carrito-footer">
-        <p>Total: <span id="carrito-total">$0</span></p>
-        <button id="btn-finalizar">Enviar pedido</button>
+        <p><span data-i18n="cart.total">Total</span>: <span id="carrito-total">$0</span></p>
+        <button id="btn-finalizar" data-i18n="cart.send">Enviar pedido</button>
       </div>
     </div>
 
@@ -104,28 +106,28 @@
     <!-- CHECKOUT -->
     <div id="checkout" class="checkout">
       <div class="checkout-header">
-        <h2>Finalizar pedido</h2>
+        <h2 data-i18n="checkout.title">Finalizar pedido</h2>
         <button id="cerrar-checkout">✕</button>
       </div>
 
       <form id="form-pedido">
-        <input name="nombre" placeholder="Nombre y Apellido" required />
+        <input name="nombre" placeholder="Nombre y Apellido" data-i18n-placeholder="checkout.name" required />
 
         <select name="entrega">
-          <option disabled selected>-- Tipo de entrega --</option>
-          <option value="delivery">Delivery</option>
-          <option value="retiro">Retiro en el local</option>
+          <option disabled selected data-i18n="checkout.deliveryType">-- Tipo de entrega --</option>
+          <option value="delivery" data-i18n="checkout.delivery">Delivery</option>
+          <option value="retiro" data-i18n="checkout.pickup">Retiro en el local</option>
         </select>
-        <label> <input type="checkbox" name="ahora" /> Ahora mismo </label>
+        <label> <input type="checkbox" name="ahora" /> <span data-i18n="checkout.now">Ahora mismo</span> </label>
         <input name="horario" type="time" />
         <select name="pago">
-          <option disabled selected>-- Tipo de pago --</option>
-          <option value="efectivo">Efectivo</option>
-          <option value="transferencia">Transferencia</option>
-          <option value="tarjeta">Credito o debito</option>
+          <option disabled selected data-i18n="checkout.payType">-- Tipo de pago --</option>
+          <option value="efectivo" data-i18n="checkout.cash">Efectivo</option>
+          <option value="transferencia" data-i18n="checkout.transfer">Transferencia</option>
+          <option value="tarjeta" data-i18n="checkout.card">Credito o debito</option>
         </select>
-        <textarea name="notas" placeholder="Notas"></textarea>
-        <button type="submit">Enviar por WhatsApp</button>
+        <textarea name="notas" placeholder="Notas" data-i18n-placeholder="checkout.notes"></textarea>
+        <button type="submit" data-i18n="checkout.submit">Enviar por WhatsApp</button>
       </form>
     </div>
     <script src="/apps/menu-app/app.js"></script>

@@ -6,6 +6,7 @@ import {
   deleteProduct,
   setProductActive,
 } from "@/lib/db/products";
+import type { Translations } from "@/lib/menu/translations";
 import { saveOrder } from "@/lib/db/ordering";
 
 export async function createProductAction(
@@ -18,7 +19,7 @@ export async function createProductAction(
     active: boolean;
     image_url?: string | null;
     featured?: boolean;
-  },
+  } & Translations,
 ) {
   await createProduct(businessId, data);
 }
@@ -35,7 +36,7 @@ export async function updateProductAction(
     active: boolean;
     image_url?: string | null;
     featured?: boolean;
-  },
+  } & Translations,
 ) {
   await updateProduct(businessId, id, data);
 }

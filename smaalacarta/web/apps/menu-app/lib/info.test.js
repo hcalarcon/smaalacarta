@@ -145,3 +145,11 @@ describe("isDemoMenu — PUBLICO-11", () => {
     expect(isDemoMenu(null)).toBe(false);
   });
 });
+
+describe("reopenText en otros idiomas — IDIOMA-1", () => {
+  it("traduce el aviso", () => {
+    expect(reopenText("2030-01-15", "en")).toBe("We reopen on 15/01");
+    expect(reopenText("2030-01-15", "pt")).toBe("Reabrimos em 15/01");
+    expect(reopenText("basura", "en")).toBe("");
+  });
+});

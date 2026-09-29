@@ -104,9 +104,13 @@ function ColorField({
 export default function SettingsForm({
   businessId,
   initial,
+  digitalMenu,
 }: {
   businessId: string;
   initial: SettingsInput;
+  // Sin plan_web ni plan_completo (solo QR + PDF), no hay menú digital: se
+  // esconde todo lo que no sea el PDF (ADMIN-CONFIG-11).
+  digitalMenu: boolean;
 }) {
   const router = useRouter();
 
@@ -203,6 +207,7 @@ export default function SettingsForm({
     <form onSubmit={handleSubmit} noValidate className="space-y-6">
       {error ? <FormAlert tone="error">{error}</FormAlert> : null}
 
+      {digitalMenu ? <>
       <Section
         title="Publicación"
         description="Mientras esté apagado, tu menú no se muestra al público."
@@ -371,6 +376,7 @@ export default function SettingsForm({
           ) : null}
         </div>
       </Section>
+      </> : null}
 
       <Section
         title="Menú en PDF"
@@ -387,6 +393,7 @@ export default function SettingsForm({
         ) : null}
       </Section>
 
+      {digitalMenu ? <>
       <Section
         title="Horarios"
         description="Con horarios cargados, el menú muestra si estás abierto o cerrado. Un horario puede pasar la medianoche (20:00 a 02:00)."
@@ -622,6 +629,7 @@ export default function SettingsForm({
           />
         </div>
       </Section>
+      </> : null}
 
       <div className="flex items-center justify-end gap-4">
         {saved ? (

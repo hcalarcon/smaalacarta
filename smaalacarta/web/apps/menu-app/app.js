@@ -9,6 +9,20 @@ let SCHEDULE = null;
 let PWA = null;
 let MENU = null;
 let COLORS = null;
+let I18N = null;
+let PRICE = null;
+
+// Idioma de la interfaz (IDIOMA-1 a 4) y el menú tal como vino, sin las secciones armadas.
+let LANG = "es";
+let BASE_MENU = null;
+let LAST_THANKS = null;
+let syncTema = () => {};
+
+// Texto de la interfaz en el idioma elegido. Solo el mensaje de WhatsApp al negocio
+// no pasa por acá: queda siempre en español (IDIOMA-5).
+function tr(key, vars) {
+  return I18N ? I18N.t(key, LANG, vars) : key;
+}
 
 // De dónde vino el menú: si es de Supabase, el pedido también se guarda en el sistema.
 let MENU_SOURCE = null;
@@ -39,8 +53,8 @@ function showNotFound() {
     <div style="display:flex;min-height:100vh;flex-direction:column;align-items:center;
       justify-content:center;gap:.5rem;padding:2rem;text-align:center;
       font-family:system-ui,-apple-system,sans-serif;color:#111827;">
-      <h1 style="font-size:1.4rem;margin:0;">No encontramos este menú</h1>
-      <p style="margin:0;color:#6b7280;">Puede que el negocio todavía no esté disponible acá.</p>
+      <h1 style="font-size:1.4rem;margin:0;">${tr("error.notFoundTitle")}</h1>
+      <p style="margin:0;color:#6b7280;">${tr("error.notFoundText")}</p>
     </div>
   `;
 }
@@ -143,6 +157,8 @@ async function init() {
       pwa,
       menuLib,
       colorsLib,
+      i18nLib,
+      priceLib,
     ] = await Promise.all([
       import("/apps/menu-app/lib/hostname.js"),
       import("/apps/menu-app/lib/html.js"),
@@ -153,8 +169,16 @@ async function init() {
       import("/apps/menu-app/lib/pwa.js"),
       import("/apps/menu-app/lib/menu.js"),
       import("/apps/menu-app/lib/colors.js"),
+      import("/apps/menu-app/lib/i18n.js"),
+      import("/apps/menu-app/lib/price.js"),
     ]);
+    PRICE = priceLib;
     COLORS = colorsLib;
+    I18N = i18nLib;
+    LANG = I18N.resolveLang({
+      search: window.location.search,
+      navigatorLanguage: navigator.language,
+    });
     SCHEDULE = schedule;
     PWA = pwa;
     MENU = menuLib;
@@ -231,16 +255,16 @@ async function init() {
         const LUNA =
           '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>';
 
-        const sync = () => {
+        syncTema = () => {
           const oscuro = document.documentElement.dataset.tema === "oscuro";
           btnTema.innerHTML = oscuro ? SOL : LUNA;
-          btnTema.setAttribute("aria-label", oscuro ? "Cambiar a tema claro" : "Cambiar a tema oscuro");
+          btnTema.setAttribute("aria-label", tr(oscuro ? "theme.toLight" : "theme.toDark"));
         };
-        sync();
+        syncTema();
         btnTema.addEventListener("click", () => {
           document.documentElement.dataset.tema =
             document.documentElement.dataset.tema === "oscuro" ? "claro" : "oscuro";
-          sync();
+          syncTema();
         });
       }
     }
@@ -257,15 +281,18 @@ async function init() {
 
     if (!menu) {
       console.error("No se pudo cargar menú");
-      document.body.innerHTML = "<h2>Error cargando menú</h2>";
+      document.body.innerHTML = `<h2>${tr("error.menu")}</h2>`;
       return;
     }
 
-    const enhancedMenu = MENU.buildEnhancedMenu(menu);
+    BASE_MENU = menu;
+    const enhancedMenu = MENU.buildEnhancedMenu(menu, LANG);
 
     MENU_GLOBAL = enhancedMenu;
     renderMenu(enhancedMenu);
 
+    buildLangSelector();
+    applyStaticTexts();
     renderHeader(config);
     renderCategorias(enhancedMenu);
 
@@ -279,9 +306,69 @@ async function init() {
     if (loader) loader.style.display = "none";
   } catch (err) {
     console.error("Error en init:", err);
-    document.body.innerHTML = "<h2>Error inesperado</h2>";
+    document.body.innerHTML = `<h2>${I18N ? tr("error.unexpected") : "Error inesperado"}</h2>`;
   }
 }
+
+// IDIOMA-4: selector ES/EN/PT. Cambiar de idioma vuelve a dibujar sin recargar la página.
+function buildLangSelector() {
+  const box = document.getElementById("selector-idioma");
+  if (!box) return;
+
+  I18N.LANGS.forEach((lang) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.textContent = lang.toUpperCase();
+    b.dataset.lang = lang;
+    b.addEventListener("click", () => setLang(lang));
+    box.appendChild(b);
+  });
+}
+
+// Los textos fijos de index.html llevan data-i18n (texto) o data-i18n-placeholder.
+function applyStaticTexts() {
+  document.documentElement.lang = LANG;
+
+  document.querySelectorAll("[data-i18n]").forEach((node) => {
+    node.textContent = tr(node.dataset.i18n);
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((node) => {
+    node.placeholder = tr(node.dataset.i18nPlaceholder);
+  });
+
+  const box = document.getElementById("selector-idioma");
+  if (box) {
+    box.setAttribute("aria-label", tr("lang.label"));
+    box.querySelectorAll("button").forEach((b) => {
+      b.setAttribute("aria-pressed", String(b.dataset.lang === LANG));
+    });
+  }
+
+  syncTema();
+}
+
+function setLang(lang) {
+  if (lang === LANG || !I18N.LANGS.includes(lang)) return;
+  LANG = lang;
+
+  const url = new URL(window.location.href);
+  url.searchParams.set("lang", lang);
+  history.replaceState(null, "", url);
+
+  applyStaticTexts();
+
+  MENU_GLOBAL = MENU.buildEnhancedMenu(BASE_MENU, LANG);
+  renderCategorias(MENU_GLOBAL);
+  renderHeader(window.CONFIG);
+
+  // Si hay algo escrito en el buscador, el filtro se vuelve a aplicar con los nombres nuevos.
+  const buscador = document.querySelector("#buscador");
+  if (buscador?.value) buscador.dispatchEvent(new Event("input"));
+  else renderMenu(MENU_GLOBAL);
+
+  if (LAST_THANKS && document.querySelector("#gracias-pedido")) showThanks(LAST_THANKS);
+}
+
 function loadTemplate(template) {
   return new Promise((resolve, reject) => {
     if (!template) {
@@ -339,7 +426,7 @@ function renderHeader(c) {
   renderInfo(c, cierre, fueraDeHorario);
 
   if (estadoEl) {
-    estadoEl.textContent = abierto ? "Abierto" : "Cerrado";
+    estadoEl.textContent = tr(abierto ? "status.open" : "status.closed");
   }
 
   if (dot) {
@@ -382,9 +469,9 @@ function renderInfo(c, cierre, fueraDeHorario = false) {
     aviso.className = "cierre-temporal";
     aviso.setAttribute("role", "status");
     aviso.textContent = [
-      "Cerrado temporalmente",
+      tr("closed.temporary"),
       cierre.message,
-      INFO.reopenText(cierre.reopensOn),
+      INFO.reopenText(cierre.reopensOn, LANG),
     ]
       .filter(Boolean)
       .join(" · ");
@@ -395,8 +482,8 @@ function renderInfo(c, cierre, fueraDeHorario = false) {
     aviso.className = "cierre-temporal";
     aviso.setAttribute("role", "status");
     aviso.textContent = [
-      "Cerrado ahora",
-      SCHEDULE.openingText(SCHEDULE.nextOpening(c.horarios)),
+      tr("closed.now"),
+      SCHEDULE.openingText(SCHEDULE.nextOpening(c.horarios), LANG),
     ]
       .filter(Boolean)
       .join(" · ");
@@ -414,7 +501,7 @@ function renderInfo(c, cierre, fueraDeHorario = false) {
 
     if (mapa) {
       const titulo = document.createElement("p");
-      titulo.textContent = "Encontranos en";
+      titulo.textContent = tr("footer.findUs");
       const a = externalLink(mapa);
       a.className = "direccion";
       a.textContent = "📍 " + c.direccion;
@@ -423,7 +510,7 @@ function renderInfo(c, cierre, fueraDeHorario = false) {
 
     if (links.length > 0) {
       const titulo = document.createElement("p");
-      titulo.textContent = "Seguinos en";
+      titulo.textContent = tr("footer.followUs");
       const redes = document.createElement("div");
       redes.className = "pie-redes";
 
@@ -445,8 +532,8 @@ function renderInfo(c, cierre, fueraDeHorario = false) {
   const enviar = document.querySelector("#form-pedido button[type='submit']");
   if (enviar) {
     enviar.disabled = Boolean(cierre) || fueraDeHorario;
-    if (cierre) enviar.textContent = "Cerrado temporalmente";
-    else if (fueraDeHorario) enviar.textContent = "Cerrado ahora";
+    if (cierre) enviar.textContent = tr("closed.temporary");
+    else if (fueraDeHorario) enviar.textContent = tr("closed.now");
   }
 }
 
@@ -504,8 +591,8 @@ function renderMenu(menu) {
         <div class="producto-info">
           <h3>${HTML.escapeHtml(p.nombre)}</h3>
           <p>${HTML.escapeHtml(p.descripcion || "")}</p>
-          ${p.precioAnterior ? `<span class="precio-anterior">$${HTML.escapeHtml(p.precioAnterior)}</span>` : ""}
-          <div class="producto-precio">$${HTML.escapeHtml(p.precio)}</div>
+          ${p.precioAnterior ? `<span class="precio-anterior">$${HTML.escapeHtml(PRICE.formatPrice(p.precioAnterior))}</span>` : ""}
+          <div class="producto-precio">$${HTML.escapeHtml(PRICE.formatPrice(p.precio))}</div>
         </div>
         <button class="btn-add">+</button>
       `;
@@ -577,8 +664,7 @@ function initSearch() {
     };
 
     if (filtrado.categorias.length === 0) {
-      menuContainer.innerHTML =
-        '<div class="no-results"> <div class="no-results-icon">🔍</div>  No se encontraron productos o categorías.</div>';
+      menuContainer.innerHTML = `<div class="no-results"> <div class="no-results-icon">🔍</div>  ${tr("noResults")}</div>`;
     } else {
       renderMenu(filtrado);
     }
@@ -625,7 +711,7 @@ function updateCart() {
     d.innerHTML = `
       <div class="item-info">
         <h4>${HTML.escapeHtml(i.nombre || "")}</h4>
-        <span class="item-precio">$${HTML.escapeHtml(i.precio)}</span>
+        <span class="item-precio">$${HTML.escapeHtml(PRICE.formatPrice(i.precio))}</span>
       </div>
       <div class="item-controls">
         <button class="btn-minus"><svg width="16" height="16" viewBox="0 0 24 24">
@@ -740,12 +826,12 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
 
   // La página puede haber quedado abierta desde antes de que el negocio cerrara.
   if (INFO?.closedNotice(window.CONFIG)) {
-    alert("Estamos cerrados temporalmente: por ahora no podemos tomar pedidos.");
+    alert(tr("error.closedTemporary"));
     return;
   }
   if (SCHEDULE && !SCHEDULE.isOpenNow(window.CONFIG?.horarios)) {
     alert(
-      ["Estamos cerrados en este momento.", SCHEDULE.openingText(SCHEDULE.nextOpening(window.CONFIG?.horarios))]
+      [tr("error.closedNow"), SCHEDULE.openingText(SCHEDULE.nextOpening(window.CONFIG?.horarios), LANG)]
         .filter(Boolean)
         .join(" "),
     );
@@ -754,8 +840,6 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
 
   const form = e.target;
   const f = new FormData(form);
-
-  const formatPrice = (n) => n.toLocaleString("es-AR");
 
   let total = 0;
 
@@ -786,8 +870,8 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
 
     total += subtotal;
 
-    msg += `• ${i.nombre} x${i.cantidad}\n`;
-    msg += `  $${formatPrice(precio)} c/u → $${formatPrice(subtotal)}\n\n`;
+    msg += `• ${i.nombreEs ?? i.nombre} x${i.cantidad}\n`;
+    msg += `  $${PRICE.formatPrice(precio)} c/u → $${PRICE.formatPrice(subtotal)}\n\n`;
   });
 
   msg += `━━━━━━━━━━━━━━\n`;
@@ -803,7 +887,7 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     const submit = form.querySelector("button[type='submit']");
     if (submit) {
       submit.disabled = true;
-      submit.textContent = "Enviando…";
+      submit.textContent = tr("checkout.sending");
     }
 
     const horarioNota = ahora ? "Horario: ahora mismo" : horario ? `Horario: ${horario}` : "";
@@ -819,22 +903,22 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
 
     if (submit) {
       submit.disabled = false;
-      submit.textContent = "Enviar por WhatsApp";
+      submit.textContent = tr("checkout.submit");
     }
 
     if (result.ok) {
       saved = result;
     } else if (result.reason === "closed") {
-      alert("Estamos cerrados temporalmente: por ahora no podemos tomar pedidos.");
+      alert(tr("error.closedTemporary"));
       return;
     } else if (result.reason === "outside_hours") {
-      alert("Estamos fuera de horario: por ahora no podemos tomar pedidos.");
+      alert(tr("error.outsideHours"));
       return;
     } else if (result.reason === "busy") {
-      alert("Estamos recibiendo muchos pedidos. Probá de nuevo en un minuto.");
+      alert(tr("error.busy"));
       return;
     } else if (result.reason === "unavailable") {
-      alert("Algún producto ya no está disponible. Recargá el menú para ver lo que hay.");
+      alert(tr("error.unavailable"));
       return;
     }
     // "invalid" y "unknown": se manda solo por WhatsApp.
@@ -868,9 +952,12 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
 // seguir el pedido. Se puede hacer en cualquier orden (SEGUIMIENTO-10): si el cliente
 // abre el seguimiento primero, esa página le ofrece enviar el mensaje. Todo con
 // textContent: el número y los links no se interpretan como HTML.
-function showThanks({ number, code, link, whatsappUrl }) {
+function showThanks(data) {
+  const { number, code, link, whatsappUrl } = data;
   const form = $("#form-pedido");
   if (!form) return;
+
+  LAST_THANKS = data;
 
   resetCheckout();
   form.classList.add("hidden");
@@ -880,34 +967,35 @@ function showThanks({ number, code, link, whatsappUrl }) {
   panel.className = "gracias-pedido";
 
   const title = document.createElement("h3");
-  title.textContent = `¡Pedido #${number} registrado!`;
+  title.textContent = tr("thanks.title", { n: number });
 
   const info = document.createElement("p");
   info.className = "gracias-aviso";
-  info.textContent = "Falta un paso: enviá el pedido por WhatsApp para que el local lo reciba.";
+  info.textContent = tr("thanks.pending");
 
   const send = document.createElement("a");
   send.className = "btn-whatsapp";
   send.href = whatsappUrl;
   send.target = "_blank";
   send.rel = "noopener noreferrer";
-  send.textContent = "Enviar por WhatsApp";
+  send.textContent = tr("checkout.submit");
 
   const track = document.createElement("a");
   track.className = "btn-seguimiento";
-  track.href = link;
-  track.textContent = "Seguir mi pedido";
+  // El seguimiento se abre en el mismo idioma (IDIOMA-7).
+  track.href = `${link}?lang=${LANG}`;
+  track.textContent = tr("thanks.track");
 
   send.addEventListener("click", () => {
     ORDERS?.markHandoffSent(window.localStorage, code);
-    info.textContent = "¡Listo! Ahora podés seguir el estado de tu pedido.";
+    info.textContent = tr("thanks.done");
     send.classList.add("hecho");
     track.classList.add("destacado");
   });
 
   const close = document.createElement("button");
   close.type = "button";
-  close.textContent = "Cerrar";
+  close.textContent = tr("thanks.close");
   close.onclick = closeAll;
 
   panel.append(title, info, send, track, close);

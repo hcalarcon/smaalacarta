@@ -7,19 +7,27 @@ import ShareSection from "./components/ShareSection";
 import Section from "@/components/ui/Section";
 import { getSettings } from "@/lib/db/settings";
 import { requireBusiness } from "@/lib/get-current-business";
+import { hasDigitalMenu } from "@/lib/plan-access";
 
 export const metadata: Metadata = { title: "Configuración" };
 
 export default async function SettingsPage() {
   const { business } = await requireBusiness();
   const settings = await getSettings(business.id, business.whatsapp);
+  const digitalMenu = hasDigitalMenu({
+    planPdf: business.plan_pdf,
+    planWeb: business.plan_web,
+    planCompleto: business.plan_completo,
+  });
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
       <section>
         <h1 className="text-3xl font-bold text-brand">Configuración</h1>
         <p className="mt-2 text-stone-500">
-          Apariencia, horarios y contacto del menú de {business.name}.
+          {digitalMenu
+            ? `Apariencia, horarios y contacto del menú de ${business.name}.`
+            : `El PDF del menú de ${business.name}.`}
         </p>
       </section>
 
@@ -36,7 +44,11 @@ export default async function SettingsPage() {
         planCompleto={business.plan_completo}
       />
 
-      <SettingsForm businessId={business.id} initial={settings} />
+      <SettingsForm
+        businessId={business.id}
+        initial={settings}
+        digitalMenu={digitalMenu}
+      />
 
       <Section
         title="Contraseña"

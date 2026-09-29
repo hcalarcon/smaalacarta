@@ -1,4 +1,6 @@
-export type ProductInput = {
+import { toTranslationColumns, type Translations } from "@/lib/menu/translations";
+
+export type ProductInput = Translations & {
   name: string;
   description?: string;
   price: number;
@@ -23,6 +25,7 @@ export function toProductInsert(
     active: input.active ?? true,
     image_url: input.image_url || null,
     featured: input.featured ?? false,
+    ...toTranslationColumns(input),
   };
 }
 
@@ -38,5 +41,6 @@ export function toProductUpdate(input: ProductInput & { category_id?: string }) 
     // Sin indicarla se conserva; con nula o vacía se quita (ADMIN-MENU-6).
     ...(input.image_url !== undefined && { image_url: input.image_url || null }),
     ...(input.featured !== undefined && { featured: input.featured }),
+    ...toTranslationColumns(input),
   };
 }

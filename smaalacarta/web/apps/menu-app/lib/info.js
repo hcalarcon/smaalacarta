@@ -3,6 +3,7 @@
 // `public-menu.js`) y lo dejan listo para pintar.
 
 import { safeHttpUrl } from "./html.js";
+import { t } from "./i18n.js";
 
 // Si el negocio está cerrado temporalmente, el aviso con su mensaje y la fecha en
 // que reabre; si no, null. Un cierre sin mensaje ni fecha también es un aviso.
@@ -16,7 +17,7 @@ export function closedNotice(config) {
 }
 
 // "2030-01-15" → "Reabrimos el 15/01". Vacío si no hay una fecha válida.
-export function reopenText(reopensOn) {
+export function reopenText(reopensOn, lang) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(reopensOn ?? "");
   if (!match) return "";
 
@@ -28,7 +29,7 @@ export function reopenText(reopensOn) {
     date.getUTCMonth() === month - 1 &&
     date.getUTCDate() === day;
 
-  return valid ? `Reabrimos el ${match[3]}/${match[2]}` : "";
+  return valid ? t("reopen", lang, { date: `${match[3]}/${match[2]}` }) : "";
 }
 
 const NETWORKS = [

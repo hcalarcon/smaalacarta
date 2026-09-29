@@ -6,12 +6,21 @@ import DashboardCard from "@/components/dashboard/DashboardCard";
 import PlanBadges from "@/components/dashboard/PlanBadges";
 import { getBusinessSummary } from "@/lib/db/summary";
 import { requireBusiness } from "@/lib/get-current-business";
+import { hasDigitalMenu, hasOrders } from "@/lib/plan-access";
 
 export const metadata: Metadata = { title: "Resumen" };
 
 export default async function DashboardPage() {
   const { business } = await requireBusiness();
   const summary = await getBusinessSummary(business.id);
+
+  const plan = {
+    planPdf: business.plan_pdf,
+    planWeb: business.plan_web,
+    planCompleto: business.plan_completo,
+  };
+  const digitalMenu = hasDigitalMenu(plan);
+  const orders = hasOrders(plan);
 
   return (
     <div className="space-y-8">
@@ -26,17 +35,11 @@ export default async function DashboardPage() {
       <section className="rounded-3xl border border-line bg-white p-5 shadow-sm">
         <p className="text-sm text-stone-500">Tu plan</p>
         <div className="mt-2">
-          <PlanBadges
-            plan={{
-              planPdf: business.plan_pdf,
-              planWeb: business.plan_web,
-              planCompleto: business.plan_completo,
-            }}
-          />
+          <PlanBadges plan={plan} />
         </div>
       </section>
 
-      {summary.pendingOrders > 0 ? (
+      {orders && summary.pendingOrders > 0 ? (
         <Link
           href="/dashboard/orders"
           className="flex items-center justify-between gap-4 rounded-3xl border border-accent/40 bg-white p-5 shadow-sm transition hover:shadow-md"
@@ -55,31 +58,39 @@ export default async function DashboardPage() {
         </Link>
       ) : null}
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <DashboardCard
-          title="Pedidos hoy"
-          value={String(summary.ordersToday)}
-          description="Pedidos registrados hoy"
-        />
+      {digitalMenu || orders ? (
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {orders ? (
+            <DashboardCard
+              title="Pedidos hoy"
+              value={String(summary.ordersToday)}
+              description="Pedidos registrados hoy"
+            />
+          ) : null}
 
-        <DashboardCard
-          title="Categorías"
-          value={String(summary.categories)}
-          description="Secciones de tu menú"
-        />
+          {digitalMenu ? (
+            <>
+              <DashboardCard
+                title="Categorías"
+                value={String(summary.categories)}
+                description="Secciones de tu menú"
+              />
 
-        <DashboardCard
-          title="Productos"
-          value={String(summary.products)}
-          description="Productos activos"
-        />
+              <DashboardCard
+                title="Productos"
+                value={String(summary.products)}
+                description="Productos activos"
+              />
 
-        <DashboardCard
-          title="Promociones"
-          value={String(summary.promotions)}
-          description="Promos activas"
-        />
-      </section>
+              <DashboardCard
+                title="Promociones"
+                value={String(summary.promotions)}
+                description="Promos activas"
+              />
+            </>
+          ) : null}
+        </section>
+      ) : null}
     </div>
   );
 }

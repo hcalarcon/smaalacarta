@@ -3,6 +3,7 @@
 // `landing/` (`smaalacarta.com.ar/<slug>/menu.html?ruta=<slug>`, RUTAS-4). Mismo
 // dato que el menú interactivo (`public_menu`, sin sesión) pero como HTML de solo
 // lectura, armado en el momento — sin build ni JS de carrito.
+import { normalizeLang } from "../apps/menu-app/lib/i18n.js";
 import { getDemoMenu } from "../apps/menu-app/lib/demo-menu.js";
 import { fetchPublicMenu, isSupabaseConfigured } from "../apps/menu-app/lib/public-menu.js";
 import { resolveTarget } from "../apps/menu-app/lib/hostname.js";
@@ -42,5 +43,5 @@ export default async function handler(req, res) {
   res.setHeader("Content-Type", "text/html; charset=utf-8");
   // Poco tiempo en el borde: un cambio en Configuración se ve rápido.
   res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
-  res.status(200).send(renderStaticMenuPage(remote));
+  res.status(200).send(renderStaticMenuPage({ ...remote, lang: normalizeLang(url.searchParams.get("lang")) }));
 }

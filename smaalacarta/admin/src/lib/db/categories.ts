@@ -7,6 +7,10 @@ import {
 } from "@/lib/db/resources";
 
 import { Database } from "@/types/database";
+import {
+  toTranslationColumns,
+  type Translations,
+} from "@/lib/menu/translations";
 import { sortByOrder } from "@/lib/menu/ordering";
 import { createClient } from "@/lib/supabase-server";
 
@@ -46,25 +50,35 @@ export async function getCategory(businessId: string, id: string) {
 
 export async function createCategory(
   businessId: string,
-  payload: { name: string; description?: string; active?: boolean },
+  payload: {
+    name: string;
+    description?: string;
+    active?: boolean;
+  } & Translations,
 ) {
   await insertRecord("categories", {
     business_id: businessId,
     name: payload.name,
     description: payload.description || null,
     active: payload.active ?? true,
+    ...toTranslationColumns(payload),
   });
 }
 
 export async function updateCategory(
   businessId: string,
   id: string,
-  payload: { name: string; description?: string; active?: boolean },
+  payload: {
+    name: string;
+    description?: string;
+    active?: boolean;
+  } & Translations,
 ) {
   await updateRecord("categories", id, businessId, {
     name: payload.name,
     description: payload.description || null,
     active: payload.active ?? true,
+    ...toTranslationColumns(payload),
   });
 }
 

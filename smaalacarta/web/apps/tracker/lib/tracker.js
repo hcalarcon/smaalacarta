@@ -3,6 +3,7 @@
 
 import { cssUrl } from "../../menu-app/lib/html.js";
 import { headerBackground } from "../../menu-app/lib/info.js";
+import { t } from "../../menu-app/lib/i18n.js";
 
 const CODE = /^[0-9a-f]{20}$/;
 
@@ -17,14 +18,12 @@ export function parseTrackingCode(pathname, search = "") {
 
 const STEPS = ["pending", "confirmed", "preparing", "ready", "delivered"];
 
-const VIEWS = {
-  pending: { title: "Recibimos tu pedido", text: "El local todavía tiene que confirmarlo." },
-  confirmed: { title: "Pedido confirmado", text: "El local confirmó tu pedido." },
-  preparing: { title: "Estamos preparando tu pedido", text: "Ya estamos trabajando en él." },
-  ready: { title: "¡Tu pedido está listo!", text: "Ya podés pasar a buscarlo o esperarlo." },
-  delivered: { title: "Pedido entregado", text: "¡Que lo disfrutes!" },
-  cancelled: { title: "Pedido cancelado", text: "Si tenés dudas, escribile al local." },
-};
+const KNOWN_STATUS = [...STEPS, "cancelled"];
+
+// Los cinco pasos del camino, en el idioma pedido.
+export function stepLabels(lang) {
+  return STEPS.map((step) => t(`step.${step}`, lang));
+}
 
 export function isFinalStatus(status) {
   return status === "delivered" || status === "cancelled";
@@ -32,39 +31,29 @@ export function isFinalStatus(status) {
 
 // Qué mostrar para cada estado: título, texto, y en qué paso del camino está (-1 si
 // se desconoce o está cancelado).
-export function statusView(status) {
-  const view = VIEWS[status];
-
-  if (!view) {
-    return { title: "Estado del pedido", text: "", step: -1, cancelled: false, final: false };
+export function statusView(status, lang) {
+  if (!KNOWN_STATUS.includes(status)) {
+    return { title: t("status.unknown.title", lang), text: "", step: -1, cancelled: false, final: false };
   }
 
   return {
-    ...view,
+    title: t(`status.${status}.title`, lang),
+    text: t(`status.${status}.text`, lang),
     step: STEPS.indexOf(status),
     cancelled: status === "cancelled",
     final: isFinalStatus(status),
   };
 }
 
-const EVENT_LABELS = {
-  pending: "Pedido recibido",
-  confirmed: "Pedido confirmado",
-  preparing: "En preparación",
-  ready: "Listo",
-  delivered: "Entregado",
-  cancelled: "Cancelado",
-};
-
 // La línea de tiempo lista para mostrar, en el orden en que llega.
-export function timeline(events) {
+export function timeline(events, lang) {
   if (!Array.isArray(events)) return [];
 
   return events.flatMap((event) =>
     event && typeof event.estado === "string"
       ? [
           {
-            label: EVENT_LABELS[event.estado] ?? event.estado,
+            label: KNOWN_STATUS.includes(event.estado) ? t(`event.${event.estado}`, lang) : event.estado,
             date: event.fecha ?? null,
             note: typeof event.nota === "string" ? event.nota : null,
           },

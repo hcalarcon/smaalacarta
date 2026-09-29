@@ -1,14 +1,29 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import PromotionsClient from "./components/PromotionsClient";
 import { listPromotions } from "@/lib/db/promotions";
 import { requireBusiness } from "@/lib/get-current-business";
+import { hasDigitalMenu } from "@/lib/plan-access";
 
 export const metadata: Metadata = { title: "Promociones" };
 
 export default async function PromotionsPage() {
   const { business } = await requireBusiness();
+
+  // Las promociones arman la categoría "Ofertas" del menú digital (interactivo
+  // y estático): sin plan_web ni plan_completo no hay menú al que agregarlas.
+  if (
+    !hasDigitalMenu({
+      planPdf: business.plan_pdf,
+      planWeb: business.plan_web,
+      planCompleto: business.plan_completo,
+    })
+  ) {
+    redirect("/dashboard");
+  }
+
   const promotions = await listPromotions(business.id);
 
   return (

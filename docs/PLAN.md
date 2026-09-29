@@ -378,10 +378,14 @@ negocio y los fijos (promo, WhatsApp) no cambian con el tema. Requisitos en
 - [x] [herni] Variables de tema en las tres plantillas (`--bg`, `--card`/`--veil`
       según la plantilla, `--text`, `--muted`, `--border`, y en clásico además
       `--tint-ok-*`/`--tint-bad-*` para Destacados/Ofertas y el estado abierto/cerrado)
-- [ ] [herni] **Mirar las tres plantillas en oscuro, en el navegador**: no hay forma
-      de probar esto sin ojos humanos, así que no está verificado más allá de la
-      lectura del CSS. Para probar rápido: Configuración → Apariencia → Oscuro →
-      Guardar, en un negocio real, o el switch de tema de las demos (siguiente ítem)
+- [x] [herni] Los campos del formulario de checkout (input/select/textarea) no
+      heredan fondo ni color de texto solos: en clásico y minimal quedaban en
+      negro fijo sobre negro al confirmar el carrito en tema oscuro (moderno ya
+      los tenía explícitos). Se notó probándolo en el navegador
+- [ ] [herni] **Seguir mirando las tres plantillas en oscuro, en el navegador**:
+      recién arrancó la revisión a ojo (salió el bug de arriba); puede haber más.
+      Para probar rápido: Configuración → Apariencia → Oscuro → Guardar, en un
+      negocio real, o el switch de tema de las demos (siguiente ítem)
 - [x] [herni] Switch de tema en las demos del interactivo (`#btn-tema`, junto al
       estado abierto/cerrado): alterna `data-tema` al toque, sin recargar, para
       mirar cómo se ve cada plantilla en los dos temas. No está en el estático ni
@@ -421,8 +425,33 @@ negocio y los fijos (promo, WhatsApp) no cambian con el tema. Requisitos en
       `SECURITY DEFINER`. El borrado no se bloquea. Un aviso fijo en todo el
       panel explica por qué mientras dure
 
+## Etapa 6j — El panel según el plan
+
+**Diseño.** No solo lo público cambia según el plan (Etapa 6g): el panel
+también. Sin `plan_web` ni `plan_completo` no hay menú digital (Menú y
+Promociones no tienen sentido, y Configuración se reduce a "Menú en PDF");
+sin `plan_completo` no hay carrito (Pedidos no tiene sentido, tampoco el aviso
+de pedidos nuevos ni "Pedidos hoy" en el resumen). El header muestra un botón
+por cada servicio que el negocio realmente tenga, no uno solo. Lógica en
+`src/lib/plan-access.ts` (`hasDigitalMenu()`, `hasOrders()`); requisitos en
+`docs/SPEC.md` (ADMIN-PLAN-1 a 3).
+
+- [x] [herni] Menú lateral, header (botones "Ver carrito"/"Ver menú"/"Ver QR"),
+      resumen y Configuración reducida, todos según el plan. Menú, Pedidos y
+      Promociones también redirigen a `/dashboard` si se entra por la URL
+      directa sin el plan que corresponde
+- [ ] [por asignar] Lo mismo pero exigido en la base (como la suspensión,
+      Etapa 6i): hoy `save_promotion()`, `create_manual_order()` y las tablas de
+      categorías/productos no miran el plan, solo el panel esconde los botones.
+      Alguien con la sesión y las herramientas para pegarle directo a la acción
+      podría saltarse el filtro
+
 ## Etapa 7 — Pendientes técnicos (backlog)
 
+- [ ] [por asignar] **Marketplace** ("un lugar donde encontrar de todo para
+      comer", negocios clientes y no clientes): en análisis, ver
+      `docs/MARKETPLACE.md`. Todavía no es una tarea tomada — no empezar sin que
+      Herni lo decida primero
 - [ ] [por asignar] Permisos por `role` en `businesses`: hoy cualquier miembro puede editar el negocio, incluido el `slug`
 - [ ] [por asignar] Políticas RLS para `anon` (lectura del menú público), junto con la Etapa 6
 - [ ] [por asignar] `getCurrentBusiness()` con varios negocios por usuario: hoy `.maybeSingle()` falla y redirige a `/login`

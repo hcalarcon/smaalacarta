@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 
 import PromotionEditor from "../components/PromotionEditor";
 import { getPromotion, listProductsForPromotions } from "@/lib/db/promotions";
 import { requireBusiness } from "@/lib/get-current-business";
+import { hasDigitalMenu } from "@/lib/plan-access";
 
 export const metadata: Metadata = { title: "Editar promoción" };
 
@@ -19,6 +20,16 @@ export default async function EditPromotionPage({
   if (!/^[0-9a-f-]{36}$/i.test(id)) notFound();
 
   const { business } = await requireBusiness();
+
+  if (
+    !hasDigitalMenu({
+      planPdf: business.plan_pdf,
+      planWeb: business.plan_web,
+      planCompleto: business.plan_completo,
+    })
+  ) {
+    redirect("/dashboard");
+  }
 
   const [promotion, products] = await Promise.all([
     getPromotion(business.id, id),
