@@ -7,6 +7,7 @@
 
 import { brandVariables } from "./colors.js";
 import { cssUrl, escapeHtml, safeHttpUrl } from "./html.js";
+import { formatPrice } from "./price.js";
 import {
   closedNotice,
   headerBackground,
@@ -50,8 +51,8 @@ function productCard(item) {
     <div class="producto-info">
       <h3>${escapeHtml(item?.nombre)}</h3>
       <p>${escapeHtml(item?.descripcion || "")}</p>
-      ${item?.precioAnterior ? `<span class="precio-anterior">$${escapeHtml(item.precioAnterior)}</span>` : ""}
-      <div class="producto-precio">$${escapeHtml(item?.precio)}</div>
+      ${item?.precioAnterior ? `<span class="precio-anterior">$${escapeHtml(formatPrice(item.precioAnterior))}</span>` : ""}
+      <div class="producto-precio">$${escapeHtml(formatPrice(item?.precio))}</div>
     </div>
   </article>`;
 }

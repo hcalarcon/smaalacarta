@@ -29,7 +29,7 @@ describe("renderStaticMenuPage — Etapa 6e", () => {
     expect(html).toContain("Bebidas");
     expect(html).toContain("Café");
     expect(html).toContain("Con leche");
-    expect(html).toContain("$1000");
+    expect(html).toContain("$1.000");
   });
 
   it("escapa el texto del negocio: un nombre con HTML no se ejecuta", () => {

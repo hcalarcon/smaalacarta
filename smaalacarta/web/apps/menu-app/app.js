@@ -10,6 +10,7 @@ let PWA = null;
 let MENU = null;
 let COLORS = null;
 let I18N = null;
+let PRICE = null;
 
 // Idioma de la interfaz (IDIOMA-1 a 4) y el menú tal como vino, sin las secciones armadas.
 let LANG = "es";
@@ -157,6 +158,7 @@ async function init() {
       menuLib,
       colorsLib,
       i18nLib,
+      priceLib,
     ] = await Promise.all([
       import("/apps/menu-app/lib/hostname.js"),
       import("/apps/menu-app/lib/html.js"),
@@ -168,7 +170,9 @@ async function init() {
       import("/apps/menu-app/lib/menu.js"),
       import("/apps/menu-app/lib/colors.js"),
       import("/apps/menu-app/lib/i18n.js"),
+      import("/apps/menu-app/lib/price.js"),
     ]);
+    PRICE = priceLib;
     COLORS = colorsLib;
     I18N = i18nLib;
     LANG = I18N.resolveLang({
@@ -587,8 +591,8 @@ function renderMenu(menu) {
         <div class="producto-info">
           <h3>${HTML.escapeHtml(p.nombre)}</h3>
           <p>${HTML.escapeHtml(p.descripcion || "")}</p>
-          ${p.precioAnterior ? `<span class="precio-anterior">$${HTML.escapeHtml(p.precioAnterior)}</span>` : ""}
-          <div class="producto-precio">$${HTML.escapeHtml(p.precio)}</div>
+          ${p.precioAnterior ? `<span class="precio-anterior">$${HTML.escapeHtml(PRICE.formatPrice(p.precioAnterior))}</span>` : ""}
+          <div class="producto-precio">$${HTML.escapeHtml(PRICE.formatPrice(p.precio))}</div>
         </div>
         <button class="btn-add">+</button>
       `;
@@ -707,7 +711,7 @@ function updateCart() {
     d.innerHTML = `
       <div class="item-info">
         <h4>${HTML.escapeHtml(i.nombre || "")}</h4>
-        <span class="item-precio">$${HTML.escapeHtml(i.precio)}</span>
+        <span class="item-precio">$${HTML.escapeHtml(PRICE.formatPrice(i.precio))}</span>
       </div>
       <div class="item-controls">
         <button class="btn-minus"><svg width="16" height="16" viewBox="0 0 24 24">
@@ -837,8 +841,6 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
   const form = e.target;
   const f = new FormData(form);
 
-  const formatPrice = (n) => n.toLocaleString("es-AR");
-
   let total = 0;
 
   let msg = `🍔 *Nuevo pedido*\n\n`;
@@ -869,7 +871,7 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     total += subtotal;
 
     msg += `• ${i.nombreEs ?? i.nombre} x${i.cantidad}\n`;
-    msg += `  $${formatPrice(precio)} c/u → $${formatPrice(subtotal)}\n\n`;
+    msg += `  $${PRICE.formatPrice(precio)} c/u → $${PRICE.formatPrice(subtotal)}\n\n`;
   });
 
   msg += `━━━━━━━━━━━━━━\n`;

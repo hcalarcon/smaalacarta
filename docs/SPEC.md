@@ -75,7 +75,7 @@ _Sin requisitos todavía._
 
 *Destacados, ofertas y categorías. Aplicado por `web/apps/menu-app/lib/menu.js`
 (lo usan el menú interactivo y el estático). Cubierto por: `lib/menu.test.js`
-(MENU-1 a 3). El resto del armado del menú sigue sin especificar.*
+(MENU-1 a 3) y `lib/price.test.js` (MENU-4). El resto del armado del menú sigue sin especificar.*
 
 - **MENU-1** Los productos marcados como destacados se reúnen en una sección
   "Destacados" que va antes de todas las categorías.
@@ -84,6 +84,9 @@ _Sin requisitos todavía._
   promociones del admin), no se arma otra.
 - **MENU-3** Las categorías del negocio siguen a continuación, sin cambios ni
   reordenamientos; un menú sin destacados ni ofertas queda como llegó.
+- **MENU-4** Los precios se muestran con formato es-AR: punto como separador de miles y
+  sin decimales si son enteros (`$12.000`, no `$12000`). Vale igual en el menú
+  interactivo, el estático y el mensaje de WhatsApp (`lib/price.js`).
 
 ## PUBLICO — El menú desde Supabase
 
