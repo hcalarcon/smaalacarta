@@ -221,6 +221,9 @@ llegando al negocio por WhatsApp.
 - **SEGUIMIENTO-12** Al cambiar el estado de un pedido, el negocio puede dejar un
   mensaje opcional (por ejemplo, el motivo de una cancelación); el cliente lo ve
   junto al evento correspondiente en su seguimiento.
+- **SEGUIMIENTO-13** El panel "Pedido registrado" hereda los colores de la plantilla (texto, botón
+  principal como el de enviar del checkout, "Cerrar" como botón secundario con borde) y se lee en
+  claro y en oscuro; sus botones y el link de reenviar miden al menos 44 px de alto.
 
 ## PWA — Instalar el menú en el celular
 
