@@ -150,3 +150,58 @@ export function markHandoffSent(storage, code) {
     // ver arriba
   }
 }
+
+// Mensaje final para el negocio, una vez guardado el pedido: el número va en el título y
+// se suma el link de seguimiento. Sin número ni link (pedido que no se guardó) queda igual.
+export function finalizeOrderMessage(message, { number, link } = {}) {
+  let out = message;
+  if (Number.isInteger(number) && number > 0) {
+    out = out.replace("*Nuevo pedido*", `*Nuevo pedido #${number}*`);
+  }
+  if (link) out += `\n\n🔎 Seguí tu pedido: ${link}`;
+  return out;
+}
+
+// El último pedido queda anotado para volver a mostrar el panel "Pedido registrado" si el
+// navegador recarga la página al volver de WhatsApp (SEGUIMIENTO-10). Solo se guarda el
+// código y el número, y vence a las 2 horas.
+const LAST_ORDER_KEY = "sma-last-order";
+const LAST_ORDER_TTL = 2 * 60 * 60 * 1000;
+
+export function rememberLastOrder(storage, { code, number }, now = Date.now()) {
+  try {
+    if (!CODE.test(code) || !Number.isInteger(number)) return;
+    storage.setItem(LAST_ORDER_KEY, JSON.stringify({ code, number, at: now }));
+  } catch {
+    // Sin almacenamiento: el panel se ve igual mientras la página siga abierta.
+  }
+}
+
+export function lastOrder(storage, now = Date.now()) {
+  try {
+    const saved = JSON.parse(storage.getItem(LAST_ORDER_KEY) ?? "null");
+    if (!saved || !CODE.test(saved.code) || !Number.isInteger(saved.number)) return null;
+    if (!(now - Number(saved.at) < LAST_ORDER_TTL)) return null;
+    return { code: saved.code, number: saved.number };
+  } catch {
+    return null;
+  }
+}
+
+export function forgetLastOrder(storage) {
+  try {
+    storage.removeItem(LAST_ORDER_KEY);
+  } catch {
+    // ver arriba
+  }
+}
+
+// El link de WhatsApp guardado de ese pedido, se haya enviado o no (para reenviarlo).
+export function handoffUrl(storage, code) {
+  try {
+    const saved = JSON.parse(storage.getItem(HANDOFF_PREFIX + code) ?? "null");
+    return saved && WHATSAPP_URL.test(saved.url) ? saved.url : null;
+  } catch {
+    return null;
+  }
+}

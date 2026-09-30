@@ -3,9 +3,14 @@ import { describe, expect, it, vi } from "vitest";
 import {
   buildOrderItems,
   createOrder,
+  finalizeOrderMessage,
+  forgetLastOrder,
+  handoffUrl,
+  lastOrder,
   markHandoffSent,
   pendingHandoff,
   rememberHandoff,
+  rememberLastOrder,
   trackingLink,
   whatsappOrderUrl,
 } from "./orders.js";
@@ -234,5 +239,64 @@ describe("motivo de rechazo por horario — SEGUIMIENTO-9", () => {
       fetchImpl,
     });
     expect(r).toEqual({ ok: false, reason: "outside_hours" });
+  });
+});
+
+describe("cierre del pedido — SEGUIMIENTO-10", () => {
+  const CODE = "0123456789abcdef0123";
+  const URL = "https://api.whatsapp.com/send?phone=5493510000001&text=Hola";
+  const LINK = "https://demo.smaalacarta.com.ar/pedido/" + CODE;
+
+  function fakeStorage() {
+    const data = new Map();
+    return {
+      get length() { return data.size; },
+      key: (i) => [...data.keys()][i] ?? null,
+      getItem: (k) => (data.has(k) ? data.get(k) : null),
+      setItem: (k, v) => void data.set(k, String(v)),
+      removeItem: (k) => void data.delete(k),
+    };
+  }
+
+  it("el mensaje lleva el número en el título y el link de seguimiento", () => {
+    const out = finalizeOrderMessage("🍔 *Nuevo pedido*\n\nCliente", { number: 12, link: LINK });
+    expect(out).toContain("*Nuevo pedido #12*");
+    expect(out.endsWith(`🔎 Seguí tu pedido: ${LINK}`)).toBe(true);
+  });
+
+  it("sin número ni link (pedido no guardado) el mensaje queda igual", () => {
+    const msg = "🍔 *Nuevo pedido*\n\nCliente";
+    expect(finalizeOrderMessage(msg)).toBe(msg);
+    expect(finalizeOrderMessage(msg, {})).toBe(msg);
+  });
+
+  it("el último pedido se recuerda y se olvida", () => {
+    const storage = fakeStorage();
+    rememberLastOrder(storage, { code: CODE, number: 7 });
+    expect(lastOrder(storage)).toEqual({ code: CODE, number: 7 });
+    forgetLastOrder(storage);
+    expect(lastOrder(storage)).toBeNull();
+  });
+
+  it("el último pedido vence a las 2 horas", () => {
+    const storage = fakeStorage();
+    rememberLastOrder(storage, { code: CODE, number: 7 }, 1000);
+    expect(lastOrder(storage, 1000 + 2 * 60 * 60 * 1000 - 1)).not.toBeNull();
+    expect(lastOrder(storage, 1000 + 2 * 60 * 60 * 1000)).toBeNull();
+  });
+
+  it("no guarda un código o un número inválidos", () => {
+    const storage = fakeStorage();
+    rememberLastOrder(storage, { code: "../x", number: 7 });
+    rememberLastOrder(storage, { code: CODE, number: "7" });
+    expect(lastOrder(storage)).toBeNull();
+  });
+
+  it("handoffUrl devuelve el link aunque ya se haya enviado", () => {
+    const storage = fakeStorage();
+    rememberHandoff(storage, CODE, URL);
+    markHandoffSent(storage, CODE);
+    expect(handoffUrl(storage, CODE)).toBe(URL);
+    expect(handoffUrl(storage, "ffffffffffffffffffff")).toBeNull();
   });
 });

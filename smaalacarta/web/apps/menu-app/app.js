@@ -299,6 +299,7 @@ async function init() {
     //renderMenu(menu);
     initSearch();
     loadCart();
+    restoreThanks();
 
     // 🧹 Ocultar loader correctamente
     document.body.classList.remove("loading");
@@ -805,6 +806,8 @@ $("#cerrar-carrito")?.addEventListener("click", closeAll);
 $("#overlay")?.addEventListener("click", closeAll);
 
 function closeAll() {
+  // Cerrar el panel "Pedido registrado" lo da por visto: no vuelve a aparecer al recargar.
+  if (document.querySelector("#gracias-pedido")) ORDERS?.forgetLastOrder(window.localStorage);
   resetCheckout();
   $("#carrito-panel")?.classList.remove("active");
   $("#overlay")?.classList.remove("active");
@@ -925,33 +928,35 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
   }
 
   const link = saved ? ORDERS.trackingLink(window.location.origin, saved.code) : "";
-  if (link) msg += `\n\n🔎 Seguí tu pedido: ${link}`;
+  if (saved) msg = ORDERS.finalizeOrderMessage(msg, { number: saved.number, link });
 
   const whatsappUrl = ORDERS
     ? ORDERS.whatsappOrderUrl(CONFIG.telefono, msg)
     : `https://api.whatsapp.com/send?phone=${CONFIG.telefono}&text=${encodeURIComponent(msg)}`;
-
-  // Si el cliente sigue el pedido antes de enviarlo, el seguimiento se lo vuelve a ofrecer.
-  if (saved) ORDERS.rememberHandoff(window.localStorage, saved.code, whatsappUrl);
 
   cart = [];
   saveCart();
   updateCart();
 
   if (saved) {
-    // El navegador puede bloquear una ventana abierta después de esperar: por eso se
-    // muestra un botón, que sí cuenta como acción del cliente.
+    // Se anota el pedido antes de salir: si el navegador recarga la página al volver de
+    // WhatsApp, el panel se muestra de nuevo (SEGUIMIENTO-10).
+    ORDERS.rememberHandoff(window.localStorage, saved.code, whatsappUrl);
+    ORDERS.rememberLastOrder(window.localStorage, saved);
     showThanks({ number: saved.number, code: saved.code, link, whatsappUrl });
+    // Misma pestaña: window.open lo bloquea el navegador después de esperar la respuesta.
+    ORDERS.markHandoffSent(window.localStorage, saved.code);
+    window.location.href = whatsappUrl;
   } else {
     window.open(whatsappUrl);
     closeAll();
   }
 });
 
-// "Pedido registrado": reemplaza al formulario, con dos pasos: enviar por WhatsApp y
-// seguir el pedido. Se puede hacer en cualquier orden (SEGUIMIENTO-10): si el cliente
-// abre el seguimiento primero, esa página le ofrece enviar el mensaje. Todo con
-// textContent: el número y los links no se interpretan como HTML.
+// "Pedido registrado": WhatsApp se abre solo al confirmar; este panel es lo que el cliente
+// ve al volver. El botón principal lleva al seguimiento y, aparte, un link chico permite
+// reenviar el mensaje si WhatsApp no se abrió (SEGUIMIENTO-10). Todo con textContent: el
+// número y los links no se interpretan como HTML.
 function showThanks(data) {
   const { number, code, link, whatsappUrl } = data;
   const form = $("#form-pedido");
@@ -973,24 +978,20 @@ function showThanks(data) {
   info.className = "gracias-aviso";
   info.textContent = tr("thanks.pending");
 
-  const send = document.createElement("a");
-  send.className = "btn-whatsapp";
-  send.href = whatsappUrl;
-  send.target = "_blank";
-  send.rel = "noopener noreferrer";
-  send.textContent = tr("checkout.submit");
-
   const track = document.createElement("a");
-  track.className = "btn-seguimiento";
+  track.className = "btn-seguimiento destacado";
   // El seguimiento se abre en el mismo idioma (IDIOMA-7).
   track.href = `${link}?lang=${LANG}`;
   track.textContent = tr("thanks.track");
 
-  send.addEventListener("click", () => {
+  const resend = document.createElement("a");
+  resend.className = "gracias-reenviar";
+  resend.href = whatsappUrl;
+  resend.target = "_blank";
+  resend.rel = "noopener noreferrer";
+  resend.textContent = tr("thanks.resend");
+  resend.addEventListener("click", () => {
     ORDERS?.markHandoffSent(window.localStorage, code);
-    info.textContent = tr("thanks.done");
-    send.classList.add("hecho");
-    track.classList.add("destacado");
   });
 
   const close = document.createElement("button");
@@ -998,8 +999,28 @@ function showThanks(data) {
   close.textContent = tr("thanks.close");
   close.onclick = closeAll;
 
-  panel.append(title, info, send, track, close);
+  panel.append(title, info, track, resend, close);
   form.insertAdjacentElement("afterend", panel);
+}
+
+// Al volver de WhatsApp con la página recargada: si hay un pedido reciente sin cerrar,
+// se vuelve a mostrar su panel.
+function restoreThanks() {
+  if (!MENU_SOURCE || !ORDERS) return;
+
+  const last = ORDERS.lastOrder(window.localStorage);
+  const whatsappUrl = last && ORDERS.handoffUrl(window.localStorage, last.code);
+  if (!last || !whatsappUrl) return;
+
+  showThanks({
+    number: last.number,
+    code: last.code,
+    link: ORDERS.trackingLink(window.location.origin, last.code),
+    whatsappUrl,
+  });
+  $("#overlay")?.classList.add("active");
+  $("#checkout")?.classList.add("active");
+  document.body.classList.add("no-scroll");
 }
 
 // Vuelve el checkout a su estado normal (formulario visible, sin el "gracias").

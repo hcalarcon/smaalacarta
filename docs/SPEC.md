@@ -205,9 +205,14 @@ llegando al negocio por WhatsApp.
 - **SEGUIMIENTO-9** Fuera del horario del negocio no se reciben pedidos: el servidor los
   rechaza (`P0006`) y el menú avisa "Cerrado ahora", con el próximo horario de
   apertura, y no deja enviarlos.
-- **SEGUIMIENTO-10** Al confirmar, el cliente puede mandar el pedido por WhatsApp y
-  seguirlo en cualquier orden: el mensaje queda guardado en su navegador y la página de
-  seguimiento ofrece enviarlo si todavía no lo envió.
+- **SEGUIMIENTO-10** Al confirmar un pedido guardado, el menú muestra el panel "Pedido registrado"
+  y abre WhatsApp solo, en la misma pestaña, con el mensaje ya armado ("Nuevo pedido #N" y el
+  link de seguimiento; siempre en español y con el nombre original de los productos). El
+  panel tiene un botón principal "Ver el estado de mi pedido" y, chico, "¿No se abrió
+  WhatsApp? Enviar de nuevo". Si el navegador recarga la página al volver, el panel se
+  vuelve a mostrar (hasta 2 horas o hasta que el cliente lo cierre). El mensaje queda
+  guardado en el navegador y la página de seguimiento ofrece enviarlo si el pedido
+  no figura como enviado. Si el pedido no se pudo guardar, se abre WhatsApp directo, sin panel.
 - **SEGUIMIENTO-11** La página de seguimiento tiene la estética del negocio: sus colores,
   su imagen de cabecera y su plantilla (`minimal` queda blanca). El seguimiento sigue sin
   datos personales, y los colores y la imagen se validan antes de usarlos.
