@@ -85,7 +85,7 @@ export default function NewBusinessForm() {
         name="whatsapp"
         inputMode="tel"
         defaultValue={state.values?.whatsapp}
-        hint="Con código de país, por ejemplo 5493510000000."
+        hint="Con el código de área, por ejemplo 3510000000."
         error={state.fieldErrors?.whatsapp}
       />
 

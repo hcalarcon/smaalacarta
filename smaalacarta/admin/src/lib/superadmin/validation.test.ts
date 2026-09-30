@@ -49,6 +49,8 @@ describe("slugify — ADMIN-SUPER-5", () => {
 describe("normalizeWhatsapp", () => {
   it("deja solo los dígitos", () => {
     expect(normalizeWhatsapp("+54 9 (351) 000-0001")).toBe("5493510000001");
+    expect(normalizeWhatsapp("3644277105")).toBe("5493644277105");
+    expect(normalizeWhatsapp("0364 427-7105")).toBe("5493644277105");
   });
 
   it("acepta vacío", () => {
