@@ -605,6 +605,11 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   saltearse, aunque lleguen a la vez.
 - **ADMIN-PEDIDOS-5** Cada ítem guarda el nombre y el precio del momento: editar o
   borrar el producto después no cambia los pedidos ya hechos.
+- **ADMIN-PEDIDOS-6** Un pedido es nuevo para el tablero si está Pendiente y su id no
+  está entre los ya vistos; uno que ya se vio no se repite, y uno que dejó de estar
+  Pendiente no cuenta.
+- **ADMIN-PEDIDOS-7** Los pedidos pendientes se cuentan por estado "pending"; los
+  demás estados, conocidos o no, no suman.
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 
