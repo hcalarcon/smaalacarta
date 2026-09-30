@@ -13,3 +13,21 @@ export function newPendingIds(
 export function pendingCount(orders: OrderLike[]): number {
   return orders.filter((o) => o.status === "pending").length;
 }
+
+// ¿Toca repetir el aviso? Mientras quede algún pendiente, cada `intervalMs` desde el
+// último sonido (`null` si todavía no sonó).
+export function shouldRemind(
+  lastBeepAt: number | null,
+  now: number,
+  pendingCount: number,
+  intervalMs: number,
+): boolean {
+  if (pendingCount <= 0) return false;
+  return lastBeepAt === null || now - lastBeepAt >= intervalMs;
+}
+
+export function tabTitle(originalTitle: string, pendingCount: number): string {
+  return pendingCount > 0
+    ? `(${pendingCount}) Nuevo pedido · ${originalTitle}`
+    : originalTitle;
+}

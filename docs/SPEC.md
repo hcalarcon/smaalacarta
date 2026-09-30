@@ -615,6 +615,12 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
 - **ADMIN-PEDIDOS-9** El aviso solo suena si el negocio activó el sonido con un botón
   (el navegador lo exige); la preferencia se recuerda, pero tras recargar el botón
   pide tocar de nuevo para volver a permitirlo.
+- **ADMIN-PEDIDOS-10** Con el sonido activado, el tablero sigue consultando pedidos cada
+  20 segundos aunque la pestaña esté oculta; sin sonido, solo con la pestaña a la vista.
+- **ADMIN-PEDIDOS-11** Con el sonido activado y pedidos Pendientes sin atender, el aviso
+  se repite cada 30 segundos hasta que no quede ninguno.
+- **ADMIN-PEDIDOS-12** Mientras haya N pedidos Pendientes, el título de la pestaña es
+  "(N) Nuevo pedido · <título original>"; cuando no queda ninguno, vuelve al original.
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 

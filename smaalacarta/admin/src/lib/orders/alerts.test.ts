@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { newPendingIds, pendingCount } from "./alerts";
+import { newPendingIds, pendingCount, shouldRemind, tabTitle } from "./alerts";
 
 const order = (id: string, status: string) => ({ id, status });
 
@@ -45,5 +45,36 @@ describe("pendientes — ADMIN-PEDIDOS-7", () => {
 
   it("no suma los estados desconocidos", () => {
     expect(pendingCount([order("a", "raro")])).toBe(0);
+  });
+});
+
+describe("repetir el aviso — ADMIN-PEDIDOS-11", () => {
+  const INTERVAL = 30_000;
+
+  it("no repite antes de que pase el intervalo", () => {
+    expect(shouldRemind(1_000, 1_000 + INTERVAL - 1, 2, INTERVAL)).toBe(false);
+  });
+
+  it("repite cuando pasó el intervalo justo o más", () => {
+    expect(shouldRemind(1_000, 1_000 + INTERVAL, 2, INTERVAL)).toBe(true);
+    expect(shouldRemind(1_000, 1_000 + INTERVAL * 3, 1, INTERVAL)).toBe(true);
+  });
+
+  it("no repite si no queda ningún pendiente", () => {
+    expect(shouldRemind(1_000, 1_000 + INTERVAL * 3, 0, INTERVAL)).toBe(false);
+  });
+
+  it("si todavía no sonó nunca y hay pendientes, repite", () => {
+    expect(shouldRemind(null, 5_000, 1, INTERVAL)).toBe(true);
+  });
+});
+
+describe("título de la pestaña — ADMIN-PEDIDOS-12", () => {
+  it("con pendientes muestra la cantidad y el título original", () => {
+    expect(tabTitle("Pedidos", 3)).toBe("(3) Nuevo pedido · Pedidos");
+  });
+
+  it("sin pendientes deja el título original", () => {
+    expect(tabTitle("Pedidos", 0)).toBe("Pedidos");
   });
 });

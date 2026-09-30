@@ -9,7 +9,7 @@ import OrderDetailDialog from "./OrderDetailDialog";
 import OrdersHistory from "./OrdersHistory";
 import { setOrderStatusAction } from "../actions";
 import type { Order } from "@/lib/db/orders";
-import { newPendingIds } from "@/lib/orders/alerts";
+import { newPendingIds, pendingCount, shouldRemind, tabTitle } from "@/lib/orders/alerts";
 import { playNewOrderSound } from "@/lib/orders/sound";
 import { boardColumn, type BoardColumn } from "@/lib/orders/status";
 
@@ -22,6 +22,9 @@ const COLUMNS: { key: BoardColumn; title: string; hint: string }[] = [
 ];
 
 const REFRESH_MS = 20_000;
+const REMIND_MS = 30_000;
+// Cada cuánto se mira si toca repetir el aviso (el intervalo real es REMIND_MS).
+const REMIND_CHECK_MS = 5_000;
 const CLOSED_SHOWN = 10;
 const SOUND_PREF_KEY = "sma-orders-sound";
 
@@ -71,6 +74,12 @@ export default function OrdersClient({
   const soundOnRef = useRef(false);
   // Los pedidos que ya estaban al abrir no suenan.
   const seenIds = useRef<Set<string>>(new Set(orders.map((o) => o.id)));
+  const lastBeepAt = useRef<number | null>(null);
+
+  function beep(ctx: AudioContext) {
+    lastBeepAt.current = Date.now();
+    playNewOrderSound(ctx);
+  }
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage solo existe en el navegador
@@ -87,7 +96,7 @@ export default function OrdersClient({
 
     const ctx = audioRef.current;
     if (fresh.length > 0 && soundOnRef.current && ctx?.state === "running") {
-      playNewOrderSound(ctx);
+      beep(ctx);
     }
   }, [orders]);
 
@@ -103,7 +112,7 @@ export default function OrdersClient({
 
       const ready = audioRef.current.state === "running";
       setAudioReady(ready);
-      if (ready) playNewOrderSound(audioRef.current);
+      if (ready) beep(audioRef.current);
       return ready;
     } catch {
       return false;
@@ -122,10 +131,11 @@ export default function OrdersClient({
     await unlockAudio();
   }
 
-  // Actualiza el tablero cada 20 segundos, solo con la pestaña a la vista.
+  // Actualiza el tablero cada 20 segundos. Con la pestaña oculta solo sigue si el
+  // sonido está activado: quien lo activó espera el aviso aunque esté en otra pestaña.
   useEffect(() => {
     const id = setInterval(() => {
-      if (document.visibilityState === "visible") {
+      if (document.visibilityState === "visible" || soundOnRef.current) {
         setNow(new Date());
         router.refresh();
       }
@@ -133,6 +143,34 @@ export default function OrdersClient({
 
     return () => clearInterval(id);
   }, [router]);
+
+  const pending = pendingCount(orders);
+
+  // Repite el sonido mientras haya pendientes sin atender.
+  useEffect(() => {
+    if (!soundOn || !audioReady || pending === 0) return;
+
+    const id = setInterval(() => {
+      const ctx = audioRef.current;
+      if (ctx?.state === "running" && shouldRemind(lastBeepAt.current, Date.now(), pending, REMIND_MS)) {
+        beep(ctx);
+      }
+    }, REMIND_CHECK_MS);
+
+    return () => clearInterval(id);
+  }, [soundOn, audioReady, pending]);
+
+  // Título de la pestaña: la cantidad de pendientes, sin parpadeo.
+  const originalTitle = useRef<string | null>(null);
+  useEffect(() => {
+    originalTitle.current ??= document.title;
+    document.title = tabTitle(originalTitle.current, pending);
+  }, [pending]);
+  useEffect(() => {
+    return () => {
+      if (originalTitle.current !== null) document.title = originalTitle.current;
+    };
+  }, []);
 
   async function changeStatus(orderId: string, status: string, note?: string) {
     setError(null);
