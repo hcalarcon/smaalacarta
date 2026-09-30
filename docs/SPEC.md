@@ -744,6 +744,18 @@ Cubierto por: `src/lib/db/promotions.test.ts` (ADMIN-PROMOS-2, 3, 5 y 6) y
   (7 días)", "Ticket promedio" y "Por tu menú". Sin pedidos vendidos en 14 días muestra "Todavía no
   hay pedidos esta semana" en lugar de tarjetas en cero. Si la lectura se truncó, no muestra la
   variación.
+- **ADMIN-METRICAS-9** `/dashboard/metrics` (con enlace "Métricas" en el menú lateral) solo existe
+  si el plan tiene pedidos (`hasOrders()`); sin él redirige a `/dashboard`. El período sale de
+  `?dias=7` (por defecto) o `?dias=30`: cualquier otro valor se toma como 7. Se elige con dos
+  enlaces, sin JS. Muestra las mismas tarjetas del Resumen para ese período, comparadas con el
+  período anterior.
+- **ADMIN-METRICAS-10** Las barras de "Lo más pedido", "Horarios" y "Días de la semana" miden su
+  valor contra el mayor del gráfico (en %, entero) y llevan su cantidad escrita, no solo el color.
+  El texto destacado es "Tu hora fuerte: 21 h" (la hora con más pedidos; en empate, la más
+  temprana) y no aparece sin pedidos.
+- **ADMIN-METRICAS-11** Sin pedidos vendidos en el período, la página dice que todavía no hay
+  pedidos en vez de dibujar gráficos vacíos; si la lectura se truncó, avisa "Mostrando los últimos
+  5000 pedidos" y no muestra variaciones.
 
 ---
 

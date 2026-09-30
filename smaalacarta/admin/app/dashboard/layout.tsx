@@ -33,11 +33,12 @@ export default async function DashboardLayout({
 
   // Menú y Promociones solo tienen sentido con un menú digital; Pedidos, solo
   // con carrito (plan_completo) — ver src/lib/plan-access.ts.
+  const ORDERS_ONLY = ["/dashboard/orders", "/dashboard/metrics"];
   const HIDDEN_WITHOUT_DIGITAL_MENU = ["/dashboard/menu", "/dashboard/promotions"];
   let links = dashboardLinks.filter(
     (link) =>
       (digitalMenu || !HIDDEN_WITHOUT_DIGITAL_MENU.includes(link.href)) &&
-      (orders || link.href !== "/dashboard/orders"),
+      (orders || !ORDERS_ONLY.includes(link.href)),
   );
 
   if (orders) {
