@@ -526,3 +526,26 @@ describe("encabezado", () => {
     expect($(".header").classList.contains("scrolled")).toBe(false);
   });
 });
+
+describe("LANDING-24 — botón Ver Demo del encabezado", () => {
+  const rule = (selector, css = CSS) => {
+    const escaped = selector.replace(/\./g, "\\.");
+    return css.match(new RegExp(`(?:^|\\n)\\s*${escaped}\\s*\\{([^}]*)\\}`))?.[1] ?? "";
+  };
+  const mobile = CSS.slice(CSS.indexOf("@media (max-width: 767px)"));
+
+  it("no parte el texto en dos líneas ni se achica, y mantiene su alto de toque", () => {
+    const demo = rule(".btn-demo");
+    expect(demo).toMatch(/white-space:\s*nowrap/);
+    expect(demo).toMatch(/flex:\s*none/);
+    expect(demo).toMatch(/padding:\s*0\.4rem 0\.9rem/);
+    expect(demo).toMatch(/min-height:\s*40px/);
+  });
+
+  it("en el celular el logo cede antes que el botón y este se separa de la hamburguesa", () => {
+    const logoText = rule(".logo-text", mobile);
+    expect(logoText).toMatch(/min-width:\s*0/);
+    expect(logoText).toMatch(/font-size:\s*1rem/);
+    expect(rule(".btn-demo", mobile)).toMatch(/margin-right:\s*0\.5rem/);
+  });
+});

@@ -220,7 +220,9 @@ h3 {
   background: transparent;
   color: inherit;
   font-size: 0.9375rem;
-  padding: 5px;
+  padding: 0.4rem 0.9rem;
+  white-space: nowrap;
+  flex: none;
 }
 
 .btn-demo:hover {
@@ -1068,6 +1070,23 @@ h3 {
    CELULAR (hasta 767 px): menú lateral
 ===================================================== */
 @media (max-width: 767px) {
+  /* El logo cede antes que el botón "Ver Demo" (LANDING-24). */
+  .logo {
+    min-width: 0;
+  }
+
+  .logo-text {
+    min-width: 0;
+    font-size: 1rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .btn-demo {
+    margin-right: 0.5rem;
+  }
+
   .nav {
     position: fixed;
     top: 0;

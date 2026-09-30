@@ -411,6 +411,9 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
 - **LANDING-23** La landing habla como empresa: no lleva la foto ni el nombre de una
   persona, los beneficios no llevan íconos de emoji y el email de contacto es
   `smaalacarta@gmail.com` en toda la página.
+- **LANDING-24** El botón "Ver Demo" del encabezado no parte su texto en dos líneas ni se
+  achica (`nowrap`, `flex: none`), y en el celular el logo cede antes que el botón para
+  que todo entre en una línea, con el botón separado de la hamburguesa.
 
 ---
 
