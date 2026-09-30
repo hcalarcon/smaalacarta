@@ -176,3 +176,30 @@ describe("LANDING-16 — precios iguales a los de index.html", () => {
     for (const i of importes.filter((x) => ["$15.000", "$25.000"].includes(x))) expect(INDEX).toContain(i);
   });
 });
+
+describe("LANDING-25 — un solo botón de WhatsApp en el celular", () => {
+  // Si se sacara la regla, el celular mostraría tres botones iguales.
+  it("oculta los botones de la portada y del cierre hasta 767 px; queda el fijo", () => {
+    const bloque = CSS.match(/@media\s*\(max-width:\s*767px\)\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+    expect(bloque).toMatch(/\.hero \.cta[^{]*\{[^}]*display:\s*none/);
+    expect(bloque).toMatch(/\.final \.cta[^{]*\{[^}]*display:\s*none/);
+    expect(parse().querySelectorAll(".hero .cta, .final .cta, .dock .cta")).toHaveLength(3);
+  });
+});
+
+describe("LANDING-26 — paso en curso dentro del teléfono (celular)", () => {
+  // Si se sacara, en el celular los pasos quedarían debajo del teléfono, fuera de la pantalla.
+  it("cada pantalla lleva su paso, igual al de la lista", () => {
+    const doc = parse();
+    const caps = [...doc.querySelectorAll(".phone .screen .cap")].map((c) => c.textContent.replace(/^\d\s*/, "").trim());
+    const lista = [...doc.querySelectorAll("ol.pasos li")].map((l) => l.textContent.trim());
+    expect(caps).toEqual(lista);
+  });
+
+  it("el CSS lo muestra solo hasta 639 px y deja la lista para lectores de pantalla", () => {
+    expect(CSS).toMatch(/\n\.cap\s*\{\s*display:\s*none/);
+    const movil = CSS.match(/@media \(max-width: 639px\)\s*\{([\s\S]*?)\n\}\n/)?.[1] ?? "";
+    expect(movil).toMatch(/\.cap\s*\{[^}]*display:\s*flex/);
+    expect(movil).toMatch(/\.pasos\s*\{[^}]*clip-path/);
+  });
+});

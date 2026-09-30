@@ -1070,6 +1070,11 @@ h3 {
    CELULAR (hasta 767 px): menú lateral
 ===================================================== */
 @media (max-width: 767px) {
+  /* El botón fijo de abajo ya ofrece WhatsApp (LANDING-25). */
+  .hero-cta {
+    display: none;
+  }
+
   /* El logo cede antes que el botón "Ver Demo" (LANDING-24). */
   .logo {
     min-width: 0;

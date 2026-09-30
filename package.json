@@ -3,10 +3,13 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "vitest run --passWithNoTests"
+    "test": "vitest run --passWithNoTests",
+    "capture-demos": "node scripts/capture-demos.mjs"
   },
   "devDependencies": {
     "jsdom": "^30.0.1",
+    "playwright": "^1.63.0",
+    "sharp": "^0.35.5",
     "vitest": "^4.1.11"
   }
 }
