@@ -610,6 +610,11 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   Pendiente no cuenta.
 - **ADMIN-PEDIDOS-7** Los pedidos pendientes se cuentan por estado "pending"; los
   demás estados, conocidos o no, no suman.
+- **ADMIN-PEDIDOS-8** Si tras actualizarse el tablero aparecen pedidos Pendientes nuevos,
+  suena un aviso una sola vez; los que ya estaban al abrir el tablero no suenan.
+- **ADMIN-PEDIDOS-9** El aviso solo suena si el negocio activó el sonido con un botón
+  (el navegador lo exige); la preferencia se recuerda, pero tras recargar el botón
+  pide tocar de nuevo para volver a permitirlo.
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 
