@@ -269,15 +269,15 @@ h3 {
   background: linear-gradient(160deg, #5a4a3a 0%, #3b3026 100%);
 }
 
-/* La cordillera del logo, como borde inferior */
+/* Onda como borde inferior */
 .hero::after {
   content: "";
   position: absolute;
   left: 0;
   right: 0;
   bottom: -1px;
-  height: clamp(36px, 6vw, 72px);
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 80' preserveAspectRatio='none'%3E%3Cpath fill='%23f0f2ee' d='M0 80V56l110-20 80 14 140-40 100 30 120-38 160 44 110-28 140 32 120-22 160 26V80z'/%3E%3C/svg%3E")
+  height: clamp(32px, 5vw, 64px);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 80' preserveAspectRatio='none'%3E%3Cpath fill='%23f0f2ee' d='M0 80V40c240 40 480 40 720 20s480-40 720 0V80z'/%3E%3C/svg%3E")
     center bottom / 100% 100% no-repeat;
 }
 
