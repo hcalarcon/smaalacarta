@@ -208,7 +208,7 @@ llegando al negocio por WhatsApp.
   rechaza (`P0006`) y el menú avisa "Cerrado ahora", con el próximo horario de
   apertura, y no deja enviarlos.
 - **SEGUIMIENTO-10** Al confirmar un pedido guardado, el menú muestra el panel "Pedido registrado"
-  y abre WhatsApp solo, en la misma pestaña, con el mensaje ya armado ("Nuevo pedido #N" y el
+  y abre WhatsApp solo (en una ventana aparte en PC, SEGUIMIENTO-14; en la misma pestaña en celulares y tablets), con el mensaje ya armado ("Nuevo pedido #N" y el
   link de seguimiento; siempre en español y con el nombre original de los productos). El
   panel tiene un botón principal "Ver el estado de mi pedido" y, chico, "¿No se abrió
   WhatsApp? Enviar de nuevo". Si el navegador recarga la página al volver, el panel se
@@ -224,6 +224,10 @@ llegando al negocio por WhatsApp.
 - **SEGUIMIENTO-13** El panel "Pedido registrado" hereda los colores de la plantilla (texto, botón
   principal como el de enviar del checkout, "Cerrar" como botón secundario con borde) y se lee en
   claro y en oscuro; sus botones y el link de reenviar miden al menos 44 px de alto.
+- **SEGUIMIENTO-14** En PC (puntero fino con hover y sin Android/iPhone/iPad/Mobile en el navegador),
+  WhatsApp se abre en una ventana aparte y la pestaña del pedido conserva el panel; la ventana se
+  abre al tocar "enviar", antes de esperar al servidor, y se cierra si el pedido no se envía. Si el
+  navegador la bloquea, y en celulares y tablets, se usa la misma pestaña.
 
 ## PWA — Instalar el menú en el celular
 
