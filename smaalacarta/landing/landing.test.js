@@ -279,6 +279,28 @@ describe("LANDING-22 — botón fijo de WhatsApp", () => {
   });
 });
 
+describe("LANDING-23 — la landing habla como empresa", () => {
+  const doc = parse();
+
+  it("no lleva la foto ni el nombre de una persona", () => {
+    expect(HTML).not.toMatch(/herni/i);
+    expect([...doc.querySelectorAll("img")].some((i) => /herni/i.test(i.src + i.alt))).toBe(false);
+  });
+
+  it("los beneficios no llevan íconos", () => {
+    expect(doc.querySelectorAll(".benefit-card").length).toBeGreaterThan(0);
+    expect(doc.querySelector(".benefit-icon")).toBeNull();
+  });
+
+  it("el email de contacto es el mismo en toda la página", () => {
+    const mails = new Set(HTML.match(/[a-z][\w.+-]*@[a-z][\w-]*\.[a-z][a-z.]*/gi));
+    expect([...mails]).toEqual(["smaalacarta@gmail.com"]);
+    const hrefs = [...doc.querySelectorAll('a[href^="mailto:"]')].map((a) => a.getAttribute("href"));
+    expect(hrefs.length).toBeGreaterThan(0);
+    for (const h of hrefs) expect(h).toBe("mailto:smaalacarta@gmail.com");
+  });
+});
+
 describe("LANDING-7 — movimiento", () => {
   it("el contenido no nace oculto en el CSS: solo lo oculta el JS al activar la animación", () => {
     expect(CSS).toMatch(/\.js-reveal\s+\.reveal/);

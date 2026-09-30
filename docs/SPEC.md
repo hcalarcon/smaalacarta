@@ -402,6 +402,9 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
   (en Subdominio Completo) y que se instala en el celular.
 - **LANDING-22** En el celular hay un botón fijo de WhatsApp abajo, que no tapa el
   contenido ni al menú ni al modal de demos; desde 768 px no se muestra.
+- **LANDING-23** La landing habla como empresa: no lleva la foto ni el nombre de una
+  persona, los beneficios no llevan íconos de emoji y el email de contacto es
+  `smaalacarta@gmail.com` en toda la página.
 
 ---
 
@@ -705,4 +708,4 @@ se resuelve en su propia rama `fix/`.
 - **Landing: redes sociales.** El pie ya no muestra Twitter ni un Instagram sin
   destino; cuando el negocio tenga cuentas, agregarlas.
 - **Dominio del email.** La landing y los menús usan `smaalacarta.com.ar`; el email de
-  ventas sigue siendo `@smaalacarta.online` hasta que exista un buzón en el otro dominio.
+  contacto es `smaalacarta@gmail.com` hasta que exista un buzón en el dominio propio.
