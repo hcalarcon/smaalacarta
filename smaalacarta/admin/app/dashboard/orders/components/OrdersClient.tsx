@@ -160,6 +160,44 @@ export default function OrdersClient({
     return () => clearInterval(id);
   }, [soundOn, audioReady, pending]);
 
+  // Pantalla encendida mientras el sonido esté activado. El navegador suelta el bloqueo
+  // al ocultarse la pestaña, así que se vuelve a pedir al volver a verla.
+  useEffect(() => {
+    if (!soundOn || !audioReady) return;
+
+    let sentinel: WakeLockSentinel | null = null;
+    let cancelled = false;
+
+    async function request() {
+      if (!("wakeLock" in navigator) || document.visibilityState !== "visible") return;
+      try {
+        const lock = await navigator.wakeLock.request("screen");
+        if (cancelled) {
+          await lock.release();
+          return;
+        }
+        sentinel = lock;
+      } catch {
+        // Sin permiso o sin batería suficiente: el aviso sigue, solo que la pantalla puede apagarse.
+      }
+    }
+
+    function onVisibility() {
+      if (document.visibilityState === "visible" && (!sentinel || sentinel.released)) {
+        void request();
+      }
+    }
+
+    void request();
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisibility);
+      sentinel?.release().catch(() => {});
+    };
+  }, [soundOn, audioReady]);
+
   // Título de la pestaña: la cantidad de pendientes, sin parpadeo.
   const originalTitle = useRef<string | null>(null);
   useEffect(() => {
@@ -209,17 +247,24 @@ export default function OrdersClient({
         </div>
 
         <div className="flex flex-wrap gap-3">
-          <button
-            type="button"
-            onClick={toggleSound}
-            className="min-h-11 rounded-xl border border-line-strong bg-white px-5 py-3 text-sm font-semibold text-brand transition hover:bg-cream"
-          >
-            {!soundOn
-              ? "🔔 Activar sonido"
-              : audioReady
-                ? "🔔 Sonido activado"
-                : "🔕 Tocá para activar el sonido"}
-          </button>
+          <div>
+            <button
+              type="button"
+              onClick={toggleSound}
+              className="min-h-11 rounded-xl border border-line-strong bg-white px-5 py-3 text-sm font-semibold text-brand transition hover:bg-cream"
+            >
+              {!soundOn
+                ? "🔔 Activar sonido"
+                : audioReady
+                  ? "🔔 Sonido activado"
+                  : "🔕 Tocá para activar el sonido"}
+            </button>
+            {soundOn ? (
+              <p className="mt-1 text-xs text-stone-500">
+                Mantené esta pantalla abierta para recibir avisos
+              </p>
+            ) : null}
+          </div>
 
           <button
             type="button"

@@ -621,6 +621,10 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   se repite cada 30 segundos hasta que no quede ninguno.
 - **ADMIN-PEDIDOS-12** Mientras haya N pedidos Pendientes, el título de la pestaña es
   "(N) Nuevo pedido · <título original>"; cuando no queda ninguno, vuelve al original.
+- **ADMIN-PEDIDOS-13** Con el sonido activado, el tablero pide mantener la pantalla
+  encendida, lo vuelve a pedir cada vez que la pestaña vuelve a estar visible y lo
+  libera al desactivar el sonido o al salir; si el navegador no lo soporta, no pasa
+  nada. Debajo del botón dice "Mantené esta pantalla abierta para recibir avisos".
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 

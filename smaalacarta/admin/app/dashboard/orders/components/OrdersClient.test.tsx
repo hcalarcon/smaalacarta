@@ -243,3 +243,91 @@ describe("título de la pestaña — ADMIN-PEDIDOS-12", () => {
     expect(document.title).toBe("Pedidos");
   });
 });
+
+describe("pantalla encendida — ADMIN-PEDIDOS-13", () => {
+  let requests: number;
+  let released: number;
+  let locks: { released: boolean }[];
+
+  function stubWakeLock() {
+    Object.defineProperty(navigator, "wakeLock", {
+      configurable: true,
+      value: {
+        request: vi.fn(async () => {
+          requests += 1;
+          const lock = { released: false, release: vi.fn(async () => { released += 1; }) };
+          locks.push(lock);
+          return lock;
+        }),
+      },
+    });
+  }
+
+  beforeEach(() => {
+    requests = 0;
+    released = 0;
+    locks = [];
+    stubWakeLock();
+  });
+
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, "wakeLock");
+    setVisibility("visible");
+  });
+
+  it("no la pide mientras el sonido está desactivado", async () => {
+    render(board([]));
+    await act(async () => {});
+    expect(requests).toBe(0);
+  });
+
+  it("la pide al activar el sonido y la libera al desactivarlo", async () => {
+    render(board([]));
+    await act(async () => fireEvent.click(soundButton()));
+    expect(requests).toBe(1);
+
+    await act(async () => fireEvent.click(soundButton()));
+    expect(released).toBe(1);
+  });
+
+  it("la vuelve a pedir cuando la pestaña vuelve a estar visible", async () => {
+    render(board([]));
+    await act(async () => fireEvent.click(soundButton()));
+
+    // Al ocultarse, el navegador suelta el bloqueo por su cuenta.
+    setVisibility("hidden");
+    locks.forEach((lock) => (lock.released = true));
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(requests).toBe(1);
+
+    setVisibility("visible");
+    await act(async () => {
+      document.dispatchEvent(new Event("visibilitychange"));
+    });
+    expect(requests).toBe(2);
+  });
+
+  it("la libera al salir de la página", async () => {
+    const { unmount } = render(board([]));
+    await act(async () => fireEvent.click(soundButton()));
+    unmount();
+    expect(released).toBe(1);
+  });
+
+  it("si el navegador no la soporta, el sonido se activa igual y sin errores", async () => {
+    Reflect.deleteProperty(navigator, "wakeLock");
+    render(board([]));
+    await act(async () => fireEvent.click(soundButton()));
+    expect(soundButton().textContent).toBe("🔔 Sonido activado");
+  });
+
+  it("avisa debajo del botón que hay que mantener la pantalla abierta", async () => {
+    render(board([]));
+    expect(screen.queryByText(/Mantené esta pantalla abierta/)).toBeNull();
+
+    await act(async () => fireEvent.click(soundButton()));
+    expect(screen.getByText("Mantené esta pantalla abierta para recibir avisos")).toBeTruthy();
+  });
+});
