@@ -735,6 +735,15 @@ Cubierto por: `src/lib/db/promotions.test.ts` (ADMIN-PROMOS-2, 3, 5 y 6) y
   cantidad).
 - **ADMIN-METRICAS-6** Como Supabase corta en 1000 filas por consulta, la lectura se pagina de a
   1000 hasta 5000 pedidos; si hay más, devuelve los 5000 más nuevos con `truncated: true`.
+- **ADMIN-METRICAS-7** Los textos de las tarjetas se arman con funciones puras
+  (`src/lib/orders/metrics-format.ts`): el dinero en pesos argentinos sin decimales; la
+  variación como "↑ 12 % vs semana anterior" o "↓ 5 % …" (con "Sin cambios vs …" si no cambió) y
+  ninguna si el período anterior es 0; y "8 de 10 pedidos vinieron por tu menú web".
+- **ADMIN-METRICAS-8** El Resumen, solo si el plan tiene pedidos (`hasOrders()`), muestra debajo de
+  las tarjetas actuales "Pedidos (7 días)" con su variación contra la semana anterior, "Vendido
+  (7 días)", "Ticket promedio" y "Por tu menú". Sin pedidos vendidos en 14 días muestra "Todavía no
+  hay pedidos esta semana" en lugar de tarjetas en cero. Si la lectura se truncó, no muestra la
+  variación.
 
 ---
 
