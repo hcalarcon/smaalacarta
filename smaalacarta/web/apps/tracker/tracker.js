@@ -2,6 +2,7 @@
 // muestra con textContent: nunca se arma HTML con datos del pedido ni del negocio.
 import { LOCALES, resolveLang, t } from "/apps/menu-app/lib/i18n.js";
 import { markHandoffSent, pendingHandoff } from "/apps/menu-app/lib/orders.js";
+import { whatsappDigits } from "/apps/menu-app/lib/phone.js";
 import { SUPABASE } from "/apps/menu-app/supabase-config.js";
 import {
   fetchTracking,
@@ -169,7 +170,7 @@ function render(data, { stale }) {
   }
 
   // Contacto con el local.
-  const phone = String(data.negocio.telefono ?? "").replace(/\D/g, "");
+  const phone = whatsappDigits(data.negocio.telefono);
   if (phone) {
     // El mensaje lo lee el negocio: queda siempre en español (IDIOMA-5).
     const message = `Hola, consulto por mi pedido #${data.pedido.numero}`;

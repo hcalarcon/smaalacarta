@@ -3,6 +3,7 @@
 // servidor (SEGUIMIENTO-2). Si algo falla, el llamador sigue con WhatsApp como siempre.
 
 import { isSupabaseConfigured } from "./public-menu.js";
+import { whatsappDigits } from "./phone.js";
 
 // Del carrito a lo que pide la base: `id`, tipo y cantidad. Nunca precios. Devuelve
 // null si algún ítem no se puede guardar (por ejemplo, un menú que viene de un JSON
@@ -97,7 +98,7 @@ export function trackingLink(origin, code) {
 }
 
 export function whatsappOrderUrl(phone, message) {
-  return `https://api.whatsapp.com/send?phone=${String(phone ?? "").replace(/\D/g, "")}&text=${encodeURIComponent(message)}`;
+  return `https://api.whatsapp.com/send?phone=${whatsappDigits(phone)}&text=${encodeURIComponent(message)}`;
 }
 
 // El mensaje de WhatsApp queda guardado en el navegador del cliente para poder mandarlo

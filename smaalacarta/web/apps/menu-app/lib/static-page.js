@@ -7,6 +7,7 @@
 
 import { brandVariables } from "./colors.js";
 import { cssUrl, escapeHtml, safeHttpUrl } from "./html.js";
+import { whatsappDigits } from "./phone.js";
 import { formatPrice } from "./price.js";
 import {
   closedNotice,
@@ -124,7 +125,7 @@ function footer(config) {
 // de inventar una clase propia sin estilo en este contexto. El mensaje va siempre en
 // español, porque lo lee el negocio (IDIOMA-5); solo el botón se traduce.
 function whatsappContact(config, lang) {
-  const phone = String(config?.telefono ?? "").replace(/\D/g, "");
+  const phone = whatsappDigits(config?.telefono);
   if (!phone) return "";
 
   const message = `Hola, consulto por el menú de ${config?.nombre ?? ""}`;
