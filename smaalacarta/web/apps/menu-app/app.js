@@ -878,7 +878,7 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
   });
 
   msg += `━━━━━━━━━━━━━━\n`;
-  msg += `💰 *TOTAL: $${formatPrice(total)}*\n\n`;
+  msg += `💰 *TOTAL: $${PRICE.formatPrice(total)}*\n\n`;
   msg += `📲 SMA a la Carta`;
 
   // Si el menú viene de Supabase, el pedido se guarda primero en el sistema para poder
