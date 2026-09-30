@@ -4,6 +4,8 @@ import {
   brandTheme,
   fetchTracking,
   isFinalStatus,
+  langSearch,
+  pageTitle,
   parseTrackingCode,
   safeColor,
   statusView,
@@ -216,5 +218,23 @@ describe("seguimiento en otros idiomas — IDIOMA-7", () => {
   it("los pasos del camino se traducen", () => {
     expect(stepLabels("en")).toEqual(["Received", "Confirmed", "Preparing", "Ready", "Delivered"]);
     expect(stepLabels()).toEqual(["Recibido", "Confirmado", "Preparando", "Listo", "Entregado"]);
+  });
+});
+
+describe("idioma de la página — IDIOMA-13 y 14", () => {
+  it("langSearch pone ?lang= sin perder el resto ni repetirlo", () => {
+    expect(langSearch("", "en")).toBe("?lang=en");
+    expect(langSearch("?code=abc", "pt")).toBe("?code=abc&lang=pt");
+    expect(langSearch("?lang=es&code=abc", "en")).toBe("?lang=en&code=abc");
+  });
+
+  it("langSearch ignora un idioma que no es es, en o pt", () => {
+    expect(langSearch("?lang=en", "fr")).toBe("?lang=en");
+    expect(langSearch("", "fr")).toBe("");
+  });
+
+  it("pageTitle arma el título en el idioma pedido", () => {
+    expect(pageTitle(12, "Café Ana", "es")).toBe("Pedido #12 · Café Ana");
+    expect(pageTitle(12, "Café Ana", "en")).toBe("Order #12 · Café Ana");
   });
 });

@@ -138,6 +138,20 @@ describe("trackingLink — SEGUIMIENTO-5", () => {
       "https://ana.smaalacarta.com.ar/pedido/0123456789abcdef0123",
     );
   });
+
+  it("agrega ?lang= solo si el idioma es es, en o pt (IDIOMA-12)", () => {
+    const base = "https://ana.smaalacarta.com.ar/pedido/0123456789abcdef0123";
+    expect(trackingLink("https://ana.smaalacarta.com.ar", "0123456789abcdef0123", "en")).toBe(`${base}?lang=en`);
+    expect(trackingLink("https://ana.smaalacarta.com.ar", "0123456789abcdef0123", "pt")).toBe(`${base}?lang=pt`);
+    expect(trackingLink("https://ana.smaalacarta.com.ar", "0123456789abcdef0123", "fr")).toBe(base);
+    expect(trackingLink("https://ana.smaalacarta.com.ar", "0123456789abcdef0123", undefined)).toBe(base);
+    expect(trackingLink("https://ana.smaalacarta.com.ar", "0123456789abcdef0123", "en&x=1")).toBe(base);
+  });
+
+  it("nunca repite ?lang= (IDIOMA-12)", () => {
+    const link = trackingLink("https://ana.smaalacarta.com.ar/", "0123456789abcdef0123", "es");
+    expect(link.match(/lang=/g)).toHaveLength(1);
+  });
 });
 
 describe("whatsappOrderUrl", () => {

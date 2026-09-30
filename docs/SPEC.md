@@ -335,6 +335,12 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
   interactivo y el estático). Si falta la traducción, se usa el español.
 - **IDIOMA-11** El mensaje de WhatsApp sigue en español (IDIOMA-5): usa el nombre original
   del producto (`nombreEs`).
+- **IDIOMA-12** El link de seguimiento que va dentro del mensaje de WhatsApp lleva `?lang=` con el
+  idioma del cliente (solo `es`, `en` o `pt`, nunca repetido); el texto del mensaje sigue en español.
+- **IDIOMA-13** El texto "Buscando tu pedido…" y el título de la pestaña de la página de
+  seguimiento salen del diccionario, en el idioma elegido.
+- **IDIOMA-14** La página de seguimiento tiene un selector ES | EN | PT (botones de al menos 44 px,
+  con `aria-pressed`): cambia `?lang=` sin recargar y vuelve a dibujar sin perder el estado.
 
 ---
 
@@ -405,6 +411,9 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
 - **LANDING-23** La landing habla como empresa: no lleva la foto ni el nombre de una
   persona, los beneficios no llevan íconos de emoji y el email de contacto es
   `smaalacarta@gmail.com` en toda la página.
+- **LANDING-24** El botón "Ver Demo" del encabezado no parte su texto en dos líneas ni se
+  achica (`nowrap`, `flex: none`), y en el celular el logo cede antes que el botón para
+  que todo entre en una línea, con el botón separado de la hamburguesa.
 
 ---
 

@@ -927,7 +927,7 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     // "invalid" y "unknown": se manda solo por WhatsApp.
   }
 
-  const link = saved ? ORDERS.trackingLink(window.location.origin, saved.code) : "";
+  const link = saved ? ORDERS.trackingLink(window.location.origin, saved.code, LANG) : "";
   if (saved) msg = ORDERS.finalizeOrderMessage(msg, { number: saved.number, link });
 
   const whatsappUrl = ORDERS
@@ -980,8 +980,8 @@ function showThanks(data) {
 
   const track = document.createElement("a");
   track.className = "btn-seguimiento destacado";
-  // El seguimiento se abre en el mismo idioma (IDIOMA-7).
-  track.href = `${link}?lang=${LANG}`;
+  // El link ya lleva ?lang= (IDIOMA-7 y 12).
+  track.href = link;
   track.textContent = tr("thanks.track");
 
   const resend = document.createElement("a");
@@ -1015,7 +1015,7 @@ function restoreThanks() {
   showThanks({
     number: last.number,
     code: last.code,
-    link: ORDERS.trackingLink(window.location.origin, last.code),
+    link: ORDERS.trackingLink(window.location.origin, last.code, LANG),
     whatsappUrl,
   });
   $("#overlay")?.classList.add("active");

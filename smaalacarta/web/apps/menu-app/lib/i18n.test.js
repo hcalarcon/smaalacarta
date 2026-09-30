@@ -33,6 +33,16 @@ describe("t — IDIOMA-3", () => {
     }
   });
 
+  it("la página de seguimiento traduce su texto de carga y el título (IDIOMA-13)", () => {
+    for (const lang of LANGS) {
+      expect(t("tracker.loading", lang)).not.toBe("tracker.loading");
+      expect(t("tracker.title", lang, { n: 7, negocio: "Ana" })).toBe(
+        lang === "en" ? "Order #7 · Ana" : "Pedido #7 · Ana",
+      );
+    }
+    expect(t("tracker.loading", "en")).not.toBe(t("tracker.loading", "es"));
+  });
+
   it("los tres idiomas tienen las mismas claves y ningún texto vacío", () => {
     const es = Object.keys(DICTIONARY.es).sort();
     for (const lang of LANGS) {
