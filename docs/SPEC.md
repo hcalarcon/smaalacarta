@@ -152,6 +152,8 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   para alternar entre los dos temas sin recargar; no existe en negocios reales
   ni en el estático. El cambio de tema anima suave (transición en fondo, texto
   y borde), salvo con `prefers-reduced-motion`.
+- **PUBLICO-17** Las demos están siempre abiertas: quien las prueba puede hacer el pedido
+  de prueba a cualquier hora. Sus `config.json` no traen `horarios` (PUBLICO-4 y 12).
 
 ## BUSQUEDA — Buscador
 
