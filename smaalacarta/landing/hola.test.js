@@ -186,3 +186,20 @@ describe("LANDING-25 — un solo botón de WhatsApp en el celular", () => {
     expect(parse().querySelectorAll(".hero .cta, .final .cta, .dock .cta")).toHaveLength(3);
   });
 });
+
+describe("LANDING-26 — paso en curso dentro del teléfono (celular)", () => {
+  // Si se sacara, en el celular los pasos quedarían debajo del teléfono, fuera de la pantalla.
+  it("cada pantalla lleva su paso, igual al de la lista", () => {
+    const doc = parse();
+    const caps = [...doc.querySelectorAll(".phone .screen .cap")].map((c) => c.textContent.replace(/^\d\s*/, "").trim());
+    const lista = [...doc.querySelectorAll("ol.pasos li")].map((l) => l.textContent.trim());
+    expect(caps).toEqual(lista);
+  });
+
+  it("el CSS lo muestra solo hasta 639 px y deja la lista para lectores de pantalla", () => {
+    expect(CSS).toMatch(/\n\.cap\s*\{\s*display:\s*none/);
+    const movil = CSS.match(/@media \(max-width: 639px\)\s*\{([\s\S]*?)\n\}\n/)?.[1] ?? "";
+    expect(movil).toMatch(/\.cap\s*\{[^}]*display:\s*flex/);
+    expect(movil).toMatch(/\.pasos\s*\{[^}]*clip-path/);
+  });
+});

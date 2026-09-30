@@ -417,6 +417,9 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
 - **LANDING-25** En el celular, con el botón fijo de WhatsApp a la vista, el botón de WhatsApp
   del inicio de `index.html` se oculta; en `/hola` quedan ocultos los botones de la portada y
   del cierre y solo queda el fijo. Desde 768 px se ven todos.
+- **LANDING-26** En `/hola`, en el celular (hasta 639 px), el paso en curso se lee dentro del
+  teléfono animado, de a uno y sincronizado con su pantalla; la lista de pasos queda solo para
+  lectores de pantalla. Desde 640 px se ve la lista al costado.
 
 ---
 
