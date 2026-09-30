@@ -30,7 +30,8 @@
   --shadow: rgba(36, 29, 22, 0.16);
 
   --font-display: "Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif;
-  --font-body: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body:
+    "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
 html {
@@ -113,7 +114,10 @@ h3 {
   font-weight: 600;
   text-decoration: none;
   cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
 }
 
 .btn-lg {
@@ -150,7 +154,10 @@ h3 {
   z-index: 1300;
   color: var(--lichen);
   border-bottom: 1px solid transparent;
-  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.3s ease;
 }
 
 .header.scrolled {
@@ -213,6 +220,7 @@ h3 {
   background: transparent;
   color: inherit;
   font-size: 0.9375rem;
+  padding: 5px;
 }
 
 .btn-demo:hover {
@@ -239,7 +247,9 @@ h3 {
   height: 2px;
   border-radius: 2px;
   background: currentColor;
-  transition: transform 0.25s ease, opacity 0.25s ease;
+  transition:
+    transform 0.25s ease,
+    opacity 0.25s ease;
 }
 
 .mobile-nav-overlay {
@@ -754,7 +764,9 @@ h3 {
   font-weight: 700;
   text-align: center;
   text-decoration: none;
-  transition: background-color 0.2s ease, color 0.2s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .plan-btn.secondary:hover {
@@ -1047,7 +1059,9 @@ h3 {
 }
 
 .js-reveal .reveal {
-  transition: opacity 0.6s ease, transform 0.6s ease;
+  transition:
+    opacity 0.6s ease,
+    transform 0.6s ease;
 }
 
 /* =====================================================
@@ -1070,13 +1084,17 @@ h3 {
     box-shadow: -12px 0 32px var(--shadow);
     transform: translateX(100%);
     visibility: hidden;
-    transition: transform 0.3s ease, visibility 0s linear 0.3s;
+    transition:
+      transform 0.3s ease,
+      visibility 0s linear 0.3s;
   }
 
   .nav.mobile-nav-open {
     transform: translateX(0);
     visibility: visible;
-    transition: transform 0.3s ease, visibility 0s;
+    transition:
+      transform 0.3s ease,
+      visibility 0s;
   }
 
   .nav-link {
