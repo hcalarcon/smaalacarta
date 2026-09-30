@@ -730,6 +730,11 @@ Cubierto por: `src/lib/db/promotions.test.ts` (ADMIN-PROMOS-2, 3, 5 y 6) y
 - **ADMIN-METRICAS-4** `topProducts()` suma las unidades de los pedidos vendidos por producto y
   ordena por cantidad descendente y, en empate, por nombre ascendente; `byHour()` (24 valores) y
   `byWeekday()` (7 valores, lunes a domingo) cuentan solo pedidos vendidos.
+- **ADMIN-METRICAS-5** `listOrdersForMetrics()` trae solo los pedidos del negocio pedido con
+  `created_at` desde la fecha indicada, del más nuevo al más viejo, con sus productos (nombre y
+  cantidad).
+- **ADMIN-METRICAS-6** Como Supabase corta en 1000 filas por consulta, la lectura se pagina de a
+  1000 hasta 5000 pedidos; si hay más, devuelve los 5000 más nuevos con `truncated: true`.
 
 ---
 
