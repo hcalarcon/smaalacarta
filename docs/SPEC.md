@@ -348,6 +348,10 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
   seguimiento salen del diccionario, en el idioma elegido.
 - **IDIOMA-14** La página de seguimiento tiene un selector ES | EN | PT (botones de al menos 44 px,
   con `aria-pressed`): cambia `?lang=` sin recargar y vuelve a dibujar sin perder el estado.
+- **IDIOMA-15** Con un pedido a la vista, el selector de idioma es la primera fila del encabezado del
+  negocio (a la derecha, con los colores del encabezado; en el blanco, los de siempre), con el nombre y
+  "Pedido #N" centrados debajo; en los mensajes sin encabezado vuelve a la barra de arriba. Los botones se
+  ven de unos 34 px y se tocan en 44 px.
 
 ---
 
@@ -720,6 +724,10 @@ escribe acá antes de construirse.
 Cosas que no cumplen lo que deberían, o que no se pueden testear acá. Cada una
 se resuelve en su propia rama `fix/`.
 
+- **Colores, ventana de WhatsApp y selector del seguimiento (a mano).** El CSS del panel
+  "Pedido registrado" (SEGUIMIENTO-13), el comportamiento real de `window.open` en PC
+  (SEGUIMIENTO-14, salvo las funciones puras, que sí tienen test) y la ubicación del selector de
+  idioma en el encabezado (IDIOMA-15) solo se comprueban mirándolos en un navegador.
 - **Protección de ramas.** El repositorio privado en plan gratuito no permite
   rulesets: las reglas de [BRANCHING.md](BRANCHING.md) se cumplen por acuerdo.
 - **Admin: `role` no limita nada.** Cualquier miembro de un negocio puede
