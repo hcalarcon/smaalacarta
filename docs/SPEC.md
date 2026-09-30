@@ -711,6 +711,28 @@ Cubierto por: `src/lib/db/promotions.test.ts` (ADMIN-PROMOS-2, 3, 5 y 6) y
 
 ---
 
+## ADMIN-METRICAS — Métricas de pedidos
+
+*Aplicado por `src/lib/dates.ts` y `src/lib/orders/metrics.ts`. Cubierto por
+`src/lib/dates.test.ts` y `src/lib/orders/metrics.test.ts`, en JS puro.*
+
+- **ADMIN-METRICAS-1** Los días y las horas de las métricas se calculan en hora de Argentina
+  (UTC-3 fijo), nunca en la zona del servidor: un pedido de las 23:30 argentinas (02:30 UTC del
+  día siguiente) cuenta en su día y en su hora.
+- **ADMIN-METRICAS-2** "Vendido" son los pedidos `confirmed`, `preparing`, `ready` o `delivered`:
+  los cancelados no suman y los `pending` se cuentan aparte como "sin confirmar".
+  `summarize()` devuelve cantidad, total vendido, ticket promedio (redondeado, 0 sin pedidos),
+  cancelados, sin confirmar y cuántos vendidos vinieron del menú web (`source` "web") y cuántos
+  se cargaron a mano ("manual"). Una lista vacía no divide por cero.
+- **ADMIN-METRICAS-3** `comparePeriods()` separa los pedidos de los últimos N días (incluido hoy)
+  de los N días anteriores; `deltaPercent()` da la variación en % entera, o `null` si el período
+  anterior es 0.
+- **ADMIN-METRICAS-4** `topProducts()` suma las unidades de los pedidos vendidos por producto y
+  ordena por cantidad descendente y, en empate, por nombre ascendente; `byHour()` (24 valores) y
+  `byWeekday()` (7 valores, lunes a domingo) cuentan solo pedidos vendidos.
+
+---
+
 ## No especificado deliberadamente
 
 Lo que está fuera a propósito. Un requisito para cualquiera de estas cosas se
