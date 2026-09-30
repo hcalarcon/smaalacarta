@@ -269,15 +269,15 @@ h3 {
   background: linear-gradient(160deg, #5a4a3a 0%, #3b3026 100%);
 }
 
-/* Onda como borde inferior */
+/* Cordillera en dos planos como borde inferior */
 .hero::after {
   content: "";
   position: absolute;
   left: 0;
   right: 0;
   bottom: -1px;
-  height: clamp(32px, 5vw, 64px);
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 80' preserveAspectRatio='none'%3E%3Cpath fill='%23f0f2ee' d='M0 80V40c240 40 480 40 720 20s480-40 720 0V80z'/%3E%3C/svg%3E")
+  height: clamp(48px, 8vw, 110px);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1440 120' preserveAspectRatio='none'%3E%3Cpath fill='%23f0f2ee' fill-opacity='.4' d='M0 120V70l120-30 180 48 180-44 160 48 180-62 160 54 140-34 160 40 160-44V120z'/%3E%3Cpath fill='%23f0f2ee' d='M0 120V84l150-32 110 26 160-58 180 62 100-22 160 36 180-62 150 46 100-12 150 30V120z'/%3E%3C/svg%3E")
     center bottom / 100% 100% no-repeat;
 }
 
