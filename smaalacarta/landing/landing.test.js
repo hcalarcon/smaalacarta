@@ -77,8 +77,51 @@ describe("LANDING-2 — enlaces", () => {
     expect(phones.size).toBe(1);
   });
 
-  it("el botón principal no tiene errores de tipeo", () => {
-    expect(doc.querySelector(".hero-cta").textContent.trim()).toBe("Solicitá tu sitio ahora");
+});
+
+// Luminancia relativa y contraste según WCAG 2.
+function luminance(hex) {
+  const [r, g, b] = hex.match(/[0-9a-f]{2}/gi).map((h) => {
+    const c = parseInt(h, 16) / 255;
+    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+  });
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+function contrast(a, b) {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+const rootVar = (name) => CSS.match(/:root\s*\{[^}]*\}/)[0].match(new RegExp(`--${name}:\\s*(#[0-9a-f]{6})`, "i"))?.[1];
+
+describe("LANDING-17 — el inicio vende y lleva a WhatsApp", () => {
+  const doc = parse();
+  const cta = doc.querySelector(".hero-cta");
+
+  it("dice lo que se vende y el botón principal abre WhatsApp con un mensaje escrito", () => {
+    expect(doc.querySelector("#inicio h1").textContent).toContain("Sin comisión");
+    expect(cta.textContent.trim()).toBe("Mandanos tu carta por WhatsApp");
+    const url = new URL(cta.href);
+    expect(url.searchParams.get("phone")).toBe("5493644277105");
+    expect(url.searchParams.get("text")).toMatch(/^Hola, quiero ver cómo quedaría mi carta/);
+    expect(cta.target).toBe("");
+  });
+
+  it("usa el mismo número que el resto de la página", () => {
+    const phones = new Set(
+      [...doc.querySelectorAll("a[href]")].map((a) => a.href.match(/(?:phone=|wa\.me\/|tel:\+?)(\d+)/)?.[1]).filter(Boolean),
+    );
+    expect([...phones]).toEqual([cta.href.match(/phone=(\d+)/)[1]]);
+  });
+
+  it("el botón tiene contraste de al menos 4,5:1", () => {
+    const bg = rootVar("cta-bg");
+    const text = rootVar("cta-text");
+    expect(bg && text).toBeTruthy();
+    expect(contrast(bg, text)).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("hay una sola regla .hero-cta de fondo", () => {
+    expect(CSS.match(/^\.hero-cta\s*\{/gm)).toHaveLength(1);
   });
 });
 
@@ -112,7 +155,7 @@ describe("LANDING-8 — imágenes y teclado", () => {
     for (const img of imgs) {
       expect(img.getAttribute("width"), img.src).toBeTruthy();
       expect(img.getAttribute("height"), img.src).toBeTruthy();
-      const aboveTheFold = img.classList.contains("hero-image") || img.closest(".header");
+      const aboveTheFold = img.closest(".header");
       if (!aboveTheFold) expect(img.getAttribute("loading"), img.src).toBe("lazy");
     }
   });
@@ -125,6 +168,136 @@ describe("LANDING-8 — imágenes y teclado", () => {
 
   it("el foco del teclado se ve", () => {
     expect(CSS).toMatch(/:focus-visible/);
+  });
+});
+
+const heroCss = () => CSS.replace(/\/\*[\s\S]*?\*\//g, "").match(/[^{}]*\.hero[^{}]*\{[^}]*\}/g).join("\n");
+
+describe("LANDING-18 — el inicio no depende de una foto", () => {
+  const doc = parse();
+
+  it("no hay imágenes en el hero", () => {
+    expect(doc.querySelector("#inicio img")).toBeNull();
+  });
+
+  it("el CSS del hero no deforma ni estira nada", () => {
+    const css = heroCss();
+    expect(css).not.toMatch(/object-fit:\s*fill/);
+    expect(css).not.toMatch(/transform:\s*scale/);
+    expect(css).not.toMatch(/min-height:\s*100vh/);
+  });
+
+  it("no queda la foto del hero ni sus reglas", () => {
+    expect(() => statSync(join(DIR, "assets/hero.jpg"))).toThrow();
+    expect(CSS).not.toMatch(/\.hero-(bg|image|overlay|tablet|grid)/);
+  });
+
+  it("titular y botón principal están antes de cualquier otra sección", () => {
+    const hero = doc.querySelector("#inicio");
+    expect(hero.querySelector("h1")).not.toBeNull();
+    expect(hero.querySelector("a.hero-cta")).not.toBeNull();
+    expect(hero.querySelector(".hero-checks li")).not.toBeNull();
+  });
+});
+
+describe("LANDING-19 — teléfono animado decorativo", () => {
+  const doc = parse();
+  const phone = doc.querySelector("#inicio .hp");
+
+  it("es decorativo y tiene las 4 pantallas", () => {
+    expect(phone.getAttribute("aria-hidden")).toBe("true");
+    expect(phone.querySelectorAll(".hp-screen")).toHaveLength(4);
+  });
+
+  it("su CSS es propio (prefijo hp-) y con prefers-reduced-motion queda quieto", () => {
+    expect(CSS).toMatch(/@keyframes hp-screen/);
+    expect(CSS).toMatch(/@keyframes hp-ring/);
+    const reduce = CSS.slice(CSS.lastIndexOf("@media (prefers-reduced-motion: reduce)"));
+    expect(reduce).toMatch(/animation:\s*none\s*!important/);
+    expect(reduce).toMatch(/\.hp-screen:nth-child\(3\)\s*\{[^}]*opacity:\s*1/);
+  });
+
+  it("no usa JavaScript", () => {
+    expect(phone.outerHTML).not.toMatch(/<script|onclick/);
+  });
+});
+
+describe("LANDING-20 — nada de terceros", () => {
+  it("todo <img> apunta al propio sitio", () => {
+    for (const img of parse().querySelectorAll("img")) {
+      expect(img.getAttribute("src"), img.outerHTML).toMatch(/^(\/|\.\/|assets\/)/);
+    }
+    expect(HTML).not.toMatch(/unsplash/i);
+  });
+});
+
+describe("LANDING-21 — lo nuevo está dicho", () => {
+  const doc = parse();
+  const text = doc.body.textContent.replace(/\s+/g, " ");
+
+  it.each(["Sin comisión", "Carta en español, inglés y portugués", "Se instala en el celular como una app", "Tu carta en 3 idiomas"])(
+    "dice %s",
+    (phrase) => expect(text).toContain(phrase),
+  );
+
+  it("la carta en 3 idiomas está en el plan Subdominio Completo", () => {
+    const plan = [...doc.querySelectorAll(".plan-card")].find((p) => p.textContent.includes("Subdominio Completo"));
+    expect(plan.textContent).toContain("Carta en español, inglés y portugués");
+    expect(plan.textContent).toContain("Se instala en el celular");
+  });
+
+  it("las descripciones hablan de sin comisión", () => {
+    for (const sel of ['meta[name="description"]', 'meta[property="og:description"]', 'meta[name="twitter:description"]']) {
+      expect(doc.querySelector(sel).content).toContain("Sin comisión por pedido");
+    }
+  });
+});
+
+describe("LANDING-22 — botón fijo de WhatsApp", () => {
+  const doc = parse();
+  const dock = doc.querySelector("a.wa-dock");
+  const z = (re) => Number(CSS.match(re)?.[1]);
+
+  it("es el último hijo de body y abre WhatsApp", () => {
+    expect(dock).not.toBeNull();
+    expect(doc.body.lastElementChild).toBe(dock);
+    expect(dock.href).toContain("phone=5493644277105");
+  });
+
+  it("queda por debajo del encabezado, del menú y del modal, y se oculta con el menú abierto", () => {
+    const dockZ = z(/\.wa-dock\s*\{[^}]*z-index:\s*(\d+)/);
+    expect(dockZ).toBeGreaterThan(0);
+    expect(dockZ).toBeLessThan(z(/\.header\s*\{[^}]*z-index:\s*(\d+)/));
+    expect(dockZ).toBeLessThan(z(/\.mobile-nav-overlay\s*\{[^}]*z-index:\s*(\d+)/));
+    expect(dockZ).toBeLessThan(z(/\.modal-overlay\s*\{[^}]*z-index:\s*(\d+)/));
+    expect(CSS).toMatch(/body\.menu-open\s+\.wa-dock/);
+  });
+
+  it("deja lugar abajo en el celular y desde 768 px no se muestra", () => {
+    expect(CSS).toMatch(/body\s*\{[^}]*padding-bottom/);
+    expect(CSS).toMatch(/@media \(min-width: 768px\)\s*\{\s*\.wa-dock\s*\{\s*display:\s*none/);
+  });
+});
+
+describe("LANDING-23 — la landing habla como empresa", () => {
+  const doc = parse();
+
+  it("no lleva la foto ni el nombre de una persona", () => {
+    expect(HTML).not.toMatch(/herni/i);
+    expect([...doc.querySelectorAll("img")].some((i) => /herni/i.test(i.src + i.alt))).toBe(false);
+  });
+
+  it("los beneficios no llevan íconos", () => {
+    expect(doc.querySelectorAll(".benefit-card").length).toBeGreaterThan(0);
+    expect(doc.querySelector(".benefit-icon")).toBeNull();
+  });
+
+  it("el email de contacto es el mismo en toda la página", () => {
+    const mails = new Set(HTML.match(/[a-z][\w.+-]*@[a-z][\w-]*\.[a-z][a-z.]*/gi));
+    expect([...mails]).toEqual(["smaalacarta@gmail.com"]);
+    const hrefs = [...doc.querySelectorAll('a[href^="mailto:"]')].map((a) => a.getAttribute("href"));
+    expect(hrefs.length).toBeGreaterThan(0);
+    for (const h of hrefs) expect(h).toBe("mailto:smaalacarta@gmail.com");
   });
 });
 

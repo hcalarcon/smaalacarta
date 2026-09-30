@@ -181,11 +181,6 @@ body.no-scroll {
   text-decoration: none;
 }
 
-.gracias-pedido .btn-whatsapp {
-  background: #25d366;
-  color: #fff;
-}
-
 .gracias-pedido .btn-seguimiento {
   border: 2px solid currentColor;
 }
@@ -194,15 +189,20 @@ body.no-scroll {
   font-weight: 600;
 }
 
-/* Después de enviar por WhatsApp, el paso que sigue pasa al frente */
-.gracias-pedido .btn-whatsapp.hecho {
-  opacity: 0.6;
-}
-
+/* Acción principal: ver el estado del pedido */
 .gracias-pedido .btn-seguimiento.destacado {
   background: var(--color-primary, #111);
   border-color: var(--color-primary, #111);
   color: #fff;
+}
+
+/* Reenviar por WhatsApp: chico y secundario, solo por si no se abrió solo */
+.gracias-pedido .gracias-reenviar {
+  padding: 0.25rem;
+  font-size: 0.85rem;
+  font-weight: 400;
+  text-decoration: underline;
+  opacity: 0.8;
 }
 
 /* La propuesta de venta solo se muestra en las demos (la muestra app.js) */

@@ -23,6 +23,16 @@ describe("t — IDIOMA-3", () => {
     expect(t("thanks.title", "en", { n: 7 })).toBe("Order #7 placed!");
   });
 
+  it("el cierre del pedido tiene sus textos en los tres idiomas (SEGUIMIENTO-10)", () => {
+    expect(t("thanks.track", "es")).toBe("Ver el estado de mi pedido");
+    expect(t("thanks.track", "en")).toBe("See my order status");
+    expect(t("thanks.track", "pt")).toBe("Ver o status do meu pedido");
+    for (const lang of LANGS) {
+      expect(t("thanks.resend", lang)).not.toBe("thanks.resend");
+      expect(DICTIONARY[lang]).not.toHaveProperty("thanks.done");
+    }
+  });
+
   it("los tres idiomas tienen las mismas claves y ningún texto vacío", () => {
     const es = Object.keys(DICTIONARY.es).sort();
     for (const lang of LANGS) {

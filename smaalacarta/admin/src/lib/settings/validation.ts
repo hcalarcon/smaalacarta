@@ -184,7 +184,7 @@ export function validateSettings(input: SettingsInput): ValidationResult<Field> 
   if (input.whatsapp.trim()) {
     const digits = normalizeWhatsapp(input.whatsapp);
     if (/[a-z]/i.test(input.whatsapp) || digits.length < 8 || digits.length > 15) {
-      errors.whatsapp = "Ingresá el número con código de país, por ejemplo 5493510000000.";
+      errors.whatsapp = "Ingresá el número con código de área, por ejemplo 3510000000.";
     }
   }
 

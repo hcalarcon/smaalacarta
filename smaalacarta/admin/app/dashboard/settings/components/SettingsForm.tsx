@@ -595,8 +595,8 @@ export default function SettingsForm({
           value={whatsapp}
           onChange={(event) => setWhatsapp(event.target.value)}
           inputMode="tel"
-          placeholder="5493510000000"
-          hint="Con código de país, sin +, espacios ni guiones."
+          placeholder="3510000000"
+          hint="Con código de área, sin 0 ni 15. Ejemplo: 3644277105."
           error={fieldErrors.whatsapp}
         />
 

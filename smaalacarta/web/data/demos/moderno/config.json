@@ -16,14 +16,5 @@
   "redes": {
     "instagram": "https://www.instagram.com/smaalacarta",
     "facebook": "https://www.facebook.com/smaalacarta"
-  },
-  "horarios": {
-    "lunes": ["11:00-02:00"],
-    "martes": ["11:00-02:00"],
-    "miercoles": ["11:00-02:00"],
-    "jueves": ["11:00-02:00"],
-    "viernes": ["11:00-02:00"],
-    "sabado": ["11:00-02:00"],
-    "domingo": ["11:00-02:00"]
   }
 }

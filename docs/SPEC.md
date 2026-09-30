@@ -152,6 +152,8 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   para alternar entre los dos temas sin recargar; no existe en negocios reales
   ni en el estático. El cambio de tema anima suave (transición en fondo, texto
   y borde), salvo con `prefers-reduced-motion`.
+- **PUBLICO-17** Las demos están siempre abiertas: quien las prueba puede hacer el pedido
+  de prueba a cualquier hora. Sus `config.json` no traen `horarios` (PUBLICO-4 y 12).
 
 ## BUSQUEDA — Buscador
 
@@ -205,9 +207,14 @@ llegando al negocio por WhatsApp.
 - **SEGUIMIENTO-9** Fuera del horario del negocio no se reciben pedidos: el servidor los
   rechaza (`P0006`) y el menú avisa "Cerrado ahora", con el próximo horario de
   apertura, y no deja enviarlos.
-- **SEGUIMIENTO-10** Al confirmar, el cliente puede mandar el pedido por WhatsApp y
-  seguirlo en cualquier orden: el mensaje queda guardado en su navegador y la página de
-  seguimiento ofrece enviarlo si todavía no lo envió.
+- **SEGUIMIENTO-10** Al confirmar un pedido guardado, el menú muestra el panel "Pedido registrado"
+  y abre WhatsApp solo, en la misma pestaña, con el mensaje ya armado ("Nuevo pedido #N" y el
+  link de seguimiento; siempre en español y con el nombre original de los productos). El
+  panel tiene un botón principal "Ver el estado de mi pedido" y, chico, "¿No se abrió
+  WhatsApp? Enviar de nuevo". Si el navegador recarga la página al volver, el panel se
+  vuelve a mostrar (hasta 2 horas o hasta que el cliente lo cierre). El mensaje queda
+  guardado en el navegador y la página de seguimiento ofrece enviarlo si el pedido
+  no figura como enviado. Si el pedido no se pudo guardar, se abre WhatsApp directo, sin panel.
 - **SEGUIMIENTO-11** La página de seguimiento tiene la estética del negocio: sus colores,
   su imagen de cabecera y su plantilla (`minimal` queda blanca). El seguimiento sigue sin
   datos personales, y los colores y la imagen se validan antes de usarlos.
@@ -339,8 +346,9 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
 
 *Planes, enlaces de contacto, demos. Aplicado por `landing/index.html`,
 `landing/landing.js`, `landing/landing.css`, `landing/robots.txt`,
-`landing/sitemap.xml` y `landing/assets/site.webmanifest`. Cubierto por:
-`landing/landing.test.js`.*
+`landing/sitemap.xml`, `landing/assets/site.webmanifest`, `landing/hola.html`,
+`landing/hola.css` y `landing/vercel.json`. Cubierto por: `landing/landing.test.js` y
+`landing/hola.test.js`.*
 
 - **LANDING-1** Lo que se comparte da buena imagen: `og:image` y `twitter:image` apuntan a un
   archivo que existe en `assets/`, de 1200×630 y menos de 300 KB, y el logo del
@@ -363,6 +371,40 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
   diferida (salvo la principal); hay un enlace para saltar al contenido y un foco visible.
 - **LANDING-9** El sitio se deja indexar bien: `robots.txt`, `sitemap.xml`, datos
   estructurados (`LocalBusiness`) y un `site.webmanifest` con el nombre real.
+- **LANDING-10** `smaalacarta.com.ar/hola` abre una página para quien llega por la tarjeta
+  de visita: existe `hola.html`, `vercel.json` la sirve en `/hola` y no se indexa
+  (`noindex`, fuera del `sitemap.xml`).
+- **LANDING-11** Tiene un solo objetivo, escribir por WhatsApp: sin menú de navegación ni
+  enlaces a secciones. Los únicos enlaces son WhatsApp, llamada, el menú de ejemplo y uno
+  discreto a la landing. Los de contacto usan el mismo número que `index.html` y los de
+  WhatsApp llevan un mensaje escrito que menciona la tarjeta.
+- **LANDING-12** En el celular hay un botón fijo de WhatsApp abajo que no tapa el
+  contenido; desde 768 px no se muestra.
+- **LANDING-13** El funcionamiento se muestra con una animación solo de CSS, decorativa
+  (`aria-hidden`): el mismo contenido está escrito en una lista de 4 pasos, y con
+  `prefers-reduced-motion` no se anima nada.
+- **LANDING-14** Es liviana: `hola.html` + `hola.css` suman menos de 30 KB, no lleva
+  JavaScript propio y sus imágenes existen, declaran tamaño y tienen `alt`.
+- **LANDING-15** Se lee bien en el celular: el botón principal tiene contraste de al menos
+  4,5:1, los botones miden al menos 48 px de alto y el foco del teclado se ve.
+- **LANDING-16** Los precios de la página son los mismos que los de `index.html`.
+- **LANDING-17** El inicio dice lo que se vende en una frase y su botón principal
+  (`.hero-cta`) abre WhatsApp, al mismo número que el resto de la página, con un mensaje
+  escrito; el botón tiene contraste de al menos 4,5:1.
+- **LANDING-18** El inicio no depende de una foto: sin `<img>` en el hero, sin
+  `object-fit: fill` ni `transform: scale` en el hero, y sin `min-height: 100vh`; en el
+  celular se ven el titular y el botón principal sin hacer scroll.
+- **LANDING-19** El inicio muestra cómo funciona con un teléfono animado solo de CSS y
+  decorativo (`aria-hidden`); con `prefers-reduced-motion` queda quieto.
+- **LANDING-20** La landing no carga imágenes de terceros: todo `<img>` apunta al propio
+  sitio.
+- **LANDING-21** Lo nuevo está dicho: sin comisión, carta en español, inglés y portugués
+  (en Subdominio Completo) y que se instala en el celular.
+- **LANDING-22** En el celular hay un botón fijo de WhatsApp abajo, que no tapa el
+  contenido ni al menú ni al modal de demos; desde 768 px no se muestra.
+- **LANDING-23** La landing habla como empresa: no lleva la foto ni el nombre de una
+  persona, los beneficios no llevan íconos de emoji y el email de contacto es
+  `smaalacarta@gmail.com` en toda la página.
 
 ---
 
@@ -666,4 +708,4 @@ se resuelve en su propia rama `fix/`.
 - **Landing: redes sociales.** El pie ya no muestra Twitter ni un Instagram sin
   destino; cuando el negocio tenga cuentas, agregarlas.
 - **Dominio del email.** La landing y los menús usan `smaalacarta.com.ar`; el email de
-  ventas sigue siendo `@smaalacarta.online` hasta que exista un buzón en el otro dominio.
+  contacto es `smaalacarta@gmail.com` hasta que exista un buzón en el dominio propio.

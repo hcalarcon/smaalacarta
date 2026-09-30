@@ -28,9 +28,12 @@ export function slugify(text: string) {
     .replace(/-+$/g, "");
 }
 
-// El WhatsApp se guarda solo con dígitos (código de país incluido).
+// El WhatsApp se guarda solo con dígitos y con código de país. Si viene un número
+// argentino sin él (10 dígitos, con o sin 0 delante), se le agrega 549.
 export function normalizeWhatsapp(input: string) {
-  return input.replace(/\D/g, "");
+  const digits = input.replace(/\D/g, "");
+  const local = digits.replace(/^0/, "");
+  return local.length === 10 ? `549${local}` : digits;
 }
 
 // Compartido por el alta de negocios (superadmin) y por el cambio de nombre/URL
@@ -91,7 +94,7 @@ export function validateNewBusiness(input: {
 
     if (hasLetters || digits.length < 8 || digits.length > 15) {
       errors.whatsapp =
-        "Ingresá el número con código de país, por ejemplo 5493510000000.";
+        "Ingresá el número con código de área, por ejemplo 3510000000.";
     }
   }
 
