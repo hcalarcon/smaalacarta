@@ -11,6 +11,7 @@ let MENU = null;
 let COLORS = null;
 let I18N = null;
 let PRICE = null;
+let WA_WINDOW = null;
 
 // Idioma de la interfaz (IDIOMA-1 a 4) y el menú tal como vino, sin las secciones armadas.
 let LANG = "es";
@@ -159,6 +160,7 @@ async function init() {
       colorsLib,
       i18nLib,
       priceLib,
+      waWindow,
     ] = await Promise.all([
       import("/apps/menu-app/lib/hostname.js"),
       import("/apps/menu-app/lib/html.js"),
@@ -171,8 +173,10 @@ async function init() {
       import("/apps/menu-app/lib/colors.js"),
       import("/apps/menu-app/lib/i18n.js"),
       import("/apps/menu-app/lib/price.js"),
+      import("/apps/menu-app/lib/whatsapp-window.js"),
     ]);
     PRICE = priceLib;
+    WA_WINDOW = waWindow;
     COLORS = colorsLib;
     I18N = i18nLib;
     LANG = I18N.resolveLang({
@@ -841,6 +845,10 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     return;
   }
 
+  // En PC, la ventana de WhatsApp se abre ya, dentro del gesto del toque: después de un
+  // await el navegador la bloquearía (SEGUIMIENTO-14).
+  const placeholder = WA_WINDOW?.openPlaceholder(window) ?? null;
+
   const form = e.target;
   const f = new FormData(form);
 
@@ -912,15 +920,19 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     if (result.ok) {
       saved = result;
     } else if (result.reason === "closed") {
+      WA_WINDOW?.discardPlaceholder(placeholder);
       alert(tr("error.closedTemporary"));
       return;
     } else if (result.reason === "outside_hours") {
+      WA_WINDOW?.discardPlaceholder(placeholder);
       alert(tr("error.outsideHours"));
       return;
     } else if (result.reason === "busy") {
+      WA_WINDOW?.discardPlaceholder(placeholder);
       alert(tr("error.busy"));
       return;
     } else if (result.reason === "unavailable") {
+      WA_WINDOW?.discardPlaceholder(placeholder);
       alert(tr("error.unavailable"));
       return;
     }
@@ -944,14 +956,22 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     ORDERS.rememberHandoff(window.localStorage, saved.code, whatsappUrl);
     ORDERS.rememberLastOrder(window.localStorage, saved);
     showThanks({ number: saved.number, code: saved.code, link, whatsappUrl });
-    // Misma pestaña: window.open lo bloquea el navegador después de esperar la respuesta.
     ORDERS.markHandoffSent(window.localStorage, saved.code);
-    window.location.href = whatsappUrl;
+    // En PC, WhatsApp va a la ventana abierta al tocar; si no hubo, a la misma pestaña.
+    openWhatsAppUrl(placeholder, whatsappUrl);
   } else {
-    window.open(whatsappUrl);
+    // Sin pedido guardado: en PC, la ventana ya abierta; si no, como siempre.
+    if (placeholder) openWhatsAppUrl(placeholder, whatsappUrl);
+    else window.open(whatsappUrl);
     closeAll();
   }
 });
+
+function openWhatsAppUrl(placeholder, url) {
+  if (WA_WINDOW) return WA_WINDOW.openWhatsApp(placeholder, url, window);
+  window.location.href = url;
+  return "same-tab";
+}
 
 // "Pedido registrado": WhatsApp se abre solo al confirmar; este panel es lo que el cliente
 // ve al volver. El botón principal lleva al seguimiento y, aparte, un link chico permite

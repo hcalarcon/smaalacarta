@@ -53,6 +53,16 @@ function paint() {
 
 // Selector ES | EN | PT (IDIOMA-14): botones de al menos 44 px con aria-pressed.
 const langBox = document.getElementById("selector-idioma");
+const langBar = document.getElementById("lang-bar");
+
+// El selector vive dentro del encabezado del negocio; sin encabezado (cargando, errores)
+// vuelve a la barra de arriba. Es siempre el mismo elemento: conserva sus listeners y no
+// se pierde cuando render() reemplaza el contenido cada 15 s.
+function dockLangSelector(header) {
+  if (!langBox) return;
+  if (header) header.prepend(langBox);
+  else if (langBox.parentElement !== langBar) langBar?.appendChild(langBox);
+}
 
 function syncLangSelector() {
   if (!langBox) return;
@@ -98,6 +108,7 @@ function el(tag, { className, text, href, attrs } = {}, children = []) {
 // Un mensaje de la página, por su clave, para poder traducirlo si cambia el idioma.
 function showMessage(key) {
   current = { kind: "message", key };
+  dockLangSelector(null);
   const isLoading = key === "tracker.loading";
   app.replaceChildren(
     el("p", { className: isLoading ? "tracker-loading" : "tracker-message", text: t(key, lang) }),
@@ -133,6 +144,7 @@ function render(data, { stale }) {
     el("p", { className: "tracker-number", text: t("tracker.order", lang, { n: data.pedido.numero }) }),
   ]);
   if (theme.header) headerNode.style.backgroundImage = theme.header;
+  dockLangSelector(headerNode);
   nodes.push(headerNode);
 
   // Si el cliente vino acá sin haber enviado el pedido por WhatsApp, se lo ofrecemos

@@ -35,23 +35,32 @@ body {
 
 .selector-idioma {
   display: inline-flex;
-  overflow: hidden;
   border: 1px solid var(--line);
   border-radius: 999px;
   background: #fff;
 }
 
+/* Se ven de 34 px de alto; la zona de toque llega a 44 px con el ::after (sin overflow
+   en el contenedor, que lo recortaría). */
 .selector-idioma button {
+  position: relative;
   min-width: 44px;
-  min-height: 44px;
+  height: 34px;
   padding: 0 0.75rem;
   border: 0;
+  border-radius: 999px;
   background: transparent;
   color: #4b5563;
   font: inherit;
   font-size: 0.8125rem;
   font-weight: 600;
   cursor: pointer;
+}
+
+.selector-idioma button::after {
+  content: "";
+  position: absolute;
+  inset: -5px 0;
 }
 
 .selector-idioma button[aria-pressed="true"] {
@@ -69,7 +78,7 @@ body {
 /* Cabecera con la estética del negocio: sus colores y, si la cargó, su imagen */
 .tracker-header {
   margin: 0 -1rem 1.25rem;
-  padding: 1.75rem 1rem 1.5rem;
+  padding: 0.75rem 1rem 1.5rem;
   text-align: center;
   color: #fff;
   background-color: var(--brand);
@@ -85,6 +94,40 @@ body {
   color: var(--brand);
   border-bottom: 1px solid var(--line);
   box-shadow: none;
+}
+
+/* El selector de idioma es la primera fila del encabezado, a la derecha; el nombre y el
+   número quedan centrados debajo (en 320 px no se pisan: están en filas distintas). */
+.tracker-header > .selector-idioma {
+  display: flex;
+  width: fit-content;
+  margin: 0 0 0.75rem auto;
+  border-color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.tracker-header > .selector-idioma button {
+  color: #fff;
+}
+
+.tracker-header > .selector-idioma button[aria-pressed="true"] {
+  background: #fff;
+  color: var(--brand);
+}
+
+/* Encabezado blanco: los colores de siempre */
+.tracker-header.plain > .selector-idioma {
+  border-color: var(--line);
+  background: #fff;
+}
+
+.tracker-header.plain > .selector-idioma button {
+  color: #4b5563;
+}
+
+.tracker-header.plain > .selector-idioma button[aria-pressed="true"] {
+  background: var(--brand);
+  color: #fff;
 }
 
 .tracker-business {

@@ -208,7 +208,7 @@ llegando al negocio por WhatsApp.
   rechaza (`P0006`) y el menú avisa "Cerrado ahora", con el próximo horario de
   apertura, y no deja enviarlos.
 - **SEGUIMIENTO-10** Al confirmar un pedido guardado, el menú muestra el panel "Pedido registrado"
-  y abre WhatsApp solo, en la misma pestaña, con el mensaje ya armado ("Nuevo pedido #N" y el
+  y abre WhatsApp solo (en una ventana aparte en PC, SEGUIMIENTO-14; en la misma pestaña en celulares y tablets), con el mensaje ya armado ("Nuevo pedido #N" y el
   link de seguimiento; siempre en español y con el nombre original de los productos). El
   panel tiene un botón principal "Ver el estado de mi pedido" y, chico, "¿No se abrió
   WhatsApp? Enviar de nuevo". Si el navegador recarga la página al volver, el panel se
@@ -221,6 +221,13 @@ llegando al negocio por WhatsApp.
 - **SEGUIMIENTO-12** Al cambiar el estado de un pedido, el negocio puede dejar un
   mensaje opcional (por ejemplo, el motivo de una cancelación); el cliente lo ve
   junto al evento correspondiente en su seguimiento.
+- **SEGUIMIENTO-13** El panel "Pedido registrado" hereda los colores de la plantilla (texto, botón
+  principal como el de enviar del checkout, "Cerrar" como botón secundario con borde) y se lee en
+  claro y en oscuro; sus botones y el link de reenviar miden al menos 44 px de alto.
+- **SEGUIMIENTO-14** En PC (puntero fino con hover y sin Android/iPhone/iPad/Mobile en el navegador),
+  WhatsApp se abre en una ventana aparte y la pestaña del pedido conserva el panel; la ventana se
+  abre al tocar "enviar", antes de esperar al servidor, y se cierra si el pedido no se envía. Si el
+  navegador la bloquea, y en celulares y tablets, se usa la misma pestaña.
 
 ## PWA — Instalar el menú en el celular
 
@@ -341,6 +348,10 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
   seguimiento salen del diccionario, en el idioma elegido.
 - **IDIOMA-14** La página de seguimiento tiene un selector ES | EN | PT (botones de al menos 44 px,
   con `aria-pressed`): cambia `?lang=` sin recargar y vuelve a dibujar sin perder el estado.
+- **IDIOMA-15** Con un pedido a la vista, el selector de idioma es la primera fila del encabezado del
+  negocio (a la derecha, con los colores del encabezado; en el blanco, los de siempre), con el nombre y
+  "Pedido #N" centrados debajo; en los mensajes sin encabezado vuelve a la barra de arriba. Los botones se
+  ven de unos 34 px y se tocan en 44 px.
 
 ---
 
@@ -605,6 +616,26 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   saltearse, aunque lleguen a la vez.
 - **ADMIN-PEDIDOS-5** Cada ítem guarda el nombre y el precio del momento: editar o
   borrar el producto después no cambia los pedidos ya hechos.
+- **ADMIN-PEDIDOS-6** Un pedido es nuevo para el tablero si está Pendiente y su id no
+  está entre los ya vistos; uno que ya se vio no se repite, y uno que dejó de estar
+  Pendiente no cuenta.
+- **ADMIN-PEDIDOS-7** Los pedidos pendientes se cuentan por estado "pending"; los
+  demás estados, conocidos o no, no suman.
+- **ADMIN-PEDIDOS-8** Si tras actualizarse el tablero aparecen pedidos Pendientes nuevos,
+  suena un aviso una sola vez; los que ya estaban al abrir el tablero no suenan.
+- **ADMIN-PEDIDOS-9** El aviso solo suena si el negocio activó el sonido con un botón
+  (el navegador lo exige); la preferencia se recuerda, pero tras recargar el botón
+  pide tocar de nuevo para volver a permitirlo.
+- **ADMIN-PEDIDOS-10** Con el sonido activado, el tablero sigue consultando pedidos cada
+  20 segundos aunque la pestaña esté oculta; sin sonido, solo con la pestaña a la vista.
+- **ADMIN-PEDIDOS-11** Con el sonido activado y pedidos Pendientes sin atender, el aviso
+  se repite cada 30 segundos hasta que no quede ninguno.
+- **ADMIN-PEDIDOS-12** Mientras haya N pedidos Pendientes, el título de la pestaña es
+  "(N) Nuevo pedido · <título original>"; cuando no queda ninguno, vuelve al original.
+- **ADMIN-PEDIDOS-13** Con el sonido activado, el tablero pide mantener la pantalla
+  encendida, lo vuelve a pedir cada vez que la pestaña vuelve a estar visible y lo
+  libera al desactivar el sonido o al salir; si el navegador no lo soporta, no pasa
+  nada. Debajo del botón dice "Mantené esta pantalla abierta para recibir avisos".
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 
@@ -693,6 +724,10 @@ escribe acá antes de construirse.
 Cosas que no cumplen lo que deberían, o que no se pueden testear acá. Cada una
 se resuelve en su propia rama `fix/`.
 
+- **Colores, ventana de WhatsApp y selector del seguimiento (a mano).** El CSS del panel
+  "Pedido registrado" (SEGUIMIENTO-13), el comportamiento real de `window.open` en PC
+  (SEGUIMIENTO-14, salvo las funciones puras, que sí tienen test) y la ubicación del selector de
+  idioma en el encabezado (IDIOMA-15) solo se comprueban mirándolos en un navegador.
 - **Protección de ramas.** El repositorio privado en plan gratuito no permite
   rulesets: las reglas de [BRANCHING.md](BRANCHING.md) se cumplen por acuerdo.
 - **Admin: `role` no limita nada.** Cualquier miembro de un negocio puede

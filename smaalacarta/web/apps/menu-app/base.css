@@ -163,13 +163,15 @@ body.no-scroll {
   cursor: not-allowed;
 }
 
-/* "GRACIAS POR TU PEDIDO" (lo arma app.js al guardar el pedido) */
+/* "GRACIAS POR TU PEDIDO" (lo arma app.js al guardar el pedido). Hereda el texto de la
+   plantilla (--text) para leerse tanto en claro como en oscuro, sin colores por plantilla. */
 .gracias-pedido {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   padding: 1.5rem 1rem;
   text-align: center;
+  color: var(--text, inherit);
 }
 
 .gracias-pedido a,
@@ -189,20 +191,34 @@ body.no-scroll {
   font-weight: 600;
 }
 
-/* Acción principal: ver el estado del pedido */
+/* Acción principal: ver el estado del pedido. Mismo estilo que el botón de enviar del checkout. */
 .gracias-pedido .btn-seguimiento.destacado {
-  background: var(--color-primary, #111);
-  border-color: var(--color-primary, #111);
-  color: #fff;
+  background: linear-gradient(
+    135deg,
+    var(--color-primary, var(--brand, #111)),
+    var(--color-secondary, var(--color-primary, var(--brand, #111)))
+  );
+  border-color: transparent;
+  color: var(--on-brand-mix, var(--on-brand, #fff));
+}
+
+/* Cerrar: botón secundario, con el color de texto y un borde que se ve en claro y en oscuro */
+.gracias-pedido button {
+  min-height: 44px;
+  background: transparent;
+  color: inherit;
+  border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
 }
 
 /* Reenviar por WhatsApp: chico y secundario, solo por si no se abrió solo */
 .gracias-pedido .gracias-reenviar {
-  padding: 0.25rem;
+  padding: 0.75rem 0.25rem;
+  min-height: 44px;
+  box-sizing: border-box;
   font-size: 0.85rem;
   font-weight: 400;
   text-decoration: underline;
-  opacity: 0.8;
+  color: inherit;
 }
 
 /* La propuesta de venta solo se muestra en las demos (la muestra app.js) */
