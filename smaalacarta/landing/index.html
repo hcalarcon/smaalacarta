@@ -9,7 +9,7 @@
 
     <meta
       name="description"
-      content="Menús digitales con QR para restaurantes y bares en San Martín de los Andes. Mostrá tu carta online y recibí pedidos por WhatsApp."
+      content="Menú con QR y pedidos por WhatsApp para restaurantes, bares y rotiserías de San Martín de los Andes. Sin comisión por pedido."
     />
 
     <!-- SEO extra -->
@@ -27,7 +27,7 @@
     />
     <meta
       property="og:description"
-      content="Digitalizá tu menú, mejorá la experiencia de tus clientes y recibí pedidos por WhatsApp."
+      content="Menú con QR y pedidos por WhatsApp para restaurantes, bares y rotiserías de San Martín de los Andes. Sin comisión por pedido."
     />
     <meta property="og:url" content="https://www.smaalacarta.com.ar/" />
     <meta property="og:site_name" content="SMA a la Carta" />
@@ -51,7 +51,7 @@
     />
     <meta
       name="twitter:description"
-      content="Menús digitales con QR y pedidos por WhatsApp para restaurantes."
+      content="Menú con QR y pedidos por WhatsApp para restaurantes, bares y rotiserías de San Martín de los Andes. Sin comisión por pedido."
     />
     <meta
       name="twitter:image"
@@ -161,30 +161,71 @@
     <main id="contenido">
       <!-- Hero Section -->
       <section id="inicio" class="hero">
-        <div class="hero-bg">
-          <img
-            src="/assets/hero.jpg"
-            alt=""
-            class="hero-image"
-            width="1200"
-            height="757"
-            fetchpriority="high"
-          />
-          <div class="hero-overlay"></div>
-        </div>
-
-        <div class="hero-content">
+        <div class="container hero-content">
           <div class="hero-text">
+            <p class="hero-eyebrow">
+              San Martín de los Andes · Restaurantes, bares y rotiserías
+            </p>
             <h1 class="hero-title">
-              Convertí tu menú en ventas desde el celular
+              Tus clientes piden por WhatsApp.
+              <span class="hero-mark">Sin comisión. Sin apps.</span>
             </h1>
             <p class="hero-subtitle">
-              Menús digitales para restaurantes y negocios. Sin apps, sin
-              comisiones, pedidos directos a tu WhatsApp.
+              Tu carta con QR y pedidos que te llegan ordenados, con seguimiento
+              para tu cliente. La armamos por vos en menos de 48 horas.
             </p>
-            <a href="#contacto" class="btn btn-primary btn-lg hero-cta">
-              Solicitá tu sitio ahora
+            <a
+              class="hero-cta"
+              href="https://api.whatsapp.com/send?phone=5493644277105&text=Hola%2C%20quiero%20ver%20c%C3%B3mo%20quedar%C3%ADa%20mi%20carta%20con%20SMA%20a%20la%20Carta.%20Mi%20local%20se%20llama%3A%20"
+            >
+              Mandanos tu carta por WhatsApp
             </a>
+            <a
+              class="hero-demo-link"
+              href="https://moderno.smaalacarta.com.ar/"
+              target="_blank"
+              rel="noopener noreferrer"
+              >Ver un menú de ejemplo →</a
+            >
+            <ul class="hero-checks">
+              <li>Menú listo en menos de 48 horas</li>
+              <li>Sin comisión por pedido</li>
+              <li>1er mes gratis en los planes pagos</li>
+            </ul>
+          </div>
+
+          <div class="hp" aria-hidden="true">
+            <div class="hp-screen hp-s1" style="--i: 0">
+              <svg width="120" height="120" viewBox="0 0 21 21" fill="#1f2937"><path d="M0 0h7v7H0zM14 0h7v7h-7zM0 14h7v7H0z" /><path fill="#fff" d="M1 1h5v5H1zM15 1h5v5h-5zM1 15h5v5H1z" /><path d="M2 2h3v3H2zM16 2h3v3h-3zM2 16h3v3H2zM9 1h2v2H9zM9 5h3v1H9zM8 8h2v2H8zM12 9h3v2h-3zM16 8h2v2h-2zM9 12h2v3H9zM13 13h2v2h-2zM17 12h3v2h-3zM12 17h2v3h-2zM16 16h2v2h-2zM19 18h2v3h-2z" /></svg>
+              <p>Escaneá el QR</p>
+            </div>
+            <div class="hp-screen hp-s2" style="--i: 1">
+              <ul>
+                <li><span>Milanesa napolitana</span> <b>$9.800</b> <i>+</i></li>
+                <li><span>Provoleta</span> <b>$6.500</b> <i>+</i></li>
+                <li><span>Cerveza artesanal</span> <b>$4.200</b> <i>+</i></li>
+              </ul>
+              <div class="hp-carrito">Ver carrito (2) · $16.300</div>
+            </div>
+            <div class="hp-screen hp-s3" style="--i: 2">
+              <div class="hp-burbuja">
+                <p>🍔 Nuevo pedido #12</p>
+                <p>👤 Lucía</p>
+                <p>🚚 Retiro</p>
+                <p>• Milanesa napolitana x1</p>
+                <p>• Provoleta x1</p>
+                <p>💰 TOTAL: $16.300</p>
+                <p>🔎 Seguí tu pedido</p>
+              </div>
+            </div>
+            <div class="hp-screen hp-s4" style="--i: 3">
+              <h3>Pedido #12</h3>
+              <ol class="hp-linea">
+                <li>Confirmado ✓</li>
+                <li>En preparación ✓</li>
+                <li class="hp-actual">Listo</li>
+              </ol>
+            </div>
           </div>
         </div>
       </section>
@@ -248,11 +289,10 @@
               <div class="step">
                 <div class="step-icon" aria-hidden="true">🎨</div>
                 <div class="step-content">
-                  <h3 class="step-title">
-                    Nos contactás y definimos tu solución
-                  </h3>
+                  <h3 class="step-title">Nos mandás tu carta</h3>
                   <p class="step-description">
-                    Elegimos juntos la mejor opción para tu negocio
+                    Una foto o el PDF que ya tenés. Elegimos juntos el plan que
+                    te conviene.
                   </p>
                 </div>
               </div>
@@ -260,9 +300,10 @@
               <div class="step">
                 <div class="step-icon" aria-hidden="true">📝</div>
                 <div class="step-content">
-                  <h3 class="step-title">Diseñamos tu menú y tu web</h3>
+                  <h3 class="step-title">Armamos tu menú y te lo mostramos</h3>
                   <p class="step-description">
-                    Usamos una plantilla o diseñamos tu sitio a medida.
+                    Lo cargamos con tus productos y tus colores, y lo ves
+                    funcionando antes de decidir.
                   </p>
                 </div>
               </div>
@@ -280,15 +321,24 @@
               </div>
             </div>
 
-            <div class="how-it-works-image">
+            <div class="how-who">
               <img
-                src="https://images.unsplash.com/photo-1625038624658-01a222d8fb8e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHxxciUyMGNvZGUlMjByZXN0YXVyYW50JTIwbWVudXxlbnwxfHx8fDE3NTg3MjIyNTh8MA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-                alt="Código QR de un menú de restaurante"
-                class="feature-image"
-                width="1080"
-                height="720"
+                src="/assets/herni.jpg"
+                alt="Herni, de SMA a la Carta"
+                width="96"
+                height="96"
                 loading="lazy"
               />
+              <p>
+                Soy Herni, de San Martín de los Andes. Armo tu carta con vos y
+                te acompaño hasta que los pedidos empiecen a llegar.
+              </p>
+              <a
+                href="https://wa.me/5493644277105?text=Hola%20Herni%2C%20quiero%20ver%20c%C3%B3mo%20quedar%C3%ADa%20mi%20carta"
+                target="_blank"
+                rel="noopener noreferrer"
+                >Escribime por WhatsApp</a
+              >
             </div>
           </div>
         </div>
@@ -305,17 +355,6 @@
           </div>
 
           <div class="benefits-grid">
-            <div class="benefits-image">
-              <img
-                src="https://images.unsplash.com/photo-1669131196140-49591336b13e?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHxtb2Rlcm4lMjByZXN0YXVyYW50JTIwaW50ZXJpb3J8ZW58MXx8fHwxNzU4NjEzMDM4fDA&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-                alt="Interior de un restaurante moderno"
-                class="feature-image"
-                width="1080"
-                height="720"
-                loading="lazy"
-              />
-            </div>
-
             <div class="benefits-list">
               <div class="benefit-card" style="--benefit-color: #388b46">
                 <div class="benefit-icon" aria-hidden="true">🔍</div>
@@ -356,6 +395,29 @@
                   <p class="benefit-description">
                     Cargá productos, armá promociones y seguí tus pedidos desde
                     un panel simple, sin depender de nadie
+                  </p>
+                </div>
+              </div>
+
+              <div class="benefit-card" style="--benefit-color: #b45309">
+                <div class="benefit-icon" aria-hidden="true">💸</div>
+                <div class="benefit-content">
+                  <h3 class="benefit-title">Sin comisión por pedido</h3>
+                  <p class="benefit-description">
+                    Pagás un valor fijo por mes. Cada pedido llega directo a tu
+                    WhatsApp y no se lleva un porcentaje de tus ventas.
+                  </p>
+                </div>
+              </div>
+
+              <div class="benefit-card" style="--benefit-color: #0f766e">
+                <div class="benefit-icon" aria-hidden="true">🌍</div>
+                <div class="benefit-content">
+                  <h3 class="benefit-title">Tu carta en 3 idiomas</h3>
+                  <p class="benefit-description">
+                    Español, inglés y portugués para tus clientes de afuera:
+                    cada uno elige su idioma y el pedido te llega en español.
+                    Incluido en Subdominio Completo.
                   </p>
                 </div>
               </div>
@@ -449,6 +511,8 @@
               <ul class="plan-features">
                 <li>Tu sitio: tunegocio.smaalacarta.com.ar</li>
                 <li>Menú web interactivo</li>
+                <li>Carta en español, inglés y portugués</li>
+                <li>Se instala en el celular como una app</li>
                 <li>Pedidos por WhatsApp con seguimiento para tu cliente</li>
                 <li>Panel de administración: productos, promociones y pedidos</li>
                 <li>Diseño personalizable</li>
@@ -486,6 +550,10 @@
                   Nuestro equipo está listo para ayudarte a crear la presencia
                   digital perfecta para tu restaurante o bar en San Martín de
                   los Andes.
+                </p>
+                <p>
+                  Mandanos una foto o el PDF de tu carta y te mostramos cómo
+                  quedaría, sin costo y sin compromiso.
                 </p>
               </div>
 
@@ -790,5 +858,11 @@
     </div>
 
     <script src="./landing.js"></script>
+
+    <a
+      class="wa-dock"
+      href="https://api.whatsapp.com/send?phone=5493644277105&text=Hola%2C%20quiero%20ver%20c%C3%B3mo%20quedar%C3%ADa%20mi%20carta%20con%20SMA%20a%20la%20Carta.%20Mi%20local%20se%20llama%3A%20"
+      >Escribinos por WhatsApp</a
+    >
   </body>
 </html>

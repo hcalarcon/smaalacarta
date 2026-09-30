@@ -388,6 +388,20 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
 - **LANDING-15** Se lee bien en el celular: el botón principal tiene contraste de al menos
   4,5:1, los botones miden al menos 48 px de alto y el foco del teclado se ve.
 - **LANDING-16** Los precios de la página son los mismos que los de `index.html`.
+- **LANDING-17** El inicio dice lo que se vende en una frase y su botón principal
+  (`.hero-cta`) abre WhatsApp, al mismo número que el resto de la página, con un mensaje
+  escrito; el botón tiene contraste de al menos 4,5:1.
+- **LANDING-18** El inicio no depende de una foto: sin `<img>` en el hero, sin
+  `object-fit: fill` ni `transform: scale` en el hero, y sin `min-height: 100vh`; en el
+  celular se ven el titular y el botón principal sin hacer scroll.
+- **LANDING-19** El inicio muestra cómo funciona con un teléfono animado solo de CSS y
+  decorativo (`aria-hidden`); con `prefers-reduced-motion` queda quieto.
+- **LANDING-20** La landing no carga imágenes de terceros: todo `<img>` apunta al propio
+  sitio.
+- **LANDING-21** Lo nuevo está dicho: sin comisión, carta en español, inglés y portugués
+  (en Subdominio Completo) y que se instala en el celular.
+- **LANDING-22** En el celular hay un botón fijo de WhatsApp abajo, que no tapa el
+  contenido ni al menú ni al modal de demos; desde 768 px no se muestra.
 
 ---
 
