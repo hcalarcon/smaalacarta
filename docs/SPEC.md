@@ -414,6 +414,9 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
 - **LANDING-24** El botón "Ver Demo" del encabezado no parte su texto en dos líneas ni se
   achica (`nowrap`, `flex: none`), y en el celular el logo cede antes que el botón para
   que todo entre en una línea, con el botón separado de la hamburguesa.
+- **LANDING-25** En el celular, con el botón fijo de WhatsApp a la vista, el botón de WhatsApp
+  del inicio de `index.html` se oculta; en `/hola` quedan ocultos los botones de la portada y
+  del cierre y solo queda el fijo. Desde 768 px se ven todos.
 
 ---
 

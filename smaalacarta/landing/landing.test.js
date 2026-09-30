@@ -549,3 +549,11 @@ describe("LANDING-24 — botón Ver Demo del encabezado", () => {
     expect(rule(".btn-demo", mobile)).toMatch(/margin-right:\s*0\.5rem/);
   });
 });
+
+describe("LANDING-25 — un solo botón de WhatsApp a la vista en el celular", () => {
+  // Si se sacara la regla, en el celular el botón del inicio y el fijo aparecerían a la vez.
+  it("el celular oculta el botón del inicio (desde 768 px el fijo no se muestra)", () => {
+    const mobile = CSS.slice(CSS.indexOf("@media (max-width: 767px)"));
+    expect(mobile).toMatch(/\.hero-cta\s*\{[^}]*display:\s*none/);
+  });
+});

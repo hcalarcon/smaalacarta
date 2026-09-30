@@ -176,3 +176,13 @@ describe("LANDING-16 — precios iguales a los de index.html", () => {
     for (const i of importes.filter((x) => ["$15.000", "$25.000"].includes(x))) expect(INDEX).toContain(i);
   });
 });
+
+describe("LANDING-25 — un solo botón de WhatsApp en el celular", () => {
+  // Si se sacara la regla, el celular mostraría tres botones iguales.
+  it("oculta los botones de la portada y del cierre hasta 767 px; queda el fijo", () => {
+    const bloque = CSS.match(/@media\s*\(max-width:\s*767px\)\s*\{([\s\S]*?)\n\}/)?.[1] ?? "";
+    expect(bloque).toMatch(/\.hero \.cta[^{]*\{[^}]*display:\s*none/);
+    expect(bloque).toMatch(/\.final \.cta[^{]*\{[^}]*display:\s*none/);
+    expect(parse().querySelectorAll(".hero .cta, .final .cta, .dock .cta")).toHaveLength(3);
+  });
+});
