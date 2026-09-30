@@ -1,6 +1,6 @@
 // Página de seguimiento de un pedido (SEGUIMIENTO-8). Todo lo que viene de la base se
 // muestra con textContent: nunca se arma HTML con datos del pedido ni del negocio.
-import { LOCALES, resolveLang, t } from "/apps/menu-app/lib/i18n.js";
+import { LANGS, LOCALES, resolveLang, t } from "/apps/menu-app/lib/i18n.js";
 import { markHandoffSent, pendingHandoff } from "/apps/menu-app/lib/orders.js";
 import { whatsappDigits } from "/apps/menu-app/lib/phone.js";
 import { SUPABASE } from "/apps/menu-app/supabase-config.js";
@@ -8,6 +8,8 @@ import {
   fetchTracking,
   brandTheme,
   isFinalStatus,
+  langSearch,
+  pageTitle,
   parseTrackingCode,
   statusView,
   stepLabels,
@@ -20,19 +22,68 @@ const app = document.getElementById("app");
 const code = parseTrackingCode(window.location.pathname, window.location.search);
 
 // Mismo criterio que el menú (IDIOMA-7): ?lang=, después el idioma del navegador.
-const lang = resolveLang({ search: window.location.search, navigatorLanguage: navigator.language });
-document.documentElement.lang = lang;
+let lang = resolveLang({ search: window.location.search, navigatorLanguage: navigator.language });
+let money;
+let time;
+let STEP_LABELS;
 
-const money = new Intl.NumberFormat(LOCALES[lang], { style: "currency", currency: "ARS" });
-const time = new Intl.DateTimeFormat(LOCALES[lang], {
-  day: "2-digit",
-  month: "2-digit",
-  hour: "2-digit",
-  minute: "2-digit",
-  timeZone: "America/Argentina/Buenos_Aires",
-});
+// Todo lo que depende del idioma se recalcula acá, también al cambiarlo (IDIOMA-14).
+function applyLang() {
+  document.documentElement.lang = lang;
+  money = new Intl.NumberFormat(LOCALES[lang], { style: "currency", currency: "ARS" });
+  time = new Intl.DateTimeFormat(LOCALES[lang], {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: "America/Argentina/Buenos_Aires",
+  });
+  STEP_LABELS = stepLabels(lang);
+}
 
-const STEP_LABELS = stepLabels(lang);
+applyLang();
+
+// Lo último que se dibujó: al cambiar de idioma se vuelve a dibujar sin pedir nada de nuevo.
+let current = { kind: "loading" };
+
+function paint() {
+  if (current.kind === "data") render(current.data, { stale: current.stale });
+  else showMessage(current.key);
+}
+
+// Selector ES | EN | PT (IDIOMA-14): botones de al menos 44 px con aria-pressed.
+const langBox = document.getElementById("selector-idioma");
+
+function syncLangSelector() {
+  if (!langBox) return;
+  langBox.setAttribute("aria-label", t("lang.label", lang));
+  langBox.querySelectorAll("button").forEach((b) => {
+    b.setAttribute("aria-pressed", String(b.dataset.lang === lang));
+  });
+}
+
+function setLang(next) {
+  if (next === lang || !LANGS.includes(next)) return;
+  lang = next;
+  applyLang();
+  syncLangSelector();
+
+  const url = new URL(window.location.href);
+  url.search = langSearch(url.search, lang);
+  history.replaceState(null, "", url);
+
+  paint();
+}
+
+for (const code of LANGS) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.textContent = code.toUpperCase();
+  button.dataset.lang = code;
+  button.addEventListener("click", () => setLang(code));
+  langBox?.appendChild(button);
+}
+syncLangSelector();
 
 function el(tag, { className, text, href, attrs } = {}, children = []) {
   const node = document.createElement(tag);
@@ -44,8 +95,13 @@ function el(tag, { className, text, href, attrs } = {}, children = []) {
   return node;
 }
 
-function showMessage(text) {
-  app.replaceChildren(el("p", { className: "tracker-message", text }));
+// Un mensaje de la página, por su clave, para poder traducirlo si cambia el idioma.
+function showMessage(key) {
+  current = { kind: "message", key };
+  const isLoading = key === "tracker.loading";
+  app.replaceChildren(
+    el("p", { className: isLoading ? "tracker-loading" : "tracker-message", text: t(key, lang) }),
+  );
 }
 
 // Los colores y la cabecera del negocio (SEGUIMIENTO-11). Los valores ya vienen validados.
@@ -63,6 +119,7 @@ function applyTheme(negocio) {
 }
 
 function render(data, { stale }) {
+  current = { kind: "data", data, stale };
   const view = statusView(data.pedido.estado, lang);
   const theme = applyTheme(data.negocio);
   const nodes = [];
@@ -192,12 +249,14 @@ function render(data, { stale }) {
   );
 
   app.replaceChildren(...nodes);
-  document.title = `Pedido #${data.pedido.numero} · ${data.negocio.nombre}`;
+  document.title = pageTitle(data.pedido.numero, data.negocio.nombre, lang);
 }
 
 async function start() {
+  showMessage("tracker.loading");
+
   if (!code) {
-    showMessage(t("tracker.invalidLink", lang));
+    showMessage("tracker.invalidLink");
     return;
   }
 
@@ -215,7 +274,7 @@ async function start() {
     // Un código que no existe no se reintenta; un error de red sí, y se sigue
     // mostrando lo último que se vio.
     if (result.reason === "notfound") {
-      showMessage(t("tracker.notFound", lang));
+      showMessage("tracker.notFound");
       return false;
     }
 
@@ -224,7 +283,7 @@ async function start() {
       return true;
     }
 
-    showMessage(t("tracker.loadError", lang));
+    showMessage("tracker.loadError");
     return true;
   }
 

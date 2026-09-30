@@ -3,6 +3,7 @@
 // servidor (SEGUIMIENTO-2). Si algo falla, el llamador sigue con WhatsApp como siempre.
 
 import { isSupabaseConfigured } from "./public-menu.js";
+import { LANGS } from "./i18n.js";
 import { whatsappDigits } from "./phone.js";
 
 // Del carrito a lo que pide la base: `id`, tipo y cantidad. Nunca precios. Devuelve
@@ -93,8 +94,10 @@ export async function createOrder({
 }
 
 // Dónde sigue el cliente su pedido: el mismo sitio del menú + /pedido/<código>.
-export function trackingLink(origin, code) {
-  return `${String(origin).replace(/\/+$/, "")}/pedido/${code}`;
+// Con `lang` (es|en|pt) el seguimiento se abre en el idioma del cliente (IDIOMA-12).
+export function trackingLink(origin, code, lang) {
+  const link = `${String(origin).replace(/\/+$/, "")}/pedido/${code}`;
+  return LANGS.includes(lang) ? `${link}?lang=${lang}` : link;
 }
 
 export function whatsappOrderUrl(phone, message) {

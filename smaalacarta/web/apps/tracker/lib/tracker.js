@@ -3,7 +3,7 @@
 
 import { cssUrl } from "../../menu-app/lib/html.js";
 import { headerBackground } from "../../menu-app/lib/info.js";
-import { t } from "../../menu-app/lib/i18n.js";
+import { LANGS, t } from "../../menu-app/lib/i18n.js";
 
 const CODE = /^[0-9a-f]{20}$/;
 
@@ -122,4 +122,18 @@ export function brandTheme(negocio) {
   );
 
   return { brand, accent, header, plain: header === "" };
+}
+
+// Título de la pestaña en el idioma elegido (IDIOMA-13).
+export function pageTitle(numero, negocio, lang) {
+  return t("tracker.title", lang, { n: numero, negocio });
+}
+
+// La dirección con `?lang=` puesto (IDIOMA-14), sin perder el resto de los parámetros. Un
+// idioma que no es es|en|pt deja todo como estaba.
+export function langSearch(search, lang) {
+  const params = new URLSearchParams(search);
+  if (LANGS.includes(lang)) params.set("lang", lang);
+  const text = params.toString();
+  return text ? `?${text}` : "";
 }
