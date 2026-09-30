@@ -344,8 +344,9 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
 
 *Planes, enlaces de contacto, demos. Aplicado por `landing/index.html`,
 `landing/landing.js`, `landing/landing.css`, `landing/robots.txt`,
-`landing/sitemap.xml` y `landing/assets/site.webmanifest`. Cubierto por:
-`landing/landing.test.js`.*
+`landing/sitemap.xml`, `landing/assets/site.webmanifest`, `landing/hola.html`,
+`landing/hola.css` y `landing/vercel.json`. Cubierto por: `landing/landing.test.js` y
+`landing/hola.test.js`.*
 
 - **LANDING-1** Lo que se comparte da buena imagen: `og:image` y `twitter:image` apuntan a un
   archivo que existe en `assets/`, de 1200×630 y menos de 300 KB, y el logo del
@@ -368,6 +369,23 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
   diferida (salvo la principal); hay un enlace para saltar al contenido y un foco visible.
 - **LANDING-9** El sitio se deja indexar bien: `robots.txt`, `sitemap.xml`, datos
   estructurados (`LocalBusiness`) y un `site.webmanifest` con el nombre real.
+- **LANDING-10** `smaalacarta.com.ar/hola` abre una página para quien llega por la tarjeta
+  de visita: existe `hola.html`, `vercel.json` la sirve en `/hola` y no se indexa
+  (`noindex`, fuera del `sitemap.xml`).
+- **LANDING-11** Tiene un solo objetivo, escribir por WhatsApp: sin menú de navegación ni
+  enlaces a secciones. Los únicos enlaces son WhatsApp, llamada, el menú de ejemplo y uno
+  discreto a la landing. Los de contacto usan el mismo número que `index.html` y los de
+  WhatsApp llevan un mensaje escrito que menciona la tarjeta.
+- **LANDING-12** En el celular hay un botón fijo de WhatsApp abajo que no tapa el
+  contenido; desde 768 px no se muestra.
+- **LANDING-13** El funcionamiento se muestra con una animación solo de CSS, decorativa
+  (`aria-hidden`): el mismo contenido está escrito en una lista de 4 pasos, y con
+  `prefers-reduced-motion` no se anima nada.
+- **LANDING-14** Es liviana: `hola.html` + `hola.css` suman menos de 30 KB, no lleva
+  JavaScript propio y sus imágenes existen, declaran tamaño y tienen `alt`.
+- **LANDING-15** Se lee bien en el celular: el botón principal tiene contraste de al menos
+  4,5:1, los botones miden al menos 48 px de alto y el foco del teclado se ve.
+- **LANDING-16** Los precios de la página son los mismos que los de `index.html`.
 
 ---
 

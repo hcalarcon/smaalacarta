@@ -1,6 +1,11 @@
 {
   "rewrites": [
     {
+      "source": "/hola",
+      "destination": "/hola.html"
+    },
+
+    {
       "source": "/admin",
       "destination": "https://smaalacarta-admin.vercel.app/admin"
     },
