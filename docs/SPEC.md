@@ -711,6 +711,54 @@ Cubierto por: `src/lib/db/promotions.test.ts` (ADMIN-PROMOS-2, 3, 5 y 6) y
 
 ---
 
+## ADMIN-METRICAS — Métricas de pedidos
+
+*Aplicado por `src/lib/dates.ts` y `src/lib/orders/metrics.ts`. Cubierto por
+`src/lib/dates.test.ts` y `src/lib/orders/metrics.test.ts`, en JS puro.*
+
+- **ADMIN-METRICAS-1** Los días y las horas de las métricas se calculan en hora de Argentina
+  (UTC-3 fijo), nunca en la zona del servidor: un pedido de las 23:30 argentinas (02:30 UTC del
+  día siguiente) cuenta en su día y en su hora.
+- **ADMIN-METRICAS-2** "Vendido" son los pedidos `confirmed`, `preparing`, `ready` o `delivered`:
+  los cancelados no suman y los `pending` se cuentan aparte como "sin confirmar".
+  `summarize()` devuelve cantidad, total vendido, ticket promedio (redondeado, 0 sin pedidos),
+  cancelados, sin confirmar y cuántos vendidos vinieron del menú web (`source` "web") y cuántos
+  se cargaron a mano ("manual"). Una lista vacía no divide por cero.
+- **ADMIN-METRICAS-3** `comparePeriods()` separa los pedidos de los últimos N días (incluido hoy)
+  de los N días anteriores; `deltaPercent()` da la variación en % entera, o `null` si el período
+  anterior es 0.
+- **ADMIN-METRICAS-4** `topProducts()` suma las unidades de los pedidos vendidos por producto y
+  ordena por cantidad descendente y, en empate, por nombre ascendente; `byHour()` (24 valores) y
+  `byWeekday()` (7 valores, lunes a domingo) cuentan solo pedidos vendidos.
+- **ADMIN-METRICAS-5** `listOrdersForMetrics()` trae solo los pedidos del negocio pedido con
+  `created_at` desde la fecha indicada, del más nuevo al más viejo, con sus productos (nombre y
+  cantidad).
+- **ADMIN-METRICAS-6** Como Supabase corta en 1000 filas por consulta, la lectura se pagina de a
+  1000 hasta 5000 pedidos; si hay más, devuelve los 5000 más nuevos con `truncated: true`.
+- **ADMIN-METRICAS-7** Los textos de las tarjetas se arman con funciones puras
+  (`src/lib/orders/metrics-format.ts`): el dinero en pesos argentinos sin decimales; la
+  variación como "↑ 12 % vs semana anterior" o "↓ 5 % …" (con "Sin cambios vs …" si no cambió) y
+  ninguna si el período anterior es 0; y "8 de 10 pedidos vinieron por tu menú web".
+- **ADMIN-METRICAS-8** El Resumen, solo si el plan tiene pedidos (`hasOrders()`), muestra debajo de
+  las tarjetas actuales "Pedidos (7 días)" con su variación contra la semana anterior, "Vendido
+  (7 días)", "Ticket promedio" y "Por tu menú". Sin pedidos vendidos en 14 días muestra "Todavía no
+  hay pedidos esta semana" en lugar de tarjetas en cero. Si la lectura se truncó, no muestra la
+  variación.
+- **ADMIN-METRICAS-9** `/dashboard/metrics` (con enlace "Métricas" en el menú lateral) solo existe
+  si el plan tiene pedidos (`hasOrders()`); sin él redirige a `/dashboard`. El período sale de
+  `?dias=7` (por defecto) o `?dias=30`: cualquier otro valor se toma como 7. Se elige con dos
+  enlaces, sin JS. Muestra las mismas tarjetas del Resumen para ese período, comparadas con el
+  período anterior.
+- **ADMIN-METRICAS-10** Las barras de "Lo más pedido", "Horarios" y "Días de la semana" miden su
+  valor contra el mayor del gráfico (en %, entero) y llevan su cantidad escrita, no solo el color.
+  El texto destacado es "Tu hora fuerte: 21 h" (la hora con más pedidos; en empate, la más
+  temprana) y no aparece sin pedidos.
+- **ADMIN-METRICAS-11** Sin pedidos vendidos en el período, la página dice que todavía no hay
+  pedidos en vez de dibujar gráficos vacíos; si la lectura se truncó, avisa "Mostrando los últimos
+  5000 pedidos" y no muestra variaciones.
+
+---
+
 ## No especificado deliberadamente
 
 Lo que está fuera a propósito. Un requisito para cualquiera de estas cosas se

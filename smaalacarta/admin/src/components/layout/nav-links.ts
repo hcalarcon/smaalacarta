@@ -24,6 +24,11 @@ export const dashboardLinks: NavLink[] = [
     icon: "M6 6h15l-1.5 9h-12L6 3H3M9 20a1 1 0 100-2 1 1 0 000 2zm9 0a1 1 0 100-2 1 1 0 000 2z",
   },
   {
+    href: "/dashboard/metrics",
+    label: "Métricas",
+    icon: "M4 20V10M10 20V4M16 20v-7M22 20H2",
+  },
+  {
     href: "/dashboard/promotions",
     label: "Promociones",
     icon: "M7 7h.01M3 12V5a2 2 0 012-2h7l9 9a2 2 0 010 2.8l-6.2 6.2a2 2 0 01-2.8 0L3 12z",

@@ -3,9 +3,13 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import DashboardCard from "@/components/dashboard/DashboardCard";
+import MetricsCards from "@/components/dashboard/MetricsCards";
 import PlanBadges from "@/components/dashboard/PlanBadges";
+import { startOfDayInArgentina } from "@/lib/dates";
+import { listOrdersForMetrics } from "@/lib/db/metrics";
 import { getBusinessSummary } from "@/lib/db/summary";
 import { requireBusiness } from "@/lib/get-current-business";
+import { comparePeriods, summarize } from "@/lib/orders/metrics";
 import { hasDigitalMenu, hasOrders } from "@/lib/plan-access";
 
 export const metadata: Metadata = { title: "Resumen" };
@@ -21,6 +25,9 @@ export default async function DashboardPage() {
   };
   const digitalMenu = hasDigitalMenu(plan);
   const orders = hasOrders(plan);
+
+  // Últimos 7 días contra los 7 anteriores (ADMIN-METRICAS-8).
+  const week = orders ? await loadWeek(business.id) : null;
 
   return (
     <div className="space-y-8">
@@ -91,6 +98,45 @@ export default async function DashboardPage() {
           ) : null}
         </section>
       ) : null}
+
+      {week ? (
+        <section className="space-y-3">
+          <h2 className="text-xl font-bold text-brand">Últimos 7 días</h2>
+
+          {week.hasSales ? (
+            <MetricsCards
+              current={week.current}
+              previous={week.previous}
+              periodLabel="7 días"
+              versus="semana anterior"
+              truncated={week.truncated}
+            />
+          ) : (
+            <p className="rounded-3xl border border-line bg-white p-5 text-stone-500 shadow-sm">
+              Todavía no hay pedidos esta semana
+            </p>
+          )}
+        </section>
+      ) : null}
     </div>
   );
+}
+
+async function loadWeek(businessId: string) {
+  const now = new Date();
+  const { orders, truncated } = await listOrdersForMetrics(
+    businessId,
+    startOfDayInArgentina(now, 13).toISOString(),
+  );
+  const { current, previous } = comparePeriods(orders, now, 7);
+  const currentSummary = summarize(current);
+  const previousSummary = summarize(previous);
+
+  return {
+    current: currentSummary,
+    previous: previousSummary,
+    truncated,
+    // "Sin pedidos vendidos en 14 días": ni esta semana ni la anterior.
+    hasSales: currentSummary.count + previousSummary.count > 0,
+  };
 }
