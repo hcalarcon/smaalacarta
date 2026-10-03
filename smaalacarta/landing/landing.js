@@ -202,3 +202,20 @@ document.addEventListener("keydown", (event) => {
     konamiIndex = pressed === KONAMI[0] ? 1 : 0;
   }
 });
+
+// En el celular no hay teclado: 7 toques seguidos al logo del encabezado hacen lo mismo.
+const LOGO_TAPS = 7;
+const LOGO_TAP_GAP_MS = 1500;
+let logoTaps = 0;
+let logoTapTimer = null;
+
+header?.querySelector(".logo")?.addEventListener("click", () => {
+  clearTimeout(logoTapTimer);
+  logoTaps += 1;
+  if (logoTaps >= LOGO_TAPS) {
+    logoTaps = 0;
+    openChaco();
+    return;
+  }
+  logoTapTimer = setTimeout(() => (logoTaps = 0), LOGO_TAP_GAP_MS);
+});

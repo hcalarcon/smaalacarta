@@ -475,7 +475,9 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
   el mapa de la provincia del Chaco (SVG, `role="dialog"`) con la frase "La sangre de mi Chaco va
   corriendo por mis venas" y suena `assets/pico-frank.mp3`. Se cierra al terminar el audio, con
   Escape o al tocar; si el audio falta o el navegador lo bloquea, se cierra solo a los 6 s. No
-  se abre dos veces a la vez. Con `prefers-reduced-motion` el mapa no late.
+  se abre dos veces a la vez. Con `prefers-reduced-motion` el mapa no late. En el celular
+  (sin teclado) lo abren 7 toques seguidos al logo del encabezado, cada uno a menos de 1,5 s del
+  anterior.
 
 ---
 

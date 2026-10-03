@@ -641,4 +641,16 @@ describe("LANDING-27 — easter egg del Chaco", () => {
     vi.advanceTimersByTime(200);
     expect($(".chaco-egg")).toBeNull();
   });
+
+  it("7 toques seguidos al logo del encabezado abren el mapa; menos, o muy espaciados, no", () => {
+    vi.useFakeTimers();
+    const logo = $(".header .logo");
+    for (let i = 0; i < 6; i++) logo.click();
+    expect($(".chaco-egg")).toBeNull();
+    vi.advanceTimersByTime(1600);
+    logo.click();
+    expect($(".chaco-egg")).toBeNull();
+    for (let i = 0; i < 6; i++) logo.click();
+    expect($(".chaco-egg")).not.toBeNull();
+  });
 });
