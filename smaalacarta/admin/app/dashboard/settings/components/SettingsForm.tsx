@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { saveSettingsAction } from "../actions";
 import Field from "@/components/ui/Field";
@@ -147,6 +147,13 @@ export default function SettingsForm({
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<string, string>>>({});
   const [imageBroken, setImageBroken] = useState(false);
+
+  // El aviso de guardado es un toast: se va solo a los 3 segundos.
+  useEffect(() => {
+    if (!saved) return;
+    const timer = setTimeout(() => setSaved(false), 3000);
+    return () => clearTimeout(timer);
+  }, [saved]);
 
   function updateDay(key: DayKey, change: (day: DayState) => DayState) {
     setSaved(false);
@@ -724,17 +731,21 @@ export default function SettingsForm({
       </Section>
       </> : null}
 
+      {saved ? (
+        <div
+          role="status"
+          className="fixed bottom-20 left-1/2 z-20 -translate-x-1/2 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-medium text-white shadow-lg"
+        >
+          Cambios guardados
+        </div>
+      ) : null}
+
       {/* Flotante: queda a la vista al fondo de la pantalla mientras se recorre el formulario. */}
-      <div className="sticky bottom-2 z-10 flex items-center justify-end gap-4 rounded-2xl border border-line bg-white/90 p-3 shadow-lg backdrop-blur">
-        {saved ? (
-          <span role="status" className="text-sm font-medium text-emerald-700">
-            Cambios guardados
-          </span>
-        ) : null}
+      <div className="sticky bottom-2 z-10 flex justify-end">
         <button
           type="submit"
           disabled={saving}
-          className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60"
+          className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-brand-hover disabled:opacity-60"
         >
           {saving ? "Guardando…" : "Guardar cambios"}
         </button>
