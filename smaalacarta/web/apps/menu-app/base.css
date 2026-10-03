@@ -221,6 +221,47 @@ body.no-scroll {
   color: inherit;
 }
 
+/* Los mismos datos, en el checkout al elegir transferencia (los arma app.js). */
+.datos-transferencia {
+  padding: 0.75rem;
+  border: 1px solid var(--border, rgba(128, 128, 128, 0.35));
+  border-radius: 0.5rem;
+  text-align: center;
+  color: var(--text, inherit);
+}
+
+.datos-transferencia[hidden] {
+  display: none;
+}
+
+.datos-transferencia .gracias-transferencia > p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.datos-transferencia .gracias-dato button {
+  border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
+  border-radius: 0.5rem;
+  color: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* En pantallas anchas, el checkout de clásico y minimal es una hoja centrada y no ocupa todo
+   el ancho (el selector más específico gana al "width: 100%" de cada plantilla). */
+@media (min-width: 768px) {
+  html[data-template="clasico"] .checkout,
+  html[data-template="minimal"] .checkout {
+    left: 0;
+    right: 0;
+    width: min(100%, 480px);
+    margin-inline: auto;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 12px 12px 0 0;
+  }
+}
+
 /* Aviso de cómo se entrega cuando hay un solo tipo (el select está oculto) */
 .aviso-entrega {
   margin: 0;
@@ -235,13 +276,13 @@ body.no-scroll {
 
 /* Datos para transferir (alias y CBU/CVU), cada uno con su botón "Copiar". Heredan el color de
    texto de la plantilla, como el resto del panel. */
-.gracias-pedido .gracias-transferencia {
+:is(.gracias-pedido, .datos-transferencia) .gracias-transferencia {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
 
-.gracias-pedido .gracias-dato {
+:is(.gracias-pedido, .datos-transferencia) .gracias-dato {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
@@ -249,19 +290,19 @@ body.no-scroll {
   gap: 0.25rem 0.75rem;
 }
 
-.gracias-pedido .gracias-dato-etiqueta {
+:is(.gracias-pedido, .datos-transferencia) .gracias-dato-etiqueta {
   flex-basis: 100%;
   font-size: 0.8rem;
   opacity: 0.8;
 }
 
-.gracias-pedido .gracias-dato-valor {
+:is(.gracias-pedido, .datos-transferencia) .gracias-dato-valor {
   font-size: 1.05rem;
   /* El CBU no tiene espacios: sin esto empuja el panel más ancho que la pantalla. */
   overflow-wrap: anywhere;
 }
 
-.gracias-pedido .gracias-dato button {
+:is(.gracias-pedido, .datos-transferencia) .gracias-dato button {
   padding: 0.5rem 1rem;
   min-width: 44px;
 }

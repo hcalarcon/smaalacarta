@@ -161,15 +161,18 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   (`lib/checkout-options.js`). Si un grupo queda con una sola opción, se preselecciona
   y su select se oculta; con varias, hay que elegir una. Si el menú no trae esos campos
   (JSON de demos y negocios sin Supabase), se ofrecen todas, como hasta ahora.
-- **PUBLICO-20** En "Gracias por tu pedido", si el pago elegido fue transferencia y el
-  negocio cargó alias o CBU/CVU, se muestran con un botón "Copiar" para cada uno. Se
-  pintan con `textContent`; ni el checkout, ni el mensaje de WhatsApp, ni el
+- **PUBLICO-20** Si el pago elegido es transferencia y el negocio cargó alias o CBU/CVU, se
+  muestran con un botón "Copiar" para cada uno, en el checkout apenas se elige y de nuevo
+  en "Gracias por tu pedido". Se pintan con `textContent`; ni el mensaje de WhatsApp ni el
   seguimiento llevan esos datos.
 - **PUBLICO-21** Los textos nuevos (alias, CBU/CVU, "Copiar", "Copiado", avisos de entrega) están
   en español, inglés y portugués.
 - **PUBLICO-22** Si el negocio ofrece un solo tipo de entrega, el checkout lo dice donde estaba
   el select: "Retirá tu pedido en nuestro local" con su dirección si la cargó, o "Solo hacemos
   delivery". Con las dos opciones, o con un menú sin esos campos, no hay aviso.
+- **PUBLICO-23** En pantallas anchas (desde 768 px) el checkout de `clasico` y `minimal` es una
+  hoja centrada de hasta 480 px, no de todo el ancho; en `minimal` oscuro el select tiene
+  borde y su lista usa los colores del tema. Solo se prueba mirándolo en el navegador.
 
 ## BUSQUEDA — Buscador
 
@@ -200,6 +203,9 @@ Cuando el menú viene de Supabase, confirmar el pedido lo guarda en el sistema a
 de abrir WhatsApp, y el cliente recibe un link para seguirlo. El pedido sigue
 llegando al negocio por WhatsApp.
 
+- **PUBLICO-23** En pantallas anchas (desde 768 px) el checkout de `clasico` y `minimal` es una
+  hoja centrada de hasta 480 px, no de todo el ancho; en `minimal` oscuro el select tiene
+  borde y su lista usa los colores del tema. Solo se prueba mirándolo en el navegador.
 - **SEGUIMIENTO-1** Un cliente, sin sesión, puede crear un pedido en un negocio
   publicado y abierto. No puede en uno que no existe, no está publicado o cerró
   temporalmente.

@@ -236,6 +236,7 @@ async function init() {
     window.CONFIG = config;
     applyCheckoutOptions(config);
     renderDeliveryNotice();
+    renderTransferInfo();
     document.documentElement.dataset.template = config.template || "";
     document.documentElement.dataset.tema = config.tema || "claro";
 
@@ -357,6 +358,7 @@ function applyStaticTexts() {
 
   syncTema();
   renderDeliveryNotice();
+  renderTransferInfo();
 }
 
 function setLang(lang) {
@@ -1049,6 +1051,9 @@ function applyCheckoutOptions(config) {
   if (!CHECKOUT) return;
 
   const options = CHECKOUT.checkoutOptions(config);
+  document
+    .querySelector('#form-pedido select[name="pago"]')
+    ?.addEventListener("change", renderTransferInfo);
 
   [
     ["entrega", options.delivery],
@@ -1091,6 +1096,17 @@ function renderDeliveryNotice() {
       : notice.address
         ? tr("checkout.onlyPickupAt", { address: notice.address })
         : tr("checkout.onlyPickup");
+}
+
+// Al elegir transferencia, el cliente ve ya los datos para pagar (PUBLICO-20).
+function renderTransferInfo() {
+  const box = document.querySelector("#datos-transferencia");
+  const select = document.querySelector('#form-pedido select[name="pago"]');
+  if (!box || !select || !CHECKOUT) return;
+
+  const transfer = CHECKOUT.transferDetails(window.CONFIG, select.value);
+  box.replaceChildren(...(transfer ? [transferBox(transfer)] : []));
+  box.hidden = !transfer;
 }
 
 // Alias y CBU/CVU para transferir, cada uno con su botón "Copiar". Todo con textContent: lo
