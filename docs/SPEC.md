@@ -471,6 +471,13 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
 - **LANDING-26** En `/hola`, en el celular (hasta 639 px), el paso en curso se lee dentro del
   teléfono animado, de a uno y sincronizado con su pantalla; la lista de pasos queda solo para
   lectores de pantalla. Desde 640 px se ve la lista al costado.
+- **LANDING-27** Easter egg: al tipear el código Konami (↑↑↓↓←→←→ B A) aparece sobre la página
+  el mapa de la provincia del Chaco (SVG con el contorno real de Natural Earth, dominio público; `role="dialog"`) con la frase "La sangre de mi Chaco va
+  corriendo por mis venas" y suena `assets/pico-frank.mp3`. Se cierra al terminar el audio, con
+  Escape o al tocar; si el audio falta o el navegador lo bloquea, se cierra solo a los 6 s. No
+  se abre dos veces a la vez. El contorno se dibuja de a poco (2,6 s), después se rellena y aparece el punto de Sáenz Peña con su nombre. Con `prefers-reduced-motion` el mapa queda completo y quieto. En el celular
+  (sin teclado) lo abren 7 toques seguidos al logo del encabezado, cada uno a menos de 1,5 s del
+  anterior.
 
 ---
 
