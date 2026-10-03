@@ -471,7 +471,7 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
 - **LANDING-26** En `/hola`, en el celular (hasta 639 px), el paso en curso se lee dentro del
   teléfono animado, de a uno y sincronizado con su pantalla; la lista de pasos queda solo para
   lectores de pantalla. Desde 640 px se ve la lista al costado.
-- **LANDING-27** Easter egg: al tipear el código Konami (↑↑↓↓←→←→ B A) aparece sobre la página
+- **LANDING-27** Easter egg: al tipear el código Konami (↑↑↓↓←→←→ B A; Shift o Bloq Mayús no lo cortan y las letras valen en cualquier distribución de teclado) aparece sobre la página
   el mapa de la provincia del Chaco (SVG con el contorno real de Natural Earth, dominio público; `role="dialog"`) con la frase "La sangre de mi Chaco va
   corriendo por mis venas" y suena `assets/pico-frank.mp3`. Se cierra al terminar el audio, con
   Escape o al tocar; si el audio falta o el navegador lo bloquea, se cierra solo a los 6 s. No
