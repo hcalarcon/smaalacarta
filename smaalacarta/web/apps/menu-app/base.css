@@ -247,19 +247,40 @@ body.no-scroll {
   cursor: pointer;
 }
 
-/* En pantallas anchas, el checkout de clásico y minimal es una hoja centrada y no ocupa todo
-   el ancho (el selector más específico gana al "width: 100%" de cada plantilla). */
+/* CHECKOUT en las tres plantillas (el selector con [data-template] gana a lo que cada una
+   define para .checkout). No ocupa toda la altura: con scroll propio y el encabezado fijo, la
+   X siempre se ve aunque el contenido sea largo (por ejemplo, con los datos de transferencia). */
+html[data-template] .checkout {
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+html[data-template] .checkout .checkout-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--card);
+}
+
+/* En pantallas anchas es una hoja centrada de 560 px, no de todo el ancho. */
 @media (min-width: 768px) {
-  html[data-template="clasico"] .checkout,
-  html[data-template="minimal"] .checkout {
+  html[data-template] .checkout {
     left: 0;
     right: 0;
-    width: min(100%, 480px);
+    width: min(100%, 560px);
     margin-inline: auto;
     border: 1px solid var(--border);
     border-bottom: none;
     border-radius: 12px 12px 0 0;
   }
+}
+
+/* Con el tema oscuro, los controles nativos (el reloj del horario, la lista del select) se
+   dibujan oscuros: en claro quedaban negros sobre el fondo oscuro. */
+:root[data-tema="oscuro"] {
+  color-scheme: dark;
 }
 
 /* Aviso de cómo se entrega cuando hay un solo tipo (el select está oculto) */

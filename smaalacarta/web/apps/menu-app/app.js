@@ -830,7 +830,7 @@ function closeAll() {
 
 $("#btn-finalizar")?.addEventListener("click", () => {
   $("#carrito-panel")?.classList.remove("active");
-  $("#overlay")?.classList.remove("active");
+  // El fondo sigue activo: tocar afuera del checkout lo cierra (closeAll).
   $("#checkout")?.classList.add("active");
 });
 

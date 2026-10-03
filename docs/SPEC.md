@@ -170,9 +170,11 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
 - **PUBLICO-22** Si el negocio ofrece un solo tipo de entrega, el checkout lo dice donde estaba
   el select: "Retirá tu pedido en nuestro local" con su dirección si la cargó, o "Solo hacemos
   delivery". Con las dos opciones, o con un menú sin esos campos, no hay aviso.
-- **PUBLICO-23** En pantallas anchas (desde 768 px) el checkout de `clasico` y `minimal` es una
-  hoja centrada de hasta 480 px, no de todo el ancho; en `minimal` oscuro el select tiene
-  borde y su lista usa los colores del tema. Solo se prueba mirándolo en el navegador.
+- **PUBLICO-23** El checkout, en las tres plantillas, no ocupa toda la altura (hasta el 90 % de la
+  pantalla, con scroll propio y el encabezado con la X siempre visible) y tocar afuera lo cierra;
+  desde 768 px es una hoja centrada de 560 px. En tema oscuro, los controles nativos (el reloj
+  del horario, la lista del select) se dibujan oscuros, y en `moderno` los botones + y − de
+  cantidad usan el color del negocio, no negro. Solo se prueba mirándolo en el navegador.
 
 ## BUSQUEDA — Buscador
 
