@@ -734,14 +734,16 @@ export default function SettingsForm({
       {saved ? (
         <div
           role="status"
-          className="fixed bottom-20 left-1/2 z-20 -translate-x-1/2 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-medium text-white shadow-lg"
+          className="fixed bottom-24 left-1/2 z-20 -translate-x-1/2 sm:bottom-6 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-medium text-white shadow-lg"
         >
           Cambios guardados
         </div>
       ) : null}
 
-      {/* Flotante: queda a la vista al fondo de la pantalla mientras se recorre el formulario. */}
-      <div className="sticky bottom-4 z-10 flex justify-end pr-4">
+      {/* Flotante: fijo en la esquina de la pantalla, afuera de las tarjetas. El espacio de abajo
+          es para que, al final del formulario, no tape el último campo en pantallas angostas. */}
+      <div className="h-14 sm:hidden" aria-hidden />
+      <div className="fixed bottom-6 right-6 z-10">
         <button
           type="submit"
           disabled={saving}

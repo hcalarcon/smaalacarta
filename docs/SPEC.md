@@ -639,10 +639,10 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
 - **ADMIN-CONFIG-14** `save_business_settings` guarda las opciones de entrega y de pago,
   el alias y el CBU junto con el resto de Configuración, en el mismo paso atómico
   (ADMIN-CONFIG-3).
-- **ADMIN-CONFIG-15** El botón "Guardar cambios" de Configuración es flotante: queda fijo al
-  borde inferior de la pantalla, dentro del ancho del formulario y no pegado a su borde mientras se recorre el formulario, y "Cambios guardados"
-  aparece como un toast que se va solo a los 3 segundos. Solo se prueba mirándolo en el
-  navegador.
+- **ADMIN-CONFIG-15** El botón "Guardar cambios" de Configuración es flotante: queda fijo en la
+  esquina inferior derecha de la pantalla, afuera de las tarjetas, y "Cambios guardados" aparece
+  como un toast de app, apenas arriba del borde inferior, que se va solo a los 3 segundos. Solo
+  se prueba mirándolo en el navegador.
 
 ## ADMIN-PEDIDOS — Pedidos
 
