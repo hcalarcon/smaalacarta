@@ -798,3 +798,52 @@ describe("horario de atención — SEGUIMIENTO-9", () => {
     }
   });
 });
+
+describe("entrega y pago habilitados — SEGUIMIENTO-15", () => {
+  const habilitar = (delivery: string, payment: string) =>
+    db.exec(
+      `update business_settings set delivery_options = '${delivery}', payment_options = '${payment}'
+       where business_id = '${NEG_ANA}'`,
+    );
+
+  it("acepta lo que el negocio tiene habilitado", async () => {
+    await habilitar("{retiro}", "{transferencia}");
+
+    const r = await order("ana", [{ id: CAFE }], { delivery: "retiro", payment: "transferencia" });
+
+    expect(r.ok).toBe(true);
+  });
+
+  it("rechaza un tipo de entrega que el negocio no ofrece (P0007) y no crea el pedido", async () => {
+    await habilitar("{retiro}", "{efectivo,transferencia,tarjeta}");
+    const antes = await count("select count(*) as n from orders");
+
+    const r = await order("ana", [{ id: CAFE }], { delivery: "delivery" });
+
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.code).toBe("P0007");
+    expect(await count("select count(*) as n from orders")).toBe(antes);
+  });
+
+  it("rechaza un medio de pago que el negocio no ofrece (P0008)", async () => {
+    await habilitar("{delivery,retiro}", "{efectivo}");
+
+    const r = await order("ana", [{ id: CAFE }], { payment: "tarjeta" });
+
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.code).toBe("P0008");
+  });
+
+  it("rechaza un valor inventado aunque el negocio ofrezca todo", async () => {
+    await habilitar("{delivery,retiro}", "{efectivo,transferencia,tarjeta}");
+
+    expect((await order("ana", [{ id: CAFE }], { delivery: "drone" })).ok).toBe(false);
+    expect((await order("ana", [{ id: CAFE }], { payment: "cripto" })).ok).toBe(false);
+  });
+
+  it("sin valor sigue permitido, como hasta ahora", async () => {
+    const r = await order("ana", [{ id: CAFE }], { delivery: "", payment: "" });
+
+    expect(r.ok).toBe(true);
+  });
+});

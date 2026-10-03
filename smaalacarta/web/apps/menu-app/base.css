@@ -221,6 +221,39 @@ body.no-scroll {
   color: inherit;
 }
 
+/* Datos para transferir (alias y CBU/CVU), cada uno con su botón "Copiar". Heredan el color de
+   texto de la plantilla, como el resto del panel. */
+.gracias-pedido .gracias-transferencia {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.gracias-pedido .gracias-dato {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem 0.75rem;
+}
+
+.gracias-pedido .gracias-dato-etiqueta {
+  flex-basis: 100%;
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+.gracias-pedido .gracias-dato-valor {
+  font-size: 1.05rem;
+  /* El CBU no tiene espacios: sin esto empuja el panel más ancho que la pantalla. */
+  overflow-wrap: anywhere;
+}
+
+.gracias-pedido .gracias-dato button {
+  padding: 0.5rem 1rem;
+  min-width: 44px;
+}
+
 /* La propuesta de venta solo se muestra en las demos (la muestra app.js) */
 .cta-section[hidden] {
   display: none !important;

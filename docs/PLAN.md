@@ -3,7 +3,7 @@
 > Plan compartido de Herni y Fede para llegar a una primera versión que funcione.
 > Al empezar una sesión: _"Leé docs/PLAN.md y seguimos desde la primera tarea sin tildar de mi nombre."_
 
-Última actualización: 27/09/2026
+Última actualización: 02/10/2026
 
 **Dueños.** Cada tarea lleva `[herni]`, `[fede]` o `[por asignar]`. Antes de tomar
 una `[por asignar]`, cambiá la etiqueta por tu nombre y pusheala a tu rama. No
@@ -44,7 +44,7 @@ tomes una tarea de otro (ver [`CLAUDE.md`](../CLAUDE.md)).
 - [x] Consolidar las migraciones según las decisiones 1 y 2
 - [x] Anotar en `docs/SPEC.md` los pendientes técnicos (Etapa 7)
 - [x] Scripts `db:link`, `db:push` y `db:types` que cargan `.env.supabase` (con `dotenv-cli`)
-- [ ] [herni] Avisar a Fede que las migraciones cambiaron y que ahora cada uno usa su propio proyecto de Supabase
+- [x] [herni] Avisar a Fede que las migraciones cambiaron y que ahora cada uno usa su propio proyecto de Supabase
 
 ## Etapa 2 — Base propia y pruebas manuales
 
@@ -55,12 +55,12 @@ Desde `smaalacarta/admin/`. Cada uno lo hace con su proyecto de Supabase.
 - [x] [herni] `.env.local` con `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (Project Settings → API Keys)
 - [x] [herni] Registrarse, iniciar sesión y crear una categoría desde el panel
 - [ ] [fede] Crear su proyecto de Supabase y repetir: `.env.supabase`, `db:link`, `db:push`, `db:types`, `.env.local`
-- [ ] [herni] En Supabase, **Authentication → URL Configuration**: Site URL `http://localhost:3000` y en Redirect URLs `http://localhost:3000/auth/callback` (sin esto los links de los mails de confirmación y de recuperación no vuelven a la app). Al publicar el admin, agregar también su dominio
+- [x] [herni] En Supabase, **Authentication → URL Configuration**: Site URL `http://localhost:3000` y en Redirect URLs `http://localhost:3000/auth/callback` (sin esto los links de los mails de confirmación y de recuperación no vuelven a la app). Al publicar el admin, agregar también su dominio
 - [ ] [herni] Revisar el envío de mails de recuperación: el servicio de mail por defecto de Supabase tiene un límite muy bajo por hora; si no alcanza, configurar un SMTP propio (**Authentication → Emails → SMTP Settings**)
 - [ ] [herni] Un usuario sin negocio (creado desde **Authentication → Users**) ve `/sin-negocio` y puede cerrar sesión
 - [ ] [herni] Recuperar la contraseña desde `/recuperar`: llega el mail, el link abre `/restablecer` y la contraseña nueva funciona
 - [ ] [herni] Con un segundo usuario de otro negocio: confirmar que no ve ni puede modificar datos del primero
-- [ ] [herni] Probar el CRUD de productos (hoy tiene errores conocidos, ver Etapa 5)
+- [x] [herni] Probar el CRUD de productos (hoy tiene errores conocidos, ver Etapa 5)
 
 Si algo falla al aplicar una migración: vaciar la base propia, corregir la migración y repetir.
 
@@ -70,7 +70,7 @@ Si algo falla al aplicar una migración: vaciar la base propia, corregir la migr
 - [x] [herni] Crear `dev-herni` y `dev-fede` desde ese mismo punto y pushearlas
 - [x] [herni] PR `dev-herni` → `main`, mergeado con merge commit. Como el repo todavía no tiene reglas activas, este es el último PR sin ellas. Fede lo puede mirar, pero no lo bloquea
 - [x] [herni] Aplicar los rulesets (`.github/rulesets/main.json` y `dev.json`) y verificar (ver `BRANCHING.md`)
-- [ ] [herni] Borrar las ramas viejas: `development`, `feat/supabase-esquema`, `feat/admin-auth-estetica` y `docs/flujo-de-trabajo`
+- [x] [herni] Borrar las ramas viejas: `development`, `feat/supabase-esquema`, `feat/admin-auth-estetica` y `docs/flujo-de-trabajo`
 - [ ] [fede] `git fetch`, cambiarse a `dev-fede` y traer `main`
 - [x] [herni] Opcional: instalar GitHub CLI (`winget install GitHub.cli` y `gh auth login`) para que Claude Code maneje los PRs
 
@@ -104,7 +104,7 @@ Pasos de Supabase:
 - [x] [herni] Tipar `Product.category_id` como nullable (se pone en null al borrar la categoría)
 - [x] [herni] `npm run lint` y `npm run build` en verde
 - [x] [herni] Quitar los `continue-on-error` del CI para lint y build del admin
-- [ ] [herni] PR hacia `main`
+- [x] [herni] PR hacia `main`
 
 ## Etapa 5b — Menú y promociones
 
@@ -113,7 +113,7 @@ Hecho en el código (migración `20260926000000_orden_y_promociones.sql`, ya apl
 - [x] [herni] Borrar productos, activar/desactivar con un clic y sin recargar la página
 - [x] [herni] Ordenar categorías y productos arrastrando (`sort_order`), y guardar el orden
 - [x] [herni] Promociones: tipo **descuento %** o **combo a precio fijo**, armadas arrastrando productos del menú (`/dashboard/promotions`), con precio final y ahorro en vivo
-- [ ] [herni] **Probar a mano en el navegador** el arrastrar y soltar (categorías, productos y armado de promociones, con mouse y en el celular) y el borrado
+- [x] [herni] **Probar a mano en el navegador** el arrastrar y soltar (categorías, productos y armado de promociones, con mouse y en el celular) y el borrado
 - [ ] [por asignar] Imagen de producto (Supabase Storage entra en el plan gratuito) y `featured`
 - [ ] [por asignar] Vigencia de las promociones (fechas o días de la semana) y otros tipos (2x1)
 
@@ -125,8 +125,8 @@ Hecho en el código (migración `20260927000000_configuracion_y_menu_publico.sql
 
 - [x] [herni] Tabla `business_settings` y pantalla de Configuración (publicar, plantilla, colores, cabecera, descripción, horarios por día con turnos y cierre, WhatsApp)
 - [x] [herni] Función `public_menu` y adaptador en `web/`, con fallback a los JSON
-- [ ] [herni] En `web/apps/menu-app/supabase-config.js`, completar `url` y `key` (Supabase → Project Settings → API; son públicas por diseño: la publishable key, **nunca** la secret). Vacío, el menú usa solo los JSON
-- [ ] [herni] **Probar a mano**: en Configuración, completar y publicar; abrir el menú con `?cliente=<slug>` (servidor estático sobre `web/`) y ver colores, cabecera, horarios, productos en su orden y las promociones en "Ofertas"; despublicar y ver que vuelve a los JSON
+- [x] [herni] En `web/apps/menu-app/supabase-config.js`, completar `url` y `key` (Supabase → Project Settings → API; son públicas por diseño: la publishable key, **nunca** la secret). Vacío, el menú usa solo los JSON
+- [x] [herni] **Probar a mano**: en Configuración, completar y publicar; abrir el menú con `?cliente=<slug>` (servidor estático sobre `web/`) y ver colores, cabecera, horarios, productos en su orden y las promociones en "Ofertas"; despublicar y ver que vuelve a los JSON
 - [x] [herni] Dirección, Instagram y Facebook, y **cierre temporal** (con mensaje y fecha de reapertura que termina sola), en Configuración y en el menú público
 - [x] [herni] **Imágenes por bucket** de Supabase Storage (`business-images`, 2 MB, JPG/PNG/WebP, cada negocio en su carpeta): cabecera del menú e imagen de cada producto
 - [x] [herni] **Subdominio = slug** en el código (`web/apps/menu-app/lib/hostname.js`): `<slug>.smaalacarta.com.ar` abre el negocio sin declararlo en `app.js`; los slugs reservados (`www`, `admin`, `app`, `api`, `demo`, `moderno`…) no se pueden usar
@@ -157,7 +157,7 @@ Hecho en el código (migración `20260929000000_pedidos.sql`, ya aplicada a la b
 - [x] [herni] Numeración por negocio (1, 2, 3…), ítems con nombre y precio del momento, estados con transiciones controladas
 - [x] [herni] El menú guarda el pedido en el sistema, con precios y total calculados por el servidor, y muestra "Gracias por tu pedido" con el botón de WhatsApp y el link de seguimiento
 - [x] [herni] Página pública de seguimiento (`web/apps/tracker`), sin datos personales, que se actualiza sola hasta que el pedido termina; ruta `/pedido/:code` en `web/vercel.json`
-- [ ] [herni] **Probar a mano** el circuito: publicar un negocio, hacer un pedido desde su menú, verlo en `/dashboard/orders`, cambiarle el estado y mirar el seguimiento. Un servidor estático no aplica la ruta `/pedido/:code`: en local abrí `apps/tracker/index.html?code=<código>`; la ruta real se prueba en una preview de Vercel
+- [x] [herni] **Probar a mano** el circuito: publicar un negocio, hacer un pedido desde su menú, verlo en `/dashboard/orders`, cambiarle el estado y mirar el seguimiento. Un servidor estático no aplica la ruta `/pedido/:code`: en local abrí `apps/tracker/index.html?code=<código>`; la ruta real se prueba en una preview de Vercel
 - [ ] [por asignar] **Avisar "tu pedido está listo" por WhatsApp**: con un botón que abre el chat con el mensaje escrito (necesita pedir el teléfono del cliente en el checkout) o, más adelante, automático con la API oficial de WhatsApp. Se deja para cuando haya clientes reales
 - [ ] [por asignar] Tiempo real (Supabase Realtime) y un aviso sonoro de pedido nuevo en el tablero
 - [ ] [por asignar] Captcha (Cloudflare Turnstile, gratis) si aparecen pedidos falsos; hoy el freno es de 20 pedidos por minuto por negocio
@@ -182,7 +182,7 @@ Requisitos LANDING-1 a 23 en `docs/SPEC.md`, cubiertos por `landing/landing.test
       por accidente. Se movió `position: relative` a `.plan-card` en general
 - [x] [herni] Página `/hola` para quien llega por la tarjeta de visita (LANDING-10 a 16): un solo objetivo, WhatsApp, sin JS
 - [x] [herni] Renovación de la landing (LANDING-17 a 23): inicio sin foto con botón a WhatsApp y teléfono animado, sin comisión y carta en 3 idiomas, sin imágenes de terceros y botón fijo de WhatsApp en el celular; rediseño visual completo, tono de empresa (sin foto de persona ni íconos de emoji) y email smaalacarta@gmail.com
-- [ ] [herni] **Revisar los textos nuevos**: que el panel, las promociones y el seguimiento estén realmente incluidos en el plan Subdominio Completo antes de publicarlos
+- [x] [herni] **Revisar los textos nuevos**: que el panel, las promociones y el seguimiento estén realmente incluidos en el plan Subdominio Completo antes de publicarlos
 - [ ] [por asignar] Reemplazar `favicon.svg` (lo siguen usando las demos de `web/`) y agregar las redes sociales cuando existan
 - [ ] [por asignar] El modal de demos: la sección "Menú Web" muestra el mismo demo
       interactivo que "Subdominio Completo" (no hay todavía una demo real de solo
@@ -271,7 +271,7 @@ siempre (JS plano, lógica en `lib/*.js` con tests, funciones en `web/api/`).
       sale del subdominio (`<slug>.smaalacarta.com.ar/pdf` y `/menu.html`), igual que
       ya funcionaba el interactivo y el seguimiento de pedidos; `vercel.json` con
       rutas "bare" (`/pdf`, `/menu.html`, sin `:cliente`)
-- [ ] [herni] Probar de nuevo en producción con `kukarachos` (o el negocio de prueba
+- [x] [herni] Probar de nuevo en producción con `kukarachos` (o el negocio de prueba
       que uses) que `<slug>.smaalacarta.com.ar/pdf` y `/menu.html` respondan bien
 - [x] [herni] El menú estático sirve las demos (ESTATICO-6): `getDemoMenu()`
       (`apps/menu-app/lib/demo-menu.js`) trae los JSON de `data/demos/<slug>/` con
@@ -302,7 +302,7 @@ demos y negocios reales, en el menú interactivo y en el estático
       test (`templates.test.js`) comprueba que toda clase que emite tiene estilo
 - [x] [herni] Pulido de las tres plantillas y texto legible sobre colores claros de marca
       (`lib/colors.js`, PUBLICO-15)
-- [ ] [herni] **Mirar `/moderno`, `/clasico` y `/minimal` en el celular** (el agente solo las
+- [x] [herni] **Mirar `/moderno`, `/clasico` y `/minimal` en el celular** (el agente solo las
       vio en capturas headless) y probar colores claros en clásico y minimal con un negocio real
 - [ ] [por asignar] Precios con formato es-AR (`$12.000`; hoy `$12000`): toca el carrito
 - [ ] [por asignar] Mostrar la descripción de cada categoría en el menú (llega en `public_menu`, no se pinta)
@@ -384,7 +384,7 @@ negocio y los fijos (promo, WhatsApp) no cambian con el tema. Requisitos en
       heredan fondo ni color de texto solos: en clásico y minimal quedaban en
       negro fijo sobre negro al confirmar el carrito en tema oscuro (moderno ya
       los tenía explícitos). Se notó probándolo en el navegador
-- [ ] [herni] **Seguir mirando las tres plantillas en oscuro, en el navegador**:
+- [x] [herni] **Seguir mirando las tres plantillas en oscuro, en el navegador**:
       recién arrancó la revisión a ojo (salió el bug de arriba); puede haber más.
       Para probar rápido: Configuración → Apariencia → Oscuro → Guardar, en un
       negocio real, o el switch de tema de las demos (siguiente ítem)
@@ -448,6 +448,21 @@ por cada servicio que el negocio realmente tenga, no uno solo. Lógica en
       Alguien con la sesión y las herramientas para pegarle directo a la acción
       podría saltarse el filtro
 
+## Etapa 6k — Entrega y pago por negocio
+
+El negocio elige en Configuración qué tipos de entrega y medios de pago ofrece y, con
+transferencia, su alias y CBU/CVU. El checkout se arma con eso y "Gracias por tu pedido"
+muestra los datos con botón "Copiar". Requisitos en `docs/SPEC.md` (ADMIN-CONFIG-11 a 14,
+PUBLICO-18 a 21, SEGUIMIENTO-15). Migración `20261002000000_entrega_y_pago.sql`.
+
+- [x] [herni] Migración: columnas con defaults y checks, `save_business_settings`,
+      `public_menu` y `create_public_order` (rechaza lo no habilitado con P0007/P0008)
+- [x] [herni] Admin: reglas puras (`src/lib/settings/payment.ts`) y sección "Entrega y pago"
+- [x] [herni] Menú: `lib/checkout-options.js`, selects según el negocio, datos de transferencia
+      en "Gracias por tu pedido", textos en es/en/pt
+- [ ] [herni] **Probar a mano**: en Configuración, dejar una sola opción por grupo y ver que el
+      checkout oculta el select; cargar alias/CBU, hacer un pedido por transferencia y copiar
+
 ## Etapa 7 — Pendientes técnicos (backlog)
 
 - [ ] [por asignar] **Marketplace** ("un lugar donde encontrar de todo para
@@ -469,7 +484,7 @@ por cada servicio que el negocio realmente tenga, no uno solo. Lógica en
       solo. **Importante:** desde que esto se despliegue, la URL directa de Vercel
       del panel (`https://smaalacarta-admin.vercel.app/`) da 404 en la raíz — todo
       vive bajo `/admin` ahora
-- [ ] [herni] Probar el login de verdad en un preview antes de mergear a `main`
+- [x] [herni] Probar el login de verdad en un preview antes de mergear a `main`
       (curl solo confirmó que las redirecciones arman bien la URL, no un login
       real con cookies de sesión en un navegador)
 - [x] Flujo de alta de negocios y membresías desde el admin: resuelto en la Etapa 4 (superadmin)

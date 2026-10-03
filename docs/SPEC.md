@@ -154,6 +154,19 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   y borde), salvo con `prefers-reduced-motion`.
 - **PUBLICO-17** Las demos están siempre abiertas: quien las prueba puede hacer el pedido
   de prueba a cualquier hora. Sus `config.json` no traen `horarios` (PUBLICO-4 y 12).
+- **PUBLICO-18** `public_menu` entrega en `config` las opciones que el negocio ofrece:
+  `entrega` y `pagos` (listas), y `transferencia` con `alias` y `cbu` solo si
+  "transferencia" está habilitada y cargó alguno de los dos.
+- **PUBLICO-19** El checkout arma los selects de entrega y de pago con esas opciones
+  (`lib/checkout-options.js`). Si un grupo queda con una sola opción, se preselecciona
+  y su select se oculta; con varias, hay que elegir una. Si el menú no trae esos campos
+  (JSON de demos y negocios sin Supabase), se ofrecen todas, como hasta ahora.
+- **PUBLICO-20** En "Gracias por tu pedido", si el pago elegido fue transferencia y el
+  negocio cargó alias o CBU/CVU, se muestran con un botón "Copiar" para cada uno. Se
+  pintan con `textContent`; ni el checkout, ni el mensaje de WhatsApp, ni el
+  seguimiento llevan esos datos.
+- **PUBLICO-21** Los textos nuevos (alias, CBU/CVU, "Copiar", "Copiado") están en español,
+  inglés y portugués.
 
 ## BUSQUEDA — Buscador
 
@@ -228,6 +241,9 @@ llegando al negocio por WhatsApp.
   WhatsApp se abre en una ventana aparte y la pestaña del pedido conserva el panel; la ventana se
   abre al tocar "enviar", antes de esperar al servidor, y se cierra si el pedido no se envía. Si el
   navegador la bloquea, y en celulares y tablets, se usa la misma pestaña.
+- **SEGUIMIENTO-15** `create_public_order` rechaza (`invalid_delivery` o
+  `invalid_payment`, código `P0007` y `P0008`) una entrega o un pago que el
+  negocio no tiene habilitado (ADMIN-CONFIG-11); sin valor se acepta, como hasta ahora.
 
 ## PWA — Instalar el menú en el celular
 
@@ -597,6 +613,23 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   además los tiene); sin él, el path del dominio raíz para el estático y el PDF,
   si los tiene, y ningún link para el interactivo. También muestra qué plan
   tiene el negocio (badges), de solo lectura: solo el superadmin lo cambia.
+- **ADMIN-CONFIG-11** El negocio elige qué tipos de entrega ofrece (`delivery`,
+  `retiro`) y qué medios de pago (`efectivo`, `transferencia`, `tarjeta`): al
+  menos uno por grupo (columnas `delivery_options` y `payment_options`). Un negocio
+  existente o nuevo arranca con todo habilitado. La base rechaza un grupo vacío o
+  con valores fuera de esos conjuntos.
+- **ADMIN-CONFIG-12** Con "transferencia" habilitada el negocio puede cargar un alias
+  (6 a 20 caracteres: letras, números, punto y guion) y un CBU/CVU (22 dígitos), los dos
+  opcionales. Sin "transferencia", el alias y el CBU/CVU se descartan al guardar. La
+  base rechaza un alias o un CBU con otro formato.
+- **ADMIN-CONFIG-13** Configuración muestra "Entrega y pago" con una casilla por opción;
+  los campos de alias y CBU/CVU aparecen solo con "transferencia" tildada. Los errores
+  (ningún tipo de entrega, ningún medio de pago, alias o CBU inválidos) salen en español
+  junto al campo, y el alias y el CBU/CVU se normalizan (sin espacios ni guiones) antes
+  de guardarse.
+- **ADMIN-CONFIG-14** `save_business_settings` guarda las opciones de entrega y de pago,
+  el alias y el CBU junto con el resto de Configuración, en el mismo paso atómico
+  (ADMIN-CONFIG-3).
 
 ## ADMIN-PEDIDOS — Pedidos
 

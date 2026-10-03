@@ -278,6 +278,8 @@ describe("configuración — PUBLICO-4", () => {
         instagram: "https://www.instagram.com/ana_resto",
         facebook: "https://www.facebook.com/anaresto",
       },
+      entrega: ["delivery", "retiro"],
+      pagos: ["efectivo", "transferencia", "tarjeta"],
     });
   });
 
@@ -433,6 +435,64 @@ describe("traducciones — IDIOMA-10", () => {
     await db.exec(`
       update categories set name_en = null, name_pt = null where business_id = '${NEG_BETO}';
       update products set name_en = null, description_pt = null where business_id = '${NEG_BETO}';
+    `);
+  });
+});
+
+describe("entrega y pago — PUBLICO-18", () => {
+  type Config = Record<string, unknown>;
+  const cfg = async () => (await publicMenu("beto"))!.config as Config;
+
+  it("sin haber elegido nada, entrega todas las opciones y no trae transferencia", async () => {
+    const c = await cfg();
+
+    expect(c.entrega).toEqual(["delivery", "retiro"]);
+    expect(c.pagos).toEqual(["efectivo", "transferencia", "tarjeta"]);
+    expect(c).not.toHaveProperty("transferencia");
+  });
+
+  it("con transferencia habilitada entrega el alias y el CBU que cargó", async () => {
+    await db.exec(`
+      update business_settings
+      set delivery_options = '{retiro}', payment_options = '{efectivo,transferencia}',
+          transfer_alias = 'beto.bar', transfer_cbu = '0000003100012345678901'
+      where business_id = '${NEG_BETO}'
+    `);
+    const c = await cfg();
+
+    expect(c.entrega).toEqual(["retiro"]);
+    expect(c.pagos).toEqual(["efectivo", "transferencia"]);
+    expect(c.transferencia).toEqual({ alias: "beto.bar", cbu: "0000003100012345678901" });
+  });
+
+  it("con uno solo de los dos, entrega solo ese", async () => {
+    await db.exec(`update business_settings set transfer_cbu = null where business_id = '${NEG_BETO}'`);
+
+    expect((await cfg()).transferencia).toEqual({ alias: "beto.bar" });
+  });
+
+  it("sin transferencia habilitada no entrega los datos aunque estén guardados", async () => {
+    // Si no, el menú mostraría datos de un medio de pago que el negocio ya no ofrece.
+    await db.exec(`update business_settings set payment_options = '{efectivo}' where business_id = '${NEG_BETO}'`);
+    const c = await cfg();
+
+    expect(c.pagos).toEqual(["efectivo"]);
+    expect(c).not.toHaveProperty("transferencia");
+  });
+
+  it("sin alias ni CBU cargados no entrega transferencia", async () => {
+    await db.exec(`
+      update business_settings
+      set payment_options = '{transferencia}', transfer_alias = null, transfer_cbu = null
+      where business_id = '${NEG_BETO}'
+    `);
+
+    expect(await cfg()).not.toHaveProperty("transferencia");
+
+    await db.exec(`
+      update business_settings
+      set delivery_options = '{delivery,retiro}', payment_options = '{efectivo,transferencia,tarjeta}'
+      where business_id = '${NEG_BETO}'
     `);
   });
 });

@@ -12,6 +12,7 @@ let COLORS = null;
 let I18N = null;
 let PRICE = null;
 let WA_WINDOW = null;
+let CHECKOUT = null;
 
 // Idioma de la interfaz (IDIOMA-1 a 4) y el menú tal como vino, sin las secciones armadas.
 let LANG = "es";
@@ -161,6 +162,7 @@ async function init() {
       i18nLib,
       priceLib,
       waWindow,
+      checkoutLib,
     ] = await Promise.all([
       import("/apps/menu-app/lib/hostname.js"),
       import("/apps/menu-app/lib/html.js"),
@@ -174,9 +176,11 @@ async function init() {
       import("/apps/menu-app/lib/i18n.js"),
       import("/apps/menu-app/lib/price.js"),
       import("/apps/menu-app/lib/whatsapp-window.js"),
+      import("/apps/menu-app/lib/checkout-options.js"),
     ]);
     PRICE = priceLib;
     WA_WINDOW = waWindow;
+    CHECKOUT = checkoutLib;
     COLORS = colorsLib;
     I18N = i18nLib;
     LANG = I18N.resolveLang({
@@ -230,6 +234,7 @@ async function init() {
     }
 
     window.CONFIG = config;
+    applyCheckoutOptions(config);
     document.documentElement.dataset.template = config.template || "";
     document.documentElement.dataset.tema = config.tema || "claro";
 
@@ -931,6 +936,10 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
       WA_WINDOW?.discardPlaceholder(placeholder);
       alert(tr("error.busy"));
       return;
+    } else if (result.reason === "invalid_delivery" || result.reason === "invalid_payment") {
+      WA_WINDOW?.discardPlaceholder(placeholder);
+      alert(tr("error.optionsChanged"));
+      return;
     } else if (result.reason === "unavailable") {
       WA_WINDOW?.discardPlaceholder(placeholder);
       alert(tr("error.unavailable"));
@@ -954,8 +963,14 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     // Se anota el pedido antes de salir: si el navegador recarga la página al volver de
     // WhatsApp, el panel se muestra de nuevo (SEGUIMIENTO-10).
     ORDERS.rememberHandoff(window.localStorage, saved.code, whatsappUrl);
-    ORDERS.rememberLastOrder(window.localStorage, saved);
-    showThanks({ number: saved.number, code: saved.code, link, whatsappUrl });
+    ORDERS.rememberLastOrder(window.localStorage, { ...saved, payment: f.get("pago") });
+    showThanks({
+      number: saved.number,
+      code: saved.code,
+      link,
+      whatsappUrl,
+      transfer: CHECKOUT?.transferDetails(CONFIG, f.get("pago")) ?? null,
+    });
     ORDERS.markHandoffSent(window.localStorage, saved.code);
     // En PC, WhatsApp va a la ventana abierta al tocar; si no hubo, a la misma pestaña.
     openWhatsAppUrl(placeholder, whatsappUrl);
@@ -978,7 +993,7 @@ function openWhatsAppUrl(placeholder, url) {
 // reenviar el mensaje si WhatsApp no se abrió (SEGUIMIENTO-10). Todo con textContent: el
 // número y los links no se interpretan como HTML.
 function showThanks(data) {
-  const { number, code, link, whatsappUrl } = data;
+  const { number, code, link, whatsappUrl, transfer } = data;
   const form = $("#form-pedido");
   if (!form) return;
 
@@ -1019,8 +1034,93 @@ function showThanks(data) {
   close.textContent = tr("thanks.close");
   close.onclick = closeAll;
 
-  panel.append(title, info, track, resend, close);
+  panel.append(title, info);
+  if (transfer) panel.append(transferBox(transfer));
+  panel.append(track, resend, close);
   form.insertAdjacentElement("afterend", panel);
+}
+
+// Arma los selects de entrega y de pago con lo que el negocio ofrece (PUBLICO-19). Con una
+// sola opción en un grupo se preselecciona y el select se oculta; con varias, hay que elegir
+// (solo si el menú viene de Supabase: con un JSON se ve como siempre).
+function applyCheckoutOptions(config) {
+  if (!CHECKOUT) return;
+
+  const options = CHECKOUT.checkoutOptions(config);
+
+  [
+    ["entrega", options.delivery],
+    ["pago", options.payment],
+  ].forEach(([name, { options: allowed, single }]) => {
+    const select = document.querySelector(`#form-pedido select[name="${name}"]`);
+    if (!select) return;
+
+    select.querySelectorAll("option[value]").forEach((option) => {
+      if (!allowed.includes(option.value)) option.remove();
+    });
+
+    if (single) {
+      select.value = single;
+      select.hidden = true;
+      return;
+    }
+
+    if (MENU_SOURCE) {
+      // El texto guía tiene que tener valor vacío para que "required" lo cuente como sin elegir.
+      select.querySelector("option:disabled")?.setAttribute("value", "");
+      select.required = true;
+    }
+  });
+}
+
+// Alias y CBU/CVU para transferir, cada uno con su botón "Copiar". Todo con textContent: lo
+// que cargó el negocio nunca se interpreta como HTML (PUBLICO-20).
+function transferBox(transfer) {
+  const box = document.createElement("div");
+  box.className = "gracias-transferencia";
+
+  const heading = document.createElement("p");
+  heading.className = "gracias-aviso";
+  heading.textContent = tr("thanks.transfer");
+  box.append(heading);
+
+  [
+    ["checkout.alias", transfer.alias],
+    ["checkout.cbu", transfer.cbu],
+  ].forEach(([labelKey, value]) => {
+    if (!value) return;
+
+    const row = document.createElement("div");
+    row.className = "gracias-dato";
+
+    const label = document.createElement("span");
+    label.className = "gracias-dato-etiqueta";
+    label.textContent = tr(labelKey);
+
+    const text = document.createElement("strong");
+    text.className = "gracias-dato-valor";
+    text.textContent = value;
+
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.textContent = tr("thanks.copy");
+    copy.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(value);
+        copy.textContent = tr("thanks.copied");
+        setTimeout(() => {
+          copy.textContent = tr("thanks.copy");
+        }, 2000);
+      } catch {
+        // Sin permiso para el portapapeles: el dato queda a la vista para copiarlo a mano.
+      }
+    });
+
+    row.append(label, text, copy);
+    box.append(row);
+  });
+
+  return box;
 }
 
 // Al volver de WhatsApp con la página recargada: si hay un pedido reciente sin cerrar,
@@ -1037,6 +1137,7 @@ function restoreThanks() {
     code: last.code,
     link: ORDERS.trackingLink(window.location.origin, last.code, LANG),
     whatsappUrl,
+    transfer: CHECKOUT?.transferDetails(CONFIG, last.payment) ?? null,
   });
   $("#overlay")?.classList.add("active");
   $("#checkout")?.classList.add("active");

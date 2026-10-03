@@ -31,12 +31,19 @@ type Settings = {
   logo?: string | null;
   pdf?: string | null;
   theme?: string;
+  delivery?: string[];
+  payment?: string[];
+  alias?: string | null;
+  cbu?: string | null;
 };
 
 const sqlText = (value: string | null | undefined, fallback: string | null) => {
   const v = value === undefined ? fallback : value;
   return v === null ? "null" : "'" + v.replace(/'/g, "''") + "'";
 };
+
+const sqlArray = (values: string[]) =>
+  `array[${values.map((v) => "'" + v + "'").join(", ")}]::text[]`;
 
 // Llama a la función que guarda la configuración, como lo haría la app.
 function save(user: string | null, s: Settings = {}) {
@@ -62,7 +69,11 @@ function save(user: string | null, s: Settings = {}) {
        ${sqlText(s.reopensOn, null)}::date,
        ${sqlText(s.logo, null)},
        ${sqlText(s.pdf, null)},
-       '${s.theme ?? "claro"}')`,
+       '${s.theme ?? "claro"}',
+       ${sqlArray(s.delivery ?? ["delivery", "retiro"])},
+       ${sqlArray(s.payment ?? ["efectivo", "transferencia", "tarjeta"])},
+       ${sqlText(s.alias, null)},
+       ${sqlText(s.cbu, null)})`,
   );
 }
 
@@ -418,5 +429,96 @@ describe("ruteo por plan — RUTAS-4 y PDF-5", () => {
     await asUser(
       db, SUPER, `update businesses set plan_pdf = false where id = '${NEG_ANA}'`,
     );
+  });
+});
+
+describe("entrega y pago — ADMIN-CONFIG-11, 12 y 14", () => {
+  const row = async () => {
+    const r = await db.query<{
+      delivery_options: string[];
+      payment_options: string[];
+      transfer_alias: string | null;
+      transfer_cbu: string | null;
+    }>(
+      `select delivery_options, payment_options, transfer_alias, transfer_cbu
+       from business_settings where business_id = '${NEG_ANA}'`,
+    );
+    return r.rows[0];
+  };
+
+  it("un negocio sin elegir nada tiene todo habilitado y sin datos de transferencia", async () => {
+    // Una fila creada sin pasar por la función, como las que ya existían.
+    await db.exec(`
+      insert into businesses (id, name, slug) values ('d4d4d4d4-0000-0000-0000-000000000004', 'Sin opciones', 'sin-opciones');
+      insert into business_settings (business_id) values ('d4d4d4d4-0000-0000-0000-000000000004');
+    `);
+    const r = await db.query<Record<string, unknown>>(
+      `select delivery_options, payment_options, transfer_alias, transfer_cbu
+       from business_settings where business_id = 'd4d4d4d4-0000-0000-0000-000000000004'`,
+    );
+
+    expect(r.rows[0]).toEqual({
+      delivery_options: ["delivery", "retiro"],
+      payment_options: ["efectivo", "transferencia", "tarjeta"],
+      transfer_alias: null,
+      transfer_cbu: null,
+    });
+  });
+
+  it("guarda las opciones, el alias y el CBU junto con el resto", async () => {
+    const r = await save(ANA, {
+      delivery: ["retiro"],
+      payment: ["efectivo", "transferencia"],
+      alias: "casa.resto",
+      cbu: "0000003100012345678901",
+    });
+
+    expect(r.ok).toBe(true);
+    expect(await row()).toEqual({
+      delivery_options: ["retiro"],
+      payment_options: ["efectivo", "transferencia"],
+      transfer_alias: "casa.resto",
+      transfer_cbu: "0000003100012345678901",
+    });
+  });
+
+  it("sin transferencia habilitada no queda guardado ningún alias ni CBU", async () => {
+    // Defensa en la base: aunque el panel ya los descarta, un dato que el negocio no
+    // ofrece no tiene que quedar en la fila.
+    await save(ANA, { payment: ["efectivo"], alias: "casa.resto", cbu: "0000003100012345678901" });
+
+    expect(await row()).toMatchObject({ transfer_alias: null, transfer_cbu: null });
+  });
+
+  it.each([
+    ["una lista de entrega vacía", { delivery: [] }],
+    ["una lista de pago vacía", { payment: [] }],
+    ["una entrega desconocida", { delivery: ["drone"] }],
+    ["un pago desconocido", { payment: ["cripto"] }],
+    ["un alias corto", { alias: "abc" }],
+    ["un alias largo", { alias: "a".repeat(21) }],
+    ["un alias con espacios", { alias: "casa resto" }],
+    ["un CBU de 21 dígitos", { cbu: "000000310001234567890" }],
+    ["un CBU con letras", { cbu: "00000031000123456789ab" }],
+  ])("la base rechaza %s", async (_nombre, extra) => {
+    const antes = await row();
+    const r = await save(ANA, { payment: ["efectivo", "transferencia"], ...extra });
+
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.code).toBe("23514");
+    expect(await row()).toEqual(antes);
+  });
+
+  it("otro negocio no puede cambiar las opciones de entrega y pago (RLS)", async () => {
+    const antes = await row();
+    const r = await save(BETO, { business: NEG_ANA, delivery: ["retiro"] });
+
+    expect(r.ok).toBe(false);
+    expect(await row()).toEqual(antes);
+  });
+
+  it("restablece todo habilitado para los demás tests", async () => {
+    await save(ANA);
+    expect((await row()).delivery_options).toEqual(["delivery", "retiro"]);
   });
 });
