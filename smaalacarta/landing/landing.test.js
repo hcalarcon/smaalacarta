@@ -347,8 +347,17 @@ describe("LANDING-9 — indexación", () => {
 });
 
 // ---- Comportamiento: se carga la página real y su landing.js en jsdom.
+// Cada carga de landing.js deja sus listeners en `document`: se quitan para que no se acumulen.
+const docListeners = [];
+const addDocListener = document.addEventListener.bind(document);
+document.addEventListener = (type, fn, opts) => {
+  docListeners.push([type, fn, opts]);
+  addDocListener(type, fn, opts);
+};
+
 async function loadPage({ reducedMotion = false, observer = true } = {}) {
   vi.resetModules();
+  docListeners.splice(0).forEach(([type, fn, opts]) => document.removeEventListener(type, fn, opts));
   document.documentElement.className = "";
   document.documentElement.innerHTML = HTML.replace(/<script src="\.\/landing\.js"><\/script>/, "");
   window.scrollTo = vi.fn();
@@ -555,5 +564,81 @@ describe("LANDING-25 — un solo botón de WhatsApp a la vista en el celular", (
   it("el celular oculta el botón del inicio (desde 768 px el fijo no se muestra)", () => {
     const mobile = CSS.slice(CSS.indexOf("@media (max-width: 767px)"));
     expect(mobile).toMatch(/\.hero-cta\s*\{[^}]*display:\s*none/);
+  });
+});
+
+describe("LANDING-27 — easter egg del Chaco", () => {
+  const KONAMI = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"];
+  let audios;
+
+  beforeEach(async () => {
+    audios = [];
+    window.Audio = class {
+      constructor(src) {
+        this.src = src;
+        this.paused = false;
+        this.listeners = {};
+        audios.push(this);
+      }
+      addEventListener(type, fn) {
+        this.listeners[type] = fn;
+      }
+      play() {
+        return Promise.resolve();
+      }
+      pause() {
+        this.paused = true;
+      }
+    };
+    await loadPage();
+  });
+  afterEach(() => vi.useRealTimers());
+
+  it("el código completo abre el mapa y reproduce el audio; antes no pasa nada", () => {
+    KONAMI.slice(0, -1).forEach((k) => key(k));
+    expect($(".chaco-egg")).toBeNull();
+    key("a");
+    expect($(".chaco-egg")).not.toBeNull();
+    expect($(".chaco-egg svg path")).not.toBeNull();
+    expect(audios).toHaveLength(1);
+    expect(audios[0].src).toBe("assets/pico-frank.mp3");
+  });
+
+  it("una tecla equivocada reinicia el código", () => {
+    KONAMI.slice(0, 5).forEach((k) => key(k));
+    key("x");
+    KONAMI.slice(5).forEach((k) => key(k));
+    expect($(".chaco-egg")).toBeNull();
+  });
+
+  it("no se duplica si se repite el código con el mapa abierto", () => {
+    KONAMI.forEach((k) => key(k));
+    KONAMI.forEach((k) => key(k));
+    expect(document.querySelectorAll(".chaco-egg")).toHaveLength(1);
+  });
+
+  it("se cierra con Escape, al terminar el audio y al tocar", () => {
+    KONAMI.forEach((k) => key(k));
+    key("Escape");
+    expect($(".chaco-egg")).toBeNull();
+    expect(audios[0].paused).toBe(true);
+
+    KONAMI.forEach((k) => key(k));
+    audios[1].listeners.ended();
+    expect($(".chaco-egg")).toBeNull();
+
+    KONAMI.forEach((k) => key(k));
+    $(".chaco-egg").click();
+    expect($(".chaco-egg")).toBeNull();
+  });
+
+  it("si el audio falla, el mapa se cierra solo a los 6 s", () => {
+    vi.useFakeTimers();
+    KONAMI.forEach((k) => key(k));
+    audios[0].listeners.error();
+    vi.advanceTimersByTime(5900);
+    expect($(".chaco-egg")).not.toBeNull();
+    vi.advanceTimersByTime(200);
+    expect($(".chaco-egg")).toBeNull();
   });
 });

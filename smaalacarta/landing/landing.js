@@ -130,3 +130,75 @@ if ("IntersectionObserver" in window && !prefersReducedMotion()) {
       observer.observe(el);
     });
 }
+
+// =====================================================
+// EASTER EGG: código Konami → el mapa del Chaco y Pico Frank
+// El audio (`assets/pico-frank.mp3`) lo pone el dueño; si falta o el navegador lo bloquea,
+// el mapa aparece igual y se cierra solo.
+// =====================================================
+const KONAMI = ["ArrowUp", "ArrowUp", "ArrowDown", "ArrowDown", "ArrowLeft", "ArrowRight", "ArrowLeft", "ArrowRight", "b", "a"];
+const CHACO_AUDIO = "assets/pico-frank.mp3";
+const CHACO_FALLBACK_MS = 6000;
+const CHACO_PATH =
+  "M36 9 L122 54 L180 126 L207 153 L198 180 L99 180 L50 180 L14 90 Z";
+let konamiIndex = 0;
+let chacoOverlay = null;
+
+function closeChaco() {
+  chacoOverlay?.dispatchEvent(new Event("chaco:close"));
+}
+
+function openChaco() {
+  if (chacoOverlay) return;
+  const overlay = document.createElement("div");
+  overlay.className = "chaco-egg";
+  overlay.setAttribute("role", "dialog");
+  overlay.setAttribute("aria-label", "La sangre de mi Chaco");
+  overlay.innerHTML =
+    '<svg class="chaco-egg-map" viewBox="0 0 220 200" role="img" aria-label="Mapa de la provincia del Chaco">' +
+    `<path class="chaco-egg-shape" d="${CHACO_PATH}" />` +
+    '<circle class="chaco-egg-heart" cx="186" cy="152" r="6" />' +
+    "</svg>" +
+    '<p class="chaco-egg-text">La sangre de mi Chaco va corriendo por mis venas</p>';
+  document.body.appendChild(overlay);
+  chacoOverlay = overlay;
+
+  let audio = null;
+  let timer = null;
+  const close = () => {
+    clearTimeout(timer);
+    audio?.pause();
+    overlay.remove();
+    chacoOverlay = null;
+  };
+  overlay.addEventListener("chaco:close", close);
+  overlay.addEventListener("click", close);
+
+  const fallback = () => {
+    clearTimeout(timer);
+    timer = setTimeout(close, CHACO_FALLBACK_MS);
+  };
+  try {
+    audio = new Audio(CHACO_AUDIO);
+    audio.addEventListener("ended", close);
+    audio.addEventListener("error", fallback);
+    Promise.resolve(audio.play()).catch(fallback);
+  } catch {
+    fallback();
+  }
+}
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") return closeChaco();
+  const expected = KONAMI[konamiIndex];
+  const pressed = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+  if (pressed === expected) {
+    konamiIndex += 1;
+    if (konamiIndex === KONAMI.length) {
+      konamiIndex = 0;
+      openChaco();
+    }
+  } else {
+    konamiIndex = pressed === KONAMI[0] ? 1 : 0;
+  }
+});
