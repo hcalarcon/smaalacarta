@@ -189,10 +189,16 @@ function openChaco() {
   }
 }
 
+// Teclas que solo acompañan a otra (Shift para la "B" mayúscula, Bloq Mayús…): no cortan la secuencia.
+const MODIFIER_KEYS = new Set(["Shift", "Control", "Alt", "AltGraph", "Meta", "CapsLock", "Fn"]);
+const LETTER_CODES = { KeyB: "b", KeyA: "a" };
+
 document.addEventListener("keydown", (event) => {
   if (event.key === "Escape") return closeChaco();
+  if (event.repeat || MODIFIER_KEYS.has(event.key)) return;
   const expected = KONAMI[konamiIndex];
-  const pressed = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+  // Las letras se toman por posición de tecla, así funciona con cualquier distribución de teclado.
+  const pressed = LETTER_CODES[event.code] ?? (event.key.length === 1 ? event.key.toLowerCase() : event.key);
   if (pressed === expected) {
     konamiIndex += 1;
     if (konamiIndex === KONAMI.length) {
