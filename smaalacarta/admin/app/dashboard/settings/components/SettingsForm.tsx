@@ -741,7 +741,7 @@ export default function SettingsForm({
       ) : null}
 
       {/* Flotante: queda a la vista al fondo de la pantalla mientras se recorre el formulario. */}
-      <div className="sticky bottom-2 z-10 flex justify-end">
+      <div className="sticky bottom-4 z-10 flex justify-end pr-4">
         <button
           type="submit"
           disabled={saving}

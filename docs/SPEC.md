@@ -170,10 +170,11 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
 - **PUBLICO-22** Si el negocio ofrece un solo tipo de entrega, el checkout lo dice donde estaba
   el select: "Retirá tu pedido en nuestro local" con su dirección si la cargó, o "Solo hacemos
   delivery". Con las dos opciones, o con un menú sin esos campos, no hay aviso.
-- **PUBLICO-23** El checkout, en las tres plantillas, no ocupa toda la altura (hasta el 90 % de la
-  pantalla, con scroll propio y el encabezado con la X siempre visible), está centrado en la
-  pantalla (horizontal y verticalmente, de hasta 560 px de ancho) y tocar afuera lo cierra; En tema oscuro, los controles nativos (el reloj
-  del horario, la lista del select) se dibujan oscuros, y en `moderno` los botones + y − de
+- **PUBLICO-23** El checkout, en las tres plantillas, es un cuadro de hasta 560 px de ancho,
+  centrado horizontalmente y despegado 15 px del borde inferior; no ocupa toda la altura (deja
+  15 px arriba), con scroll propio y el encabezado con la X siempre visible, y tocar afuera lo
+  cierra. En tema oscuro, los controles nativos (el reloj del horario, la lista del select) se
+  dibujan oscuros, y en `moderno` los botones + y − de
   cantidad usan el color del negocio, no negro. Solo se prueba mirándolo en el navegador.
 
 ## BUSQUEDA — Buscador
@@ -639,7 +640,7 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   el alias y el CBU junto con el resto de Configuración, en el mismo paso atómico
   (ADMIN-CONFIG-3).
 - **ADMIN-CONFIG-15** El botón "Guardar cambios" de Configuración es flotante: queda fijo al
-  borde inferior de la pantalla mientras se recorre el formulario, y "Cambios guardados"
+  borde inferior de la pantalla, dentro del ancho del formulario y no pegado a su borde mientras se recorre el formulario, y "Cambios guardados"
   aparece como un toast que se va solo a los 3 segundos. Solo se prueba mirándolo en el
   navegador.
 

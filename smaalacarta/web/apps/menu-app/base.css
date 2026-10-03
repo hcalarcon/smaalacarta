@@ -247,31 +247,31 @@ body.no-scroll {
   cursor: pointer;
 }
 
-/* CHECKOUT en las tres plantillas: un cuadro centrado en la pantalla, horizontal y
-   verticalmente (el selector con [data-template] gana a lo que cada una define para .checkout).
+/* CHECKOUT en las tres plantillas: un cuadro centrado horizontalmente y despegado 15 px del borde
+   inferior (el selector con [data-template] gana a lo que cada una define para .checkout).
    No ocupa toda la altura: con scroll propio y el encabezado fijo, la X siempre se ve aunque el
    contenido sea largo (por ejemplo, con los datos de transferencia). */
 html[data-template] .checkout {
-  top: 50%;
+  top: auto;
   left: 50%;
   right: auto;
-  bottom: auto;
+  bottom: 15px;
   width: min(92vw, 560px);
-  max-height: 90vh;
-  max-height: 90dvh;
+  max-height: calc(100vh - 30px);
+  max-height: calc(100dvh - 30px);
   overflow-y: auto;
   overscroll-behavior: contain;
   box-sizing: border-box;
   border: 1px solid var(--border);
   border-radius: 12px;
-  transform: translate(-50%, -46%);
+  transform: translate(-50%, calc(100% + 15px));
   transition:
     transform 0.25s ease,
     opacity 0.2s ease;
 }
 
 html[data-template] .checkout.active {
-  transform: translate(-50%, -50%);
+  transform: translate(-50%, 0);
 }
 
 html[data-template] .checkout .checkout-header {
