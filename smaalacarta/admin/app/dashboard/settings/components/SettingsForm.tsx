@@ -724,7 +724,8 @@ export default function SettingsForm({
       </Section>
       </> : null}
 
-      <div className="flex items-center justify-end gap-4">
+      {/* Flotante: queda a la vista al fondo de la pantalla mientras se recorre el formulario. */}
+      <div className="sticky bottom-2 z-10 flex items-center justify-end gap-4 rounded-2xl border border-line bg-white/90 p-3 shadow-lg backdrop-blur">
         {saved ? (
           <span role="status" className="text-sm font-medium text-emerald-700">
             Cambios guardados

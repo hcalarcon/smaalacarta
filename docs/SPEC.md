@@ -639,6 +639,9 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
 - **ADMIN-CONFIG-14** `save_business_settings` guarda las opciones de entrega y de pago,
   el alias y el CBU junto con el resto de Configuración, en el mismo paso atómico
   (ADMIN-CONFIG-3).
+- **ADMIN-CONFIG-15** El botón "Guardar cambios" de Configuración es flotante: queda fijo al
+  borde inferior de la pantalla mientras se recorre el formulario. Solo se prueba mirándolo
+  en el navegador.
 
 ## ADMIN-PEDIDOS — Pedidos
 
