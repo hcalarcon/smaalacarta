@@ -604,6 +604,12 @@ describe("LANDING-27 — easter egg del Chaco", () => {
     expect(audios[0].src).toBe("assets/pico-frank.mp3");
   });
 
+  it("el audio existe en el repo y el mapa es un contorno real (no un polígono de pocos puntos)", () => {
+    expect(statSync(join(DIR, "assets/pico-frank.mp3")).size).toBeGreaterThan(1000);
+    KONAMI.forEach((k) => key(k));
+    expect($(".chaco-egg-shape").getAttribute("d").split("L").length).toBeGreaterThan(40);
+  });
+
   it("una tecla equivocada reinicia el código", () => {
     KONAMI.slice(0, 5).forEach((k) => key(k));
     key("x");
