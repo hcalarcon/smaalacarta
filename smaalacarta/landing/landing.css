@@ -1299,10 +1299,27 @@ h3 {
   stroke: #fff;
   stroke-width: 3;
   stroke-linejoin: round;
+  stroke-dasharray: 1;
+  animation:
+    chaco-draw 2.6s ease-in-out backwards,
+    chaco-fill 0.6s ease-out 2.6s backwards;
+}
+
+.chaco-egg-heart,
+.chaco-egg-city {
+  fill: #fff;
+  animation: chaco-pop 0.4s ease-out 3.2s backwards;
 }
 
 .chaco-egg-heart {
-  fill: #fff;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.chaco-egg-city {
+  font-size: 11px;
+  font-weight: 700;
+  text-anchor: middle;
 }
 
 .chaco-egg-text {
@@ -1316,6 +1333,25 @@ h3 {
 @keyframes chaco-in {
   from {
     opacity: 0;
+  }
+}
+
+@keyframes chaco-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@keyframes chaco-fill {
+  from {
+    fill-opacity: 0;
+  }
+}
+
+@keyframes chaco-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.2);
   }
 }
 

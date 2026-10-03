@@ -156,8 +156,9 @@ function openChaco() {
   overlay.setAttribute("aria-label", "La sangre de mi Chaco");
   overlay.innerHTML =
     '<svg class="chaco-egg-map" viewBox="-6 -6 212 183" role="img" aria-label="Mapa de la provincia del Chaco">' +
-    `<path class="chaco-egg-shape" d="${CHACO_PATH}" />` +
-    '<circle class="chaco-egg-heart" cx="175.1" cy="147.1" r="5" />' +
+    `<path class="chaco-egg-shape" d="${CHACO_PATH}" pathLength="1" />` +
+    '<circle class="chaco-egg-heart" cx="117.2" cy="117.6" r="5" />' +
+    '<text class="chaco-egg-city" x="117.2" y="105">Sáenz Peña</text>' +
     "</svg>" +
     '<p class="chaco-egg-text">La sangre de mi Chaco va corriendo por mis venas</p>';
   document.body.appendChild(overlay);

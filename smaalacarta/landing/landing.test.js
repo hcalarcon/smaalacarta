@@ -608,6 +608,8 @@ describe("LANDING-27 — easter egg del Chaco", () => {
     expect(statSync(join(DIR, "assets/pico-frank.mp3")).size).toBeGreaterThan(1000);
     KONAMI.forEach((k) => key(k));
     expect($(".chaco-egg-shape").getAttribute("d").split("L").length).toBeGreaterThan(40);
+    expect($(".chaco-egg-city").textContent).toBe("Sáenz Peña");
+    expect($(".chaco-egg-shape").getAttribute("pathLength")).toBe("1");
   });
 
   it("una tecla equivocada reinicia el código", () => {
