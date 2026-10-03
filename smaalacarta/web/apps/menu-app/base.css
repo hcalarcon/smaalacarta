@@ -247,14 +247,31 @@ body.no-scroll {
   cursor: pointer;
 }
 
-/* CHECKOUT en las tres plantillas (el selector con [data-template] gana a lo que cada una
-   define para .checkout). No ocupa toda la altura: con scroll propio y el encabezado fijo, la
-   X siempre se ve aunque el contenido sea largo (por ejemplo, con los datos de transferencia). */
+/* CHECKOUT en las tres plantillas: un cuadro centrado en la pantalla, horizontal y
+   verticalmente (el selector con [data-template] gana a lo que cada una define para .checkout).
+   No ocupa toda la altura: con scroll propio y el encabezado fijo, la X siempre se ve aunque el
+   contenido sea largo (por ejemplo, con los datos de transferencia). */
 html[data-template] .checkout {
+  top: 50%;
+  left: 50%;
+  right: auto;
+  bottom: auto;
+  width: min(92vw, 560px);
   max-height: 90vh;
   max-height: 90dvh;
   overflow-y: auto;
   overscroll-behavior: contain;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transform: translate(-50%, -46%);
+  transition:
+    transform 0.25s ease,
+    opacity 0.2s ease;
+}
+
+html[data-template] .checkout.active {
+  transform: translate(-50%, -50%);
 }
 
 html[data-template] .checkout .checkout-header {
@@ -262,19 +279,6 @@ html[data-template] .checkout .checkout-header {
   top: 0;
   z-index: 1;
   background: var(--card);
-}
-
-/* En pantallas anchas es una hoja centrada de 560 px, no de todo el ancho. */
-@media (min-width: 768px) {
-  html[data-template] .checkout {
-    left: 0;
-    right: 0;
-    width: min(100%, 560px);
-    margin-inline: auto;
-    border: 1px solid var(--border);
-    border-bottom: none;
-    border-radius: 12px 12px 0 0;
-  }
 }
 
 /* Con el tema oscuro, los controles nativos (el reloj del horario, la lista del select) se
