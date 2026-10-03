@@ -13,6 +13,7 @@ let I18N = null;
 let PRICE = null;
 let WA_WINDOW = null;
 let CHECKOUT = null;
+let THEME = null;
 
 // Idioma de la interfaz (IDIOMA-1 a 4) y el menú tal como vino, sin las secciones armadas.
 let LANG = "es";
@@ -163,6 +164,7 @@ async function init() {
       priceLib,
       waWindow,
       checkoutLib,
+      themeLib,
     ] = await Promise.all([
       import("/apps/menu-app/lib/hostname.js"),
       import("/apps/menu-app/lib/html.js"),
@@ -177,10 +179,12 @@ async function init() {
       import("/apps/menu-app/lib/price.js"),
       import("/apps/menu-app/lib/whatsapp-window.js"),
       import("/apps/menu-app/lib/checkout-options.js"),
+      import("/apps/menu-app/lib/theme.js"),
     ]);
     PRICE = priceLib;
     WA_WINDOW = waWindow;
     CHECKOUT = checkoutLib;
+    THEME = themeLib;
     COLORS = colorsLib;
     I18N = i18nLib;
     LANG = I18N.resolveLang({
@@ -238,7 +242,8 @@ async function init() {
     renderDeliveryNotice();
     renderTransferInfo();
     document.documentElement.dataset.template = config.template || "";
-    document.documentElement.dataset.tema = config.tema || "claro";
+    // El tema por defecto es el del negocio; si el visitante eligió otro, vale el suyo (PUBLICO-24).
+    document.documentElement.dataset.tema = THEME.resolveTheme(config, window.localStorage, slug);
 
     // App instalable: manifest, ícono y color del negocio (PWA-1 a 3).
     PWA.applyPwa(document, { type, slug, config });
@@ -253,31 +258,29 @@ async function init() {
     const volver = document.querySelector(".btn-volver");
     if (volver) volver.hidden = !demo;
 
-    // Switch de tema: solo en las demos, para mostrar cómo se ve cada plantilla
-    // en los dos temas sin tener que cargar un negocio real en oscuro.
+    // Switch de tema: el visitante puede cambiar el tema que dejó el negocio (PUBLICO-24).
     const btnTema = document.getElementById("btn-tema");
     if (btnTema) {
-      btnTema.hidden = !demo;
-      if (demo) {
-        // Sol (pasar a claro) y luna (pasar a oscuro): el ícono muestra el
-        // tema al que se pasaría al tocar, no el actual.
-        const SOL =
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>';
-        const LUNA =
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>';
+      btnTema.hidden = false;
+      // Sol (pasar a claro) y luna (pasar a oscuro): el ícono muestra el
+      // tema al que se pasaría al tocar, no el actual.
+      const SOL =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>';
+      const LUNA =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>';
 
-        syncTema = () => {
-          const oscuro = document.documentElement.dataset.tema === "oscuro";
-          btnTema.innerHTML = oscuro ? SOL : LUNA;
-          btnTema.setAttribute("aria-label", tr(oscuro ? "theme.toLight" : "theme.toDark"));
-        };
+      syncTema = () => {
+        const oscuro = document.documentElement.dataset.tema === "oscuro";
+        btnTema.innerHTML = oscuro ? SOL : LUNA;
+        btnTema.setAttribute("aria-label", tr(oscuro ? "theme.toLight" : "theme.toDark"));
+      };
+      syncTema();
+      btnTema.addEventListener("click", () => {
+        const next = document.documentElement.dataset.tema === "oscuro" ? "claro" : "oscuro";
+        document.documentElement.dataset.tema = next;
+        THEME.rememberTheme(window.localStorage, slug, next);
         syncTema();
-        btnTema.addEventListener("click", () => {
-          document.documentElement.dataset.tema =
-            document.documentElement.dataset.tema === "oscuro" ? "claro" : "oscuro";
-          syncTema();
-        });
-      }
+      });
     }
 
     // 🎨 Colores dinámicos

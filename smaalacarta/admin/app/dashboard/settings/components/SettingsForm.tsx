@@ -275,7 +275,7 @@ export default function SettingsForm({
         </div>
 
         <div>
-          <span className="mb-1.5 block text-sm font-medium text-brand">Tema</span>
+          <span className="mb-1.5 block text-sm font-medium text-brand">Tema por defecto</span>
           <div className="grid gap-2 sm:grid-cols-3">
             {THEMES.map((option) => (
               <button
@@ -293,6 +293,10 @@ export default function SettingsForm({
               </button>
             ))}
           </div>
+          <p className="mt-1.5 text-sm text-stone-500">
+            Es el tema con el que se abre tu menú; tus clientes pueden cambiarlo con el botón del
+            menú.
+          </p>
           {fieldErrors.theme ? (
             <p className="mt-1.5 text-sm text-red-600">{fieldErrors.theme}</p>
           ) : null}

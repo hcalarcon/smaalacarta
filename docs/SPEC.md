@@ -147,11 +147,14 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   `[data-tema="oscuro"]` para redefinir sus variables de fondo, tarjeta, texto y
   borde; los colores de marca del negocio y los fijos (promo, WhatsApp) no
   cambian con el tema: ya se calculan para leerse sobre sí mismos. Sin tema
-  cargado (las demos, hoy), se ve como siempre: claro. En el interactivo, las
-  demos tienen además un switch (`#btn-tema`, junto al estado abierto/cerrado)
-  para alternar entre los dos temas sin recargar; no existe en negocios reales
-  ni en el estático. El cambio de tema anima suave (transición en fondo, texto
+  cargado (las demos, hoy), se ve como siempre: claro. El interactivo tiene además
+  un switch (`#btn-tema`, junto al estado abierto/cerrado) para alternar entre
+  los dos temas sin recargar (PUBLICO-24); no existe en el estático. El cambio de tema anima suave (transición en fondo, texto
   y borde), salvo con `prefers-reduced-motion`.
+- **PUBLICO-24** El tema que el negocio elige en Configuración (ADMIN-CONFIG-9) es el que ve
+  cada visitante la primera vez; el visitante puede cambiarlo con el switch del menú
+  interactivo, y su elección queda en su navegador, por negocio (`lib/theme.js`), y gana al
+  tema del negocio las próximas veces. Sin almacenamiento disponible, vale el del negocio.
 - **PUBLICO-17** Las demos están siempre abiertas: quien las prueba puede hacer el pedido
   de prueba a cualquier hora. Sus `config.json` no traen `horarios` (PUBLICO-4 y 12).
 - **PUBLICO-18** `public_menu` entrega en `config` las opciones que el negocio ofrece:
