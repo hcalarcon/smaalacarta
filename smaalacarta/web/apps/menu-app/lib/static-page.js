@@ -42,23 +42,27 @@ function socialIconSvg(key) {
     : "";
 }
 
-function productCard(item) {
+function productCard(item, lang) {
   const image = safeHttpUrl(item?.imagen);
   // Igual que el interactivo: la plantilla dibuja la etiqueta de la promo desde el atributo.
   const promo = item?.promo ? ` data-promo="${escapeHtml(item.promo)}"` : "";
 
-  return `<article class="producto"${promo}>
+  // Sin stock (ESTATICO-7): se ve atenuado y con su etiqueta, igual que en el interactivo.
+  const soldOut = item?.agotado === true;
+
+  return `<article class="producto${soldOut ? " agotado" : ""}"${promo}>
     ${image ? `<img src="${escapeHtml(image)}" alt="">` : ""}
     <div class="producto-info">
       <h3>${escapeHtml(item?.nombre)}</h3>
       <p>${escapeHtml(item?.descripcion || "")}</p>
       ${item?.precioAnterior ? `<span class="precio-anterior">$${escapeHtml(formatPrice(item.precioAnterior))}</span>` : ""}
       <div class="producto-precio">$${escapeHtml(formatPrice(item?.precio))}</div>
+      ${soldOut ? `<span class="etiqueta-agotado">${escapeHtml(t("item.soldOut", lang))}</span>` : ""}
     </div>
   </article>`;
 }
 
-function categorySection(cat) {
+function categorySection(cat, lang) {
   const items = Array.isArray(cat?.items) ? cat.items : [];
   if (items.length === 0) return "";
 
@@ -67,7 +71,7 @@ function categorySection(cat) {
 
   return `<section class="categoria${tipo}" id="${escapeHtml(id)}">
     <h2 class="categoria-titulo">${escapeHtml(cat.nombre)}</h2>
-    <div class="categoria-grid">${items.map(productCard).join("")}</div>
+    <div class="categoria-grid">${items.map((item) => productCard(item, lang)).join("")}</div>
   </section>`;
 }
 
@@ -181,7 +185,7 @@ export function renderStaticMenuPage({ config, menu, lang: requestedLang } = {})
 </header>
 ${aviso}
 ${categoryNav(categorias)}
-<main class="menu-container" id="menu">${categorias.map(categorySection).join("")}</main>
+<main class="menu-container" id="menu">${categorias.map((cat) => categorySection(cat, lang)).join("")}</main>
 ${footer(config)}
 ${whatsappContact(config, lang)}
 </body>

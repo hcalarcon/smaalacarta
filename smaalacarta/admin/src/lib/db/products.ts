@@ -22,6 +22,7 @@ export type Product = {
   active: boolean;
   image_url: string | null;
   featured: boolean;
+  sold_out: boolean;
   name_en: string | null;
   name_pt: string | null;
   description_en: string | null;
@@ -61,6 +62,15 @@ export async function setProductActive(
   active: boolean,
 ) {
   await updateRecord("products", id, businessId, { active });
+}
+
+// Marcar o quitar "Sin stock" sin tocar nada más (ADMIN-MENU-8).
+export async function setProductSoldOut(
+  businessId: string,
+  id: string,
+  soldOut: boolean,
+) {
+  await updateRecord("products", id, businessId, { sold_out: soldOut });
 }
 
 export async function deleteProduct(businessId: string, id: string) {

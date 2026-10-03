@@ -157,6 +157,7 @@ describe("categorías y productos — PUBLICO-2", () => {
       precio: 1000,
       imagen: "https://ejemplo.com/cafe.jpg",
       destacado: true,
+      agotado: false,
     });
   });
 
@@ -169,6 +170,7 @@ describe("categorías y productos — PUBLICO-2", () => {
       nombre: "Té",
       precio: 800,
       destacado: false,
+      agotado: false,
     });
   });
 
@@ -494,5 +496,54 @@ describe("entrega y pago — PUBLICO-18", () => {
       set delivery_options = '{delivery,retiro}', payment_options = '{efectivo,transferencia,tarjeta}'
       where business_id = '${NEG_BETO}'
     `);
+  });
+});
+
+describe("sin stock — PUBLICO-25", () => {
+  const TE = "d1000000-0000-0000-0000-000000000002";
+  const names = async () => {
+    const m = (await publicMenu("ana"))!;
+    return m.menu.categorias.flatMap((c) => c.items.map((i) => `${c.nombre}/${i.nombre}`));
+  };
+  const item = async (nombre: string) =>
+    (await publicMenu("ana"))!.menu.categorias
+      .filter((c) => c.tipo !== "ofertas")
+      .flatMap((c) => c.items)
+      .find((i) => i.nombre === nombre) as (Item & { agotado?: boolean }) | undefined;
+
+  it("un producto nuevo no está agotado (por defecto sold_out es false)", async () => {
+    const r = await db.query<{ sold_out: boolean }>(
+      `select sold_out from products where id = '${TE}'`,
+    );
+
+    expect(r.rows[0].sold_out).toBe(false);
+    expect((await item("Té"))!.agotado).toBe(false);
+  });
+
+  it("el producto sin stock sigue en el menú, marcado como agotado", async () => {
+    await db.exec(`update products set sold_out = true where id = '${TE}'`);
+
+    expect(await names()).toContain("Bebidas/Té");
+    expect((await item("Té"))!.agotado).toBe(true);
+    expect((await item("Café"))!.agotado).toBe(false);
+  });
+
+  it("una promoción con un producto sin stock no se entrega, a diferencia del producto", async () => {
+    // "Desayuno" lleva Té + Café: sin Té no se puede armar.
+    const ofertas = (await publicMenu("ana"))!.menu.categorias.find((c) => c.tipo === "ofertas");
+
+    expect(ofertas!.items.map((i) => i.nombre)).not.toContain("Desayuno");
+    expect(ofertas!.items.map((i) => i.nombre)).toContain("Combo");
+  });
+
+  it("al volver a haber stock, la promoción vuelve", async () => {
+    await db.exec(`update products set sold_out = false where id = '${TE}'`);
+    const ofertas = (await publicMenu("ana"))!.menu.categorias.find((c) => c.tipo === "ofertas");
+
+    expect(ofertas!.items.map((i) => i.nombre)).toContain("Desayuno");
+  });
+
+  it("un producto oculto sigue sin entregarse aunque tenga stock (Oculto no es Sin stock)", async () => {
+    expect(await names()).not.toContain("Bebidas/Jugo");
   });
 });

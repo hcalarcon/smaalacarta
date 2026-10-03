@@ -24,6 +24,7 @@ type ProductDialogProps = {
     active: boolean;
     image_url: string | null;
     featured: boolean;
+    sold_out: boolean;
   } & Translations) => Promise<void>;
 };
 
@@ -45,6 +46,9 @@ function ProductDialogForm({
   const [active, setActive] = useState(editing ? initialData.active : true);
   const [featured, setFeatured] = useState(
     editing ? initialData.featured : false,
+  );
+  const [soldOut, setSoldOut] = useState(
+    editing ? (initialData.sold_out ?? false) : false,
   );
   const [imageUrl, setImageUrl] = useState(
     editing ? (initialData.image_url ?? "") : "",
@@ -74,6 +78,7 @@ function ProductDialogForm({
         active,
         image_url: imageUrl || null,
         featured,
+        sold_out: soldOut,
         ...translations,
       });
     } finally {
@@ -172,6 +177,15 @@ function ProductDialogForm({
                 onChange={(e) => setFeatured(e.target.checked)}
               />
               Destacado
+            </label>
+
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={soldOut}
+                onChange={(e) => setSoldOut(e.target.checked)}
+              />
+              Sin stock
             </label>
           </div>
 

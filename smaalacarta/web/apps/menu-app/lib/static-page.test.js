@@ -298,3 +298,45 @@ describe("renderStaticMenuPage con ?lang= — IDIOMA-6", () => {
     expect(html).toContain(encodeURIComponent("Hola, consulto por el menú de Ana Resto"));
   });
 });
+
+describe("renderStaticMenuPage con productos sin stock — ESTATICO-7", () => {
+  const conAgotado = {
+    ...base,
+    menu: {
+      categorias: [
+        {
+          nombre: "Bebidas",
+          items: [
+            { nombre: "Café", precio: 1000 },
+            { nombre: "Té", precio: 800, agotado: true },
+          ],
+        },
+      ],
+    },
+  };
+
+  it("el producto sin stock se ve atenuado y con su etiqueta; el otro no", () => {
+    const html = renderStaticMenuPage(conAgotado);
+    const articles = html.match(/<article class="producto[^"]*"[\s\S]*?<\/article>/g);
+    const te = articles.find((a) => a.includes("Té"));
+    const cafe = articles.find((a) => a.includes("Café"));
+
+    expect(te).toContain("producto agotado");
+    expect(te).toContain('<span class="etiqueta-agotado">Sin stock</span>');
+    expect(cafe).not.toContain("agotado");
+  });
+
+  it("la etiqueta sale en el idioma pedido", () => {
+    expect(renderStaticMenuPage({ ...conAgotado, lang: "en" })).toContain(">Out of stock<");
+    expect(renderStaticMenuPage({ ...conAgotado, lang: "pt" })).toContain(">Sem estoque<");
+  });
+
+  it("agotado: false o ausente no marca nada", () => {
+    const html = renderStaticMenuPage({
+      ...base,
+      menu: { categorias: [{ nombre: "Bebidas", items: [{ nombre: "Café", precio: 1, agotado: false }] }] },
+    });
+
+    expect(html).not.toContain("etiqueta-agotado");
+  });
+});

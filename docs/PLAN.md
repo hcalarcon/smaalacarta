@@ -463,6 +463,21 @@ PUBLICO-18 a 21, SEGUIMIENTO-15). Migración `20261002000000_entrega_y_pago.sql`
 - [ ] [herni] **Probar a mano**: en Configuración, dejar una sola opción por grupo y ver que el
       checkout oculta el select; cargar alias/CBU, hacer un pedido por transferencia y copiar
 
+## Etapa 6l — Productos "Sin stock"
+
+Un producto puede marcarse "Sin stock" desde el panel: distinto de Oculto, sigue visible en el
+menú público pero no se puede pedir. Requisitos en `docs/SPEC.md` (ADMIN-MENU-8 y 9,
+PUBLICO-25 a 27, ESTATICO-7, SEGUIMIENTO-16). Migración `20261003000000_sin_stock.sql`.
+
+- [x] [herni] Migración: `products.sold_out`; `public_menu` entrega `agotado` y oculta las
+      promociones con algo sin stock; `create_public_order` rechaza con P0009 (el pedido manual no valida)
+- [x] [herni] Admin: alternar "Sin stock" en la tarjeta, filtro y casilla en el formulario
+- [x] [herni] Menú interactivo y estático: atenuado con etiqueta, sin botón "+"; el carrito
+      guardado se limpia y un pedido rechazado por stock refresca el menú
+- [ ] [herni] **Probar a mano**: marcar un producto sin stock, ver el menú (interactivo y
+      estático, en las tres plantillas y en oscuro), probar que una promoción con ese producto
+      desaparece y que un carrito con ese producto lo quita al recargar
+
 ## Etapa 7 — Pendientes técnicos (backlog)
 
 - [ ] [por asignar] **Marketplace** ("un lugar donde encontrar de todo para

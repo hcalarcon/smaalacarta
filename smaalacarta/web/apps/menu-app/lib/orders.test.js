@@ -93,6 +93,7 @@ describe("createOrder — SEGUIMIENTO-1 y 7", () => {
     ["P0005", "closed"],
     ["P0007", "invalid_delivery"],
     ["P0008", "invalid_payment"],
+    ["P0009", "out_of_stock"],
     ["P0003", "busy"],
     ["P0001", "unavailable"],
     ["P0002", "unavailable"],

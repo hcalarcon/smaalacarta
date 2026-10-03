@@ -1,5 +1,6 @@
 import { Product } from "@/lib/db/products";
 import DropdownMenu from "@/components/ui/DropdownMenu";
+import { productStatus } from "@/lib/menu/product-fields";
 
 type ProductCardProps = {
   product: Product;
@@ -9,6 +10,7 @@ type ProductCardProps = {
   onEdit: () => void;
   onDelete: () => void;
   onToggleActive: () => void;
+  onToggleSoldOut: () => void;
 };
 
 export default function ProductCard({
@@ -17,13 +19,18 @@ export default function ProductCard({
   onEdit,
   onDelete,
   onToggleActive,
+  onToggleSoldOut,
 }: ProductCardProps) {
+  const status = productStatus(product);
+
   return (
     <article
       className={`rounded-2xl border px-3 py-2 transition ${
-        product.active
-          ? "border-line bg-white"
-          : "border-line bg-cream opacity-60"
+        status === "hidden"
+          ? "border-line bg-cream opacity-60"
+          : status === "sold_out"
+            ? "border-amber-300 bg-amber-50/40"
+            : "border-line bg-white"
       }`}
     >
       <div className="flex items-center gap-2.5">
@@ -44,7 +51,11 @@ export default function ProductCard({
         <div className="min-w-0 flex-1">
           <h3 className="flex items-center gap-1 truncate text-sm font-semibold text-brand">
             {product.featured ? (
-              <span title="Destacado" aria-label="Destacado" className="text-amber-500">
+              <span
+                title="Destacado"
+                aria-label="Destacado"
+                className="text-amber-500"
+              >
                 ★
               </span>
             ) : null}
@@ -57,19 +68,38 @@ export default function ProductCard({
       </div>
 
       <div className="mt-2 flex items-center justify-between gap-2">
-        <button
-          type="button"
-          onClick={onToggleActive}
-          aria-pressed={product.active}
-          title={product.active ? "Desactivar" : "Activar"}
-          className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium transition hover:opacity-80 ${
-            product.active
-              ? "bg-emerald-100 text-emerald-700"
-              : "bg-line text-stone-600"
-          }`}
-        >
-          ● {product.active ? "Activo" : "Oculto"}
-        </button>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onToggleActive}
+            aria-pressed={product.active}
+            title={product.active ? "Desactivar" : "Activar"}
+            className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium transition hover:opacity-80 ${
+              product.active
+                ? "bg-emerald-100 text-emerald-700"
+                : "bg-line text-stone-600"
+            }`}
+          >
+            ● {product.active ? "Activo" : "Oculto"}
+          </button>
+
+          {/* Sin stock: sigue visible en el menú pero no se puede pedir (distinto de Oculto). */}
+          <button
+            type="button"
+            onClick={onToggleSoldOut}
+            aria-pressed={product.sold_out}
+            title={
+              product.sold_out ? "Volver a tener stock" : "Marcar sin stock"
+            }
+            className={`whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-medium transition hover:opacity-80 ${
+              product.sold_out
+                ? "bg-amber-100 text-amber-800"
+                : "bg-line text-stone-600"
+            }`}
+          >
+            {product.sold_out ? "Sin stock" : "Con stock"}
+          </button>
+        </div>
 
         <div className="flex items-center gap-1.5">
           <span className="whitespace-nowrap text-sm font-bold text-brand">
@@ -97,6 +127,18 @@ export default function ProductCard({
                   className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-brand-soft"
                 >
                   {product.active ? "Desactivar" : "Activar"}
+                </button>
+
+                <button
+                  onClick={() => {
+                    close();
+                    onToggleSoldOut();
+                  }}
+                  className="w-full rounded-lg px-3 py-2 text-left text-sm hover:bg-brand-soft"
+                >
+                  {product.sold_out
+                    ? "Volver a tener stock"
+                    : "Marcar sin stock"}
                 </button>
 
                 <button

@@ -35,6 +35,7 @@ const REASONS = {
   P0003: "busy", // demasiados pedidos seguidos
   P0007: "invalid_delivery", // el negocio no ofrece ese tipo de entrega
   P0008: "invalid_payment", // el negocio no acepta ese medio de pago
+  P0009: "out_of_stock", // un producto del pedido está sin stock
   P0001: "unavailable", // un producto ya no está disponible
   P0002: "unavailable", // el negocio no existe o no está publicado
   22023: "invalid", // datos inválidos

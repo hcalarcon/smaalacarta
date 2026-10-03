@@ -847,3 +847,54 @@ describe("entrega y pago habilitados — SEGUIMIENTO-15", () => {
     expect(r.ok).toBe(true);
   });
 });
+
+describe("productos sin stock — SEGUIMIENTO-16", () => {
+  const marcar = (id: string, soldOut: boolean) =>
+    db.exec(`update products set sold_out = ${soldOut} where id = '${id}'`);
+
+  it("rechaza un pedido con un producto sin stock (P0009) y no lo crea", async () => {
+    await marcar(CAFE, true);
+    const antes = await count("select count(*) as n from orders");
+
+    const r = await order("ana", [{ id: TE }, { id: CAFE }]);
+
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.code).toBe("P0009");
+    expect(await count("select count(*) as n from orders")).toBe(antes);
+  });
+
+  it("rechaza una promoción que lleva un producto sin stock", async () => {
+    const r = await order("ana", [{ id: DESAYUNO, kind: "promo" }]);
+
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.code).toBe("P0009");
+  });
+
+  it("lo que sí tiene stock se sigue pidiendo", async () => {
+    expect((await order("ana", [{ id: TE }, { id: MILANESA }])).ok).toBe(true);
+  });
+
+  it("un producto oculto sigue siendo 'no disponible' (P0001), no 'sin stock'", async () => {
+    const r = await order("ana", [{ id: JUGO }]);
+
+    expect(!r.ok && r.code).toBe("P0001");
+  });
+
+  it("el pedido manual no valida el stock: el negocio sabe lo que tiene (ADMIN-PEDIDOS-3)", async () => {
+    const r = await asUser(
+      db,
+      ANA,
+      `select public.create_manual_order('${NEG_ANA}', 'Mostrador', 'retiro', 'efectivo', null,
+         '[{"name":"Café","unit_price":1000,"quantity":1}]'::jsonb) as result`,
+    );
+
+    expect(r.ok).toBe(true);
+  });
+
+  it("al volver a haber stock se puede pedir", async () => {
+    await marcar(CAFE, false);
+
+    expect((await order("ana", [{ id: CAFE }])).ok).toBe(true);
+    expect((await order("ana", [{ id: DESAYUNO, kind: "promo" }])).ok).toBe(true);
+  });
+});

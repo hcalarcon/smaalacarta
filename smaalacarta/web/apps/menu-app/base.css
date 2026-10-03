@@ -287,6 +287,30 @@ html[data-template] .checkout .checkout-header {
   color-scheme: dark;
 }
 
+/* PRODUCTO SIN STOCK (PUBLICO-26 y ESTATICO-7): sigue en el menú pero atenuado, con su etiqueta
+   y sin botón para agregarlo. La etiqueta usa el texto y el borde de la plantilla, así se lee en
+   claro y en oscuro sin colores por plantilla. */
+.producto.agotado {
+  opacity: 0.6;
+}
+
+.producto.agotado img {
+  filter: grayscale(1);
+}
+
+.etiqueta-agotado {
+  display: inline-block;
+  margin-top: 0.35rem;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text, inherit);
+}
+
 /* Aviso de cómo se entrega cuando hay un solo tipo (el select está oculto) */
 .aviso-entrega {
   margin: 0;

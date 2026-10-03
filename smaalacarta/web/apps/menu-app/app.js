@@ -14,6 +14,7 @@ let PRICE = null;
 let WA_WINDOW = null;
 let CHECKOUT = null;
 let THEME = null;
+let STOCK = null;
 
 // Idioma de la interfaz (IDIOMA-1 a 4) y el menú tal como vino, sin las secciones armadas.
 let LANG = "es";
@@ -165,6 +166,7 @@ async function init() {
       waWindow,
       checkoutLib,
       themeLib,
+      stockLib,
     ] = await Promise.all([
       import("/apps/menu-app/lib/hostname.js"),
       import("/apps/menu-app/lib/html.js"),
@@ -180,11 +182,13 @@ async function init() {
       import("/apps/menu-app/lib/whatsapp-window.js"),
       import("/apps/menu-app/lib/checkout-options.js"),
       import("/apps/menu-app/lib/theme.js"),
+      import("/apps/menu-app/lib/stock.js"),
     ]);
     PRICE = priceLib;
     WA_WINDOW = waWindow;
     CHECKOUT = checkoutLib;
     THEME = themeLib;
+    STOCK = stockLib;
     COLORS = colorsLib;
     I18N = i18nLib;
     LANG = I18N.resolveLang({
@@ -313,6 +317,7 @@ async function init() {
     //renderMenu(menu);
     initSearch();
     loadCart();
+    dropSoldOutFromCart(enhancedMenu);
     restoreThanks();
 
     // 🧹 Ocultar loader correctamente
@@ -597,6 +602,10 @@ function renderMenu(menu) {
       const d = document.createElement("div");
       d.className = "producto";
 
+      // Sin stock: se ve, atenuado y con su etiqueta, pero no se puede agregar (PUBLICO-26).
+      const soldOut = STOCK.isSoldOut(p);
+      if (soldOut) d.classList.add("agotado");
+
       if (p.promo) {
         d.setAttribute("data-promo", p.promo);
       }
@@ -610,13 +619,14 @@ function renderMenu(menu) {
           <p>${HTML.escapeHtml(p.descripcion || "")}</p>
           ${p.precioAnterior ? `<span class="precio-anterior">$${HTML.escapeHtml(PRICE.formatPrice(p.precioAnterior))}</span>` : ""}
           <div class="producto-precio">$${HTML.escapeHtml(PRICE.formatPrice(p.precio))}</div>
+          ${soldOut ? `<span class="etiqueta-agotado">${HTML.escapeHtml(tr("item.soldOut"))}</span>` : ""}
         </div>
-        <button class="btn-add">+</button>
+        ${soldOut ? "" : `<button class="btn-add">+</button>`}
       `;
 
       const btn = d.querySelector(".btn-add");
 
-      btn.onclick = () => {
+      if (btn) btn.onclick = () => {
         addToCart(p);
 
         // 🎯 animación producto
@@ -803,6 +813,35 @@ function saveCart() {
   localStorage.setItem("cart", JSON.stringify(cart));
 }
 
+// Quita del carrito lo que quedó sin stock (por ejemplo, un carrito guardado de otra visita) y
+// avisa qué se quitó (PUBLICO-26). Solo con un menú de Supabase, donde los ítems tienen id.
+function dropSoldOutFromCart(menu) {
+  if (!MENU_SOURCE || !STOCK) return;
+
+  const { cart: kept, removed } = STOCK.reconcileCart(cart, menu);
+  if (removed.length === 0) return;
+
+  cart = kept;
+  saveCart();
+  updateCart();
+  alert(tr("cart.removedSoldOut", { names: removed.join(", ") }));
+}
+
+// Vuelve a pedir el menú al sistema y lo pinta de nuevo, por ejemplo cuando un pedido se
+// rechazó por falta de stock. Si no se puede, queda el menú que ya estaba.
+async function refreshMenu() {
+  if (!MENU_SOURCE) return;
+
+  const remote = await loadFromSupabase(MENU_SOURCE.slug);
+  if (!remote?.menu) return;
+
+  BASE_MENU = remote.menu;
+  MENU_GLOBAL = MENU.buildEnhancedMenu(BASE_MENU, LANG);
+  renderCategorias(MENU_GLOBAL);
+  renderMenu(MENU_GLOBAL);
+  dropSoldOutFromCart(MENU_GLOBAL);
+}
+
 function loadCart() {
   const c = localStorage.getItem("cart");
   if (c) cart = JSON.parse(c);
@@ -942,6 +981,11 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     } else if (result.reason === "busy") {
       WA_WINDOW?.discardPlaceholder(placeholder);
       alert(tr("error.busy"));
+      return;
+    } else if (result.reason === "out_of_stock") {
+      WA_WINDOW?.discardPlaceholder(placeholder);
+      alert(tr("error.outOfStock"));
+      await refreshMenu();
       return;
     } else if (result.reason === "invalid_delivery" || result.reason === "invalid_payment") {
       WA_WINDOW?.discardPlaceholder(placeholder);

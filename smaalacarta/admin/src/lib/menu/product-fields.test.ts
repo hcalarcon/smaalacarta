@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 
-import { toProductInsert, toProductUpdate } from "./product-fields";
+import {
+  matchesStatusFilter,
+  productStatus,
+  toProductInsert,
+  toProductUpdate,
+} from "./product-fields";
 
 describe("toProductInsert — ADMIN-MENU-1", () => {
   it("arma la fila con negocio y categoría", () => {
@@ -21,6 +26,7 @@ describe("toProductInsert — ADMIN-MENU-1", () => {
       active: false,
       image_url: null,
       featured: false,
+      sold_out: false,
       name_en: null,
       name_pt: null,
       description_en: null,
@@ -162,5 +168,60 @@ describe("traducciones — IDIOMA-8 y IDIOMA-9", () => {
     });
     expect(row.name_en).toBeNull();
     expect(row.description_en).toBeNull();
+  });
+});
+
+describe("producto sin stock — ADMIN-MENU-8", () => {
+  it("un producto nuevo nace con stock si no se indica", () => {
+    expect(toProductInsert("b1", { category_id: "c1", name: "A", price: 1 }).sold_out).toBe(false);
+  });
+
+  it("se puede crear ya sin stock", () => {
+    expect(
+      toProductInsert("b1", { category_id: "c1", name: "A", price: 1, sold_out: true }).sold_out,
+    ).toBe(true);
+  });
+
+  it("editar sin indicar sold_out no lo toca", () => {
+    // Si no, guardar el formulario de un producto sin stock le devolvería el stock.
+    expect(toProductUpdate({ name: "A", price: 1 })).not.toHaveProperty("sold_out");
+  });
+
+  it("editar con sold_out lo cambia, en las dos direcciones", () => {
+    expect(toProductUpdate({ name: "A", price: 1, sold_out: true }).sold_out).toBe(true);
+    expect(toProductUpdate({ name: "A", price: 1, sold_out: false }).sold_out).toBe(false);
+  });
+});
+
+describe("estado del producto en el panel — ADMIN-MENU-9", () => {
+  it("Oculto gana a Sin stock: un producto oculto no se ve en el menú", () => {
+    expect(productStatus({ active: false, sold_out: true })).toBe("hidden");
+    expect(productStatus({ active: false, sold_out: false })).toBe("hidden");
+  });
+
+  it("activo y sin stock es 'sold_out', distinto de Oculto", () => {
+    expect(productStatus({ active: true, sold_out: true })).toBe("sold_out");
+  });
+
+  it("activo y con stock está disponible", () => {
+    expect(productStatus({ active: true, sold_out: false })).toBe("available");
+  });
+
+  it("un producto sin el dato de stock (anterior a la columna) está disponible", () => {
+    expect(productStatus({ active: true })).toBe("available");
+  });
+
+  it.each([
+    ["all", { active: false, sold_out: false }, true],
+    ["active", { active: true, sold_out: false }, true],
+    ["active", { active: true, sold_out: true }, true],
+    ["active", { active: false, sold_out: false }, false],
+    ["hidden", { active: false, sold_out: true }, true],
+    ["hidden", { active: true, sold_out: false }, false],
+    ["sold_out", { active: true, sold_out: true }, true],
+    ["sold_out", { active: false, sold_out: true }, false],
+    ["sold_out", { active: true, sold_out: false }, false],
+  ] as const)("el filtro %s con %j da %s", (filter, product, expected) => {
+    expect(matchesStatusFilter(product, filter)).toBe(expected);
   });
 });

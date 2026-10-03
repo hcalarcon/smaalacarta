@@ -460,6 +460,7 @@ export type Database = {
           name_en: string | null
           name_pt: string | null
           price: number
+          sold_out: boolean
           sort_order: number | null
           updated_at: string
         }
@@ -478,6 +479,7 @@ export type Database = {
           name_en?: string | null
           name_pt?: string | null
           price?: number
+          sold_out?: boolean
           sort_order?: number | null
           updated_at?: string
         }
@@ -496,6 +498,7 @@ export type Database = {
           name_en?: string | null
           name_pt?: string | null
           price?: number
+          sold_out?: boolean
           sort_order?: number | null
           updated_at?: string
         }

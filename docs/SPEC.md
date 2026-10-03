@@ -155,6 +155,13 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   cada visitante la primera vez; el visitante puede cambiarlo con el switch del menú
   interactivo, y su elección queda en su navegador, por negocio (`lib/theme.js`), y gana al
   tema del negocio las próximas veces. Sin almacenamiento disponible, vale el del negocio.
+- **PUBLICO-25** `public_menu` entrega `agotado` (verdadero o falso) en cada producto, y no
+  entrega una promoción que lleva algún producto sin stock (ADMIN-MENU-8).
+- **PUBLICO-26** El menú interactivo muestra un producto agotado atenuado y con la etiqueta "Sin
+  stock", sin botón para agregarlo. Si el carrito guardado de una visita anterior tiene uno, se
+  quita al cargar el menú y se avisa. Si al confirmar el pedido el sistema responde que algo
+  está sin stock (`out_of_stock`), se avisa y el menú se vuelve a cargar con lo actual.
+- **PUBLICO-27** Los textos de "Sin stock" y los avisos están en español, inglés y portugués.
 - **PUBLICO-17** Las demos están siempre abiertas: quien las prueba puede hacer el pedido
   de prueba a cualquier hora. Sus `config.json` no traen `horarios` (PUBLICO-4 y 12).
 - **PUBLICO-18** `public_menu` entrega en `config` las opciones que el negocio ofrece:
@@ -256,6 +263,9 @@ llegando al negocio por WhatsApp.
 - **SEGUIMIENTO-15** `create_public_order` rechaza (`invalid_delivery` o
   `invalid_payment`, código `P0007` y `P0008`) una entrega o un pago que el
   negocio no tiene habilitado (ADMIN-CONFIG-11); sin valor se acepta, como hasta ahora.
+- **SEGUIMIENTO-16** `create_public_order` rechaza (`out_of_stock`, código `P0009`) un pedido
+  con un producto sin stock, solo o dentro de una promoción (ADMIN-MENU-8). El pedido manual del
+  negocio no valida el stock.
 
 ## PWA — Instalar el menú en el celular
 
@@ -331,6 +341,8 @@ en JS puro.*
   `minimal`) muestra la demo de solo lectura, sin pedir nada a Supabase: sale de
   los mismos JSON que usa el menú interactivo para las demos
   (`web/data/demos/<slug>/`), no del plan de un negocio.
+- **ESTATICO-7** El menú estático muestra un producto sin stock atenuado y con la etiqueta "Sin
+  stock", en las tres plantillas y en los dos temas.
 
 ## IDIOMA — Menú público en español, inglés y portugués
 
@@ -584,6 +596,13 @@ Cubierto por: `src/lib/menu/product-fields.test.ts` (ADMIN-MENU-1 y 2),
 - **ADMIN-MENU-7** Un producto puede marcarse como destacado; un producto nuevo nace
   sin destacar si no se indica. El menú público ya arma la categoría "Destacados"
   con estos productos (PUBLICO-1 a 5); esto solo agrega cómo marcarlos desde el panel.
+- **ADMIN-MENU-8** Un producto puede marcarse "Sin stock" (columna `sold_out`, por defecto
+  `false`), distinto de Oculto (`active`): sin stock sigue visible en el menú público pero no
+  se puede pedir. Un producto nuevo nace con stock; editarlo sin indicar `sold_out` no lo toca.
+- **ADMIN-MENU-9** En el panel, cada producto muestra su estado (Oculto o Sin stock, con una
+  etiqueta visible; un producto activo y sin stock se distingue de uno Oculto), se alterna
+  "Sin stock" con un clic y sin recargar (con actualización optimista, como Activar/Desactivar),
+  el filtro del menú tiene "Sin stock" y el formulario del producto tiene su casilla.
 
 ## ADMIN-CONFIG — Configuración del negocio
 
