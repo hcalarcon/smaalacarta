@@ -235,6 +235,7 @@ async function init() {
 
     window.CONFIG = config;
     applyCheckoutOptions(config);
+    renderDeliveryNotice();
     document.documentElement.dataset.template = config.template || "";
     document.documentElement.dataset.tema = config.tema || "claro";
 
@@ -355,6 +356,7 @@ function applyStaticTexts() {
   }
 
   syncTema();
+  renderDeliveryNotice();
 }
 
 function setLang(lang) {
@@ -1071,6 +1073,24 @@ function applyCheckoutOptions(config) {
       select.required = true;
     }
   });
+}
+
+// Con un solo tipo de entrega no hay select: el aviso le dice al cliente cómo se entrega
+// (PUBLICO-22). Va con textContent y se vuelve a armar al cambiar de idioma.
+function renderDeliveryNotice() {
+  const node = document.querySelector("#aviso-entrega");
+  if (!node || !CHECKOUT) return;
+
+  const notice = CHECKOUT.deliveryNotice(window.CONFIG);
+  node.hidden = !notice;
+  if (!notice) return;
+
+  node.textContent =
+    notice.kind === "delivery"
+      ? tr("checkout.onlyDelivery")
+      : notice.address
+        ? tr("checkout.onlyPickupAt", { address: notice.address })
+        : tr("checkout.onlyPickup");
 }
 
 // Alias y CBU/CVU para transferir, cada uno con su botón "Copiar". Todo con textContent: lo

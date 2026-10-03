@@ -165,8 +165,11 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   negocio cargó alias o CBU/CVU, se muestran con un botón "Copiar" para cada uno. Se
   pintan con `textContent`; ni el checkout, ni el mensaje de WhatsApp, ni el
   seguimiento llevan esos datos.
-- **PUBLICO-21** Los textos nuevos (alias, CBU/CVU, "Copiar", "Copiado") están en español,
-  inglés y portugués.
+- **PUBLICO-21** Los textos nuevos (alias, CBU/CVU, "Copiar", "Copiado", avisos de entrega) están
+  en español, inglés y portugués.
+- **PUBLICO-22** Si el negocio ofrece un solo tipo de entrega, el checkout lo dice donde estaba
+  el select: "Retirá tu pedido en nuestro local" con su dirección si la cargó, o "Solo hacemos
+  delivery". Con las dos opciones, o con un menú sin esos campos, no hay aviso.
 
 ## BUSQUEDA — Buscador
 

@@ -221,6 +221,18 @@ body.no-scroll {
   color: inherit;
 }
 
+/* Aviso de cómo se entrega cuando hay un solo tipo (el select está oculto) */
+.aviso-entrega {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text, inherit);
+}
+
+.aviso-entrega[hidden] {
+  display: none;
+}
+
 /* Datos para transferir (alias y CBU/CVU), cada uno con su botón "Copiar". Heredan el color de
    texto de la plantilla, como el resto del panel. */
 .gracias-pedido .gracias-transferencia {

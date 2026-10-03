@@ -27,6 +27,17 @@ export function checkoutOptions(config) {
   };
 }
 
+// Con un solo tipo de entrega el select se oculta y el cliente no vería cómo se entrega:
+// este aviso se lo dice (PUBLICO-22). Con las dos opciones, o sin lista, no hay aviso.
+export function deliveryNotice(config) {
+  const { single } = checkoutOptions(config).delivery;
+  if (single === "delivery") return { kind: "delivery" };
+  if (single !== "retiro") return null;
+
+  const address = text(config?.direccion);
+  return { kind: "pickup", ...(address ? { address } : {}) };
+}
+
 const text = (value) => (typeof value === "string" && value.trim() ? value.trim() : null);
 
 // Alias y CBU/CVU para mostrar en "Gracias por tu pedido", solo si el cliente eligió

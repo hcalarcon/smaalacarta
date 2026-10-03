@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { checkoutOptions, transferDetails } from "./checkout-options.js";
+import { checkoutOptions, deliveryNotice, transferDetails } from "./checkout-options.js";
 import { DICTIONARY, LANGS } from "./i18n.js";
 
 const TODAS = {
@@ -46,6 +46,32 @@ describe("checkoutOptions — PUBLICO-19", () => {
   });
 });
 
+describe("deliveryNotice — PUBLICO-22", () => {
+  it("solo retiro: avisa que se retira en el local, con la dirección si la hay", () => {
+    expect(deliveryNotice({ entrega: ["retiro"], direccion: "San Martín 100" })).toEqual({
+      kind: "pickup",
+      address: "San Martín 100",
+    });
+    expect(deliveryNotice({ entrega: ["retiro"] })).toEqual({ kind: "pickup" });
+  });
+
+  it("solo delivery: avisa que el pedido se lleva a domicilio", () => {
+    expect(deliveryNotice({ entrega: ["delivery"], direccion: "San Martín 100" })).toEqual({
+      kind: "delivery",
+    });
+  });
+
+  it("con las dos opciones, o sin lista (JSON), no hay aviso: el cliente elige", () => {
+    expect(deliveryNotice({ entrega: ["delivery", "retiro"] })).toBeNull();
+    expect(deliveryNotice({})).toBeNull();
+    expect(deliveryNotice(null)).toBeNull();
+  });
+
+  it("ignora una dirección vacía", () => {
+    expect(deliveryNotice({ entrega: ["retiro"], direccion: "  " })).toEqual({ kind: "pickup" });
+  });
+});
+
 describe("transferDetails — PUBLICO-20", () => {
   const config = { transferencia: { alias: "casa.resto", cbu: "0000003100012345678901" } };
 
@@ -76,7 +102,7 @@ describe("transferDetails — PUBLICO-20", () => {
 });
 
 describe("textos de entrega y pago — PUBLICO-21", () => {
-  it.each(["checkout.alias", "checkout.cbu", "thanks.transfer", "thanks.copy", "thanks.copied", "error.optionsChanged"])(
+  it.each(["checkout.alias", "checkout.cbu", "thanks.transfer", "thanks.copy", "thanks.copied", "error.optionsChanged", "checkout.onlyPickup", "checkout.onlyPickupAt", "checkout.onlyDelivery"])(
     "%s está en los tres idiomas",
     (key) => {
       for (const lang of LANGS) {
