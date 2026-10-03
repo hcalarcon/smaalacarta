@@ -22,12 +22,14 @@ import {
   deleteProductAction,
   reorderProductsAction,
   setProductActiveAction,
+  setProductSoldOutAction,
   updateProductAction,
 } from "../actions/products";
 import {
   pickTranslations,
   type Translations,
 } from "@/lib/menu/translations";
+import { matchesStatusFilter, type StatusFilter } from "@/lib/menu/product-fields";
 import ProductDialog from "./dialogs/ProductDialog";
 
 type Category = {
@@ -46,8 +48,6 @@ type MenuClientProps = {
   businessId: string;
   initialCategories: Category[];
 };
-
-type StatusFilter = "all" | "active" | "hidden";
 
 // Sin tildes ni mayúsculas, para que buscar "papas" encuentre "Papás".
 function normalize(text: string) {
@@ -111,7 +111,7 @@ export default function MenuClient({
 
       if (statusFilter !== "all") {
         products = products.filter((product) =>
-          statusFilter === "active" ? product.active : !product.active,
+          matchesStatusFilter(product, statusFilter),
         );
       }
 
@@ -252,6 +252,7 @@ export default function MenuClient({
     active: boolean;
     image_url: string | null;
     featured: boolean;
+    sold_out: boolean;
   } & Translations) {
     if (data.id) {
       await updateProductAction(businessId, data.id, {
@@ -261,6 +262,7 @@ export default function MenuClient({
         active: data.active,
         image_url: data.image_url,
         featured: data.featured,
+        sold_out: data.sold_out,
         ...pickTranslations(data),
       });
     } else {
@@ -275,6 +277,7 @@ export default function MenuClient({
         active: data.active,
         image_url: data.image_url,
         featured: data.featured,
+        sold_out: data.sold_out,
         ...pickTranslations(data),
       });
     }
@@ -298,6 +301,19 @@ export default function MenuClient({
     }
 
     void run(() => setProductActiveAction(businessId, product.id, active));
+  }
+
+  // Sin stock, igual que Activar/Desactivar: se ve al instante y, si falla, se vuelve a pedir el menú.
+  function handleToggleSoldOut(product: Product) {
+    const sold_out = !product.sold_out;
+
+    if (product.category_id) {
+      updateProducts(product.category_id, (products) =>
+        products.map((p) => (p.id === product.id ? { ...p, sold_out } : p)),
+      );
+    }
+
+    void run(() => setProductSoldOutAction(businessId, product.id, sold_out));
   }
 
   async function confirmDeleteProduct() {
@@ -362,6 +378,7 @@ export default function MenuClient({
                   ["all", "Todos"],
                   ["active", "Activos"],
                   ["hidden", "Ocultos"],
+                  ["sold_out", "Sin stock"],
                 ] as const
               ).map(([key, label]) => (
                 <button
@@ -409,6 +426,7 @@ export default function MenuClient({
                       onEditProduct={handleEditProduct}
                       onDeleteProduct={setProductToDelete}
                       onToggleProduct={handleToggleProduct}
+                      onToggleSoldOut={handleToggleSoldOut}
                       onReorderProducts={() => {}}
                     />
                   ))
@@ -435,6 +453,7 @@ export default function MenuClient({
                             onEditProduct={handleEditProduct}
                             onDeleteProduct={setProductToDelete}
                             onToggleProduct={handleToggleProduct}
+                            onToggleSoldOut={handleToggleSoldOut}
                             onReorderProducts={(ids) =>
                               handleReorderProducts(category.id, ids)
                             }

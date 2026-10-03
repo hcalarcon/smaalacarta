@@ -426,6 +426,22 @@ body {
   color: var(--text);
 }
 
+/* El select se ve como un campo (borde completo) y su lista, con los colores del tema: sin
+   esto, en oscuro el campo casi desaparece y las opciones salían claras sobre claro. */
+.checkout select {
+  border: 1px solid color-mix(in srgb, var(--text) 35%, transparent);
+  border-radius: 4px;
+}
+
+.checkout select option {
+  background: var(--card);
+  color: var(--text);
+}
+
+:root[data-tema="oscuro"] {
+  color-scheme: dark;
+}
+
 /* BOTÓN */
 .checkout button[type="submit"] {
   margin-top: 10px;

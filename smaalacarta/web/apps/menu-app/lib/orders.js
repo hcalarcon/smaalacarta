@@ -3,6 +3,7 @@
 // servidor (SEGUIMIENTO-2). Si algo falla, el llamador sigue con WhatsApp como siempre.
 
 import { isSupabaseConfigured } from "./public-menu.js";
+import { PAYMENT } from "./checkout-options.js";
 import { LANGS } from "./i18n.js";
 import { whatsappDigits } from "./phone.js";
 
@@ -32,6 +33,9 @@ const REASONS = {
   P0005: "closed", // cerrado temporalmente
   P0006: "outside_hours", // fuera del horario de atención
   P0003: "busy", // demasiados pedidos seguidos
+  P0007: "invalid_delivery", // el negocio no ofrece ese tipo de entrega
+  P0008: "invalid_payment", // el negocio no acepta ese medio de pago
+  P0009: "out_of_stock", // un producto del pedido está sin stock
   P0001: "unavailable", // un producto ya no está disponible
   P0002: "unavailable", // el negocio no existe o no está publicado
   22023: "invalid", // datos inválidos
@@ -168,14 +172,16 @@ export function finalizeOrderMessage(message, { number, link } = {}) {
 
 // El último pedido queda anotado para volver a mostrar el panel "Pedido registrado" si el
 // navegador recarga la página al volver de WhatsApp (SEGUIMIENTO-10). Solo se guarda el
-// código y el número, y vence a las 2 horas.
+// código, el número y el medio de pago (para volver a mostrar los datos de la transferencia),
+// y vence a las 2 horas.
 const LAST_ORDER_KEY = "sma-last-order";
 const LAST_ORDER_TTL = 2 * 60 * 60 * 1000;
 
-export function rememberLastOrder(storage, { code, number }, now = Date.now()) {
+export function rememberLastOrder(storage, { code, number, payment }, now = Date.now()) {
   try {
     if (!CODE.test(code) || !Number.isInteger(number)) return;
-    storage.setItem(LAST_ORDER_KEY, JSON.stringify({ code, number, at: now }));
+    const known = PAYMENT.includes(payment) ? { payment } : {};
+    storage.setItem(LAST_ORDER_KEY, JSON.stringify({ code, number, ...known, at: now }));
   } catch {
     // Sin almacenamiento: el panel se ve igual mientras la página siga abierta.
   }
@@ -186,7 +192,11 @@ export function lastOrder(storage, now = Date.now()) {
     const saved = JSON.parse(storage.getItem(LAST_ORDER_KEY) ?? "null");
     if (!saved || !CODE.test(saved.code) || !Number.isInteger(saved.number)) return null;
     if (!(now - Number(saved.at) < LAST_ORDER_TTL)) return null;
-    return { code: saved.code, number: saved.number };
+    return {
+      code: saved.code,
+      number: saved.number,
+      ...(PAYMENT.includes(saved.payment) ? { payment: saved.payment } : {}),
+    };
   } catch {
     return null;
   }

@@ -12,6 +12,9 @@ let COLORS = null;
 let I18N = null;
 let PRICE = null;
 let WA_WINDOW = null;
+let CHECKOUT = null;
+let THEME = null;
+let STOCK = null;
 
 // Idioma de la interfaz (IDIOMA-1 a 4) y el menú tal como vino, sin las secciones armadas.
 let LANG = "es";
@@ -161,6 +164,9 @@ async function init() {
       i18nLib,
       priceLib,
       waWindow,
+      checkoutLib,
+      themeLib,
+      stockLib,
     ] = await Promise.all([
       import("/apps/menu-app/lib/hostname.js"),
       import("/apps/menu-app/lib/html.js"),
@@ -174,9 +180,15 @@ async function init() {
       import("/apps/menu-app/lib/i18n.js"),
       import("/apps/menu-app/lib/price.js"),
       import("/apps/menu-app/lib/whatsapp-window.js"),
+      import("/apps/menu-app/lib/checkout-options.js"),
+      import("/apps/menu-app/lib/theme.js"),
+      import("/apps/menu-app/lib/stock.js"),
     ]);
     PRICE = priceLib;
     WA_WINDOW = waWindow;
+    CHECKOUT = checkoutLib;
+    THEME = themeLib;
+    STOCK = stockLib;
     COLORS = colorsLib;
     I18N = i18nLib;
     LANG = I18N.resolveLang({
@@ -230,8 +242,12 @@ async function init() {
     }
 
     window.CONFIG = config;
+    applyCheckoutOptions(config);
+    renderDeliveryNotice();
+    renderTransferInfo();
     document.documentElement.dataset.template = config.template || "";
-    document.documentElement.dataset.tema = config.tema || "claro";
+    // El tema por defecto es el del negocio; si el visitante eligió otro, vale el suyo (PUBLICO-24).
+    document.documentElement.dataset.tema = THEME.resolveTheme(config, window.localStorage, slug);
 
     // App instalable: manifest, ícono y color del negocio (PWA-1 a 3).
     PWA.applyPwa(document, { type, slug, config });
@@ -246,31 +262,29 @@ async function init() {
     const volver = document.querySelector(".btn-volver");
     if (volver) volver.hidden = !demo;
 
-    // Switch de tema: solo en las demos, para mostrar cómo se ve cada plantilla
-    // en los dos temas sin tener que cargar un negocio real en oscuro.
+    // Switch de tema: el visitante puede cambiar el tema que dejó el negocio (PUBLICO-24).
     const btnTema = document.getElementById("btn-tema");
     if (btnTema) {
-      btnTema.hidden = !demo;
-      if (demo) {
-        // Sol (pasar a claro) y luna (pasar a oscuro): el ícono muestra el
-        // tema al que se pasaría al tocar, no el actual.
-        const SOL =
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>';
-        const LUNA =
-          '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>';
+      btnTema.hidden = false;
+      // Sol (pasar a claro) y luna (pasar a oscuro): el ícono muestra el
+      // tema al que se pasaría al tocar, no el actual.
+      const SOL =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>';
+      const LUNA =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z"/></svg>';
 
-        syncTema = () => {
-          const oscuro = document.documentElement.dataset.tema === "oscuro";
-          btnTema.innerHTML = oscuro ? SOL : LUNA;
-          btnTema.setAttribute("aria-label", tr(oscuro ? "theme.toLight" : "theme.toDark"));
-        };
+      syncTema = () => {
+        const oscuro = document.documentElement.dataset.tema === "oscuro";
+        btnTema.innerHTML = oscuro ? SOL : LUNA;
+        btnTema.setAttribute("aria-label", tr(oscuro ? "theme.toLight" : "theme.toDark"));
+      };
+      syncTema();
+      btnTema.addEventListener("click", () => {
+        const next = document.documentElement.dataset.tema === "oscuro" ? "claro" : "oscuro";
+        document.documentElement.dataset.tema = next;
+        THEME.rememberTheme(window.localStorage, slug, next);
         syncTema();
-        btnTema.addEventListener("click", () => {
-          document.documentElement.dataset.tema =
-            document.documentElement.dataset.tema === "oscuro" ? "claro" : "oscuro";
-          syncTema();
-        });
-      }
+      });
     }
 
     // 🎨 Colores dinámicos
@@ -303,6 +317,7 @@ async function init() {
     //renderMenu(menu);
     initSearch();
     loadCart();
+    dropSoldOutFromCart(enhancedMenu);
     restoreThanks();
 
     // 🧹 Ocultar loader correctamente
@@ -350,6 +365,8 @@ function applyStaticTexts() {
   }
 
   syncTema();
+  renderDeliveryNotice();
+  renderTransferInfo();
 }
 
 function setLang(lang) {
@@ -585,6 +602,10 @@ function renderMenu(menu) {
       const d = document.createElement("div");
       d.className = "producto";
 
+      // Sin stock: se ve, atenuado y con su etiqueta, pero no se puede agregar (PUBLICO-26).
+      const soldOut = STOCK.isSoldOut(p);
+      if (soldOut) d.classList.add("agotado");
+
       if (p.promo) {
         d.setAttribute("data-promo", p.promo);
       }
@@ -598,13 +619,14 @@ function renderMenu(menu) {
           <p>${HTML.escapeHtml(p.descripcion || "")}</p>
           ${p.precioAnterior ? `<span class="precio-anterior">$${HTML.escapeHtml(PRICE.formatPrice(p.precioAnterior))}</span>` : ""}
           <div class="producto-precio">$${HTML.escapeHtml(PRICE.formatPrice(p.precio))}</div>
+          ${soldOut ? `<span class="etiqueta-agotado">${HTML.escapeHtml(tr("item.soldOut"))}</span>` : ""}
         </div>
-        <button class="btn-add">+</button>
+        ${soldOut ? "" : `<button class="btn-add">+</button>`}
       `;
 
       const btn = d.querySelector(".btn-add");
 
-      btn.onclick = () => {
+      if (btn) btn.onclick = () => {
         addToCart(p);
 
         // 🎯 animación producto
@@ -791,6 +813,35 @@ function saveCart() {
   localStorage.setItem("cart", JSON.stringify(cart));
 }
 
+// Quita del carrito lo que quedó sin stock (por ejemplo, un carrito guardado de otra visita) y
+// avisa qué se quitó (PUBLICO-26). Solo con un menú de Supabase, donde los ítems tienen id.
+function dropSoldOutFromCart(menu) {
+  if (!MENU_SOURCE || !STOCK) return;
+
+  const { cart: kept, removed } = STOCK.reconcileCart(cart, menu);
+  if (removed.length === 0) return;
+
+  cart = kept;
+  saveCart();
+  updateCart();
+  alert(tr("cart.removedSoldOut", { names: removed.join(", ") }));
+}
+
+// Vuelve a pedir el menú al sistema y lo pinta de nuevo, por ejemplo cuando un pedido se
+// rechazó por falta de stock. Si no se puede, queda el menú que ya estaba.
+async function refreshMenu() {
+  if (!MENU_SOURCE) return;
+
+  const remote = await loadFromSupabase(MENU_SOURCE.slug);
+  if (!remote?.menu) return;
+
+  BASE_MENU = remote.menu;
+  MENU_GLOBAL = MENU.buildEnhancedMenu(BASE_MENU, LANG);
+  renderCategorias(MENU_GLOBAL);
+  renderMenu(MENU_GLOBAL);
+  dropSoldOutFromCart(MENU_GLOBAL);
+}
+
 function loadCart() {
   const c = localStorage.getItem("cart");
   if (c) cart = JSON.parse(c);
@@ -821,7 +872,7 @@ function closeAll() {
 
 $("#btn-finalizar")?.addEventListener("click", () => {
   $("#carrito-panel")?.classList.remove("active");
-  $("#overlay")?.classList.remove("active");
+  // El fondo sigue activo: tocar afuera del checkout lo cierra (closeAll).
   $("#checkout")?.classList.add("active");
 });
 
@@ -931,6 +982,15 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
       WA_WINDOW?.discardPlaceholder(placeholder);
       alert(tr("error.busy"));
       return;
+    } else if (result.reason === "out_of_stock") {
+      WA_WINDOW?.discardPlaceholder(placeholder);
+      alert(tr("error.outOfStock"));
+      await refreshMenu();
+      return;
+    } else if (result.reason === "invalid_delivery" || result.reason === "invalid_payment") {
+      WA_WINDOW?.discardPlaceholder(placeholder);
+      alert(tr("error.optionsChanged"));
+      return;
     } else if (result.reason === "unavailable") {
       WA_WINDOW?.discardPlaceholder(placeholder);
       alert(tr("error.unavailable"));
@@ -954,8 +1014,14 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     // Se anota el pedido antes de salir: si el navegador recarga la página al volver de
     // WhatsApp, el panel se muestra de nuevo (SEGUIMIENTO-10).
     ORDERS.rememberHandoff(window.localStorage, saved.code, whatsappUrl);
-    ORDERS.rememberLastOrder(window.localStorage, saved);
-    showThanks({ number: saved.number, code: saved.code, link, whatsappUrl });
+    ORDERS.rememberLastOrder(window.localStorage, { ...saved, payment: f.get("pago") });
+    showThanks({
+      number: saved.number,
+      code: saved.code,
+      link,
+      whatsappUrl,
+      transfer: CHECKOUT?.transferDetails(CONFIG, f.get("pago")) ?? null,
+    });
     ORDERS.markHandoffSent(window.localStorage, saved.code);
     // En PC, WhatsApp va a la ventana abierta al tocar; si no hubo, a la misma pestaña.
     openWhatsAppUrl(placeholder, whatsappUrl);
@@ -978,7 +1044,7 @@ function openWhatsAppUrl(placeholder, url) {
 // reenviar el mensaje si WhatsApp no se abrió (SEGUIMIENTO-10). Todo con textContent: el
 // número y los links no se interpretan como HTML.
 function showThanks(data) {
-  const { number, code, link, whatsappUrl } = data;
+  const { number, code, link, whatsappUrl, transfer } = data;
   const form = $("#form-pedido");
   if (!form) return;
 
@@ -1019,8 +1085,125 @@ function showThanks(data) {
   close.textContent = tr("thanks.close");
   close.onclick = closeAll;
 
-  panel.append(title, info, track, resend, close);
+  panel.append(title, info);
+  if (transfer) panel.append(transferBox(transfer));
+  panel.append(track, resend, close);
   form.insertAdjacentElement("afterend", panel);
+}
+
+// Arma los selects de entrega y de pago con lo que el negocio ofrece (PUBLICO-19). Con una
+// sola opción en un grupo se preselecciona y el select se oculta; con varias, hay que elegir
+// (solo si el menú viene de Supabase: con un JSON se ve como siempre).
+function applyCheckoutOptions(config) {
+  if (!CHECKOUT) return;
+
+  const options = CHECKOUT.checkoutOptions(config);
+  document
+    .querySelector('#form-pedido select[name="pago"]')
+    ?.addEventListener("change", renderTransferInfo);
+
+  [
+    ["entrega", options.delivery],
+    ["pago", options.payment],
+  ].forEach(([name, { options: allowed, single }]) => {
+    const select = document.querySelector(`#form-pedido select[name="${name}"]`);
+    if (!select) return;
+
+    select.querySelectorAll("option[value]").forEach((option) => {
+      if (!allowed.includes(option.value)) option.remove();
+    });
+
+    if (single) {
+      select.value = single;
+      select.hidden = true;
+      return;
+    }
+
+    if (MENU_SOURCE) {
+      // El texto guía tiene que tener valor vacío para que "required" lo cuente como sin elegir.
+      select.querySelector("option:disabled")?.setAttribute("value", "");
+      select.required = true;
+    }
+  });
+}
+
+// Con un solo tipo de entrega no hay select: el aviso le dice al cliente cómo se entrega
+// (PUBLICO-22). Va con textContent y se vuelve a armar al cambiar de idioma.
+function renderDeliveryNotice() {
+  const node = document.querySelector("#aviso-entrega");
+  if (!node || !CHECKOUT) return;
+
+  const notice = CHECKOUT.deliveryNotice(window.CONFIG);
+  node.hidden = !notice;
+  if (!notice) return;
+
+  node.textContent =
+    notice.kind === "delivery"
+      ? tr("checkout.onlyDelivery")
+      : notice.address
+        ? tr("checkout.onlyPickupAt", { address: notice.address })
+        : tr("checkout.onlyPickup");
+}
+
+// Al elegir transferencia, el cliente ve ya los datos para pagar (PUBLICO-20).
+function renderTransferInfo() {
+  const box = document.querySelector("#datos-transferencia");
+  const select = document.querySelector('#form-pedido select[name="pago"]');
+  if (!box || !select || !CHECKOUT) return;
+
+  const transfer = CHECKOUT.transferDetails(window.CONFIG, select.value);
+  box.replaceChildren(...(transfer ? [transferBox(transfer)] : []));
+  box.hidden = !transfer;
+}
+
+// Alias y CBU/CVU para transferir, cada uno con su botón "Copiar". Todo con textContent: lo
+// que cargó el negocio nunca se interpreta como HTML (PUBLICO-20).
+function transferBox(transfer) {
+  const box = document.createElement("div");
+  box.className = "gracias-transferencia";
+
+  const heading = document.createElement("p");
+  heading.className = "gracias-aviso";
+  heading.textContent = tr("thanks.transfer");
+  box.append(heading);
+
+  [
+    ["checkout.alias", transfer.alias],
+    ["checkout.cbu", transfer.cbu],
+  ].forEach(([labelKey, value]) => {
+    if (!value) return;
+
+    const row = document.createElement("div");
+    row.className = "gracias-dato";
+
+    const label = document.createElement("span");
+    label.className = "gracias-dato-etiqueta";
+    label.textContent = tr(labelKey);
+
+    const text = document.createElement("strong");
+    text.className = "gracias-dato-valor";
+    text.textContent = value;
+
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.textContent = tr("thanks.copy");
+    copy.addEventListener("click", async () => {
+      try {
+        await navigator.clipboard.writeText(value);
+        copy.textContent = tr("thanks.copied");
+        setTimeout(() => {
+          copy.textContent = tr("thanks.copy");
+        }, 2000);
+      } catch {
+        // Sin permiso para el portapapeles: el dato queda a la vista para copiarlo a mano.
+      }
+    });
+
+    row.append(label, text, copy);
+    box.append(row);
+  });
+
+  return box;
 }
 
 // Al volver de WhatsApp con la página recargada: si hay un pedido reciente sin cerrar,
@@ -1037,6 +1220,7 @@ function restoreThanks() {
     code: last.code,
     link: ORDERS.trackingLink(window.location.origin, last.code, LANG),
     whatsappUrl,
+    transfer: CHECKOUT?.transferDetails(CONFIG, last.payment) ?? null,
   });
   $("#overlay")?.classList.add("active");
   $("#checkout")?.classList.add("active");

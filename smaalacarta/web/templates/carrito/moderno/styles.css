@@ -662,7 +662,8 @@ body {
 .btn-minus,
 .btn-plus,
 .btn-remove {
-  background: var(--primary);
+  /* El color del negocio, no un negro fijo: en tema oscuro el negro no se veía sobre la tarjeta. */
+  background: var(--brand);
   color: var(--on-brand, #fff);
   border: none;
   border-radius: 50%;
@@ -678,7 +679,7 @@ body {
 
 .btn-minus:hover,
 .btn-plus:hover {
-  background: #333;
+  background: var(--brand-ink);
 }
 
 .btn-remove {

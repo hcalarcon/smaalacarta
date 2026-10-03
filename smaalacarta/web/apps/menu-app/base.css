@@ -221,6 +221,141 @@ body.no-scroll {
   color: inherit;
 }
 
+/* Los mismos datos, en el checkout al elegir transferencia (los arma app.js). */
+.datos-transferencia {
+  padding: 0.75rem;
+  border: 1px solid var(--border, rgba(128, 128, 128, 0.35));
+  border-radius: 0.5rem;
+  text-align: center;
+  color: var(--text, inherit);
+}
+
+.datos-transferencia[hidden] {
+  display: none;
+}
+
+.datos-transferencia .gracias-transferencia > p {
+  margin: 0;
+  font-weight: 600;
+}
+
+.datos-transferencia .gracias-dato button {
+  border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
+  border-radius: 0.5rem;
+  color: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* CHECKOUT en las tres plantillas: un cuadro centrado horizontalmente y despegado 15 px del borde
+   inferior (el selector con [data-template] gana a lo que cada una define para .checkout).
+   No ocupa toda la altura: con scroll propio y el encabezado fijo, la X siempre se ve aunque el
+   contenido sea largo (por ejemplo, con los datos de transferencia). */
+html[data-template] .checkout {
+  top: auto;
+  left: 50%;
+  right: auto;
+  bottom: 15px;
+  width: min(92vw, 560px);
+  max-height: calc(100vh - 30px);
+  max-height: calc(100dvh - 30px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  transform: translate(-50%, calc(100% + 15px));
+  transition:
+    transform 0.25s ease,
+    opacity 0.2s ease;
+}
+
+html[data-template] .checkout.active {
+  transform: translate(-50%, 0);
+}
+
+html[data-template] .checkout .checkout-header {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--card);
+}
+
+/* Con el tema oscuro, los controles nativos (el reloj del horario, la lista del select) se
+   dibujan oscuros: en claro quedaban negros sobre el fondo oscuro. */
+:root[data-tema="oscuro"] {
+  color-scheme: dark;
+}
+
+/* PRODUCTO SIN STOCK (PUBLICO-26 y ESTATICO-7): sigue en el menú pero atenuado, con su etiqueta
+   y sin botón para agregarlo. La etiqueta usa el texto y el borde de la plantilla, así se lee en
+   claro y en oscuro sin colores por plantilla. */
+.producto.agotado {
+  opacity: 0.6;
+}
+
+.producto.agotado img {
+  filter: grayscale(1);
+}
+
+.etiqueta-agotado {
+  display: inline-block;
+  margin-top: 0.35rem;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text, inherit);
+}
+
+/* Aviso de cómo se entrega cuando hay un solo tipo (el select está oculto) */
+.aviso-entrega {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text, inherit);
+}
+
+.aviso-entrega[hidden] {
+  display: none;
+}
+
+/* Datos para transferir (alias y CBU/CVU), cada uno con su botón "Copiar". Heredan el color de
+   texto de la plantilla, como el resto del panel. */
+:is(.gracias-pedido, .datos-transferencia) .gracias-transferencia {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+:is(.gracias-pedido, .datos-transferencia) .gracias-dato {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem 0.75rem;
+}
+
+:is(.gracias-pedido, .datos-transferencia) .gracias-dato-etiqueta {
+  flex-basis: 100%;
+  font-size: 0.8rem;
+  opacity: 0.8;
+}
+
+:is(.gracias-pedido, .datos-transferencia) .gracias-dato-valor {
+  font-size: 1.05rem;
+  /* El CBU no tiene espacios: sin esto empuja el panel más ancho que la pantalla. */
+  overflow-wrap: anywhere;
+}
+
+:is(.gracias-pedido, .datos-transferencia) .gracias-dato button {
+  padding: 0.5rem 1rem;
+  min-width: 44px;
+}
+
 /* La propuesta de venta solo se muestra en las demos (la muestra app.js) */
 .cta-section[hidden] {
   display: none !important;

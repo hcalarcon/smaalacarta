@@ -118,6 +118,7 @@
           <option value="delivery" data-i18n="checkout.delivery">Delivery</option>
           <option value="retiro" data-i18n="checkout.pickup">Retiro en el local</option>
         </select>
+        <p id="aviso-entrega" class="aviso-entrega" hidden></p>
         <label> <input type="checkbox" name="ahora" /> <span data-i18n="checkout.now">Ahora mismo</span> </label>
         <input name="horario" type="time" />
         <select name="pago">
@@ -126,6 +127,7 @@
           <option value="transferencia" data-i18n="checkout.transfer">Transferencia</option>
           <option value="tarjeta" data-i18n="checkout.card">Credito o debito</option>
         </select>
+        <div id="datos-transferencia" class="datos-transferencia" hidden></div>
         <textarea name="notas" placeholder="Notas" data-i18n-placeholder="checkout.notes"></textarea>
         <button type="submit" data-i18n="checkout.submit">Enviar por WhatsApp</button>
       </form>

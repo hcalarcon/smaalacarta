@@ -147,13 +147,45 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   `[data-tema="oscuro"]` para redefinir sus variables de fondo, tarjeta, texto y
   borde; los colores de marca del negocio y los fijos (promo, WhatsApp) no
   cambian con el tema: ya se calculan para leerse sobre sí mismos. Sin tema
-  cargado (las demos, hoy), se ve como siempre: claro. En el interactivo, las
-  demos tienen además un switch (`#btn-tema`, junto al estado abierto/cerrado)
-  para alternar entre los dos temas sin recargar; no existe en negocios reales
-  ni en el estático. El cambio de tema anima suave (transición en fondo, texto
+  cargado (las demos, hoy), se ve como siempre: claro. El interactivo tiene además
+  un switch (`#btn-tema`, junto al estado abierto/cerrado) para alternar entre
+  los dos temas sin recargar (PUBLICO-24); no existe en el estático. El cambio de tema anima suave (transición en fondo, texto
   y borde), salvo con `prefers-reduced-motion`.
+- **PUBLICO-24** El tema que el negocio elige en Configuración (ADMIN-CONFIG-9) es el que ve
+  cada visitante la primera vez; el visitante puede cambiarlo con el switch del menú
+  interactivo, y su elección queda en su navegador, por negocio (`lib/theme.js`), y gana al
+  tema del negocio las próximas veces. Sin almacenamiento disponible, vale el del negocio.
+- **PUBLICO-25** `public_menu` entrega `agotado` (verdadero o falso) en cada producto, y no
+  entrega una promoción que lleva algún producto sin stock (ADMIN-MENU-8).
+- **PUBLICO-26** El menú interactivo muestra un producto agotado atenuado y con la etiqueta "Sin
+  stock", sin botón para agregarlo. Si el carrito guardado de una visita anterior tiene uno, se
+  quita al cargar el menú y se avisa. Si al confirmar el pedido el sistema responde que algo
+  está sin stock (`out_of_stock`), se avisa y el menú se vuelve a cargar con lo actual.
+- **PUBLICO-27** Los textos de "Sin stock" y los avisos están en español, inglés y portugués.
 - **PUBLICO-17** Las demos están siempre abiertas: quien las prueba puede hacer el pedido
   de prueba a cualquier hora. Sus `config.json` no traen `horarios` (PUBLICO-4 y 12).
+- **PUBLICO-18** `public_menu` entrega en `config` las opciones que el negocio ofrece:
+  `entrega` y `pagos` (listas), y `transferencia` con `alias` y `cbu` solo si
+  "transferencia" está habilitada y cargó alguno de los dos.
+- **PUBLICO-19** El checkout arma los selects de entrega y de pago con esas opciones
+  (`lib/checkout-options.js`). Si un grupo queda con una sola opción, se preselecciona
+  y su select se oculta; con varias, hay que elegir una. Si el menú no trae esos campos
+  (JSON de demos y negocios sin Supabase), se ofrecen todas, como hasta ahora.
+- **PUBLICO-20** Si el pago elegido es transferencia y el negocio cargó alias o CBU/CVU, se
+  muestran con un botón "Copiar" para cada uno, en el checkout apenas se elige y de nuevo
+  en "Gracias por tu pedido". Se pintan con `textContent`; ni el mensaje de WhatsApp ni el
+  seguimiento llevan esos datos.
+- **PUBLICO-21** Los textos nuevos (alias, CBU/CVU, "Copiar", "Copiado", avisos de entrega) están
+  en español, inglés y portugués.
+- **PUBLICO-22** Si el negocio ofrece un solo tipo de entrega, el checkout lo dice donde estaba
+  el select: "Retirá tu pedido en nuestro local" con su dirección si la cargó, o "Solo hacemos
+  delivery". Con las dos opciones, o con un menú sin esos campos, no hay aviso.
+- **PUBLICO-23** El checkout, en las tres plantillas, es un cuadro de hasta 560 px de ancho,
+  centrado horizontalmente y despegado 15 px del borde inferior; no ocupa toda la altura (deja
+  15 px arriba), con scroll propio y el encabezado con la X siempre visible, y tocar afuera lo
+  cierra. En tema oscuro, los controles nativos (el reloj del horario, la lista del select) se
+  dibujan oscuros, y en `moderno` los botones + y − de
+  cantidad usan el color del negocio, no negro. Solo se prueba mirándolo en el navegador.
 
 ## BUSQUEDA — Buscador
 
@@ -228,6 +260,12 @@ llegando al negocio por WhatsApp.
   WhatsApp se abre en una ventana aparte y la pestaña del pedido conserva el panel; la ventana se
   abre al tocar "enviar", antes de esperar al servidor, y se cierra si el pedido no se envía. Si el
   navegador la bloquea, y en celulares y tablets, se usa la misma pestaña.
+- **SEGUIMIENTO-15** `create_public_order` rechaza (`invalid_delivery` o
+  `invalid_payment`, código `P0007` y `P0008`) una entrega o un pago que el
+  negocio no tiene habilitado (ADMIN-CONFIG-11); sin valor se acepta, como hasta ahora.
+- **SEGUIMIENTO-16** `create_public_order` rechaza (`out_of_stock`, código `P0009`) un pedido
+  con un producto sin stock, solo o dentro de una promoción (ADMIN-MENU-8). El pedido manual del
+  negocio no valida el stock.
 
 ## PWA — Instalar el menú en el celular
 
@@ -303,6 +341,8 @@ en JS puro.*
   `minimal`) muestra la demo de solo lectura, sin pedir nada a Supabase: sale de
   los mismos JSON que usa el menú interactivo para las demos
   (`web/data/demos/<slug>/`), no del plan de un negocio.
+- **ESTATICO-7** El menú estático muestra un producto sin stock atenuado y con la etiqueta "Sin
+  stock", en las tres plantillas y en los dos temas.
 
 ## IDIOMA — Menú público en español, inglés y portugués
 
@@ -556,6 +596,13 @@ Cubierto por: `src/lib/menu/product-fields.test.ts` (ADMIN-MENU-1 y 2),
 - **ADMIN-MENU-7** Un producto puede marcarse como destacado; un producto nuevo nace
   sin destacar si no se indica. El menú público ya arma la categoría "Destacados"
   con estos productos (PUBLICO-1 a 5); esto solo agrega cómo marcarlos desde el panel.
+- **ADMIN-MENU-8** Un producto puede marcarse "Sin stock" (columna `sold_out`, por defecto
+  `false`), distinto de Oculto (`active`): sin stock sigue visible en el menú público pero no
+  se puede pedir. Un producto nuevo nace con stock; editarlo sin indicar `sold_out` no lo toca.
+- **ADMIN-MENU-9** En el panel, cada producto muestra su estado (Oculto o Sin stock, con una
+  etiqueta visible; un producto activo y sin stock se distingue de uno Oculto), se alterna
+  "Sin stock" con un clic y sin recargar (con actualización optimista, como Activar/Desactivar),
+  el filtro del menú tiene "Sin stock" y el formulario del producto tiene su casilla.
 
 ## ADMIN-CONFIG — Configuración del negocio
 
@@ -597,6 +644,27 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   además los tiene); sin él, el path del dominio raíz para el estático y el PDF,
   si los tiene, y ningún link para el interactivo. También muestra qué plan
   tiene el negocio (badges), de solo lectura: solo el superadmin lo cambia.
+- **ADMIN-CONFIG-11** El negocio elige qué tipos de entrega ofrece (`delivery`,
+  `retiro`) y qué medios de pago (`efectivo`, `transferencia`, `tarjeta`): al
+  menos uno por grupo (columnas `delivery_options` y `payment_options`). Un negocio
+  existente o nuevo arranca con todo habilitado. La base rechaza un grupo vacío o
+  con valores fuera de esos conjuntos.
+- **ADMIN-CONFIG-12** Con "transferencia" habilitada el negocio puede cargar un alias
+  (6 a 20 caracteres: letras, números, punto y guion) y un CBU/CVU (22 dígitos), los dos
+  opcionales. Sin "transferencia", el alias y el CBU/CVU se descartan al guardar. La
+  base rechaza un alias o un CBU con otro formato.
+- **ADMIN-CONFIG-13** Configuración muestra "Entrega y pago" con una casilla por opción;
+  los campos de alias y CBU/CVU aparecen solo con "transferencia" tildada. Los errores
+  (ningún tipo de entrega, ningún medio de pago, alias o CBU inválidos) salen en español
+  junto al campo, y el alias y el CBU/CVU se normalizan (sin espacios ni guiones) antes
+  de guardarse.
+- **ADMIN-CONFIG-14** `save_business_settings` guarda las opciones de entrega y de pago,
+  el alias y el CBU junto con el resto de Configuración, en el mismo paso atómico
+  (ADMIN-CONFIG-3).
+- **ADMIN-CONFIG-15** El botón "Guardar cambios" de Configuración es flotante: queda fijo en la
+  esquina inferior derecha de la pantalla, afuera de las tarjetas, y "Cambios guardados" aparece
+  como un toast de app, apenas arriba del borde inferior, que se va solo a los 3 segundos. Solo
+  se prueba mirándolo en el navegador.
 
 ## ADMIN-PEDIDOS — Pedidos
 

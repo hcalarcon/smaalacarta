@@ -1,6 +1,12 @@
 import type { ValidationResult } from "@/lib/auth/validation";
 import { normalizeWhatsapp } from "@/lib/superadmin/validation";
 
+import {
+  ALL_DELIVERY,
+  ALL_PAYMENT,
+  normalizeDeliveryPayment,
+  validateDeliveryPayment,
+} from "./payment";
 import { validateSchedule, type Schedule } from "./schedule";
 import { normalizeFacebook, normalizeInstagram } from "./social";
 
@@ -43,6 +49,12 @@ export type SettingsInput = {
   closedMessage: string;
   // Día en que reabre, "YYYY-MM-DD", o vacío.
   reopensOn: string;
+  // Qué entrega y qué medios de pago ofrece, y los datos de su transferencia
+  // (ADMIN-CONFIG-11 y 12). Alias y CBU/CVU solo cuentan con "transferencia" tildada.
+  deliveryOptions: string[];
+  paymentOptions: string[];
+  transferAlias: string;
+  transferCbu: string;
 };
 
 // Los colores de la marca, como en la landing. Un negocio nuevo arranca así.
@@ -64,6 +76,10 @@ export const DEFAULT_SETTINGS: SettingsInput = {
   temporarilyClosed: false,
   closedMessage: "",
   reopensOn: "",
+  deliveryOptions: [...ALL_DELIVERY],
+  paymentOptions: [...ALL_PAYMENT],
+  transferAlias: "",
+  transferCbu: "",
 };
 
 type Field =
@@ -81,7 +97,11 @@ type Field =
   | "instagram"
   | "facebook"
   | "closedMessage"
-  | "reopensOn";
+  | "reopensOn"
+  | "deliveryOptions"
+  | "paymentOptions"
+  | "transferAlias"
+  | "transferCbu";
 
 const COLOR = /^#[0-9a-fA-F]{6}$/;
 // Solo https y sin caracteres que rompan un atributo o un estilo (mismo criterio
@@ -109,14 +129,14 @@ function isRealDate(value: string) {
 // Deja las redes como direcciones https (si son válidas) y recorta los textos. Lo que
 // no se pueda normalizar queda como está, para que la validación lo marque.
 export function normalizeSettingsText(input: SettingsInput): SettingsInput {
-  return {
+  return normalizeDeliveryPayment({
     ...input,
     address: input.address.trim(),
     closedMessage: input.closedMessage.trim(),
     reopensOn: input.reopensOn.trim(),
     instagram: normalizeInstagram(input.instagram) ?? input.instagram.trim(),
     facebook: normalizeFacebook(input.facebook) ?? input.facebook.trim(),
-  };
+  });
 }
 
 export function validateSettings(input: SettingsInput): ValidationResult<Field> {
@@ -172,6 +192,11 @@ export function validateSettings(input: SettingsInput): ValidationResult<Field> 
 
   if (input.reopensOn.trim() && !isRealDate(input.reopensOn.trim())) {
     errors.reopensOn = "Ingresá una fecha válida.";
+  }
+
+  const deliveryPayment = validateDeliveryPayment(input);
+  if (!deliveryPayment.ok) {
+    Object.assign(errors, deliveryPayment.errors);
   }
 
   const schedule = validateSchedule(input.schedule);

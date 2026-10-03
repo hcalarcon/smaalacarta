@@ -157,6 +157,7 @@ describe("categorías y productos — PUBLICO-2", () => {
       precio: 1000,
       imagen: "https://ejemplo.com/cafe.jpg",
       destacado: true,
+      agotado: false,
     });
   });
 
@@ -169,6 +170,7 @@ describe("categorías y productos — PUBLICO-2", () => {
       nombre: "Té",
       precio: 800,
       destacado: false,
+      agotado: false,
     });
   });
 
@@ -278,6 +280,8 @@ describe("configuración — PUBLICO-4", () => {
         instagram: "https://www.instagram.com/ana_resto",
         facebook: "https://www.facebook.com/anaresto",
       },
+      entrega: ["delivery", "retiro"],
+      pagos: ["efectivo", "transferencia", "tarjeta"],
     });
   });
 
@@ -434,5 +438,112 @@ describe("traducciones — IDIOMA-10", () => {
       update categories set name_en = null, name_pt = null where business_id = '${NEG_BETO}';
       update products set name_en = null, description_pt = null where business_id = '${NEG_BETO}';
     `);
+  });
+});
+
+describe("entrega y pago — PUBLICO-18", () => {
+  type Config = Record<string, unknown>;
+  const cfg = async () => (await publicMenu("beto"))!.config as Config;
+
+  it("sin haber elegido nada, entrega todas las opciones y no trae transferencia", async () => {
+    const c = await cfg();
+
+    expect(c.entrega).toEqual(["delivery", "retiro"]);
+    expect(c.pagos).toEqual(["efectivo", "transferencia", "tarjeta"]);
+    expect(c).not.toHaveProperty("transferencia");
+  });
+
+  it("con transferencia habilitada entrega el alias y el CBU que cargó", async () => {
+    await db.exec(`
+      update business_settings
+      set delivery_options = '{retiro}', payment_options = '{efectivo,transferencia}',
+          transfer_alias = 'beto.bar', transfer_cbu = '0000003100012345678901'
+      where business_id = '${NEG_BETO}'
+    `);
+    const c = await cfg();
+
+    expect(c.entrega).toEqual(["retiro"]);
+    expect(c.pagos).toEqual(["efectivo", "transferencia"]);
+    expect(c.transferencia).toEqual({ alias: "beto.bar", cbu: "0000003100012345678901" });
+  });
+
+  it("con uno solo de los dos, entrega solo ese", async () => {
+    await db.exec(`update business_settings set transfer_cbu = null where business_id = '${NEG_BETO}'`);
+
+    expect((await cfg()).transferencia).toEqual({ alias: "beto.bar" });
+  });
+
+  it("sin transferencia habilitada no entrega los datos aunque estén guardados", async () => {
+    // Si no, el menú mostraría datos de un medio de pago que el negocio ya no ofrece.
+    await db.exec(`update business_settings set payment_options = '{efectivo}' where business_id = '${NEG_BETO}'`);
+    const c = await cfg();
+
+    expect(c.pagos).toEqual(["efectivo"]);
+    expect(c).not.toHaveProperty("transferencia");
+  });
+
+  it("sin alias ni CBU cargados no entrega transferencia", async () => {
+    await db.exec(`
+      update business_settings
+      set payment_options = '{transferencia}', transfer_alias = null, transfer_cbu = null
+      where business_id = '${NEG_BETO}'
+    `);
+
+    expect(await cfg()).not.toHaveProperty("transferencia");
+
+    await db.exec(`
+      update business_settings
+      set delivery_options = '{delivery,retiro}', payment_options = '{efectivo,transferencia,tarjeta}'
+      where business_id = '${NEG_BETO}'
+    `);
+  });
+});
+
+describe("sin stock — PUBLICO-25", () => {
+  const TE = "d1000000-0000-0000-0000-000000000002";
+  const names = async () => {
+    const m = (await publicMenu("ana"))!;
+    return m.menu.categorias.flatMap((c) => c.items.map((i) => `${c.nombre}/${i.nombre}`));
+  };
+  const item = async (nombre: string) =>
+    (await publicMenu("ana"))!.menu.categorias
+      .filter((c) => c.tipo !== "ofertas")
+      .flatMap((c) => c.items)
+      .find((i) => i.nombre === nombre) as (Item & { agotado?: boolean }) | undefined;
+
+  it("un producto nuevo no está agotado (por defecto sold_out es false)", async () => {
+    const r = await db.query<{ sold_out: boolean }>(
+      `select sold_out from products where id = '${TE}'`,
+    );
+
+    expect(r.rows[0].sold_out).toBe(false);
+    expect((await item("Té"))!.agotado).toBe(false);
+  });
+
+  it("el producto sin stock sigue en el menú, marcado como agotado", async () => {
+    await db.exec(`update products set sold_out = true where id = '${TE}'`);
+
+    expect(await names()).toContain("Bebidas/Té");
+    expect((await item("Té"))!.agotado).toBe(true);
+    expect((await item("Café"))!.agotado).toBe(false);
+  });
+
+  it("una promoción con un producto sin stock no se entrega, a diferencia del producto", async () => {
+    // "Desayuno" lleva Té + Café: sin Té no se puede armar.
+    const ofertas = (await publicMenu("ana"))!.menu.categorias.find((c) => c.tipo === "ofertas");
+
+    expect(ofertas!.items.map((i) => i.nombre)).not.toContain("Desayuno");
+    expect(ofertas!.items.map((i) => i.nombre)).toContain("Combo");
+  });
+
+  it("al volver a haber stock, la promoción vuelve", async () => {
+    await db.exec(`update products set sold_out = false where id = '${TE}'`);
+    const ofertas = (await publicMenu("ana"))!.menu.categorias.find((c) => c.tipo === "ofertas");
+
+    expect(ofertas!.items.map((i) => i.nombre)).toContain("Desayuno");
+  });
+
+  it("un producto oculto sigue sin entregarse aunque tenga stock (Oculto no es Sin stock)", async () => {
+    expect(await names()).not.toContain("Bebidas/Jugo");
   });
 });

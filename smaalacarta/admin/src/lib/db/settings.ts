@@ -45,6 +45,10 @@ export async function getSettings(
     temporarilyClosed: data.temporarily_closed,
     closedMessage: data.closed_message ?? "",
     reopensOn: data.reopens_on ?? "",
+    deliveryOptions: data.delivery_options,
+    paymentOptions: data.payment_options,
+    transferAlias: data.transfer_alias ?? "",
+    transferCbu: data.transfer_cbu ?? "",
   };
 }
 
@@ -75,6 +79,10 @@ export async function saveSettings(
     p_logo_url: input.logoUrl,
     p_menu_pdf_url: input.menuPdfUrl,
     p_theme: input.theme,
+    p_delivery_options: input.deliveryOptions,
+    p_payment_options: input.paymentOptions,
+    p_transfer_alias: input.transferAlias,
+    p_transfer_cbu: input.transferCbu,
   });
 
   return error ? { error: { code: error.code, message: error.message } } : {};

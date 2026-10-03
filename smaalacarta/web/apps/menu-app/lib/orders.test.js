@@ -91,6 +91,9 @@ describe("createOrder — SEGUIMIENTO-1 y 7", () => {
 
   it.each([
     ["P0005", "closed"],
+    ["P0007", "invalid_delivery"],
+    ["P0008", "invalid_payment"],
+    ["P0009", "out_of_stock"],
     ["P0003", "busy"],
     ["P0001", "unavailable"],
     ["P0002", "unavailable"],
@@ -290,6 +293,18 @@ describe("cierre del pedido — SEGUIMIENTO-10", () => {
     expect(lastOrder(storage)).toEqual({ code: CODE, number: 7 });
     forgetLastOrder(storage);
     expect(lastOrder(storage)).toBeNull();
+  });
+
+  it("el último pedido recuerda el pago elegido, para mostrar los datos de la transferencia al volver (PUBLICO-20)", () => {
+    const storage = fakeStorage();
+    rememberLastOrder(storage, { code: CODE, number: 7, payment: "transferencia" });
+    expect(lastOrder(storage)).toEqual({ code: CODE, number: 7, payment: "transferencia" });
+  });
+
+  it("un pago desconocido no se guarda", () => {
+    const storage = fakeStorage();
+    rememberLastOrder(storage, { code: CODE, number: 7, payment: "<b>x</b>" });
+    expect(lastOrder(storage)).toEqual({ code: CODE, number: 7 });
   });
 
   it("el último pedido vence a las 2 horas", () => {

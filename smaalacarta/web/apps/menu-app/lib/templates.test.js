@@ -41,6 +41,7 @@ const completo = {
         items: [
           { nombre: "Torta", precio: 4000, destacado: true, imagen: "https://cdn.example.com/t.jpg" },
           { nombre: "Pizza", precio: 5200, precioAnterior: 6500, promo: "20% OFF" },
+          { nombre: "Flan", precio: 2500, agotado: true },
         ],
       },
     ],

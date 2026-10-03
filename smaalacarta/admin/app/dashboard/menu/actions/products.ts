@@ -5,6 +5,7 @@ import {
   updateProduct,
   deleteProduct,
   setProductActive,
+  setProductSoldOut,
 } from "@/lib/db/products";
 import type { Translations } from "@/lib/menu/translations";
 import { saveOrder } from "@/lib/db/ordering";
@@ -19,6 +20,7 @@ export async function createProductAction(
     active: boolean;
     image_url?: string | null;
     featured?: boolean;
+    sold_out?: boolean;
   } & Translations,
 ) {
   await createProduct(businessId, data);
@@ -36,6 +38,7 @@ export async function updateProductAction(
     active: boolean;
     image_url?: string | null;
     featured?: boolean;
+    sold_out?: boolean;
   } & Translations,
 ) {
   await updateProduct(businessId, id, data);
@@ -51,6 +54,14 @@ export async function setProductActiveAction(
   active: boolean,
 ) {
   await setProductActive(businessId, id, active);
+}
+
+export async function setProductSoldOutAction(
+  businessId: string,
+  id: string,
+  soldOut: boolean,
+) {
+  await setProductSoldOut(businessId, id, soldOut);
 }
 
 // `orderedIds` son los productos de una categoría, en el orden nuevo.

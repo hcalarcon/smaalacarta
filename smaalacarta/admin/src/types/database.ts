@@ -45,11 +45,13 @@ export type Database = {
           business_id: string
           closed_message: string | null
           created_at: string
+          delivery_options: string[]
           facebook_url: string | null
           header_image_url: string | null
           instagram_url: string | null
           logo_url: string | null
           menu_pdf_url: string | null
+          payment_options: string[]
           primary_color: string
           published: boolean
           reopens_on: string | null
@@ -59,6 +61,8 @@ export type Database = {
           template: string
           temporarily_closed: boolean
           theme: string
+          transfer_alias: string | null
+          transfer_cbu: string | null
           updated_at: string
         }
         Insert: {
@@ -66,11 +70,13 @@ export type Database = {
           business_id: string
           closed_message?: string | null
           created_at?: string
+          delivery_options?: string[]
           facebook_url?: string | null
           header_image_url?: string | null
           instagram_url?: string | null
           logo_url?: string | null
           menu_pdf_url?: string | null
+          payment_options?: string[]
           primary_color?: string
           published?: boolean
           reopens_on?: string | null
@@ -80,6 +86,8 @@ export type Database = {
           template?: string
           temporarily_closed?: boolean
           theme?: string
+          transfer_alias?: string | null
+          transfer_cbu?: string | null
           updated_at?: string
         }
         Update: {
@@ -87,11 +95,13 @@ export type Database = {
           business_id?: string
           closed_message?: string | null
           created_at?: string
+          delivery_options?: string[]
           facebook_url?: string | null
           header_image_url?: string | null
           instagram_url?: string | null
           logo_url?: string | null
           menu_pdf_url?: string | null
+          payment_options?: string[]
           primary_color?: string
           published?: boolean
           reopens_on?: string | null
@@ -101,6 +111,8 @@ export type Database = {
           template?: string
           temporarily_closed?: boolean
           theme?: string
+          transfer_alias?: string | null
+          transfer_cbu?: string | null
           updated_at?: string
         }
         Relationships: [
@@ -448,6 +460,7 @@ export type Database = {
           name_en: string | null
           name_pt: string | null
           price: number
+          sold_out: boolean
           sort_order: number | null
           updated_at: string
         }
@@ -466,6 +479,7 @@ export type Database = {
           name_en?: string | null
           name_pt?: string | null
           price?: number
+          sold_out?: boolean
           sort_order?: number | null
           updated_at?: string
         }
@@ -484,6 +498,7 @@ export type Database = {
           name_en?: string | null
           name_pt?: string | null
           price?: number
+          sold_out?: boolean
           sort_order?: number | null
           updated_at?: string
         }
@@ -695,11 +710,13 @@ export type Database = {
           p_address: string
           p_business_id: string
           p_closed_message: string
+          p_delivery_options: string[]
           p_facebook_url: string
           p_header_image_url: string
           p_instagram_url: string
           p_logo_url: string
           p_menu_pdf_url: string
+          p_payment_options: string[]
           p_primary_color: string
           p_published: boolean
           p_reopens_on: string
@@ -709,6 +726,8 @@ export type Database = {
           p_template: string
           p_temporarily_closed: boolean
           p_theme: string
+          p_transfer_alias: string
+          p_transfer_cbu: string
           p_whatsapp: string
         }
         Returns: undefined

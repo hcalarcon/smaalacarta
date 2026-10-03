@@ -28,6 +28,7 @@ type CategorySectionProps = {
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (product: Product) => void;
   onToggleProduct: (product: Product) => void;
+  onToggleSoldOut: (product: Product) => void;
   onReorderProducts: (orderedIds: string[]) => void;
 };
 
@@ -43,6 +44,7 @@ export default function CategorySection({
   onEditProduct,
   onDeleteProduct,
   onToggleProduct,
+  onToggleSoldOut,
   onReorderProducts,
 }: CategorySectionProps) {
   const products = category.products ?? [];
@@ -142,6 +144,7 @@ export default function CategorySection({
                       onEdit={() => onEditProduct(product)}
                       onDelete={() => onDeleteProduct(product)}
                       onToggleActive={() => onToggleProduct(product)}
+                      onToggleSoldOut={() => onToggleSoldOut(product)}
                     />
                   )}
                 </SortableItem>
@@ -155,6 +158,7 @@ export default function CategorySection({
                 onEdit={() => onEditProduct(product)}
                 onDelete={() => onDeleteProduct(product)}
                 onToggleActive={() => onToggleProduct(product)}
+                onToggleSoldOut={() => onToggleSoldOut(product)}
               />
             ))
           )}

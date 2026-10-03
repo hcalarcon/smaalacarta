@@ -798,3 +798,103 @@ describe("horario de atención — SEGUIMIENTO-9", () => {
     }
   });
 });
+
+describe("entrega y pago habilitados — SEGUIMIENTO-15", () => {
+  const habilitar = (delivery: string, payment: string) =>
+    db.exec(
+      `update business_settings set delivery_options = '${delivery}', payment_options = '${payment}'
+       where business_id = '${NEG_ANA}'`,
+    );
+
+  it("acepta lo que el negocio tiene habilitado", async () => {
+    await habilitar("{retiro}", "{transferencia}");
+
+    const r = await order("ana", [{ id: CAFE }], { delivery: "retiro", payment: "transferencia" });
+
+    expect(r.ok).toBe(true);
+  });
+
+  it("rechaza un tipo de entrega que el negocio no ofrece (P0007) y no crea el pedido", async () => {
+    await habilitar("{retiro}", "{efectivo,transferencia,tarjeta}");
+    const antes = await count("select count(*) as n from orders");
+
+    const r = await order("ana", [{ id: CAFE }], { delivery: "delivery" });
+
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.code).toBe("P0007");
+    expect(await count("select count(*) as n from orders")).toBe(antes);
+  });
+
+  it("rechaza un medio de pago que el negocio no ofrece (P0008)", async () => {
+    await habilitar("{delivery,retiro}", "{efectivo}");
+
+    const r = await order("ana", [{ id: CAFE }], { payment: "tarjeta" });
+
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.code).toBe("P0008");
+  });
+
+  it("rechaza un valor inventado aunque el negocio ofrezca todo", async () => {
+    await habilitar("{delivery,retiro}", "{efectivo,transferencia,tarjeta}");
+
+    expect((await order("ana", [{ id: CAFE }], { delivery: "drone" })).ok).toBe(false);
+    expect((await order("ana", [{ id: CAFE }], { payment: "cripto" })).ok).toBe(false);
+  });
+
+  it("sin valor sigue permitido, como hasta ahora", async () => {
+    const r = await order("ana", [{ id: CAFE }], { delivery: "", payment: "" });
+
+    expect(r.ok).toBe(true);
+  });
+});
+
+describe("productos sin stock — SEGUIMIENTO-16", () => {
+  const marcar = (id: string, soldOut: boolean) =>
+    db.exec(`update products set sold_out = ${soldOut} where id = '${id}'`);
+
+  it("rechaza un pedido con un producto sin stock (P0009) y no lo crea", async () => {
+    await marcar(CAFE, true);
+    const antes = await count("select count(*) as n from orders");
+
+    const r = await order("ana", [{ id: TE }, { id: CAFE }]);
+
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.code).toBe("P0009");
+    expect(await count("select count(*) as n from orders")).toBe(antes);
+  });
+
+  it("rechaza una promoción que lleva un producto sin stock", async () => {
+    const r = await order("ana", [{ id: DESAYUNO, kind: "promo" }]);
+
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.code).toBe("P0009");
+  });
+
+  it("lo que sí tiene stock se sigue pidiendo", async () => {
+    expect((await order("ana", [{ id: TE }, { id: MILANESA }])).ok).toBe(true);
+  });
+
+  it("un producto oculto sigue siendo 'no disponible' (P0001), no 'sin stock'", async () => {
+    const r = await order("ana", [{ id: JUGO }]);
+
+    expect(!r.ok && r.code).toBe("P0001");
+  });
+
+  it("el pedido manual no valida el stock: el negocio sabe lo que tiene (ADMIN-PEDIDOS-3)", async () => {
+    const r = await asUser(
+      db,
+      ANA,
+      `select public.create_manual_order('${NEG_ANA}', 'Mostrador', 'retiro', 'efectivo', null,
+         '[{"name":"Café","unit_price":1000,"quantity":1}]'::jsonb) as result`,
+    );
+
+    expect(r.ok).toBe(true);
+  });
+
+  it("al volver a haber stock se puede pedir", async () => {
+    await marcar(CAFE, false);
+
+    expect((await order("ana", [{ id: CAFE }])).ok).toBe(true);
+    expect((await order("ana", [{ id: DESAYUNO, kind: "promo" }])).ok).toBe(true);
+  });
+});

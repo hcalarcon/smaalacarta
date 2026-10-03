@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { saveSettingsAction } from "../actions";
 import Field from "@/components/ui/Field";
@@ -9,6 +9,7 @@ import FormAlert from "@/components/ui/FormAlert";
 import ImageUploader from "@/components/ui/ImageUploader";
 import PdfUploader from "@/components/ui/PdfUploader";
 import Section from "@/components/ui/Section";
+import { DELIVERY_OPTIONS, PAYMENT_OPTIONS, hasTransfer } from "@/lib/settings/payment";
 import {
   DAYS,
   parseRange,
@@ -109,7 +110,7 @@ export default function SettingsForm({
   businessId: string;
   initial: SettingsInput;
   // Sin plan_web ni plan_completo (solo QR + PDF), no hay menú digital: se
-  // esconde todo lo que no sea el PDF (ADMIN-CONFIG-11).
+  // esconde todo lo que no sea el PDF (ADMIN-PLAN-1).
   digitalMenu: boolean;
 }) {
   const router = useRouter();
@@ -130,6 +131,10 @@ export default function SettingsForm({
   const [temporarilyClosed, setTemporarilyClosed] = useState(initial.temporarilyClosed);
   const [closedMessage, setClosedMessage] = useState(initial.closedMessage);
   const [reopensOn, setReopensOn] = useState(initial.reopensOn);
+  const [deliveryOptions, setDeliveryOptions] = useState(initial.deliveryOptions);
+  const [paymentOptions, setPaymentOptions] = useState(initial.paymentOptions);
+  const [transferAlias, setTransferAlias] = useState(initial.transferAlias);
+  const [transferCbu, setTransferCbu] = useState(initial.transferCbu);
 
   const hasInitialSchedule = Object.keys(initial.schedule).length > 0;
   const [scheduleEnabled, setScheduleEnabled] = useState(hasInitialSchedule);
@@ -143,9 +148,26 @@ export default function SettingsForm({
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<string, string>>>({});
   const [imageBroken, setImageBroken] = useState(false);
 
+  // El aviso de guardado es un toast: se va solo a los 3 segundos.
+  useEffect(() => {
+    if (!saved) return;
+    const timer = setTimeout(() => setSaved(false), 3000);
+    return () => clearTimeout(timer);
+  }, [saved]);
+
   function updateDay(key: DayKey, change: (day: DayState) => DayState) {
     setSaved(false);
     setDays((prev) => ({ ...prev, [key]: change(prev[key]) }));
+  }
+
+  // Tilda o destilda una opción de entrega o de pago.
+  function toggleOption(
+    set: React.Dispatch<React.SetStateAction<string[]>>,
+    key: string,
+    checked: boolean,
+  ) {
+    setSaved(false);
+    set((prev) => (checked ? [...prev, key] : prev.filter((option) => option !== key)));
   }
 
   function copyMondayToAll() {
@@ -186,6 +208,10 @@ export default function SettingsForm({
         temporarilyClosed,
         closedMessage,
         reopensOn,
+        deliveryOptions,
+        paymentOptions,
+        transferAlias,
+        transferCbu,
       });
 
       if (!result.ok) {
@@ -249,7 +275,7 @@ export default function SettingsForm({
         </div>
 
         <div>
-          <span className="mb-1.5 block text-sm font-medium text-brand">Tema</span>
+          <span className="mb-1.5 block text-sm font-medium text-brand">Tema por defecto</span>
           <div className="grid gap-2 sm:grid-cols-3">
             {THEMES.map((option) => (
               <button
@@ -267,6 +293,10 @@ export default function SettingsForm({
               </button>
             ))}
           </div>
+          <p className="mt-1.5 text-sm text-stone-500">
+            Es el tema con el que se abre tu menú; tus clientes pueden cambiarlo con el botón del
+            menú.
+          </p>
           {fieldErrors.theme ? (
             <p className="mt-1.5 text-sm text-red-600">{fieldErrors.theme}</p>
           ) : null}
@@ -587,6 +617,80 @@ export default function SettingsForm({
       </Section>
 
       <Section
+        title="Entrega y pago"
+        description="Qué ofrecés en el checkout del menú. Si dejás una sola opción en un grupo, tus clientes no tienen que elegir."
+      >
+        <fieldset>
+          <legend className="mb-1.5 text-sm font-medium text-brand">Tipos de entrega</legend>
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            {DELIVERY_OPTIONS.map((option) => (
+              <label key={option.key} className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={deliveryOptions.includes(option.key)}
+                  onChange={(event) =>
+                    toggleOption(setDeliveryOptions, option.key, event.target.checked)
+                  }
+                  className="h-5 w-5"
+                />
+                <span className="text-sm font-medium text-stone-900">{option.label}</span>
+              </label>
+            ))}
+          </div>
+          {fieldErrors.deliveryOptions ? (
+            <p className="mt-1.5 text-sm text-red-600">{fieldErrors.deliveryOptions}</p>
+          ) : null}
+        </fieldset>
+
+        <fieldset>
+          <legend className="mb-1.5 text-sm font-medium text-brand">Medios de pago</legend>
+          <div className="flex flex-wrap gap-x-6 gap-y-2">
+            {PAYMENT_OPTIONS.map((option) => (
+              <label key={option.key} className="flex items-center gap-3">
+                <input
+                  type="checkbox"
+                  checked={paymentOptions.includes(option.key)}
+                  onChange={(event) =>
+                    toggleOption(setPaymentOptions, option.key, event.target.checked)
+                  }
+                  className="h-5 w-5"
+                />
+                <span className="text-sm font-medium text-stone-900">{option.label}</span>
+              </label>
+            ))}
+          </div>
+          {fieldErrors.paymentOptions ? (
+            <p className="mt-1.5 text-sm text-red-600">{fieldErrors.paymentOptions}</p>
+          ) : null}
+        </fieldset>
+
+        {hasTransfer(paymentOptions) ? (
+          <div className="grid gap-5 sm:grid-cols-2">
+            <Field
+              label="Alias (opcional)"
+              value={transferAlias}
+              onChange={(event) => setTransferAlias(event.target.value)}
+              placeholder="mi.negocio"
+              hint="Se le muestra al cliente al terminar el pedido, con un botón para copiarlo."
+              error={fieldErrors.transferAlias}
+              autoCapitalize="none"
+              maxLength={40}
+            />
+            <Field
+              label="CBU o CVU (opcional)"
+              value={transferCbu}
+              onChange={(event) => setTransferCbu(event.target.value)}
+              inputMode="numeric"
+              placeholder="22 números"
+              hint="Los 22 números de tu cuenta; podés pegarlo con espacios."
+              error={fieldErrors.transferCbu}
+              maxLength={40}
+            />
+          </div>
+        ) : null}
+      </Section>
+
+      <Section
         title="Contacto"
         description="Los pedidos, el envío y el retiro se arreglan con tus clientes por WhatsApp."
       >
@@ -631,16 +735,23 @@ export default function SettingsForm({
       </Section>
       </> : null}
 
-      <div className="flex items-center justify-end gap-4">
-        {saved ? (
-          <span role="status" className="text-sm font-medium text-emerald-700">
-            Cambios guardados
-          </span>
-        ) : null}
+      {saved ? (
+        <div
+          role="status"
+          className="fixed bottom-24 left-1/2 z-20 -translate-x-1/2 sm:bottom-6 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-medium text-white shadow-lg"
+        >
+          Cambios guardados
+        </div>
+      ) : null}
+
+      {/* Flotante: fijo en la esquina de la pantalla, afuera de las tarjetas. El espacio de abajo
+          es para que, al final del formulario, no tape el último campo en pantallas angostas. */}
+      <div className="h-14 sm:hidden" aria-hidden />
+      <div className="fixed bottom-6 right-6 z-10">
         <button
           type="submit"
           disabled={saving}
-          className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60"
+          className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-brand-hover disabled:opacity-60"
         >
           {saving ? "Guardando…" : "Guardar cambios"}
         </button>

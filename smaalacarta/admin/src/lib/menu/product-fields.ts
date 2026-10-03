@@ -9,6 +9,8 @@ export type ProductInput = Translations & {
   image_url?: string | null;
   // Aparece en la categoría "Destacados" del menú público (ADMIN-MENU-7).
   featured?: boolean;
+  // Sin stock: se ve en el menú pero no se puede pedir (ADMIN-MENU-8). Distinto de `active`.
+  sold_out?: boolean;
 };
 
 // Fila para crear un producto. Siempre lleva categoría (ADMIN-MENU-1).
@@ -25,6 +27,7 @@ export function toProductInsert(
     active: input.active ?? true,
     image_url: input.image_url || null,
     featured: input.featured ?? false,
+    sold_out: input.sold_out ?? false,
     ...toTranslationColumns(input),
   };
 }
@@ -41,6 +44,35 @@ export function toProductUpdate(input: ProductInput & { category_id?: string }) 
     // Sin indicarla se conserva; con nula o vacía se quita (ADMIN-MENU-6).
     ...(input.image_url !== undefined && { image_url: input.image_url || null }),
     ...(input.featured !== undefined && { featured: input.featured }),
+    ...(input.sold_out !== undefined && { sold_out: input.sold_out }),
     ...toTranslationColumns(input),
   };
+}
+
+// Cómo está un producto en el panel (ADMIN-MENU-9). Oculto gana: un producto oculto no se ve
+// en el menú, tenga o no stock.
+export type ProductStatus = "hidden" | "sold_out" | "available";
+
+export function productStatus(product: { active: boolean; sold_out?: boolean }): ProductStatus {
+  if (!product.active) return "hidden";
+  return product.sold_out ? "sold_out" : "available";
+}
+
+export type StatusFilter = "all" | "active" | "hidden" | "sold_out";
+
+// "Activos" incluye los que están sin stock: siguen visibles en el menú.
+export function matchesStatusFilter(
+  product: { active: boolean; sold_out?: boolean },
+  filter: StatusFilter,
+): boolean {
+  switch (filter) {
+    case "active":
+      return product.active;
+    case "hidden":
+      return !product.active;
+    case "sold_out":
+      return productStatus(product) === "sold_out";
+    default:
+      return true;
+  }
 }
