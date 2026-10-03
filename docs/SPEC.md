@@ -205,9 +205,6 @@ Cuando el menú viene de Supabase, confirmar el pedido lo guarda en el sistema a
 de abrir WhatsApp, y el cliente recibe un link para seguirlo. El pedido sigue
 llegando al negocio por WhatsApp.
 
-- **PUBLICO-23** En pantallas anchas (desde 768 px) el checkout de `clasico` y `minimal` es una
-  hoja centrada de hasta 480 px, no de todo el ancho; en `minimal` oscuro el select tiene
-  borde y su lista usa los colores del tema. Solo se prueba mirándolo en el navegador.
 - **SEGUIMIENTO-1** Un cliente, sin sesión, puede crear un pedido en un negocio
   publicado y abierto. No puede en uno que no existe, no está publicado o cerró
   temporalmente.
