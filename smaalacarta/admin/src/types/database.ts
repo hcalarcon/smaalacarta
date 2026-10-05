@@ -42,6 +42,7 @@ export type Database = {
       business_settings: {
         Row: {
           address: string | null
+          allow_scheduled_orders: boolean
           business_id: string
           closed_message: string | null
           created_at: string
@@ -52,10 +53,13 @@ export type Database = {
           logo_url: string | null
           menu_pdf_url: string | null
           payment_options: string[]
+          preorder_cutoffs: Json
+          preorders_enabled: boolean
           primary_color: string
           published: boolean
           reopens_on: string | null
           schedule: Json
+          scheduled_lead_minutes: number
           secondary_color: string
           tagline: string | null
           template: string
@@ -67,6 +71,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          allow_scheduled_orders?: boolean
           business_id: string
           closed_message?: string | null
           created_at?: string
@@ -77,10 +82,13 @@ export type Database = {
           logo_url?: string | null
           menu_pdf_url?: string | null
           payment_options?: string[]
+          preorder_cutoffs?: Json
+          preorders_enabled?: boolean
           primary_color?: string
           published?: boolean
           reopens_on?: string | null
           schedule?: Json
+          scheduled_lead_minutes?: number
           secondary_color?: string
           tagline?: string | null
           template?: string
@@ -92,6 +100,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          allow_scheduled_orders?: boolean
           business_id?: string
           closed_message?: string | null
           created_at?: string
@@ -102,10 +111,13 @@ export type Database = {
           logo_url?: string | null
           menu_pdf_url?: string | null
           payment_options?: string[]
+          preorder_cutoffs?: Json
+          preorders_enabled?: boolean
           primary_color?: string
           published?: boolean
           reopens_on?: string | null
           schedule?: Json
+          scheduled_lead_minutes?: number
           secondary_color?: string
           tagline?: string | null
           template?: string
@@ -397,6 +409,8 @@ export type Database = {
           notes: string | null
           order_number: string
           payment: string | null
+          preorder: boolean
+          scheduled_for: string | null
           source: string
           status: string
           total: number
@@ -413,6 +427,8 @@ export type Database = {
           notes?: string | null
           order_number: string
           payment?: string | null
+          preorder?: boolean
+          scheduled_for?: string | null
           source?: string
           status?: string
           total?: number
@@ -429,6 +445,8 @@ export type Database = {
           notes?: string | null
           order_number?: string
           payment?: string | null
+          preorder?: boolean
+          scheduled_for?: string | null
           source?: string
           status?: string
           total?: number
@@ -674,6 +692,7 @@ export type Database = {
           p_items: Json
           p_notes: string
           p_payment: string
+          p_scheduled_for?: string
         }
         Returns: Json
       }
@@ -684,6 +703,8 @@ export type Database = {
           p_items: Json
           p_notes: string
           p_payment: string
+          p_preorder?: boolean
+          p_scheduled_for?: string
           p_slug: string
         }
         Returns: Json
@@ -692,10 +713,27 @@ export type Database = {
         Args: { p_at: string; p_schedule: Json }
         Returns: boolean
       }
+      is_schedulable_at: {
+        Args: {
+          p_at: string
+          p_lead_minutes: number
+          p_now: string
+          p_schedule: Json
+        }
+        Returns: boolean
+      }
       is_super_admin: { Args: never; Returns: boolean }
+      is_valid_preorder_cutoffs: { Args: { p_cutoffs: Json }; Returns: boolean }
       is_valid_schedule: { Args: { p_schedule: Json }; Returns: boolean }
       new_tracking_code: { Args: never; Returns: string }
       next_order_number: { Args: { p_business_id: string }; Returns: number }
+      preorder_window: {
+        Args: { p_cutoffs: Json; p_now: string; p_schedule: Json }
+        Returns: {
+          cutoff_at: string
+          opens_at: string
+        }[]
+      }
       public_business_pdf: {
         Args: { p_slug: string; p_via_path?: boolean }
         Returns: Json
@@ -708,6 +746,7 @@ export type Database = {
       save_business_settings: {
         Args: {
           p_address: string
+          p_allow_scheduled_orders: boolean
           p_business_id: string
           p_closed_message: string
           p_delivery_options: string[]
@@ -717,10 +756,13 @@ export type Database = {
           p_logo_url: string
           p_menu_pdf_url: string
           p_payment_options: string[]
+          p_preorder_cutoffs: Json
+          p_preorders_enabled: boolean
           p_primary_color: string
           p_published: boolean
           p_reopens_on: string
           p_schedule: Json
+          p_scheduled_lead_minutes: number
           p_secondary_color: string
           p_tagline: string
           p_template: string

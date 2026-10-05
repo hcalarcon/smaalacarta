@@ -10,6 +10,7 @@ import ImageUploader from "@/components/ui/ImageUploader";
 import PdfUploader from "@/components/ui/PdfUploader";
 import Section from "@/components/ui/Section";
 import { DELIVERY_OPTIONS, PAYMENT_OPTIONS, hasTransfer } from "@/lib/settings/payment";
+import type { PreorderCutoffs } from "@/lib/settings/preorders";
 import {
   DAYS,
   parseRange,
@@ -62,6 +63,31 @@ function toSchedule(state: ScheduleState, enabled: boolean): Schedule {
       return [key, ranges];
     }),
   ) as Schedule;
+}
+
+// El corte de cada día de venta como lo edita el formulario: `dia` vacío = sin pedidos
+// anticipados para ese día.
+type CutoffRow = { dia: DayKey | ""; hora: string };
+type CutoffsState = Record<DayKey, CutoffRow>;
+
+const DEFAULT_CUTOFF_TIME = "20:00";
+
+function toCutoffsState(cutoffs: PreorderCutoffs): CutoffsState {
+  return Object.fromEntries(
+    DAYS.map(({ key }) => [
+      key,
+      cutoffs[key] ? { ...cutoffs[key] } : { dia: "", hora: DEFAULT_CUTOFF_TIME },
+    ]),
+  ) as CutoffsState;
+}
+
+function toCutoffs(state: CutoffsState): PreorderCutoffs {
+  return Object.fromEntries(
+    DAYS.flatMap(({ key }) => {
+      const row = state[key];
+      return row.dia ? [[key, { dia: row.dia, hora: row.hora }]] : [];
+    }),
+  ) as PreorderCutoffs;
 }
 
 const inputClass =
@@ -135,6 +161,11 @@ export default function SettingsForm({
   const [paymentOptions, setPaymentOptions] = useState(initial.paymentOptions);
   const [transferAlias, setTransferAlias] = useState(initial.transferAlias);
   const [transferCbu, setTransferCbu] = useState(initial.transferCbu);
+  const [allowScheduledOrders, setAllowScheduledOrders] = useState(initial.allowScheduledOrders);
+  // Texto, para poder borrar y escribir; se convierte a número al guardar.
+  const [leadMinutes, setLeadMinutes] = useState(String(initial.scheduledLeadMinutes));
+  const [preordersEnabled, setPreordersEnabled] = useState(initial.preordersEnabled);
+  const [cutoffs, setCutoffs] = useState<CutoffsState>(() => toCutoffsState(initial.preorderCutoffs));
 
   const hasInitialSchedule = Object.keys(initial.schedule).length > 0;
   const [scheduleEnabled, setScheduleEnabled] = useState(hasInitialSchedule);
@@ -159,6 +190,17 @@ export default function SettingsForm({
     setSaved(false);
     setDays((prev) => ({ ...prev, [key]: change(prev[key]) }));
   }
+
+  function updateCutoff(key: DayKey, change: Partial<CutoffRow>) {
+    setSaved(false);
+    setCutoffs((prev) => ({ ...prev, [key]: { ...prev[key], ...change } }));
+  }
+
+  // Los días de venta: los que tienen al menos un rango cargado.
+  const sellingDays = DAYS.filter(
+    ({ key }) =>
+      scheduleEnabled && !days[key].closed && days[key].ranges.some((row) => row.start && row.end),
+  );
 
   // Tilda o destilda una opción de entrega o de pago.
   function toggleOption(
@@ -212,6 +254,18 @@ export default function SettingsForm({
         paymentOptions,
         transferAlias,
         transferCbu,
+        allowScheduledOrders,
+        scheduledLeadMinutes: leadMinutes.trim() === "" ? Number.NaN : Number(leadMinutes),
+        preordersEnabled,
+        // Solo los días que hoy son de venta: el corte de un día que se cerró no cuenta.
+        preorderCutoffs: toCutoffs(
+          Object.fromEntries(
+            DAYS.map(({ key }) => [
+              key,
+              sellingDays.some((day) => day.key === key) ? cutoffs[key] : { dia: "", hora: "" },
+            ]),
+          ) as CutoffsState,
+        ),
       });
 
       if (!result.ok) {
@@ -564,6 +618,69 @@ export default function SettingsForm({
       </Section>
 
       <Section
+        title="Pedidos anticipados"
+        description="Si vendés solo ciertos días, tus clientes pueden dejar el pedido mientras estás cerrado, para tu próxima apertura, hasta un corte que elegís para cada día."
+      >
+        <label className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={preordersEnabled}
+            onChange={(event) => {
+              setSaved(false);
+              setPreordersEnabled(event.target.checked);
+            }}
+            className="h-5 w-5"
+          />
+          <span className="text-sm font-medium text-stone-900">Aceptar pedidos anticipados</span>
+        </label>
+
+        {preordersEnabled ? (
+          sellingDays.length === 0 ? (
+            <p className="text-sm text-stone-500">
+              Cargá tus horarios arriba: el corte se elige para cada día en que abrís.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {sellingDays.map(({ key, label }) => (
+                <div key={key} className="flex flex-wrap items-center gap-3">
+                  <span className="w-24 text-sm font-medium text-stone-900">{label}</span>
+                  <select
+                    value={cutoffs[key].dia}
+                    onChange={(event) => updateCutoff(key, { dia: event.target.value as DayKey | "" })}
+                    aria-label={`Día de corte para el ${label.toLowerCase()}`}
+                    className={inputClass}
+                  >
+                    <option value="">Sin pedidos anticipados</option>
+                    {DAYS.map((day) => (
+                      <option key={day.key} value={day.key}>
+                        Corte el {day.label.toLowerCase()}
+                      </option>
+                    ))}
+                  </select>
+                  {cutoffs[key].dia ? (
+                    <input
+                      type="time"
+                      value={cutoffs[key].hora}
+                      onChange={(event) => updateCutoff(key, { hora: event.target.value })}
+                      aria-label={`Hora de corte para el ${label.toLowerCase()}`}
+                      className={inputClass}
+                    />
+                  ) : null}
+                </div>
+              ))}
+              <p className="text-sm text-stone-500">
+                Hora de Argentina. El corte tiene que ser antes de que abras ese día. Después del corte
+                y hasta que abras no se toma ningún pedido.
+              </p>
+            </div>
+          )
+        ) : null}
+        {fieldErrors.preorderCutoffs ? (
+          <p className="text-sm text-red-600">{fieldErrors.preorderCutoffs}</p>
+        ) : null}
+      </Section>
+
+      <Section
         title="Cierre temporal"
         description="Para vacaciones u otros cierres: el menú muestra que estás cerrado y no deja enviar pedidos."
       >
@@ -687,6 +804,40 @@ export default function SettingsForm({
               maxLength={40}
             />
           </div>
+        ) : null}
+      </Section>
+
+      <Section
+        title="Pedidos programados"
+        description="Dejá que tus clientes elijan para qué hora de hoy es el pedido, dentro de tus horarios de atención."
+      >
+        <label className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={allowScheduledOrders}
+            onChange={(event) => {
+              setSaved(false);
+              setAllowScheduledOrders(event.target.checked);
+            }}
+            className="h-5 w-5"
+          />
+          <span className="text-sm font-medium text-stone-900">Permitir programar pedido</span>
+        </label>
+
+        {allowScheduledOrders ? (
+          <Field
+            label="Minutos de anticipación"
+            value={leadMinutes}
+            onChange={(event) => {
+              setSaved(false);
+              setLeadMinutes(event.target.value);
+            }}
+            inputMode="numeric"
+            placeholder="30"
+            hint="El pedido tiene que ser para dentro de, como mínimo, este tiempo (de 15 a 240)."
+            error={fieldErrors.scheduledLeadMinutes}
+            maxLength={3}
+          />
         ) : null}
       </Section>
 

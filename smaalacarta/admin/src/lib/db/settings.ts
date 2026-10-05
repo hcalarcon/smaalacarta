@@ -3,6 +3,7 @@ import {
   DEFAULT_SETTINGS,
   type SettingsInput,
 } from "@/lib/settings/validation";
+import type { PreorderCutoffs } from "@/lib/settings/preorders";
 import type { Schedule } from "@/lib/settings/schedule";
 
 // La configuración del negocio, con los valores por defecto si todavía no la
@@ -49,6 +50,10 @@ export async function getSettings(
     paymentOptions: data.payment_options,
     transferAlias: data.transfer_alias ?? "",
     transferCbu: data.transfer_cbu ?? "",
+    allowScheduledOrders: data.allow_scheduled_orders,
+    scheduledLeadMinutes: data.scheduled_lead_minutes,
+    preordersEnabled: data.preorders_enabled,
+    preorderCutoffs: (data.preorder_cutoffs ?? {}) as PreorderCutoffs,
   };
 }
 
@@ -83,6 +88,10 @@ export async function saveSettings(
     p_payment_options: input.paymentOptions,
     p_transfer_alias: input.transferAlias,
     p_transfer_cbu: input.transferCbu,
+    p_allow_scheduled_orders: input.allowScheduledOrders,
+    p_scheduled_lead_minutes: input.scheduledLeadMinutes,
+    p_preorders_enabled: input.preordersEnabled,
+    p_preorder_cutoffs: input.preorderCutoffs,
   });
 
   return error ? { error: { code: error.code, message: error.message } } : {};

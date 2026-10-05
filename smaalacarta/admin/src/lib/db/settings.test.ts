@@ -35,6 +35,10 @@ type Settings = {
   payment?: string[];
   alias?: string | null;
   cbu?: string | null;
+  allowScheduled?: boolean;
+  leadMinutes?: number;
+  preorders?: boolean;
+  cutoffs?: unknown;
 };
 
 const sqlText = (value: string | null | undefined, fallback: string | null) => {
@@ -73,7 +77,11 @@ function save(user: string | null, s: Settings = {}) {
        ${sqlArray(s.delivery ?? ["delivery", "retiro"])},
        ${sqlArray(s.payment ?? ["efectivo", "transferencia", "tarjeta"])},
        ${sqlText(s.alias, null)},
-       ${sqlText(s.cbu, null)})`,
+       ${sqlText(s.cbu, null)},
+       ${s.allowScheduled ?? true},
+       ${s.leadMinutes ?? 30},
+       ${s.preorders ?? false},
+       '${JSON.stringify(s.cutoffs ?? {})}'::jsonb)`,
   );
 }
 
@@ -135,6 +143,18 @@ describe("guardar la configuración — ADMIN-CONFIG-1 y 3", () => {
     expect(s2.rows[0].theme).toBe("oscuro");
 
     await save(ANA, { theme: "claro" });
+  });
+
+  it("guarda los pedidos anticipados y sus cortes (ADMIN-CONFIG-18)", async () => {
+    const cutoffs = { sabado: { dia: "viernes", hora: "20:00" } };
+    await save(ANA, { preorders: true, cutoffs });
+
+    const s = await db.query<{ preorders_enabled: boolean; preorder_cutoffs: unknown }>(
+      `select preorders_enabled, preorder_cutoffs from business_settings where business_id = '${NEG_ANA}'`,
+    );
+    expect(s.rows[0]).toEqual({ preorders_enabled: true, preorder_cutoffs: cutoffs });
+
+    await save(ANA);
   });
 
   it("guardar de nuevo actualiza la misma fila (no duplica)", async () => {
@@ -520,5 +540,55 @@ describe("entrega y pago — ADMIN-CONFIG-11, 12 y 14", () => {
   it("restablece todo habilitado para los demás tests", async () => {
     await save(ANA);
     expect((await row()).delivery_options).toEqual(["delivery", "retiro"]);
+  });
+});
+
+// ADMIN-CONFIG-16: pedidos programados.
+describe("pedidos programados — ADMIN-CONFIG-16", () => {
+  const row = async () => {
+    const r = await db.query<{ allow_scheduled_orders: boolean; scheduled_lead_minutes: number }>(
+      `select allow_scheduled_orders, scheduled_lead_minutes
+       from business_settings where business_id = '${NEG_ANA}'`,
+    );
+    return r.rows[0];
+  };
+
+  it("guarda si acepta pedidos programados y la anticipación, junto con el resto", async () => {
+    expect((await save(ANA, { allowScheduled: false, leadMinutes: 90 })).ok).toBe(true);
+
+    expect(await row()).toEqual({ allow_scheduled_orders: false, scheduled_lead_minutes: 90 });
+  });
+
+  it("un negocio que ya existía queda con los pedidos programados habilitados y 30 minutos", async () => {
+    // Una fila creada sin pasar por la función, como las que ya existían.
+    await db.exec(`
+      insert into businesses (id, name, slug) values ('d5d5d5d5-0000-0000-0000-000000000005', 'Vieja', 'vieja');
+      insert into business_settings (business_id) values ('d5d5d5d5-0000-0000-0000-000000000005');
+    `);
+    const r = await db.query(
+      `select allow_scheduled_orders, scheduled_lead_minutes from business_settings
+       where business_id = 'd5d5d5d5-0000-0000-0000-000000000005'`,
+    );
+
+    expect(r.rows[0]).toEqual({ allow_scheduled_orders: true, scheduled_lead_minutes: 30 });
+  });
+
+  it.each([14, 241, 0, -5])("la base rechaza una anticipación de %i minutos", async (leadMinutes) => {
+    const antes = await row();
+    const r = await save(ANA, { leadMinutes });
+
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.code).toBe("23514");
+    expect(await row()).toEqual(antes);
+  });
+
+  it.each([15, 240])("la base acepta una anticipación de %i minutos", async (leadMinutes) => {
+    expect((await save(ANA, { leadMinutes })).ok).toBe(true);
+    expect((await row()).scheduled_lead_minutes).toBe(leadMinutes);
+  });
+
+  it("restablece los valores de siempre para los demás tests", async () => {
+    await save(ANA);
+    expect(await row()).toEqual({ allow_scheduled_orders: true, scheduled_lead_minutes: 30 });
   });
 });

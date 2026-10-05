@@ -2,6 +2,7 @@
 
 import type { Order } from "@/lib/db/orders";
 import { timeAgo } from "@/lib/orders/format";
+import { orderBadge } from "@/lib/orders/scheduled";
 import { primaryAction, STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
 
@@ -22,6 +23,7 @@ export default function OrderCard({
 }) {
   const action = primaryAction(order.status);
   const extra = order.order_items.length - SHOWN_ITEMS;
+  const scheduled = orderBadge(order);
 
   return (
     <article className="rounded-xl border border-line bg-white p-3 shadow-sm">
@@ -40,6 +42,12 @@ export default function OrderCard({
 
         <span className="shrink-0 text-[11px] text-stone-400">{timeAgo(order.created_at, now)}</span>
       </div>
+
+      {scheduled ? (
+        <p className="mt-2 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+          🕒 {scheduled}
+        </p>
+      ) : null}
 
       <ul className="mt-2 space-y-0.5 text-xs text-stone-600">
         {order.order_items.slice(0, SHOWN_ITEMS).map((item, index) => (

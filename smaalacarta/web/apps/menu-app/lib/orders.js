@@ -36,6 +36,9 @@ const REASONS = {
   P0007: "invalid_delivery", // el negocio no ofrece ese tipo de entrega
   P0008: "invalid_payment", // el negocio no acepta ese medio de pago
   P0009: "out_of_stock", // un producto del pedido está sin stock
+  P0011: "scheduling_disabled", // el negocio no acepta pedidos programados
+  P0012: "invalid_schedule", // la hora elegida no es válida (ya pasó, falta anticipación o está cerrado)
+  P0013: "preorder_closed", // ya no se toman pedidos anticipados (pasó el corte, no los acepta o está abierto)
   P0001: "unavailable", // un producto ya no está disponible
   P0002: "unavailable", // el negocio no existe o no está publicado
   22023: "invalid", // datos inválidos
@@ -52,6 +55,8 @@ export async function createOrder({
   payment,
   notes,
   items,
+  scheduledFor,
+  preorder,
   fetchImpl = globalThis.fetch,
 }) {
   if (!isSupabaseConfigured({ url, key }) || !slug || !Array.isArray(items) || items.length === 0) {
@@ -74,6 +79,10 @@ export async function createOrder({
         p_payment: payment,
         p_notes: notes,
         p_items: items,
+        // Sin hora el pedido es "lo antes posible": la clave ni se manda.
+        ...(scheduledFor ? { p_scheduled_for: scheduledFor } : {}),
+        // Pedido anticipado (negocio cerrado): la base lo fecha con la próxima apertura.
+        ...(preorder ? { p_preorder: true } : {}),
       }),
       signal:
         typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(10000) : undefined,

@@ -6,7 +6,7 @@ import { t } from "./i18n.js";
 
 export const TIME_ZONE = "America/Argentina/Buenos_Aires";
 
-const DAYS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
+export const DAYS = ["domingo", "lunes", "martes", "miercoles", "jueves", "viernes", "sabado"];
 const WEEKDAYS = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
 
 // Día de la semana (0 = domingo) y minutos desde la medianoche, en hora de Argentina.
@@ -37,7 +37,7 @@ export function parseRange(range) {
   };
 }
 
-const rangesOf = (horarios, day) =>
+export const rangesOf = (horarios, day) =>
   (Array.isArray(horarios?.[DAYS[day]]) ? horarios[DAYS[day]] : []).map(parseRange).filter(Boolean);
 
 // Sin horarios cargados el negocio está siempre abierto.

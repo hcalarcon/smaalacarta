@@ -200,7 +200,7 @@ Requisitos en `docs/SPEC.md` (PUBLICO-10 a 14, SEGUIMIENTO-9 a 11, PWA-1 a 3, AD
 - [x] [herni] Admin: resumen con el link público y aviso de pedidos nuevos, contador en el menú lateral, "pedidos de hoy" con la hora de Argentina, y arreglos en el celular (desborde de productos y error de hidratación al arrastrar)
 - [ ] [herni] **Probar en una preview de Vercel**: `/api/manifest?slug=<slug>` (función nueva, no se puede probar con un servidor estático), instalar el menú desde el celular y ver el ícono
 - [ ] [por asignar] Botón "Instalar app" dentro del menú (hoy depende de que el navegador lo ofrezca; en iPhone es "Compartir → Agregar a inicio")
-- [ ] [por asignar] Horarios de retiro programado cuando el negocio está cerrado (hoy, cerrado = no se toman pedidos)
+- [x] [herni] Horarios de retiro programado cuando el negocio está cerrado: cubierto por los pedidos anticipados (Etapa 6n)
 
 ## Etapa 6e — Tres servicios por negocio: interactivo, estático y PDF
 
@@ -477,6 +477,48 @@ PUBLICO-25 a 27, ESTATICO-7, SEGUIMIENTO-16). Migración `20261003000000_sin_sto
 - [ ] [herni] **Probar a mano**: marcar un producto sin stock, ver el menú (interactivo y
       estático, en las tres plantillas y en oscuro), probar que una promoción con ese producto
       desaparece y que un carrito con ese producto lo quita al recargar
+
+## Etapa 6m — Pedidos programados
+
+El negocio decide si acepta pedidos para una hora de hoy (dentro de sus horarios y con una
+anticipación mínima) y el pedido guarda para cuándo es. Requisitos en `docs/SPEC.md`
+(ADMIN-CONFIG-16 y 17, ADMIN-PEDIDOS-14 y 15, PUBLICO-28 a 30, SEGUIMIENTO-17 y 18). Migración
+`20261005000000_pedidos_programados.sql`. No reemplaza el ítem "Horarios de retiro programado
+cuando el negocio está cerrado" de la Etapa 6c: un pedido programado también exige que el
+negocio esté abierto ahora.
+
+- [x] [herni] Migración: `allow_scheduled_orders`, `scheduled_lead_minutes`, `orders.scheduled_for`;
+      `is_schedulable_at`; `create_public_order` rechaza con P0011 y P0012; `public_order_tracking`
+      y `public_menu` entregan la hora y los ajustes
+- [x] [herni] Admin: sección "Pedidos programados" en Configuración; distintivo "Para las HH:MM",
+      orden de Nuevos y columna en el historial; "Para las" en el pedido manual
+- [x] [herni] Menú: "Lo antes posible" o "Programar" con las horas de hoy; seguimiento con
+      "Programado para las HH:MM"
+- [ ] [herni] **Probar a mano**: programar un pedido desde el menú (con y sin horarios cargados,
+      con un rango nocturno), apagar la opción en Configuración y ver que el menú no pregunta la
+      hora, y mirar el badge en el tablero y el aviso en el seguimiento
+
+## Etapa 6n — Pedidos anticipados
+
+Un negocio que vende solo ciertos días puede recibir pedidos mientras está cerrado, para su próxima
+apertura, hasta un corte fijo por día de venta (día de la semana y hora, hora de Argentina). El
+pedido se guarda en el panel con su fecha; el cliente no tiene seguimiento. Requisitos en
+`docs/SPEC.md` (ADMIN-CONFIG-18 a 20, ADMIN-PEDIDOS-16, PUBLICO-31 a 34, SEGUIMIENTO-19). Migración
+`20261006000000_pedidos_anticipados.sql`. Cubre el ítem "Horarios de retiro programado cuando el
+negocio está cerrado" de la Etapa 6c.
+
+- [x] [herni] Migración: `preorders_enabled`, `preorder_cutoffs` (con restricción de formato),
+      `orders.preorder`; `preorder_window` (gemela de `preorderWindow` en JS, con test que las compara);
+      `save_business_settings`, `public_menu` (`config.anticipados`) y `create_public_order`
+      (`p_preorder`, error `P0013`)
+- [x] [herni] Admin: sección "Pedidos anticipados" en Configuración (casilla y corte por día de venta,
+      con validación pura); distintivo "Para el sáb 10/10" y orden por fecha en el tablero
+- [x] [herni] Menú: aviso "Cerrado ahora. Podés dejar tu pedido para el sábado 10/10 (hasta el viernes
+      20:00)", botón habilitado, "Pedido para el sábado 10/10" en WhatsApp y en "Gracias por tu pedido"
+      (sin link de seguimiento); textos en es/en/pt
+- [ ] [herni] **Probar a mano**: con un negocio que vende solo el sábado y corte el viernes a las 20:00,
+      ver el aviso y hacer un pedido en miércoles, comprobar el badge en el tablero, y ver que después del
+      corte el menú queda cerrado como siempre y que al abrir funciona el pedido normal
 
 ## Etapa 7 — Pendientes técnicos (backlog)
 

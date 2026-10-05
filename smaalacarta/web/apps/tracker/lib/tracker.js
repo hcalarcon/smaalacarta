@@ -137,3 +137,21 @@ export function langSearch(search, lang) {
   const text = params.toString();
   return text ? `?${text}` : "";
 }
+
+const timeFormatter = new Intl.DateTimeFormat("en-GB", {
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+  timeZone: "America/Argentina/Buenos_Aires",
+});
+
+// "Programado para las 20:30" si el pedido es para una hora (SEGUIMIENTO-18); si no, null.
+// La hora es la de Argentina, la del local.
+export function scheduledNotice(programado, lang) {
+  if (typeof programado !== "string") return null;
+
+  const date = new Date(programado);
+  if (Number.isNaN(date.getTime())) return null;
+
+  return t("tracker.scheduled", lang, { time: timeFormatter.format(date) });
+}

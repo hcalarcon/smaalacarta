@@ -612,6 +612,17 @@ describe("LANDING-27 — easter egg del Chaco", () => {
     expect($(".chaco-egg-shape").getAttribute("pathLength")).toBe("1");
   });
 
+  it("Shift, Bloq Mayús, la B mayúscula y letras por posición de tecla no cortan el código", () => {
+    KONAMI.slice(0, 8).forEach((k) => key(k));
+    key("Shift");
+    key("B", { code: "KeyB", shiftKey: true });
+    key("Shift");
+    key("a", { code: "KeyA", repeat: true });
+    expect($(".chaco-egg")).toBeNull();
+    key("ф", { code: "KeyA" });
+    expect($(".chaco-egg")).not.toBeNull();
+  });
+
   it("una tecla equivocada reinicia el código", () => {
     KONAMI.slice(0, 5).forEach((k) => key(k));
     key("x");

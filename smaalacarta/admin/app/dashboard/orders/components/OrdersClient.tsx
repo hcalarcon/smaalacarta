@@ -11,6 +11,7 @@ import { setOrderStatusAction } from "../actions";
 import type { Order } from "@/lib/db/orders";
 import { newPendingIds, pendingCount, shouldRemind, tabTitle } from "@/lib/orders/alerts";
 import { playNewOrderSound } from "@/lib/orders/sound";
+import { compareForBoard } from "@/lib/orders/scheduled";
 import { boardColumn, type BoardColumn } from "@/lib/orders/status";
 
 // "Terminados" (entregados o cancelados) no es una columna más del tablero:
@@ -229,11 +230,11 @@ export default function OrdersClient({
 
   const byColumn = (key: BoardColumn) => {
     const list = orders.filter((order) => boardColumn(order.status) === key);
-    // Los nuevos y en curso, del más viejo al más nuevo (el más urgente primero); los
-    // terminados, los más recientes.
+    // Los nuevos y en curso, del más viejo al más nuevo (el más urgente primero) y, en
+    // los programados, por la hora para la que son; los terminados, los más recientes.
     return key === "cerrados"
       ? list.slice(0, CLOSED_SHOWN)
-      : [...list].sort((a, b) => a.created_at.localeCompare(b.created_at));
+      : [...list].sort(compareForBoard);
   };
 
   return (

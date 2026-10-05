@@ -162,6 +162,37 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   quita al cargar el menú y se avisa. Si al confirmar el pedido el sistema responde que algo
   está sin stock (`out_of_stock`), se avisa y el menú se vuelve a cargar con lo actual.
 - **PUBLICO-27** Los textos de "Sin stock" y los avisos están en español, inglés y portugués.
+- **PUBLICO-28** `public_menu` entrega en `config` `programados` (si el negocio acepta pedidos
+  programados, ADMIN-CONFIG-16) y `anticipacionMin` (los minutos de anticipación).
+- **PUBLICO-29** `scheduledSlots(horarios, anticipacionMin, ahora)` (`lib/scheduled-slots.js`)
+  devuelve las horas de hoy, cada 15 minutos, que están dentro de un rango abierto (con los
+  rangos nocturnos) y desde ahora más la anticipación, siempre en hora de Argentina; sin
+  horarios cargados, cualquier hora de hoy que quede. Es el mismo cálculo que
+  `is_schedulable_at` en la base, y un test compara los dos.
+- **PUBLICO-30** El checkout ofrece "Lo antes posible" o "Programar" (un select con esas horas)
+  solo si el menú viene de Supabase y el negocio acepta pedidos programados; si no queda
+  ninguna hora, solo "Lo antes posible"; con un menú de JSON se comporta como siempre (un
+  campo de hora libre que va a las notas). La hora elegida se manda al servidor
+  (`p_scheduled_for`) y deja de ir en las notas; el mensaje de WhatsApp sigue diciendo
+  "Horario: HH:MM". Los motivos de rechazo nuevos (`scheduling_disabled`, `invalid_schedule`)
+  tienen texto en español, inglés y portugués.
+- **PUBLICO-31** `public_menu` entrega en `config` `anticipados` (`activo`, `proximaApertura` y
+  `corte`, en ISO) solo si el negocio acepta pedidos anticipados (ADMIN-CONFIG-18), está cerrado
+  por horario (no por cierre temporal), la próxima apertura es de un día con corte cargado y ese
+  corte todavía no pasó; si no, no entrega la clave.
+- **PUBLICO-32** `preorderWindow(horarios, cortes, ahora)` (`lib/preorders.js`) devuelve la próxima
+  apertura y su corte (siempre en hora de Argentina), o null si el negocio está abierto, no tiene
+  horarios, ese día no tiene corte o el corte ya pasó. El corte de un día de venta es la última
+  vez que cae el día y la hora cargados antes de su primera apertura. Es el mismo cálculo que
+  `preorder_window` en la base, y un test compara los dos.
+- **PUBLICO-33** Con `anticipados` activo, en vez de bloquear el menú avisa "Cerrado ahora. Podés
+  dejar tu pedido para el sábado 10/10 (hasta el viernes 20:00)", el botón de enviar queda
+  habilitado y el pedido se manda con `p_preorder`; pasado el corte queda cerrado como siempre.
+  Un pedido anticipado no pregunta la hora y no muestra link de seguimiento: "Gracias por tu
+  pedido" dice "Tu pedido es para el sábado 10/10".
+- **PUBLICO-34** El mensaje de WhatsApp de un pedido anticipado incluye "Pedido para el sábado
+  10/10" y no lleva link de seguimiento. Los textos nuevos y el motivo de rechazo
+  `preorder_closed` (`P0013`) están en español, inglés y portugués.
 - **PUBLICO-17** Las demos están siempre abiertas: quien las prueba puede hacer el pedido
   de prueba a cualquier hora. Sus `config.json` no traen `horarios` (PUBLICO-4 y 12).
 - **PUBLICO-18** `public_menu` entrega en `config` las opciones que el negocio ofrece:
@@ -266,6 +297,21 @@ llegando al negocio por WhatsApp.
 - **SEGUIMIENTO-16** `create_public_order` rechaza (`out_of_stock`, código `P0009`) un pedido
   con un producto sin stock, solo o dentro de una promoción (ADMIN-MENU-8). El pedido manual del
   negocio no valida el stock.
+- **SEGUIMIENTO-17** `create_public_order` acepta `p_scheduled_for` y lo guarda en el pedido.
+  Lo rechaza con `scheduling_disabled` (`P0011`) si el negocio no acepta pedidos programados
+  (ADMIN-CONFIG-16) y con `invalid_schedule` (`P0012`) si no es para hoy en hora de Argentina,
+  si cae antes de ahora más la anticipación, o si no está dentro de un rango abierto (con los
+  nocturnos; sin horarios cargados vale cualquier hora de hoy futura). El pedido "ahora" sigue
+  exigiendo que el negocio esté abierto (SEGUIMIENTO-9), y el programado también.
+- **SEGUIMIENTO-18** `public_order_tracking` entrega `programado` en el pedido y la página de
+  seguimiento dice "Programado para las HH:MM" (hora de Argentina, en el idioma del cliente),
+  sin dar a entender demora; la línea de tiempo no cambia.
+- **SEGUIMIENTO-19** `create_public_order` acepta `p_preorder`. Lo rechaza con `preorder_closed`
+  (`P0013`) si el negocio no acepta pedidos anticipados, si está abierto, si el día de su próxima
+  apertura no tiene corte o si el corte ya pasó; con `p_scheduled_for` no se combina (`22023`). Un
+  pedido anticipado exige que el cierre no sea temporal (`P0005`), guarda `preorder = true` y
+  `scheduled_for` = el inicio de la próxima apertura. Cuando el negocio abre, el pedido normal
+  funciona como siempre (SEGUIMIENTO-9).
 
 ## PWA — Instalar el menú en el celular
 
@@ -471,7 +517,7 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
 - **LANDING-26** En `/hola`, en el celular (hasta 639 px), el paso en curso se lee dentro del
   teléfono animado, de a uno y sincronizado con su pantalla; la lista de pasos queda solo para
   lectores de pantalla. Desde 640 px se ve la lista al costado.
-- **LANDING-27** Easter egg: al tipear el código Konami (↑↑↓↓←→←→ B A) aparece sobre la página
+- **LANDING-27** Easter egg: al tipear el código Konami (↑↑↓↓←→←→ B A; Shift o Bloq Mayús no lo cortan y las letras valen en cualquier distribución de teclado) aparece sobre la página
   el mapa de la provincia del Chaco (SVG con el contorno real de Natural Earth, dominio público; `role="dialog"`) con la frase "La sangre de mi Chaco va
   corriendo por mis venas" y suena `assets/pico-frank.mp3`. Se cierra al terminar el audio, con
   Escape o al tocar; si el audio falta o el navegador lo bloquea, se cierra solo a los 6 s. No
@@ -672,6 +718,30 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   esquina inferior derecha de la pantalla, afuera de las tarjetas, y "Cambios guardados" aparece
   como un toast de app, apenas arriba del borde inferior, que se va solo a los 3 segundos. Solo
   se prueba mirándolo en el navegador.
+- **ADMIN-CONFIG-16** El negocio decide si acepta pedidos programados para una hora de hoy
+  (`allow_scheduled_orders`, por defecto sí) y con cuántos minutos de anticipación como mínimo
+  (`scheduled_lead_minutes`, por defecto 30; la base rechaza lo que no esté entre 15 y 240).
+  `save_business_settings` los guarda junto con el resto, en el mismo paso atómico
+  (ADMIN-CONFIG-3).
+- **ADMIN-CONFIG-17** Configuración muestra "Pedidos programados" con la casilla "Permitir
+  programar pedido" y los minutos de anticipación (visibles solo con la casilla tildada). La
+  anticipación tiene que ser un entero de 15 a 240; si no, el error sale en español junto al campo
+  (`src/lib/settings/scheduled.ts`).
+- **ADMIN-CONFIG-18** El negocio decide si acepta pedidos anticipados mientras está cerrado
+  (`preorders_enabled`, por defecto no) y, por cada día de venta (con rangos en `schedule`), un
+  corte `{dia, hora}` en hora de Argentina (`preorder_cutoffs`, por ejemplo
+  `{"sabado":{"dia":"viernes","hora":"20:00"}}`). Un día sin corte no recibe pedidos anticipados.
+  La base rechaza un formato que no sea ese, y `save_business_settings` los guarda junto con el
+  resto (ADMIN-CONFIG-3).
+- **ADMIN-CONFIG-19** El corte de un día tiene que ser anterior a su primera apertura y no más de
+  7 días antes: con el mismo día de la semana, la hora tiene que ser menor que la apertura. La
+  hora es HH:MM y el corte solo se carga para días con horario (`src/lib/settings/preorders.ts`).
+  Con la casilla tildada hace falta el corte de al menos un día; apagada, los cortes no bloquean
+  el guardado.
+- **ADMIN-CONFIG-20** Configuración muestra, junto a Horarios, "Pedidos anticipados" con la casilla
+  "Aceptar pedidos anticipados" y, por cada día con horario, un selector de día de corte y la hora
+  (visibles solo con la casilla tildada); los errores salen en español junto al campo. Solo se
+  prueba mirándolo en el navegador.
 
 ## ADMIN-PEDIDOS — Pedidos
 
@@ -711,6 +781,16 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   encendida, lo vuelve a pedir cada vez que la pestaña vuelve a estar visible y lo
   libera al desactivar el sonido o al salir; si el navegador no lo soporta, no pasa
   nada. Debajo del botón dice "Mantené esta pantalla abierta para recibir avisos".
+- **ADMIN-PEDIDOS-14** Un pedido guarda para cuándo es (`orders.scheduled_for`; vacío = lo
+  antes posible). El pedido manual acepta un "Para las" opcional (hora de hoy, hora de Argentina)
+  y `create_manual_order` lo guarda sin validarlo contra los horarios del negocio.
+- **ADMIN-PEDIDOS-15** El tablero muestra en los pedidos programados el distintivo "Para las
+  HH:MM" (hora de Argentina), ordena los Nuevos por esa hora (los "lo antes posible" van antes,
+  por llegada) y la tabla de historial muestra el mismo dato (`src/lib/orders/scheduled.ts`).
+- **ADMIN-PEDIDOS-16** Un pedido guarda si es anticipado (`orders.preorder`). El tablero muestra
+  en los anticipados el distintivo con la fecha ("Para el sáb 10/10", hora de Argentina) en lugar
+  de la hora, y ordena los Nuevos por esa fecha junto con los programados
+  (`src/lib/orders/scheduled.ts`).
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 

@@ -119,8 +119,20 @@
           <option value="retiro" data-i18n="checkout.pickup">Retiro en el local</option>
         </select>
         <p id="aviso-entrega" class="aviso-entrega" hidden></p>
-        <label> <input type="checkbox" name="ahora" /> <span data-i18n="checkout.now">Ahora mismo</span> </label>
-        <input name="horario" type="time" />
+        <!-- Menú de un JSON: campo de hora libre, como siempre. Con Supabase lo reemplaza #horario-programado (PUBLICO-30). -->
+        <div id="horario-libre" class="horario-pedido">
+          <label> <input type="checkbox" name="ahora" /> <span data-i18n="checkout.now">Ahora mismo</span> </label>
+          <input name="horario" type="time" />
+        </div>
+        <div id="horario-programado" class="horario-pedido" hidden>
+          <select name="cuando">
+            <option value="asap" selected data-i18n="checkout.when.asap">Lo antes posible</option>
+            <option value="schedule" data-i18n="checkout.when.schedule">Programar para una hora</option>
+          </select>
+          <select name="hora" hidden>
+            <option value="" disabled selected data-i18n="checkout.when.pick">-- Elegí la hora --</option>
+          </select>
+        </div>
         <select name="pago">
           <option disabled selected data-i18n="checkout.payType">-- Tipo de pago --</option>
           <option value="efectivo" data-i18n="checkout.cash">Efectivo</option>

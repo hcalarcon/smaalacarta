@@ -2,6 +2,7 @@
 
 import type { Order } from "@/lib/db/orders";
 import { formatDateTime } from "@/lib/orders/format";
+import { scheduledShort } from "@/lib/orders/scheduled";
 import { STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
 
@@ -36,13 +37,14 @@ export default function OrdersHistory({
         </p>
       ) : (
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[640px] text-left text-sm">
+          <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
               <tr className="border-b border-line text-xs uppercase tracking-wide text-stone-400">
                 <th className="py-2 pr-3 font-medium">Pedido</th>
                 <th className="py-2 pr-3 font-medium">Cliente</th>
                 <th className="py-2 pr-3 font-medium">Estado</th>
                 <th className="py-2 pr-3 font-medium">Total</th>
+                <th className="py-2 pr-3 font-medium">Para</th>
                 <th className="py-2 pr-3 font-medium">Empezó</th>
                 <th className="py-2 pr-3 font-medium">Terminó</th>
                 <th className="py-2 font-medium" />
@@ -75,6 +77,9 @@ export default function OrdersHistory({
                   </td>
                   <td className="py-2.5 pr-3 font-semibold text-brand">
                     {formatMoney(Number(order.total))}
+                  </td>
+                  <td className="py-2.5 pr-3 text-stone-500">
+                    {scheduledShort(order)}
                   </td>
                   <td className="py-2.5 pr-3 text-stone-500">
                     {formatDateTime(order.created_at)}

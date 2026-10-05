@@ -312,6 +312,15 @@ html[data-template] .checkout .checkout-header {
 }
 
 /* Aviso de cómo se entrega cuando hay un solo tipo (el select está oculto) */
+/* Agrupan los campos de hora sin cambiar el espaciado del formulario (PUBLICO-30). */
+.horario-pedido {
+  display: contents;
+}
+
+.horario-pedido[hidden] {
+  display: none;
+}
+
 .aviso-entrega {
   margin: 0;
   font-size: 0.9rem;

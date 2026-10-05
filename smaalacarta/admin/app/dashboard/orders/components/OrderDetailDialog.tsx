@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 import type { Order } from "@/lib/db/orders";
 import { formatDateTime, trackingUrl } from "@/lib/orders/format";
+import { orderBadge } from "@/lib/orders/scheduled";
 import { nextStatuses, STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
 
@@ -80,6 +81,11 @@ export default function OrderDetailDialog({
             <p className="mt-1 text-sm text-stone-500">
               {order.customer_name || "Sin nombre"} · {label(order.status)}
             </p>
+            {orderBadge(order) ? (
+              <p className="mt-2 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+                🕒 {orderBadge(order)}
+              </p>
+            ) : null}
           </div>
           <button
             type="button"
