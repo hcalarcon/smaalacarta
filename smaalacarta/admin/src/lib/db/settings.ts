@@ -49,6 +49,8 @@ export async function getSettings(
     paymentOptions: data.payment_options,
     transferAlias: data.transfer_alias ?? "",
     transferCbu: data.transfer_cbu ?? "",
+    allowScheduledOrders: data.allow_scheduled_orders,
+    scheduledLeadMinutes: data.scheduled_lead_minutes,
   };
 }
 
@@ -83,6 +85,8 @@ export async function saveSettings(
     p_payment_options: input.paymentOptions,
     p_transfer_alias: input.transferAlias,
     p_transfer_cbu: input.transferCbu,
+    p_allow_scheduled_orders: input.allowScheduledOrders,
+    p_scheduled_lead_minutes: input.scheduledLeadMinutes,
   });
 
   return error ? { error: { code: error.code, message: error.message } } : {};

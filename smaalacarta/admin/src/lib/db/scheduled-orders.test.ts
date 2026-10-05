@@ -261,7 +261,7 @@ describe("pedido manual — ADMIN-PEDIDOS-14", () => {
     const r = await manual(`, '${when}'::timestamptz`);
 
     expect(r.ok).toBe(true);
-    expect((await storedFor((r.ok ? r.rows[0].result : { code: "" }).code as string))?.toISOString()).toBe(when);
+    expect((await storedFor(((r.ok ? r.rows[0].result : { code: "" }) as { code: string }).code))?.toISOString()).toBe(when);
     await setSchedule({});
     await setup("allow_scheduled_orders = true");
   });
@@ -270,6 +270,6 @@ describe("pedido manual — ADMIN-PEDIDOS-14", () => {
     const r = await manual("");
 
     expect(r.ok).toBe(true);
-    expect(await storedFor((r.ok ? r.rows[0].result : { code: "" }).code as string)).toBeNull();
+    expect(await storedFor(((r.ok ? r.rows[0].result : { code: "" }) as { code: string }).code)).toBeNull();
   });
 });

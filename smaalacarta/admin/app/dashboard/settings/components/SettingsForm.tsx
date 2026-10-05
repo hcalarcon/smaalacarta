@@ -135,6 +135,9 @@ export default function SettingsForm({
   const [paymentOptions, setPaymentOptions] = useState(initial.paymentOptions);
   const [transferAlias, setTransferAlias] = useState(initial.transferAlias);
   const [transferCbu, setTransferCbu] = useState(initial.transferCbu);
+  const [allowScheduledOrders, setAllowScheduledOrders] = useState(initial.allowScheduledOrders);
+  // Texto, para poder borrar y escribir; se convierte a número al guardar.
+  const [leadMinutes, setLeadMinutes] = useState(String(initial.scheduledLeadMinutes));
 
   const hasInitialSchedule = Object.keys(initial.schedule).length > 0;
   const [scheduleEnabled, setScheduleEnabled] = useState(hasInitialSchedule);
@@ -212,6 +215,8 @@ export default function SettingsForm({
         paymentOptions,
         transferAlias,
         transferCbu,
+        allowScheduledOrders,
+        scheduledLeadMinutes: leadMinutes.trim() === "" ? Number.NaN : Number(leadMinutes),
       });
 
       if (!result.ok) {
@@ -687,6 +692,40 @@ export default function SettingsForm({
               maxLength={40}
             />
           </div>
+        ) : null}
+      </Section>
+
+      <Section
+        title="Pedidos programados"
+        description="Dejá que tus clientes elijan para qué hora de hoy es el pedido, dentro de tus horarios de atención."
+      >
+        <label className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            checked={allowScheduledOrders}
+            onChange={(event) => {
+              setSaved(false);
+              setAllowScheduledOrders(event.target.checked);
+            }}
+            className="h-5 w-5"
+          />
+          <span className="text-sm font-medium text-stone-900">Permitir programar pedido</span>
+        </label>
+
+        {allowScheduledOrders ? (
+          <Field
+            label="Minutos de anticipación"
+            value={leadMinutes}
+            onChange={(event) => {
+              setSaved(false);
+              setLeadMinutes(event.target.value);
+            }}
+            inputMode="numeric"
+            placeholder="30"
+            hint="El pedido tiene que ser para dentro de, como mínimo, este tiempo (de 15 a 240)."
+            error={fieldErrors.scheduledLeadMinutes}
+            maxLength={3}
+          />
         ) : null}
       </Section>
 
