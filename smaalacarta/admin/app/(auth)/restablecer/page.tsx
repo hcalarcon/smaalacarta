@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import AuthHeading from "../components/AuthHeading";
-import ResetPasswordForm from "../components/ResetPasswordForm";
+import NewPasswordForm from "../components/NewPasswordForm";
+import { hasRecoverySession } from "@/lib/auth/recovery-cookie";
 import { createClient } from "@/lib/supabase-server";
 
 export const metadata: Metadata = { title: "Nueva contraseña" };
@@ -19,6 +20,12 @@ export default async function ResetPasswordPage() {
     redirect("/login?error=link");
   }
 
+  // Solo con una sesión que vino de un link de recuperación (ADMIN-AUTH-14); quien ya tenía una
+  // sesión normal cambia su contraseña desde Configuración, con la actual.
+  if (!(await hasRecoverySession(user.id))) {
+    redirect("/dashboard");
+  }
+
   return (
     <>
       <AuthHeading
@@ -26,7 +33,7 @@ export default async function ResetPasswordPage() {
         subtitle="Con ella vas a ingresar de ahora en más."
       />
 
-      <ResetPasswordForm />
+      <NewPasswordForm />
     </>
   );
 }

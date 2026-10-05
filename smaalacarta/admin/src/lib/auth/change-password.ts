@@ -78,3 +78,22 @@ export async function changePassword(
     ? { ok: false, error: authErrorMessage(result.error) }
     : { ok: true };
 }
+
+// Restablecer desde el link de un mail (ADMIN-AUTH-13): no hay contraseña actual que pedir, la sesión
+// de recuperación (ver `recovery-session.ts`) ya probó quién es. Misma validación de la nueva y mismo
+// borrado de la marca de temporal que el cambio normal.
+export async function resetPassword(
+  deps: Pick<ChangePasswordDeps, "updateOwnPassword" | "updateTemporaryPassword">,
+  input: { userId: string; isTemporary: boolean; password: string; confirm: string },
+): Promise<ChangePasswordResult> {
+  const validation = validateNewPassword(input.password, input.confirm);
+  if (!validation.ok) {
+    return { ok: false, fieldErrors: validation.errors };
+  }
+
+  const result = input.isTemporary
+    ? await deps.updateTemporaryPassword(input.userId, input.password)
+    : await deps.updateOwnPassword(input.password);
+
+  return result.error ? { ok: false, error: authErrorMessage(result.error) } : { ok: true };
+}

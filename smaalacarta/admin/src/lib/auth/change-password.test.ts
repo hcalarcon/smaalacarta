@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { changePassword, type ChangePasswordDeps } from "./change-password";
+import {
+  changePassword,
+  resetPassword,
+  type ChangePasswordDeps,
+} from "./change-password";
 
 function makeDeps(overrides: Partial<ChangePasswordDeps> = {}) {
   const deps = {
@@ -128,5 +132,40 @@ describe("changePassword — ADMIN-SUPER-10 y ADMIN-AUTH-5 y 10", () => {
     });
 
     expect(!result.ok && result.error).toMatch(/distinta/i);
+  });
+});
+
+describe("resetPassword — ADMIN-AUTH-13", () => {
+  const input = { userId: "u1", isTemporary: false, password: "MiClavePropia9", confirm: "MiClavePropia9" };
+
+  it("no pide la contraseña actual: con la nueva y su repetición cambia la contraseña", async () => {
+    const deps = makeDeps();
+    expect(await resetPassword(deps, input)).toEqual({ ok: true });
+    expect(deps.updateOwnPassword).toHaveBeenCalledWith("MiClavePropia9");
+    expect(deps.matchesCurrentPassword).not.toHaveBeenCalled();
+  });
+
+  it("con datos inválidos informa los campos y no toca nada", async () => {
+    const deps = makeDeps();
+    const corta = await resetPassword(deps, { ...input, password: "corta", confirm: "corta" });
+    const distinta = await resetPassword(deps, { ...input, confirm: "OtraDistinta9" });
+
+    expect(!corta.ok && corta.fieldErrors?.password).toBeTruthy();
+    expect(!distinta.ok && distinta.fieldErrors?.confirm).toBeTruthy();
+    expect(deps.updateOwnPassword).not.toHaveBeenCalled();
+    expect(deps.updateTemporaryPassword).not.toHaveBeenCalled();
+  });
+
+  it("si la cuenta tenía una contraseña temporal, la cambia y borra la marca en el mismo paso", async () => {
+    const deps = makeDeps();
+    expect(await resetPassword(deps, { ...input, isTemporary: true })).toEqual({ ok: true });
+    expect(deps.updateTemporaryPassword).toHaveBeenCalledWith("u1", "MiClavePropia9");
+    expect(deps.updateOwnPassword).not.toHaveBeenCalled();
+  });
+
+  it("si Supabase falla, devuelve el error en español", async () => {
+    const deps = makeDeps({ updateOwnPassword: vi.fn(async () => ({ error: { code: "weak_password" } })) });
+    const r = await resetPassword(deps, input);
+    expect(!r.ok && r.error).toBeTruthy();
   });
 });

@@ -3,7 +3,8 @@
 import { redirect } from "next/navigation";
 
 import { hasTemporaryPassword } from "@/lib/auth/access";
-import { changePassword } from "@/lib/auth/change-password";
+import { changePassword, resetPassword } from "@/lib/auth/change-password";
+import { clearRecoverySession, hasRecoverySession } from "@/lib/auth/recovery-cookie";
 import { authErrorMessage } from "@/lib/auth/messages";
 import { safeNextPath } from "@/lib/auth/redirect";
 import { isValidEmail, validateLogin } from "@/lib/auth/validation";
@@ -75,9 +76,65 @@ export async function requestPasswordResetAction(
   return { message: RECOVERY_MESSAGE };
 }
 
-// Elegir una contraseña propia: al restablecer con el link de un mail o, con una
-// contraseña temporal, en /cambiar-contrasena. En el segundo caso se borra la marca
-// de temporal (ADMIN-SUPER-10).
+// Cómo se guarda una contraseña nueva, común al cambio normal y al restablecer.
+function passwordWriters(supabase: Awaited<ReturnType<typeof createClient>>) {
+  return {
+    updateOwnPassword: async (password: string) => {
+      const { error } = await supabase.auth.updateUser({ password });
+      return { error: error ?? undefined };
+    },
+    updateTemporaryPassword: async (userId: string, password: string) => {
+      let admin;
+      try {
+        admin = createAdminClient();
+      } catch {
+        return { error: { code: "service_key_missing" } };
+      }
+
+      const { error } = await admin.auth.admin.updateUserById(userId, {
+        password,
+        app_metadata: { must_change_password: false },
+      });
+      return { error: error ?? undefined };
+    },
+  };
+}
+
+// Restablecer desde el link de un mail (ADMIN-AUTH-13): sin contraseña actual. Solo vale con una
+// sesión que vino de un link de recuperación (ADMIN-AUTH-14); una sesión normal, sin la marca, no
+// puede saltearse la contraseña actual entrando a /restablecer.
+export async function resetPasswordAction(
+  _prev: AuthFormState,
+  formData: FormData,
+): Promise<AuthFormState> {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user || !(await hasRecoverySession(user.id))) {
+    redirect("/login?error=link");
+  }
+
+  const result = await resetPassword(passwordWriters(supabase), {
+    userId: user.id,
+    isTemporary: hasTemporaryPassword(user.app_metadata),
+    password: text(formData, "password"),
+    confirm: text(formData, "confirm"),
+  });
+
+  if (!result.ok) {
+    return { error: result.error, fieldErrors: result.fieldErrors };
+  }
+
+  await clearRecoverySession();
+  redirect("/dashboard");
+}
+
+// Cambiar la contraseña pidiendo la actual: desde Configuración o, con una contraseña
+// temporal, en /cambiar-contrasena (en ese caso se borra la marca de temporal,
+// ADMIN-SUPER-10). Restablecer desde el mail es `resetPasswordAction`.
 export async function updatePasswordAction(
   _prev: AuthFormState,
   formData: FormData,
@@ -101,24 +158,7 @@ export async function updatePasswordAction(
         });
         return !error;
       },
-      updateOwnPassword: async (password) => {
-        const { error } = await supabase.auth.updateUser({ password });
-        return { error: error ?? undefined };
-      },
-      updateTemporaryPassword: async (userId, password) => {
-        let admin;
-        try {
-          admin = createAdminClient();
-        } catch {
-          return { error: { code: "service_key_missing" } };
-        }
-
-        const { error } = await admin.auth.admin.updateUserById(userId, {
-          password,
-          app_metadata: { must_change_password: false },
-        });
-        return { error: error ?? undefined };
-      },
+      ...passwordWriters(supabase),
     },
     {
       userId: user.id,

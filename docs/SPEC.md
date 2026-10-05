@@ -568,10 +568,21 @@ recuperación se prueban a mano.*
 - **ADMIN-AUTH-11** El link del mail de recuperar contraseña vuelve a
   `<origen>/admin/auth/callback?next=/restablecer`, en producción y en localhost: el basePath
   (`src/lib/base-path.ts`, el mismo que usa `next.config.ts`) se suma en un solo lugar.
-- **ADMIN-AUTH-12** `/auth/callback` redirige sumando el basePath: el link de recuperación sigue a
-  `/admin/restablecer`, el de confirmar cuenta a `/admin/dashboard`, y uno inválido o vencido a
-  `/admin/login?error=link`. Si el canje del `code` falla (o el link no lo trae) se loguea en el
+- **ADMIN-AUTH-12** `/auth/callback` responde con un redirect relativo que suma el basePath (el
+  navegador conserva el dominio con el que entró, p. ej. `www.smaalacarta.com.ar`, y no pasa al host
+  interno del deploy): el link de recuperación sigue a `/admin/restablecer`, el de confirmar cuenta a
+  `/admin/dashboard`, y uno inválido o vencido a `/admin/login?error=link`. Si el canje del `code` falla (o el link no lo trae) se loguea en el
   servidor el motivo, nunca el `code`.
+- **ADMIN-AUTH-13** `/restablecer` (el destino del link del mail de recuperación) pide solo la
+  contraseña nueva y su repetición, sin la actual, que quien llega ahí no recuerda: la sesión que
+  abrió el link es la prueba de identidad. Valida la nueva como el cambio normal y, si la cuenta
+  tenía una contraseña temporal, borra la marca `must_change_password` en el mismo paso. El cambio
+  desde Configuración y `/cambiar-contrasena` siguen pidiendo la actual (ADMIN-AUTH-10).
+- **ADMIN-AUTH-14** `/restablecer` y su acción solo valen con una sesión de recuperación: al canjear
+  un link con `next=/restablecer`, `/auth/callback` deja una cookie `sma-recovery` httpOnly, de 15
+  minutos, acotada al panel y firmada con una clave del servidor, atada al usuario. Sin esa marca (una
+  sesión normal que entra a mano a `/restablecer`) se va a `/dashboard` y la acción no cambia nada; la
+  marca se borra al guardar la contraseña. Sin clave en el servidor falla cerrado.
 
 ## ADMIN-SUPER — Superadmin y alta de cuentas
 
