@@ -3,7 +3,7 @@ import type { BusinessPlan } from "@/lib/menu-url";
 const PLAN_LABELS = [
   { key: "planPdf", label: "QR + PDF" },
   { key: "planWeb", label: "Menú Web" },
-  { key: "planCompleto", label: "Subdominio Completo" },
+  { key: "planCompleto", label: "Pedidos Online" },
 ] as const;
 
 // Los planes de un negocio (ADMIN-CONFIG-10), de solo lectura: solo el

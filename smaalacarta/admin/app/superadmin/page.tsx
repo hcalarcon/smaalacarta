@@ -70,7 +70,7 @@ export default async function SuperAdminHomePage() {
                     ) : null}
                     {business.plan_completo ? (
                       <span className="rounded-full bg-stone-100 px-2.5 py-0.5 text-xs font-medium text-stone-600">
-                        Subdominio Completo
+                        Pedidos Online
                       </span>
                     ) : null}
                     {!business.plan_pdf && !business.plan_web && !business.plan_completo ? (

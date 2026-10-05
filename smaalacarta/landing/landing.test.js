@@ -126,7 +126,7 @@ describe("LANDING-17 — el inicio vende y lleva a WhatsApp", () => {
 });
 
 describe("LANDING-3 — dominio de los menús", () => {
-  it("el plan Subdominio muestra un subdominio de smaalacarta.com.ar", () => {
+  it("el plan Pedidos Online muestra un subdominio de smaalacarta.com.ar", () => {
     expect(HTML).toContain("tunegocio.smaalacarta.com.ar");
     expect(HTML).not.toContain("tunegocio.smaalacarta.online");
   });
@@ -240,8 +240,8 @@ describe("LANDING-21 — lo nuevo está dicho", () => {
     (phrase) => expect(text).toContain(phrase),
   );
 
-  it("la carta en 3 idiomas está en el plan Subdominio Completo", () => {
-    const plan = [...doc.querySelectorAll(".plan-card")].find((p) => p.textContent.includes("Subdominio Completo"));
+  it("la carta en 3 idiomas está en el plan Pedidos Online", () => {
+    const plan = [...doc.querySelectorAll(".plan-card")].find((p) => p.textContent.includes("Pedidos Online"));
     expect(plan.textContent).toContain("Carta en español, inglés y portugués");
     expect(plan.textContent).toContain("Se instala en el celular");
   });
