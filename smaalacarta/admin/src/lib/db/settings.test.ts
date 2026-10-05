@@ -37,6 +37,8 @@ type Settings = {
   cbu?: string | null;
   allowScheduled?: boolean;
   leadMinutes?: number;
+  preorders?: boolean;
+  cutoffs?: unknown;
 };
 
 const sqlText = (value: string | null | undefined, fallback: string | null) => {
@@ -77,7 +79,9 @@ function save(user: string | null, s: Settings = {}) {
        ${sqlText(s.alias, null)},
        ${sqlText(s.cbu, null)},
        ${s.allowScheduled ?? true},
-       ${s.leadMinutes ?? 30})`,
+       ${s.leadMinutes ?? 30},
+       ${s.preorders ?? false},
+       '${JSON.stringify(s.cutoffs ?? {})}'::jsonb)`,
   );
 }
 
@@ -139,6 +143,18 @@ describe("guardar la configuración — ADMIN-CONFIG-1 y 3", () => {
     expect(s2.rows[0].theme).toBe("oscuro");
 
     await save(ANA, { theme: "claro" });
+  });
+
+  it("guarda los pedidos anticipados y sus cortes (ADMIN-CONFIG-18)", async () => {
+    const cutoffs = { sabado: { dia: "viernes", hora: "20:00" } };
+    await save(ANA, { preorders: true, cutoffs });
+
+    const s = await db.query<{ preorders_enabled: boolean; preorder_cutoffs: unknown }>(
+      `select preorders_enabled, preorder_cutoffs from business_settings where business_id = '${NEG_ANA}'`,
+    );
+    expect(s.rows[0]).toEqual({ preorders_enabled: true, preorder_cutoffs: cutoffs });
+
+    await save(ANA);
   });
 
   it("guardar de nuevo actualiza la misma fila (no duplica)", async () => {

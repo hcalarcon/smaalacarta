@@ -2,7 +2,7 @@
 
 import type { Order } from "@/lib/db/orders";
 import { timeAgo } from "@/lib/orders/format";
-import { scheduledLabel } from "@/lib/orders/scheduled";
+import { orderBadge } from "@/lib/orders/scheduled";
 import { primaryAction, STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
 
@@ -23,7 +23,7 @@ export default function OrderCard({
 }) {
   const action = primaryAction(order.status);
   const extra = order.order_items.length - SHOWN_ITEMS;
-  const scheduled = scheduledLabel(order.scheduled_for);
+  const scheduled = orderBadge(order);
 
   return (
     <article className="rounded-xl border border-line bg-white p-3 shadow-sm">

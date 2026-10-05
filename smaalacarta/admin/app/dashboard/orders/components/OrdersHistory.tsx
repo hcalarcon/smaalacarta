@@ -2,7 +2,7 @@
 
 import type { Order } from "@/lib/db/orders";
 import { formatDateTime } from "@/lib/orders/format";
-import { scheduledLabel } from "@/lib/orders/scheduled";
+import { scheduledShort } from "@/lib/orders/scheduled";
 import { STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
 
@@ -79,7 +79,7 @@ export default function OrdersHistory({
                     {formatMoney(Number(order.total))}
                   </td>
                   <td className="py-2.5 pr-3 text-stone-500">
-                    {scheduledLabel(order.scheduled_for)?.replace("Para las ", "") ?? "Lo antes posible"}
+                    {scheduledShort(order)}
                   </td>
                   <td className="py-2.5 pr-3 text-stone-500">
                     {formatDateTime(order.created_at)}

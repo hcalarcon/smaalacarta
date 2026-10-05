@@ -25,6 +25,43 @@ export function scheduledLabel(scheduledFor: string | null | undefined): string 
   return `Para las ${timeFormatter.format(date)}`;
 }
 
+const dayFormatter = new Intl.DateTimeFormat("es-AR", {
+  weekday: "short",
+  day: "2-digit",
+  month: "2-digit",
+  timeZone: TIME_ZONE,
+});
+
+// "sáb 10/10": el día en que abre el negocio, en hora de Argentina.
+function shortDate(iso: string): string | null {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const part = (type: string) =>
+    dayFormatter.formatToParts(date).find((p) => p.type === type)?.value.replace(/\.$/, "") ?? "";
+
+  return `${part("weekday")} ${part("day")}/${part("month")}`;
+}
+
+// "Para el sáb 10/10" de un pedido anticipado (ADMIN-PEDIDOS-16), o null si no hay fecha.
+export function preorderLabel(scheduledFor: string | null | undefined): string | null {
+  const date = scheduledFor ? shortDate(scheduledFor) : null;
+  return date ? `Para el ${date}` : null;
+}
+
+type Badged = { preorder?: boolean; scheduled_for?: string | null };
+
+// El distintivo de la tarjeta: la fecha si el pedido es anticipado, la hora si es programado.
+export function orderBadge(order: Badged): string | null {
+  return order.preorder ? preorderLabel(order.scheduled_for) : scheduledLabel(order.scheduled_for);
+}
+
+// La columna "Para" del historial: la fecha, la hora o "Lo antes posible".
+export function scheduledShort(order: Badged): string {
+  if (order.preorder && order.scheduled_for) return shortDate(order.scheduled_for) ?? "Lo antes posible";
+  return scheduledLabel(order.scheduled_for)?.replace("Para las ", "") ?? "Lo antes posible";
+}
+
 type Sortable = { created_at: string; scheduled_for?: string | null };
 
 // Orden de la lista de Nuevos: los "lo antes posible" primero, por llegada; después los

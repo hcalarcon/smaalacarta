@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { compareForBoard, scheduledLabel, todayAtIso } from "./scheduled";
+import {
+  compareForBoard,
+  orderBadge,
+  preorderLabel,
+  scheduledLabel,
+  scheduledShort,
+  todayAtIso,
+} from "./scheduled";
 import { validateManualOrder, type ManualOrderInput } from "./manual-order";
 
 // Argentina es UTC-3 todo el año.
@@ -92,5 +99,45 @@ describe("validateManualOrder con 'Para las' — ADMIN-PEDIDOS-14", () => {
   it("rechaza algo que no es una hora", () => {
     const r = validateManualOrder({ ...valid, scheduledFor: "mañana" });
     expect(r.ok === false && r.errors.scheduledFor).toBe("Ingresá una hora, por ejemplo 20:30.");
+  });
+});
+
+describe("pedidos anticipados en el tablero — ADMIN-PEDIDOS-16", () => {
+  // Sábado 10 de octubre de 2026, 12:00 hora argentina.
+  const APERTURA = "2026-10-10T15:00:00Z";
+
+  it("la fecha se dice 'Para el sáb 10/10' en hora de Argentina", () => {
+    expect(preorderLabel(APERTURA)).toBe("Para el sáb 10/10");
+    // Domingo 00:30 argentino ya es domingo (03:30 UTC), y sábado 22:00 argentino cae en domingo UTC.
+    expect(preorderLabel("2026-10-11T03:30:00Z")).toBe("Para el dom 11/10");
+    expect(preorderLabel("2026-10-11T01:00:00Z")).toBe("Para el sáb 10/10");
+  });
+
+  it("sin fecha o con una que no se entiende no hay distintivo", () => {
+    expect(preorderLabel(null)).toBeNull();
+    expect(preorderLabel("no es una fecha")).toBeNull();
+  });
+
+  it("el distintivo de un anticipado lleva la fecha; el de un programado, la hora", () => {
+    expect(orderBadge({ preorder: true, scheduled_for: APERTURA })).toBe("Para el sáb 10/10");
+    expect(orderBadge({ preorder: false, scheduled_for: "2026-01-05T23:30:00Z" })).toBe("Para las 20:30");
+    expect(orderBadge({ preorder: false, scheduled_for: null })).toBeNull();
+  });
+
+  it("la tabla de historial muestra la fecha, la hora o 'Lo antes posible'", () => {
+    expect(scheduledShort({ preorder: true, scheduled_for: APERTURA })).toBe("sáb 10/10");
+    expect(scheduledShort({ preorder: false, scheduled_for: "2026-01-05T23:30:00Z" })).toBe("20:30");
+    expect(scheduledShort({ preorder: false, scheduled_for: null })).toBe("Lo antes posible");
+  });
+
+  it("los anticipados se ordenan por su fecha junto con los programados", () => {
+    const o = (id: string, created: string, scheduled: string | null) => ({ id, created_at: created, scheduled_for: scheduled });
+    const list = [
+      o("sabado", "2026-10-06T10:00:00Z", "2026-10-10T15:00:00Z"),
+      o("hoy", "2026-10-06T12:00:00Z", "2026-10-06T23:30:00Z"),
+      o("ya", "2026-10-06T13:00:00Z", null),
+      o("domingo", "2026-10-05T10:00:00Z", "2026-10-11T15:00:00Z"),
+    ];
+    expect([...list].sort(compareForBoard).map((x) => x.id)).toEqual(["ya", "hoy", "sabado", "domingo"]);
   });
 });

@@ -15,6 +15,7 @@ let WA_WINDOW = null;
 let CHECKOUT = null;
 let THEME = null;
 let STOCK = null;
+let PREORDERS = null;
 
 // Idioma de la interfaz (IDIOMA-1 a 4) y el menú tal como vino, sin las secciones armadas.
 let LANG = "es";
@@ -167,6 +168,7 @@ async function init() {
       checkoutLib,
       themeLib,
       stockLib,
+      preordersLib,
     ] = await Promise.all([
       import("/apps/menu-app/lib/hostname.js"),
       import("/apps/menu-app/lib/html.js"),
@@ -183,12 +185,14 @@ async function init() {
       import("/apps/menu-app/lib/checkout-options.js"),
       import("/apps/menu-app/lib/theme.js"),
       import("/apps/menu-app/lib/stock.js"),
+      import("/apps/menu-app/lib/preorders.js"),
     ]);
     PRICE = priceLib;
     WA_WINDOW = waWindow;
     CHECKOUT = checkoutLib;
     THEME = themeLib;
     STOCK = stockLib;
+    PREORDERS = preordersLib;
     COLORS = colorsLib;
     I18N = i18nLib;
     LANG = I18N.resolveLang({
@@ -427,6 +431,13 @@ function loadTemplate(template) {
 }
 
 // RENDER
+// Pedido anticipado (PUBLICO-33): con el negocio cerrado por horario (no por un cierre temporal)
+// y el corte sin pasar, el menú toma el pedido para la próxima apertura. Null si no corresponde.
+function currentPreorder(c, cierre = INFO?.closedNotice(c)) {
+  if (!PREORDERS || !SCHEDULE || cierre || SCHEDULE.isOpenNow(c?.horarios)) return null;
+  return PREORDERS.activePreorder(c);
+}
+
 function renderHeader(c) {
   const nombreEl = document.querySelector("#nombre-negocio");
   const descEl = document.querySelector("#descripcion-negocio");
@@ -446,7 +457,7 @@ function renderHeader(c) {
   const fueraDeHorario = !cierre && !SCHEDULE.isOpenNow(c.horarios);
   const abierto = !cierre && !fueraDeHorario;
 
-  renderInfo(c, cierre, fueraDeHorario);
+  renderInfo(c, cierre, fueraDeHorario, currentPreorder(c, cierre));
 
   if (estadoEl) {
     estadoEl.textContent = tr(abierto ? "status.open" : "status.closed");
@@ -480,7 +491,7 @@ function externalLink(href) {
 // Aviso de cierre temporal (arriba, debajo del encabezado) y dirección y redes (al pie).
 // Todo se arma con textContent y atributos: lo que escribe el negocio nunca se
 // interpreta como HTML.
-function renderInfo(c, cierre, fueraDeHorario = false) {
+function renderInfo(c, cierre, fueraDeHorario = false, preorder = null) {
   document.querySelectorAll("#aviso-cierre, #pie-negocio").forEach((el) => el.remove());
 
   const header = document.querySelector(".header");
@@ -504,12 +515,11 @@ function renderInfo(c, cierre, fueraDeHorario = false) {
     aviso.id = "aviso-cierre";
     aviso.className = "cierre-temporal";
     aviso.setAttribute("role", "status");
-    aviso.textContent = [
-      tr("closed.now"),
-      SCHEDULE.openingText(SCHEDULE.nextOpening(c.horarios), LANG),
-    ]
-      .filter(Boolean)
-      .join(" · ");
+    aviso.textContent = preorder
+      ? PREORDERS.preorderNotice(preorder, LANG)
+      : [tr("closed.now"), SCHEDULE.openingText(SCHEDULE.nextOpening(c.horarios), LANG)]
+          .filter(Boolean)
+          .join(" · ");
     header.insertAdjacentElement("afterend", aviso);
   }
 
@@ -554,8 +564,9 @@ function renderInfo(c, cierre, fueraDeHorario = false) {
   // Cerrado: no se pueden enviar pedidos.
   const enviar = document.querySelector("#form-pedido button[type='submit']");
   if (enviar) {
-    enviar.disabled = Boolean(cierre) || fueraDeHorario;
+    enviar.disabled = Boolean(cierre) || (fueraDeHorario && !preorder);
     if (cierre) enviar.textContent = tr("closed.temporary");
+    else if (preorder) enviar.textContent = tr("preorder.submit");
     else if (fueraDeHorario) enviar.textContent = tr("closed.now");
   }
 }
@@ -890,7 +901,10 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     alert(tr("error.closedTemporary"));
     return;
   }
-  if (SCHEDULE && !SCHEDULE.isOpenNow(window.CONFIG?.horarios)) {
+  // Cerrado por horario: con pedidos anticipados activos el pedido es para la próxima apertura
+  // (PUBLICO-33); si no, no se puede enviar.
+  const preorder = currentPreorder(window.CONFIG);
+  if (SCHEDULE && !preorder && !SCHEDULE.isOpenNow(window.CONFIG?.horarios)) {
     alert(
       [tr("error.closedNow"), SCHEDULE.openingText(SCHEDULE.nextOpening(window.CONFIG?.horarios), LANG)]
         .filter(Boolean)
@@ -919,10 +933,13 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
   // Menú de Supabase con horas para elegir: la hora va al servidor como `scheduledFor` y el
   // mensaje de WhatsApp la dice igual que siempre (PUBLICO-30).
   const hourSelect = document.querySelector('#horario-programado select[name="hora"]');
-  const choosing = CHECKOUT?.scheduleChoice(window.CONFIG, Boolean(MENU_SOURCE)).mode === "slots";
+  const choosing =
+    !preorder && CHECKOUT?.scheduleChoice(window.CONFIG, Boolean(MENU_SOURCE)).mode === "slots";
   const scheduledFor = choosing && f.get("cuando") === "schedule" ? f.get("hora") || null : null;
 
-  if (choosing) {
+  if (preorder) {
+    msg += `${PREORDERS.preorderMessageLine(preorder)}\n`;
+  } else if (choosing) {
     msg += scheduledFor
       ? `⏰ Horario: ${hourSelect.selectedOptions[0].textContent}\n`
       : `⏰ Horario: Ahora mismo\n`;
@@ -966,7 +983,7 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     }
 
     // Solo el campo libre (menú sin horas para elegir) sigue yendo en las notas.
-    const horarioNota = choosing ? "" : ahora ? "Horario: ahora mismo" : horario ? `Horario: ${horario}` : "";
+    const horarioNota = choosing || preorder ? "" : ahora ? "Horario: ahora mismo" : horario ? `Horario: ${horario}` : "";
     const result = await ORDERS.createOrder({
       ...SUPABASE_CFG,
       slug: MENU_SOURCE.slug,
@@ -976,11 +993,12 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
       notes: [horarioNota, f.get("notas") || ""].filter(Boolean).join(" · ").slice(0, 500),
       items,
       scheduledFor,
+      preorder: Boolean(preorder),
     });
 
     if (submit) {
       submit.disabled = false;
-      submit.textContent = tr("checkout.submit");
+      submit.textContent = preorder ? tr("preorder.submit") : tr("checkout.submit");
     }
 
     if (result.ok) {
@@ -1016,6 +1034,13 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
       alert(tr("error.invalidSchedule"));
       renderScheduleChoice();
       return;
+    } else if (result.reason === "preorder_closed") {
+      // Pasó el corte (o el negocio cambió la configuración): se recarga para ver el estado de
+      // ahora. El carrito queda guardado.
+      WA_WINDOW?.discardPlaceholder(placeholder);
+      alert(tr("error.preorderClosed"));
+      window.location.reload();
+      return;
     } else if (result.reason === "unavailable") {
       WA_WINDOW?.discardPlaceholder(placeholder);
       alert(tr("error.unavailable"));
@@ -1024,7 +1049,8 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     // "invalid" y "unknown": se manda solo por WhatsApp.
   }
 
-  const link = saved ? ORDERS.trackingLink(window.location.origin, saved.code, LANG) : "";
+  // Un pedido anticipado no tiene seguimiento: ni link ni panel para volver a verlo.
+  const link = saved && !preorder ? ORDERS.trackingLink(window.location.origin, saved.code, LANG) : "";
   if (saved) msg = ORDERS.finalizeOrderMessage(msg, { number: saved.number, link });
 
   const whatsappUrl = ORDERS
@@ -1038,16 +1064,19 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
   if (saved) {
     // Se anota el pedido antes de salir: si el navegador recarga la página al volver de
     // WhatsApp, el panel se muestra de nuevo (SEGUIMIENTO-10).
-    ORDERS.rememberHandoff(window.localStorage, saved.code, whatsappUrl);
-    ORDERS.rememberLastOrder(window.localStorage, { ...saved, payment: f.get("pago") });
+    if (!preorder) {
+      ORDERS.rememberHandoff(window.localStorage, saved.code, whatsappUrl);
+      ORDERS.rememberLastOrder(window.localStorage, { ...saved, payment: f.get("pago") });
+    }
     showThanks({
       number: saved.number,
       code: saved.code,
       link,
       whatsappUrl,
       transfer: CHECKOUT?.transferDetails(CONFIG, f.get("pago")) ?? null,
+      preorder,
     });
-    ORDERS.markHandoffSent(window.localStorage, saved.code);
+    if (!preorder) ORDERS.markHandoffSent(window.localStorage, saved.code);
     // En PC, WhatsApp va a la ventana abierta al tocar; si no hubo, a la misma pestaña.
     openWhatsAppUrl(placeholder, whatsappUrl);
   } else {
@@ -1069,7 +1098,7 @@ function openWhatsAppUrl(placeholder, url) {
 // reenviar el mensaje si WhatsApp no se abrió (SEGUIMIENTO-10). Todo con textContent: el
 // número y los links no se interpretan como HTML.
 function showThanks(data) {
-  const { number, code, link, whatsappUrl, transfer } = data;
+  const { number, code, link, whatsappUrl, transfer, preorder } = data;
   const form = $("#form-pedido");
   if (!form) return;
 
@@ -1088,6 +1117,11 @@ function showThanks(data) {
   const info = document.createElement("p");
   info.className = "gracias-aviso";
   info.textContent = tr("thanks.pending");
+
+  // Un pedido anticipado no tiene seguimiento: dice para qué día es y nada más (PUBLICO-33).
+  const date = document.createElement("p");
+  date.className = "gracias-aviso";
+  date.textContent = preorder ? PREORDERS.preorderThanks(preorder, LANG) : "";
 
   const track = document.createElement("a");
   track.className = "btn-seguimiento destacado";
@@ -1110,9 +1144,12 @@ function showThanks(data) {
   close.textContent = tr("thanks.close");
   close.onclick = closeAll;
 
-  panel.append(title, info);
+  panel.append(title);
+  if (preorder) panel.append(date);
+  panel.append(info);
   if (transfer) panel.append(transferBox(transfer));
-  panel.append(track, resend, close);
+  if (!preorder) panel.append(track);
+  panel.append(resend, close);
   form.insertAdjacentElement("afterend", panel);
 }
 
@@ -1163,7 +1200,10 @@ function renderScheduleChoice() {
   const hour = programado?.querySelector('select[name="hora"]');
   if (!libre || !programado || !hour) return;
 
-  const choice = CHECKOUT.scheduleChoice(window.CONFIG, Boolean(MENU_SOURCE));
+  // Un pedido anticipado es para la próxima apertura: no se elige hora.
+  const choice = currentPreorder(window.CONFIG)
+    ? { mode: "none" }
+    : CHECKOUT.scheduleChoice(window.CONFIG, Boolean(MENU_SOURCE));
   libre.hidden = choice.mode !== "free";
   programado.hidden = choice.mode !== "slots";
   if (choice.mode !== "slots") return;

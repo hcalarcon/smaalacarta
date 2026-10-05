@@ -26,6 +26,7 @@ export type Order = {
   payment: string | null;
   source: "web" | "manual";
   scheduled_for: string | null;
+  preorder: boolean;
   code: string;
   created_at: string;
   updated_at: string;
@@ -34,7 +35,7 @@ export type Order = {
 };
 
 const SELECT =
-  "id, order_number, status, total, notes, customer_name, delivery, payment, source, scheduled_for, code, created_at, updated_at, " +
+  "id, order_number, status, total, notes, customer_name, delivery, payment, source, scheduled_for, preorder, code, created_at, updated_at, " +
   "order_items(name, quantity, unit_price, sort_order), order_events(status, created_at, note)";
 
 // Los pedidos más recientes del negocio, con su detalle y su línea de tiempo. El RLS

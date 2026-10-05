@@ -53,6 +53,8 @@ export type Database = {
           logo_url: string | null
           menu_pdf_url: string | null
           payment_options: string[]
+          preorder_cutoffs: Json
+          preorders_enabled: boolean
           primary_color: string
           published: boolean
           reopens_on: string | null
@@ -80,6 +82,8 @@ export type Database = {
           logo_url?: string | null
           menu_pdf_url?: string | null
           payment_options?: string[]
+          preorder_cutoffs?: Json
+          preorders_enabled?: boolean
           primary_color?: string
           published?: boolean
           reopens_on?: string | null
@@ -107,6 +111,8 @@ export type Database = {
           logo_url?: string | null
           menu_pdf_url?: string | null
           payment_options?: string[]
+          preorder_cutoffs?: Json
+          preorders_enabled?: boolean
           primary_color?: string
           published?: boolean
           reopens_on?: string | null
@@ -403,6 +409,7 @@ export type Database = {
           notes: string | null
           order_number: string
           payment: string | null
+          preorder: boolean
           scheduled_for: string | null
           source: string
           status: string
@@ -420,6 +427,7 @@ export type Database = {
           notes?: string | null
           order_number: string
           payment?: string | null
+          preorder?: boolean
           scheduled_for?: string | null
           source?: string
           status?: string
@@ -437,6 +445,7 @@ export type Database = {
           notes?: string | null
           order_number?: string
           payment?: string | null
+          preorder?: boolean
           scheduled_for?: string | null
           source?: string
           status?: string
@@ -694,6 +703,7 @@ export type Database = {
           p_items: Json
           p_notes: string
           p_payment: string
+          p_preorder?: boolean
           p_scheduled_for?: string
           p_slug: string
         }
@@ -713,9 +723,17 @@ export type Database = {
         Returns: boolean
       }
       is_super_admin: { Args: never; Returns: boolean }
+      is_valid_preorder_cutoffs: { Args: { p_cutoffs: Json }; Returns: boolean }
       is_valid_schedule: { Args: { p_schedule: Json }; Returns: boolean }
       new_tracking_code: { Args: never; Returns: string }
       next_order_number: { Args: { p_business_id: string }; Returns: number }
+      preorder_window: {
+        Args: { p_cutoffs: Json; p_now: string; p_schedule: Json }
+        Returns: {
+          cutoff_at: string
+          opens_at: string
+        }[]
+      }
       public_business_pdf: {
         Args: { p_slug: string; p_via_path?: boolean }
         Returns: Json
@@ -738,6 +756,8 @@ export type Database = {
           p_logo_url: string
           p_menu_pdf_url: string
           p_payment_options: string[]
+          p_preorder_cutoffs: Json
+          p_preorders_enabled: boolean
           p_primary_color: string
           p_published: boolean
           p_reopens_on: string

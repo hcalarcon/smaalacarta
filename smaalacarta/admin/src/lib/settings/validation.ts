@@ -7,6 +7,7 @@ import {
   normalizeDeliveryPayment,
   validateDeliveryPayment,
 } from "./payment";
+import { normalizePreorders, validatePreorders, type PreorderCutoffs } from "./preorders";
 import { validateSchedule, type Schedule } from "./schedule";
 import {
   DEFAULT_LEAD,
@@ -64,6 +65,10 @@ export type SettingsInput = {
   // minutos de anticipación como mínimo (15 a 240).
   allowScheduledOrders: boolean;
   scheduledLeadMinutes: number;
+  // Pedidos anticipados (ADMIN-CONFIG-18): con el negocio cerrado, pedidos para la próxima
+  // apertura hasta un corte por día de venta.
+  preordersEnabled: boolean;
+  preorderCutoffs: PreorderCutoffs;
 };
 
 // Los colores de la marca, como en la landing. Un negocio nuevo arranca así.
@@ -91,6 +96,8 @@ export const DEFAULT_SETTINGS: SettingsInput = {
   transferCbu: "",
   allowScheduledOrders: true,
   scheduledLeadMinutes: DEFAULT_LEAD,
+  preordersEnabled: false,
+  preorderCutoffs: {},
 };
 
 type Field =
@@ -113,7 +120,8 @@ type Field =
   | "paymentOptions"
   | "transferAlias"
   | "transferCbu"
-  | "scheduledLeadMinutes";
+  | "scheduledLeadMinutes"
+  | "preorderCutoffs";
 
 const COLOR = /^#[0-9a-fA-F]{6}$/;
 // Solo https y sin caracteres que rompan un atributo o un estilo (mismo criterio
@@ -141,14 +149,14 @@ function isRealDate(value: string) {
 // Deja las redes como direcciones https (si son válidas) y recorta los textos. Lo que
 // no se pueda normalizar queda como está, para que la validación lo marque.
 export function normalizeSettingsText(input: SettingsInput): SettingsInput {
-  return normalizeScheduledOrders(normalizeDeliveryPayment({
+  return normalizePreorders(normalizeScheduledOrders(normalizeDeliveryPayment({
     ...input,
     address: input.address.trim(),
     closedMessage: input.closedMessage.trim(),
     reopensOn: input.reopensOn.trim(),
     instagram: normalizeInstagram(input.instagram) ?? input.instagram.trim(),
     facebook: normalizeFacebook(input.facebook) ?? input.facebook.trim(),
-  }));
+  })));
 }
 
 export function validateSettings(input: SettingsInput): ValidationResult<Field> {
@@ -214,6 +222,11 @@ export function validateSettings(input: SettingsInput): ValidationResult<Field> 
   const scheduledOrders = validateScheduledOrders(input);
   if (!scheduledOrders.ok) {
     Object.assign(errors, scheduledOrders.errors);
+  }
+
+  const preorders = validatePreorders(input);
+  if (!preorders.ok) {
+    Object.assign(errors, preorders.errors);
   }
 
   const schedule = validateSchedule(input.schedule);
