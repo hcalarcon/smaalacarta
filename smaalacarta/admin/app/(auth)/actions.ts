@@ -7,7 +7,7 @@ import { changePassword } from "@/lib/auth/change-password";
 import { authErrorMessage } from "@/lib/auth/messages";
 import { safeNextPath } from "@/lib/auth/redirect";
 import { isValidEmail, validateLogin } from "@/lib/auth/validation";
-import { siteOrigin } from "@/lib/site-origin";
+import { recoveryRedirectUrl, siteOrigin } from "@/lib/site-origin";
 import { createAdminClient } from "@/lib/supabase-admin";
 import { createClient } from "@/lib/supabase-server";
 
@@ -63,7 +63,7 @@ export async function requestPasswordResetAction(
 
   const supabase = await createClient();
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${await siteOrigin()}/auth/callback?next=/restablecer`,
+    redirectTo: recoveryRedirectUrl(await siteOrigin()),
   });
 
   // Solo se informa el límite de envíos: no revela si la cuenta existe.

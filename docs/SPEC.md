@@ -565,6 +565,13 @@ recuperación se prueban a mano.*
   Configuración o, con la temporal, en `/cambiar-contrasena`) pide la
   contraseña actual y la valida contra Supabase antes de guardar la nueva; si
   no coincide, no se toca nada. La nueva tiene que ser distinta de la actual.
+- **ADMIN-AUTH-11** El link del mail de recuperar contraseña vuelve a
+  `<origen>/admin/auth/callback?next=/restablecer`, en producción y en localhost: el basePath
+  (`src/lib/base-path.ts`, el mismo que usa `next.config.ts`) se suma en un solo lugar.
+- **ADMIN-AUTH-12** `/auth/callback` redirige sumando el basePath: el link de recuperación sigue a
+  `/admin/restablecer`, el de confirmar cuenta a `/admin/dashboard`, y uno inválido o vencido a
+  `/admin/login?error=link`. Si el canje del `code` falla (o el link no lo trae) se loguea en el
+  servidor el motivo, nunca el `code`.
 
 ## ADMIN-SUPER — Superadmin y alta de cuentas
 
