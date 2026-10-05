@@ -11,6 +11,7 @@ import {
   langSearch,
   pageTitle,
   parseTrackingCode,
+  scheduledNotice,
   statusView,
   stepLabels,
   timeline,
@@ -189,6 +190,11 @@ function render(data, { stale }) {
         ),
       ),
     );
+  }
+  // Pedido programado: se dice para qué hora es, para que no parezca una demora (SEGUIMIENTO-18).
+  const scheduled = scheduledNotice(data.pedido.programado, lang);
+  if (scheduled) {
+    status.insertBefore(el("p", { className: "status-scheduled", text: scheduled }), status.firstChild);
   }
   nodes.push(status);
 

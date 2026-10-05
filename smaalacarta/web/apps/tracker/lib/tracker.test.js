@@ -8,6 +8,7 @@ import {
   pageTitle,
   parseTrackingCode,
   safeColor,
+  scheduledNotice,
   statusView,
   stepLabels,
   timeline,
@@ -236,5 +237,25 @@ describe("idioma de la página — IDIOMA-13 y 14", () => {
   it("pageTitle arma el título en el idioma pedido", () => {
     expect(pageTitle(12, "Café Ana", "es")).toBe("Pedido #12 · Café Ana");
     expect(pageTitle(12, "Café Ana", "en")).toBe("Order #12 · Café Ana");
+  });
+});
+
+describe("scheduledNotice — SEGUIMIENTO-18", () => {
+  it("dice para qué hora es el pedido, en hora de Argentina", () => {
+    // 23:30 UTC = 20:30 en Argentina.
+    expect(scheduledNotice("2026-01-05T23:30:00Z", "es")).toBe("Programado para las 20:30");
+    expect(scheduledNotice("2026-01-05T23:30:00Z", "en")).toBe("Scheduled for 20:30");
+    expect(scheduledNotice("2026-01-05T23:30:00Z", "pt")).toBe("Agendado para as 20:30");
+  });
+
+  it("usa 24 horas en todos los idiomas", () => {
+    expect(scheduledNotice("2026-01-06T02:05:00Z", "en")).toBe("Scheduled for 23:05");
+  });
+
+  it("un pedido sin hora (o con una hora que no se entiende) no muestra nada", () => {
+    expect(scheduledNotice(undefined, "es")).toBeNull();
+    expect(scheduledNotice(null, "es")).toBeNull();
+    expect(scheduledNotice("no es una fecha", "es")).toBeNull();
+    expect(scheduledNotice(12345, "es")).toBeNull();
   });
 });

@@ -478,6 +478,26 @@ PUBLICO-25 a 27, ESTATICO-7, SEGUIMIENTO-16). Migración `20261003000000_sin_sto
       estático, en las tres plantillas y en oscuro), probar que una promoción con ese producto
       desaparece y que un carrito con ese producto lo quita al recargar
 
+## Etapa 6m — Pedidos programados
+
+El negocio decide si acepta pedidos para una hora de hoy (dentro de sus horarios y con una
+anticipación mínima) y el pedido guarda para cuándo es. Requisitos en `docs/SPEC.md`
+(ADMIN-CONFIG-16 y 17, ADMIN-PEDIDOS-14 y 15, PUBLICO-28 a 30, SEGUIMIENTO-17 y 18). Migración
+`20261005000000_pedidos_programados.sql`. No reemplaza el ítem "Horarios de retiro programado
+cuando el negocio está cerrado" de la Etapa 6c: un pedido programado también exige que el
+negocio esté abierto ahora.
+
+- [x] [herni] Migración: `allow_scheduled_orders`, `scheduled_lead_minutes`, `orders.scheduled_for`;
+      `is_schedulable_at`; `create_public_order` rechaza con P0011 y P0012; `public_order_tracking`
+      y `public_menu` entregan la hora y los ajustes
+- [x] [herni] Admin: sección "Pedidos programados" en Configuración; distintivo "Para las HH:MM",
+      orden de Nuevos y columna en el historial; "Para las" en el pedido manual
+- [x] [herni] Menú: "Lo antes posible" o "Programar" con las horas de hoy; seguimiento con
+      "Programado para las HH:MM"
+- [ ] [herni] **Probar a mano**: programar un pedido desde el menú (con y sin horarios cargados,
+      con un rango nocturno), apagar la opción en Configuración y ver que el menú no pregunta la
+      hora, y mirar el badge en el tablero y el aviso en el seguimiento
+
 ## Etapa 7 — Pendientes técnicos (backlog)
 
 - [ ] [por asignar] **Marketplace** ("un lugar donde encontrar de todo para
