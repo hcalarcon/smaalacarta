@@ -583,6 +583,13 @@ recuperación se prueban a mano.*
   minutos, acotada al panel y firmada con una clave del servidor, atada al usuario. Sin esa marca (una
   sesión normal que entra a mano a `/restablecer`) se va a `/dashboard` y la acción no cambia nada; la
   marca se borra al guardar la contraseña. Sin clave en el servidor falla cerrado.
+- **ADMIN-AUTH-15** Mientras la sesión tenga una marca de recuperación válida (cookie `sma-recovery`,
+  ADMIN-AUTH-14) y no se haya guardado la contraseña nueva, `proxy.ts` deja al usuario solo en
+  `/restablecer` y `/auth/callback` y manda cualquier otra ruta a `/restablecer` (`redirectForRoute`,
+  también por encima de la contraseña temporal): con "atrás" o escribiendo `/dashboard` no queda
+  logueado sin haberla cambiado. El cierre de sesión se manda desde `/restablecer` y descarta la
+  marca; guardar la contraseña también la borra. Con la marca vencida o inválida no confina (flujo
+  normal).
 
 ## ADMIN-SUPER — Superadmin y alta de cuentas
 

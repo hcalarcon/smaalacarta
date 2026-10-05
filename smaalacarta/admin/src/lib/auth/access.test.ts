@@ -189,3 +189,46 @@ describe("hasTemporaryPassword — ADMIN-SUPER-10", () => {
     expect(hasTemporaryPassword(metadata as never)).toBe(false);
   });
 });
+
+describe("sesión de recuperación confinada a /restablecer — ADMIN-AUTH-15", () => {
+  const recovery = (path: string, hasUser = true, mustChange = false) =>
+    redirectForRoute(path, hasUser, mustChange, true);
+
+  it.each([
+    "/dashboard",
+    "/dashboard/menu",
+    "/superadmin",
+    "/superadmin/negocios/x",
+    "/login",
+    "/recuperar",
+    "/cambiar-contrasena",
+    "/sin-negocio",
+    "/",
+  ])("con marca de recuperación válida, manda %s a /restablecer", (path) => {
+    expect(recovery(path)).toBe("/restablecer");
+  });
+
+  it.each(["/restablecer", "/auth/callback"])(
+    "con marca de recuperación, %s sigue accesible (también el cierre de sesión, que se manda desde /restablecer)",
+    (path) => {
+      expect(recovery(path)).toBeNull();
+    },
+  );
+
+  it("sin marca, o con la marca vencida o inválida, no confina: flujo normal", () => {
+    expect(redirectForRoute("/dashboard", true, false, false)).toBeNull();
+    expect(redirectForRoute("/dashboard", true)).toBeNull();
+    expect(redirectForRoute("/login", true)).toBe("/dashboard");
+  });
+
+  it("sin sesión la marca no importa", () => {
+    expect(recovery("/dashboard", false)).toBe("/login?next=%2Fdashboard");
+    expect(recovery("/login", false)).toBeNull();
+  });
+
+  it("gana sobre la contraseña temporal: la cuenta con temporal también elige acá su contraseña", () => {
+    expect(recovery("/dashboard", true, true)).toBe("/restablecer");
+    expect(recovery("/cambiar-contrasena", true, true)).toBe("/restablecer");
+    expect(recovery("/restablecer", true, true)).toBeNull();
+  });
+});

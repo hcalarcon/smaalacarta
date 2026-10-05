@@ -180,6 +180,8 @@ export async function updatePasswordAction(
 export async function signOutAction() {
   const supabase = await createClient();
   await supabase.auth.signOut();
+  // Salir desde /restablecer también descarta la marca de recuperación.
+  await clearRecoverySession();
 
   redirect("/login");
 }
