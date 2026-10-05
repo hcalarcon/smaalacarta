@@ -16,8 +16,8 @@ describe("siteOrigin", () => {
   });
 
   it("usa el origen del navegador si viene", async () => {
-    headerValues.current = { origin: "https://smaalacarta.com.ar", host: "smaalacarta-admin.vercel.app" };
-    expect(await siteOrigin()).toBe("https://smaalacarta.com.ar");
+    headerValues.current = { origin: "https://www.smaalacarta.com.ar", host: "smaalacarta-admin.vercel.app" };
+    expect(await siteOrigin()).toBe("https://www.smaalacarta.com.ar");
   });
 
   it("sin origen, arma https con el host", async () => {
@@ -37,8 +37,8 @@ describe("recoveryRedirectUrl — ADMIN-AUTH-11", () => {
   });
 
   it("en producción el link vuelve a /admin/auth/callback", () => {
-    expect(recoveryRedirectUrl("https://smaalacarta.com.ar")).toBe(
-      "https://smaalacarta.com.ar/admin/auth/callback?next=/restablecer",
+    expect(recoveryRedirectUrl("https://www.smaalacarta.com.ar")).toBe(
+      "https://www.smaalacarta.com.ar/admin/auth/callback?next=/restablecer",
     );
   });
 
