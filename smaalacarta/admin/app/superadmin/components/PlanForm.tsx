@@ -47,7 +47,7 @@ export default function PlanForm({
             name="planCompleto"
             defaultChecked={planCompleto}
           />
-          Subdominio Completo
+          Pedidos Online
         </label>
       </div>
 

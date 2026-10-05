@@ -502,7 +502,7 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
 - **LANDING-20** La landing no carga imágenes de terceros: todo `<img>` apunta al propio
   sitio.
 - **LANDING-21** Lo nuevo está dicho: sin comisión, carta en español, inglés y portugués
-  (en Subdominio Completo) y que se instala en el celular.
+  (en Pedidos Online) y que se instala en el celular.
 - **LANDING-22** En el celular hay un botón fijo de WhatsApp abajo, que no tapa el
   contenido ni al menú ni al modal de demos; desde 768 px no se muestra.
 - **LANDING-23** La landing habla como empresa: no lleva la foto ni el nombre de una

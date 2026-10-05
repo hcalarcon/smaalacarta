@@ -182,10 +182,10 @@ Requisitos LANDING-1 a 23 en `docs/SPEC.md`, cubiertos por `landing/landing.test
       por accidente. Se movió `position: relative` a `.plan-card` en general
 - [x] [herni] Página `/hola` para quien llega por la tarjeta de visita (LANDING-10 a 16): un solo objetivo, WhatsApp, sin JS
 - [x] [herni] Renovación de la landing (LANDING-17 a 23): inicio sin foto con botón a WhatsApp y teléfono animado, sin comisión y carta en 3 idiomas, sin imágenes de terceros y botón fijo de WhatsApp en el celular; rediseño visual completo, tono de empresa (sin foto de persona ni íconos de emoji) y email smaalacarta@gmail.com
-- [x] [herni] **Revisar los textos nuevos**: que el panel, las promociones y el seguimiento estén realmente incluidos en el plan Subdominio Completo antes de publicarlos
+- [x] [herni] **Revisar los textos nuevos**: que el panel, las promociones y el seguimiento estén realmente incluidos en el plan Pedidos Online antes de publicarlos
 - [ ] [por asignar] Reemplazar `favicon.svg` (lo siguen usando las demos de `web/`) y agregar las redes sociales cuando existan
 - [ ] [por asignar] El modal de demos: la sección "Menú Web" muestra el mismo demo
-      interactivo que "Subdominio Completo" (no hay todavía una demo real de solo
+      interactivo que "Pedidos Online" (no hay todavía una demo real de solo
       lectura; depende del ítem de `static-menu.js` sin respaldo JSON, en la Etapa 6e)
 
 ## Etapa 6d — Flujo del pedido, PWA y pulido de las pantallas
@@ -308,6 +308,9 @@ demos y negocios reales, en el menú interactivo y en el estático
 - [ ] [por asignar] Mostrar la descripción de cada categoría en el menú (llega en `public_menu`, no se pinta)
 
 ## Etapa 6g — Plan de cada negocio y alta/baja por pago
+
+Subdominio Completo se llama ahora Pedidos Online (solo el nombre que ve la gente: `plan_completo` y el resto
+de los identificadores no cambian).
 
 **Diseño.** El plan no es un valor único: son tres capacidades combinables
 (`businesses.plan_pdf`, `plan_web`, `plan_completo` — uno por servicio de

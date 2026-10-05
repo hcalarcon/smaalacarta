@@ -114,7 +114,7 @@ export default function NewBusinessForm() {
               name="planCompleto"
               defaultChecked={state.values?.planCompleto === "on"}
             />
-            Subdominio Completo
+            Pedidos Online
           </label>
         </div>
         <p className="mt-1.5 text-sm text-stone-500">
