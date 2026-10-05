@@ -27,6 +27,7 @@ function Form({
   const [delivery, setDelivery] = useState("");
   const [payment, setPayment] = useState("");
   const [notes, setNotes] = useState("");
+  const [scheduledFor, setScheduledFor] = useState("");
   const [rows, setRows] = useState<Row[]>([{ ...EMPTY_ROW }]);
 
   const [saving, setSaving] = useState(false);
@@ -56,7 +57,14 @@ function Form({
     setFieldErrors({});
 
     try {
-      const result = await createManualOrderAction({ customerName, delivery, payment, notes, items });
+      const result = await createManualOrderAction({
+        customerName,
+        delivery,
+        payment,
+        notes,
+        items,
+        scheduledFor,
+      });
 
       if (!result.ok) {
         setError(result.error);
@@ -108,6 +116,21 @@ function Form({
         <div className="grid gap-3 sm:grid-cols-2">
           <input value={delivery} onChange={(e) => setDelivery(e.target.value)} className={inputClass} placeholder="Entrega (retiro, delivery…)" aria-label="Entrega" maxLength={35} />
           <input value={payment} onChange={(e) => setPayment(e.target.value)} className={inputClass} placeholder="Pago (efectivo, transferencia…)" aria-label="Pago" maxLength={35} />
+        </div>
+
+        <div>
+          <label htmlFor="mo-time" className="mb-1.5 block text-sm font-medium text-brand">
+            Para las (opcional)
+          </label>
+          <input
+            id="mo-time"
+            type="time"
+            value={scheduledFor}
+            onChange={(e) => setScheduledFor(e.target.value)}
+            className={inputClass}
+          />
+          <p className="mt-1 text-xs text-stone-500">Una hora de hoy. Vacío es lo antes posible.</p>
+          {fieldErrors.scheduledFor ? <p className="mt-1 text-sm text-red-600">{fieldErrors.scheduledFor}</p> : null}
         </div>
 
         <div>

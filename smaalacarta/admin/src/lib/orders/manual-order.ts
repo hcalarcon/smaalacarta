@@ -1,5 +1,7 @@
 import type { ValidationResult } from "@/lib/auth/validation";
 
+import { TIME_PATTERN } from "./scheduled";
+
 export type ManualOrderItem = {
   name: string;
   unitPrice: number;
@@ -12,9 +14,11 @@ export type ManualOrderInput = {
   payment: string;
   notes: string;
   items: ManualOrderItem[];
+  // "HH:MM" de hoy, o vacío (lo antes posible).
+  scheduledFor?: string;
 };
 
-type Field = "customerName" | "delivery" | "payment" | "notes" | "items";
+type Field = "customerName" | "delivery" | "payment" | "notes" | "items" | "scheduledFor";
 
 // Los mismos límites que `create_manual_order` en la base de datos.
 export const LIMITS = {
@@ -46,6 +50,10 @@ export function validateManualOrder(input: ManualOrderInput): ValidationResult<F
 
   if (input.notes.trim().length > LIMITS.notes) {
     errors.notes = `Usá hasta ${LIMITS.notes} caracteres.`;
+  }
+
+  if (input.scheduledFor && !TIME_PATTERN.test(input.scheduledFor)) {
+    errors.scheduledFor = "Ingresá una hora, por ejemplo 20:30.";
   }
 
   if (input.items.length < 1) {
