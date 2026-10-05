@@ -83,6 +83,16 @@ describe("createOrder — SEGUIMIENTO-1 y 7", () => {
     });
   });
 
+  it("manda la hora programada como p_scheduled_for, y sin ella no manda la clave (PUBLICO-30)", async () => {
+    const programado = fakeFetch({ code: "0123456789abcdef0123", number: 1, total: 1 });
+    await createOrder({ ...base, scheduledFor: "2026-01-05T23:30:00.000Z", fetchImpl: programado });
+    expect(JSON.parse(programado.mock.calls[0][1].body).p_scheduled_for).toBe("2026-01-05T23:30:00.000Z");
+
+    const ahora = fakeFetch({ code: "0123456789abcdef0123", number: 1, total: 1 });
+    await createOrder({ ...base, fetchImpl: ahora });
+    expect(JSON.parse(ahora.mock.calls[0][1].body)).not.toHaveProperty("p_scheduled_for");
+  });
+
   it("solo manda Authorization con claves en formato JWT", async () => {
     const jwt = fakeFetch({ code: "0123456789abcdef0123", number: 1, total: 1 });
     await createOrder({ ...base, key: "eyJhbGciOi.payload.firma", fetchImpl: jwt });
@@ -94,6 +104,8 @@ describe("createOrder — SEGUIMIENTO-1 y 7", () => {
     ["P0007", "invalid_delivery"],
     ["P0008", "invalid_payment"],
     ["P0009", "out_of_stock"],
+    ["P0011", "scheduling_disabled"],
+    ["P0012", "invalid_schedule"],
     ["P0003", "busy"],
     ["P0001", "unavailable"],
     ["P0002", "unavailable"],

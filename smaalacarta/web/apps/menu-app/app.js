@@ -243,6 +243,7 @@ async function init() {
 
     window.CONFIG = config;
     applyCheckoutOptions(config);
+    renderScheduleChoice();
     renderDeliveryNotice();
     renderTransferInfo();
     document.documentElement.dataset.template = config.template || "";
@@ -871,6 +872,8 @@ function closeAll() {
 }
 
 $("#btn-finalizar")?.addEventListener("click", () => {
+  // Las horas disponibles dependen de la hora de ahora: se calculan al abrir el checkout.
+  renderScheduleChoice();
   $("#carrito-panel")?.classList.remove("active");
   // El fondo sigue activo: tocar afuera del checkout lo cierra (closeAll).
   $("#checkout")?.classList.add("active");
@@ -913,7 +916,17 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
   const ahora = f.get("ahora");
   const horario = f.get("horario");
 
-  if (ahora) {
+  // Menú de Supabase con horas para elegir: la hora va al servidor como `scheduledFor` y el
+  // mensaje de WhatsApp la dice igual que siempre (PUBLICO-30).
+  const hourSelect = document.querySelector('#horario-programado select[name="hora"]');
+  const choosing = CHECKOUT?.scheduleChoice(window.CONFIG, Boolean(MENU_SOURCE)).mode === "slots";
+  const scheduledFor = choosing && f.get("cuando") === "schedule" ? f.get("hora") || null : null;
+
+  if (choosing) {
+    msg += scheduledFor
+      ? `⏰ Horario: ${hourSelect.selectedOptions[0].textContent}\n`
+      : `⏰ Horario: Ahora mismo\n`;
+  } else if (ahora) {
     msg += `⏰ Horario: Ahora mismo\n`;
   } else if (horario) {
     msg += `⏰ Horario: ${horario}\n`;
@@ -952,7 +965,8 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
       submit.textContent = tr("checkout.sending");
     }
 
-    const horarioNota = ahora ? "Horario: ahora mismo" : horario ? `Horario: ${horario}` : "";
+    // Solo el campo libre (menú sin horas para elegir) sigue yendo en las notas.
+    const horarioNota = choosing ? "" : ahora ? "Horario: ahora mismo" : horario ? `Horario: ${horario}` : "";
     const result = await ORDERS.createOrder({
       ...SUPABASE_CFG,
       slug: MENU_SOURCE.slug,
@@ -961,6 +975,7 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
       payment: f.get("pago") || "",
       notes: [horarioNota, f.get("notas") || ""].filter(Boolean).join(" · ").slice(0, 500),
       items,
+      scheduledFor,
     });
 
     if (submit) {
@@ -990,6 +1005,16 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     } else if (result.reason === "invalid_delivery" || result.reason === "invalid_payment") {
       WA_WINDOW?.discardPlaceholder(placeholder);
       alert(tr("error.optionsChanged"));
+      return;
+    } else if (result.reason === "scheduling_disabled") {
+      WA_WINDOW?.discardPlaceholder(placeholder);
+      alert(tr("error.schedulingDisabled"));
+      await refreshMenu();
+      return;
+    } else if (result.reason === "invalid_schedule") {
+      WA_WINDOW?.discardPlaceholder(placeholder);
+      alert(tr("error.invalidSchedule"));
+      renderScheduleChoice();
       return;
     } else if (result.reason === "unavailable") {
       WA_WINDOW?.discardPlaceholder(placeholder);
@@ -1126,6 +1151,52 @@ function applyCheckoutOptions(config) {
     }
   });
 }
+
+// Para cuándo es el pedido (PUBLICO-30): con un menú de Supabase que acepta pedidos
+// programados, "Lo antes posible" o "Programar" con las horas de hoy; si no los acepta, no hay
+// elección; con un menú de un JSON, el campo de hora libre de siempre.
+function renderScheduleChoice() {
+  if (!CHECKOUT) return;
+
+  const libre = document.querySelector("#horario-libre");
+  const programado = document.querySelector("#horario-programado");
+  const hour = programado?.querySelector('select[name="hora"]');
+  if (!libre || !programado || !hour) return;
+
+  const choice = CHECKOUT.scheduleChoice(window.CONFIG, Boolean(MENU_SOURCE));
+  libre.hidden = choice.mode !== "free";
+  programado.hidden = choice.mode !== "slots";
+  if (choice.mode !== "slots") return;
+
+  const previous = hour.value;
+  hour.querySelectorAll("option:not([disabled])").forEach((option) => option.remove());
+  choice.slots.forEach(({ value, iso }) => {
+    const option = document.createElement("option");
+    option.value = iso;
+    option.textContent = value;
+    hour.append(option);
+  });
+  // Si la hora que había elegido ya no está disponible, vuelve a elegir.
+  hour.value = choice.slots.some((slot) => slot.iso === previous) ? previous : "";
+
+  syncScheduleSelects();
+}
+
+// Las horas solo se muestran (y se exigen) al elegir "Programar".
+function syncScheduleSelects() {
+  const when = document.querySelector('#horario-programado select[name="cuando"]');
+  const hour = document.querySelector('#horario-programado select[name="hora"]');
+  if (!when || !hour) return;
+
+  const scheduling = when.value === "schedule";
+  hour.hidden = !scheduling;
+  hour.required = scheduling;
+  if (!scheduling) hour.value = "";
+}
+
+document
+  .querySelector('#horario-programado select[name="cuando"]')
+  ?.addEventListener("change", syncScheduleSelects);
 
 // Con un solo tipo de entrega no hay select: el aviso le dice al cliente cómo se entrega
 // (PUBLICO-22). Va con textContent y se vuelve a armar al cambiar de idioma.

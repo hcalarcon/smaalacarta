@@ -2,6 +2,8 @@
 // datos de transferencia mostrar al terminar el pedido (PUBLICO-20). Lógica pura: `app.js`
 // solo arma los selects y pinta.
 
+import { scheduledSlots } from "./scheduled-slots.js";
+
 export const DELIVERY = ["delivery", "retiro"];
 export const PAYMENT = ["efectivo", "transferencia", "tarjeta"];
 
@@ -50,4 +52,15 @@ export function transferDetails(config, payment) {
   if (!alias && !cbu) return null;
 
   return { ...(alias ? { alias } : {}), ...(cbu ? { cbu } : {}) };
+}
+
+// Cómo se elige para cuándo es el pedido (PUBLICO-30). "slots": "Lo antes posible" o
+// "Programar" con las horas de hoy; "none": solo lo antes posible; "free": el campo de hora
+// libre de siempre, para los menús que no vienen de Supabase.
+export function scheduleChoice(config, fromSupabase, now = new Date()) {
+  if (!fromSupabase) return { mode: "free" };
+  if (config?.programados !== true) return { mode: "none" };
+
+  const slots = scheduledSlots(config.horarios, config.anticipacionMin, now);
+  return slots.length ? { mode: "slots", slots } : { mode: "none" };
 }
