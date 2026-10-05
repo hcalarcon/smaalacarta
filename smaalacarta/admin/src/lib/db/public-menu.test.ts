@@ -282,6 +282,8 @@ describe("configuración — PUBLICO-4", () => {
       },
       entrega: ["delivery", "retiro"],
       pagos: ["efectivo", "transferencia", "tarjeta"],
+      programados: true,
+      anticipacionMin: 30,
     });
   });
 
