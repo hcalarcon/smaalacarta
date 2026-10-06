@@ -55,10 +55,10 @@ Desde `smaalacarta/admin/`. Cada uno lo hace con su proyecto de Supabase.
 - [x] [herni] `.env.local` con `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` (Project Settings → API Keys)
 - [x] [herni] Registrarse, iniciar sesión y crear una categoría desde el panel
 - [ ] [fede] Crear su proyecto de Supabase y repetir: `.env.supabase`, `db:link`, `db:push`, `db:types`, `.env.local`
-- [x] [herni] En Supabase, **Authentication → URL Configuration**: Site URL `http://localhost:3000` y en Redirect URLs `http://localhost:3000/admin/auth/callback` y, en producción, `https://www.smaalacarta.com.ar/admin/auth/callback` (el panel vive bajo `/admin`; sin esto los links de los mails de confirmación y de recuperación no vuelven a la app). Al publicar el admin, agregar también su dominio
-- [ ] [herni] Revisar el envío de mails de recuperación: el servicio de mail por defecto de Supabase tiene un límite muy bajo por hora; si no alcanza, configurar un SMTP propio (**Authentication → Emails → SMTP Settings**)
+- [x] ~~[herni] En Supabase, **Authentication → URL Configuration**: Site URL `http://localhost:3000` y en Redirect URLs `http://localhost:3000/admin/auth/callback` y, en producción, `https://www.smaalacarta.com.ar/admin/auth/callback` (el panel vive bajo `/admin`; sin esto los links de los mails de confirmación y de recuperación no vuelven a la app). Al publicar el admin, agregar también su dominio~~ *(ya no hace falta: se quitó la recuperación por mail y `/auth/callback`)*
+- [x] ~~[herni] Revisar el envío de mails de recuperación: el servicio de mail por defecto de Supabase tiene un límite muy bajo por hora; si no alcanza, configurar un SMTP propio (**Authentication → Emails → SMTP Settings**)~~ *(ya no hace falta: la recuperación la hace el superadmin)*
 - [ ] [herni] Un usuario sin negocio (creado desde **Authentication → Users**) ve `/sin-negocio` y puede cerrar sesión
-- [ ] [herni] Recuperar la contraseña desde `/recuperar`: llega el mail, el link abre `/restablecer` y la contraseña nueva funciona
+- [x] ~~[herni] Recuperar la contraseña desde `/recuperar`: llega el mail, el link abre `/restablecer` y la contraseña nueva funciona~~ *(reemplazado: ver ADMIN-AUTH-16)*
 - [ ] [herni] Con un segundo usuario de otro negocio: confirmar que no ve ni puede modificar datos del primero
 - [x] [herni] Probar el CRUD de productos (hoy tiene errores conocidos, ver Etapa 5)
 
@@ -76,7 +76,7 @@ Si algo falla al aplicar una migración: vaciar la base propia, corregir la migr
 
 ## Etapa 4 — Superadmin y alta de cuentas
 
-**Modelo.** No hay registro público: las cuentas y los negocios los crea el equipo de SMA a la Carta (el superadmin) desde `/superadmin`, y el resto de los usuarios solo puede entrar y recuperar su contraseña.
+**Modelo.** No hay registro público: las cuentas y los negocios los crea el equipo de SMA a la Carta (el superadmin) desde `/superadmin`, y el resto de los usuarios solo puede entrar; si olvidan la contraseña, se la pide al equipo.
 
 **Diseño elegido.** Tabla `super_admins` (un usuario que no pertenece a ningún negocio) y sección `/superadmin` dentro de este admin. **Sin mails**: como el mail por defecto de Supabase solo entrega a miembros del equipo del proyecto y permite 2 por hora, las cuentas se crean con una **contraseña temporal** que el superadmin ve una sola vez y le pasa a la persona; en su primer ingreso solo puede llegar a "Cambiar contraseña" y elige una propia. Si la olvida, el superadmin le restablece una temporal nueva. El superadmin usa RLS para ver y gestionar miembros; crear un negocio solo se puede con la función atómica `create_business_with_owner`. La clave de servicio se usa solo para crear cuentas y cambiar contraseñas, después de comprobar quién pide la acción. Requisitos en `docs/SPEC.md` (ADMIN-SUPER-1 a 11).
 
@@ -92,11 +92,11 @@ Hecho en el código:
 Pasos de Supabase:
 
 - [x] [herni] Apagar el registro público (**Authentication → Sign In / Providers → "Allow new users to sign up"**)
-- [x] [herni] Redirect URL `http://localhost:3000/admin/auth/callback` (antes sin `/admin`: ver ADMIN-AUTH-11; en producción, `https://www.smaalacarta.com.ar/admin/auth/callback`, a cargar en Supabase → Redirect URLs)
+- [x] ~~[herni] Redirect URL `http://localhost:3000/admin/auth/callback` (antes sin `/admin`: ver ADMIN-AUTH-11; en producción, `https://www.smaalacarta.com.ar/admin/auth/callback`, a cargar en Supabase → Redirect URLs)~~ *(ya no hace falta)*
 - [x] [herni] Cargar el primer superadmin (SQL en el encabezado de la migración)
 - [x] [herni] `SUPABASE_SERVICE_ROLE_KEY` en `admin/.env.local`
 - [x] [herni] **Probar a mano** (hecho: alta con contraseña temporal, ingreso y cambio de contraseña): entrar como superadmin (debe llevarte a `/superadmin` o mostrar el botón "Superadmin"), crear un negocio con un email alternativo, copiar la contraseña temporal, entrar en una ventana privada con esa cuenta (debe llevarte a "Elegí tu contraseña"), elegir una propia y ver su panel; restablecer su contraseña desde el detalle del negocio; y con un usuario común comprobar que `/superadmin` lo manda a `/dashboard`
-- [ ] [herni] Cuando haya un SMTP propio (plan pago o proveedor externo): reevaluar `/recuperar` para clientes y las plantillas de mail. Hasta entonces, la recuperación la hace el superadmin
+- [ ] [por asignar] Idea futura: si algún día hay un SMTP propio (plan pago o proveedor externo), reevaluar la recuperación por mail para clientes. Hasta entonces, la recuperación la hace el superadmin
 
 ## Etapa 5 — Que el admin compile
 

@@ -18,12 +18,6 @@ describe("authErrorMessage — ADMIN-AUTH-4", () => {
     );
   });
 
-  it("explica el límite de envíos de mail", () => {
-    expect(authErrorMessage({ code: "over_email_send_rate_limit" })).toMatch(
-      /esper/i,
-    );
-  });
-
   it("explica que la cuenta ya existe al registrarse", () => {
     expect(authErrorMessage({ code: "user_already_exists" })).toMatch(
       /ya (existe|est[aá])/i,
