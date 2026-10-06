@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 
 import type { Order } from "@/lib/db/orders";
 import { formatDateTime, trackingUrl } from "@/lib/orders/format";
+import PaymentBadge from "./PaymentBadge";
+import { isPaymentPending, PAYMENT_BLOCK_REASON } from "@/lib/orders/payment";
 import { orderBadge } from "@/lib/orders/scheduled";
 import { nextStatuses, STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
@@ -52,7 +54,8 @@ export default function OrderDetailDialog({
   if (!order) return null;
 
   const link = trackingUrl(slug, order.code);
-  const options = nextStatuses(order.status);
+  const options = nextStatuses(order.status, order.payment_status);
+  const blocked = isPaymentPending(order.payment_status);
 
   async function copy() {
     try {
@@ -80,6 +83,9 @@ export default function OrderDetailDialog({
             <h2 className="text-xl font-semibold text-brand">Pedido #{order.order_number}</h2>
             <p className="mt-1 text-sm text-stone-500">
               {order.customer_name || "Sin nombre"} · {label(order.status)}
+            </p>
+            <p className="mt-2 empty:hidden">
+              <PaymentBadge status={order.payment_status} />
             </p>
             {orderBadge(order) ? (
               <p className="mt-2 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
@@ -159,6 +165,7 @@ export default function OrderDetailDialog({
         {options.length > 0 ? (
           <div className="mt-6">
             <h3 className="text-sm font-semibold text-brand">Cambiar estado</h3>
+            {blocked ? <p className="mt-1 text-xs text-stone-500">{PAYMENT_BLOCK_REASON}</p> : null}
 
             {cancelling ? (
               <div className="mt-2 space-y-3 rounded-2xl border border-red-200 bg-red-50 p-4">

@@ -1,3 +1,5 @@
+import { isPaymentPending } from "./payment";
+
 // Estados de un pedido (ADMIN-PEDIDOS-1). La misma regla está en la base de datos
 // (`set_order_status`); los tests comparan la matriz completa.
 export const STATUSES = [
@@ -32,16 +34,18 @@ export function isFinal(status: string) {
 }
 
 // Desde un estado se puede pasar a uno posterior o cancelar; Entregado y Cancelado
-// no cambian.
-export function nextStatuses(from: string): OrderStatus[] {
+// no cambian. Con el pago de Mercado Pago pendiente o fallido solo se puede cancelar
+// (ADMIN-PEDIDOS-18).
+export function nextStatuses(from: string, paymentStatus?: string | null): OrderStatus[] {
   if (!isStatus(from) || isFinal(from)) return [];
+  if (isPaymentPending(paymentStatus)) return ["cancelled"];
 
   const later = FLOW.slice(FLOW.indexOf(from as (typeof FLOW)[number]) + 1);
   return [...later, "cancelled"];
 }
 
-export function canTransition(from: string, to: string) {
-  return (nextStatuses(from) as string[]).includes(to);
+export function canTransition(from: string, to: string, paymentStatus?: string | null) {
+  return (nextStatuses(from, paymentStatus) as string[]).includes(to);
 }
 
 const PRIMARY: Partial<Record<OrderStatus, { status: OrderStatus; label: string }>> = {

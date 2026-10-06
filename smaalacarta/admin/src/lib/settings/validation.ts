@@ -91,7 +91,8 @@ export const DEFAULT_SETTINGS: SettingsInput = {
   closedMessage: "",
   reopensOn: "",
   deliveryOptions: [...ALL_DELIVERY],
-  paymentOptions: [...ALL_PAYMENT],
+  // Mercado Pago no va de entrada: depende de las credenciales del negocio (MP-1).
+  paymentOptions: ALL_PAYMENT.filter((option) => option !== "mercadopago"),
   transferAlias: "",
   transferCbu: "",
   allowScheduledOrders: true,

@@ -16,6 +16,7 @@ let CHECKOUT = null;
 let THEME = null;
 let STOCK = null;
 let PREORDERS = null;
+let MERCADOPAGO = null;
 
 // Idioma de la interfaz (IDIOMA-1 a 4) y el menú tal como vino, sin las secciones armadas.
 let LANG = "es";
@@ -169,6 +170,7 @@ async function init() {
       themeLib,
       stockLib,
       preordersLib,
+      mercadopagoLib,
     ] = await Promise.all([
       import("/apps/menu-app/lib/hostname.js"),
       import("/apps/menu-app/lib/html.js"),
@@ -186,6 +188,7 @@ async function init() {
       import("/apps/menu-app/lib/theme.js"),
       import("/apps/menu-app/lib/stock.js"),
       import("/apps/menu-app/lib/preorders.js"),
+      import("/apps/menu-app/lib/mercadopago.js"),
     ]);
     PRICE = priceLib;
     WA_WINDOW = waWindow;
@@ -193,6 +196,7 @@ async function init() {
     THEME = themeLib;
     STOCK = stockLib;
     PREORDERS = preordersLib;
+    MERCADOPAGO = mercadopagoLib;
     COLORS = colorsLib;
     I18N = i18nLib;
     LANG = I18N.resolveLang({
@@ -913,12 +917,16 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     return;
   }
 
-  // En PC, la ventana de WhatsApp se abre ya, dentro del gesto del toque: después de un
-  // await el navegador la bloquearía (SEGUIMIENTO-14).
-  const placeholder = WA_WINDOW?.openPlaceholder(window) ?? null;
-
   const form = e.target;
   const f = new FormData(form);
+
+  // Con Mercado Pago el cliente sale a pagar y WhatsApp queda para después, desde el seguimiento
+  // (PUBLICO-36): no se abre la ventana.
+  const online = Boolean(MERCADOPAGO?.isMercadoPago(f.get("pago")));
+
+  // En PC, la ventana de WhatsApp se abre ya, dentro del gesto del toque: después de un
+  // await el navegador la bloquearía (SEGUIMIENTO-14).
+  const placeholder = online ? null : (WA_WINDOW?.openPlaceholder(window) ?? null);
 
   let total = 0;
 
@@ -949,7 +957,7 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     msg += `⏰ Horario: ${horario}\n`;
   }
 
-  msg += `💳 Pago: ${f.get("pago")}\n`;
+  msg += `💳 Pago: ${online ? "Mercado Pago" : f.get("pago")}\n`;
 
   const notas = f.get("notas");
   if (notas) msg += `📝 Notas: ${notas}\n`;
@@ -1049,8 +1057,15 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     // "invalid" y "unknown": se manda solo por WhatsApp.
   }
 
-  // Un pedido anticipado no tiene seguimiento: ni link ni panel para volver a verlo.
-  const link = saved && !preorder ? ORDERS.trackingLink(window.location.origin, saved.code, LANG) : "";
+  // Sin pedido guardado no hay nada que cobrar: Mercado Pago no tiene el respaldo de WhatsApp.
+  if (online && !saved) {
+    alert(tr("error.mpNotSaved"));
+    return;
+  }
+
+  // Un pedido anticipado no tiene seguimiento (salvo que se pague con Mercado Pago: el pago vuelve
+  // ahí, PUBLICO-38): ni link ni panel para volver a verlo.
+  const link = saved && (!preorder || online) ? ORDERS.trackingLink(window.location.origin, saved.code, LANG) : "";
   if (saved) msg = ORDERS.finalizeOrderMessage(msg, { number: saved.number, link });
 
   const whatsappUrl = ORDERS
@@ -1060,6 +1075,13 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
   cart = [];
   saveCart();
   updateCart();
+
+  if (saved && online) {
+    // El mensaje queda guardado para enviarlo por WhatsApp desde el seguimiento (SEGUIMIENTO-10).
+    ORDERS.rememberHandoff(window.localStorage, saved.code, whatsappUrl);
+    await payOnline(form, saved.code, link);
+    return;
+  }
 
   if (saved) {
     // Se anota el pedido antes de salir: si el navegador recarga la página al volver de
@@ -1086,6 +1108,26 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     closeAll();
   }
 });
+
+// Pedido con Mercado Pago ya guardado: pide el link de pago y redirige. El navegador solo manda el
+// código del pedido (los montos los arma el servidor). Si no se puede, avisa y lleva al
+// seguimiento, que ofrece reintentar y deja el pedido cancelable por el negocio (PUBLICO-36 y 37).
+async function payOnline(form, code, trackingLink) {
+  const submit = form.querySelector("button[type='submit']");
+  if (submit) {
+    submit.disabled = true;
+    submit.textContent = tr("checkout.sending");
+  }
+
+  const pay = await MERCADOPAGO.createPayment({ code });
+  if (pay.ok) {
+    window.location.href = pay.url;
+    return;
+  }
+
+  alert(tr("error.mpFailed"));
+  window.location.href = trackingLink;
+}
 
 function openWhatsAppUrl(placeholder, url) {
   if (WA_WINDOW) return WA_WINDOW.openWhatsApp(placeholder, url, window);
@@ -1163,6 +1205,9 @@ function applyCheckoutOptions(config) {
   document
     .querySelector('#form-pedido select[name="pago"]')
     ?.addEventListener("change", renderTransferInfo);
+  document
+    .querySelector('#form-pedido select[name="pago"]')
+    ?.addEventListener("change", syncSubmitLabel);
 
   [
     ["entrega", options.delivery],
@@ -1254,6 +1299,20 @@ function renderDeliveryNotice() {
       : notice.address
         ? tr("checkout.onlyPickupAt", { address: notice.address })
         : tr("checkout.onlyPickup");
+}
+
+// Con Mercado Pago el botón dice que se paga ahí y no que se envía por WhatsApp (PUBLICO-36). Un
+// botón desactivado (negocio cerrado, enviando) conserva su texto.
+function syncSubmitLabel() {
+  const submit = document.querySelector('#form-pedido button[type="submit"]');
+  const select = document.querySelector('#form-pedido select[name="pago"]');
+  if (!submit || !select || submit.disabled || !MERCADOPAGO) return;
+
+  if (MERCADOPAGO.isMercadoPago(select.value)) {
+    submit.textContent = tr("tracker.pay.button");
+  } else {
+    submit.textContent = currentPreorder(window.CONFIG) ? tr("preorder.submit") : tr("checkout.submit");
+  }
 }
 
 // Al elegir transferencia, el cliente ve ya los datos para pagar (PUBLICO-20).

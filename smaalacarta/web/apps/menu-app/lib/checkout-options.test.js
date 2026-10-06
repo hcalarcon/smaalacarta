@@ -46,6 +46,33 @@ describe("checkoutOptions — PUBLICO-19", () => {
   });
 });
 
+describe("Mercado Pago en el checkout — PUBLICO-36", () => {
+  it("se ofrece solo si config.pagos lo trae, al final", () => {
+    const r = checkoutOptions({ pagos: ["mercadopago", "efectivo"] });
+    expect(r.payment.options).toEqual(["efectivo", "mercadopago"]);
+    expect(r.payment.single).toBeNull();
+  });
+
+  it("sin la lista (JSON de demos) o sin Mercado Pago en ella, no se ofrece", () => {
+    for (const config of [undefined, {}, { pagos: null }, { pagos: [] }, { pagos: ["efectivo"] }]) {
+      expect(checkoutOptions(config).payment.options).not.toContain("mercadopago");
+    }
+  });
+
+  it("si es el único medio, se preselecciona", () => {
+    const r = checkoutOptions({ pagos: ["mercadopago"] });
+    expect(r.payment.options).toEqual(["mercadopago"]);
+    expect(r.payment.single).toBe("mercadopago");
+  });
+
+  it("tiene su texto en los tres idiomas", () => {
+    for (const lang of LANGS) {
+      expect(DICTIONARY[lang]["checkout.mercadopago"], lang).toBeTruthy();
+      expect(DICTIONARY[lang]["error.mpFailed"], lang).toBeTruthy();
+    }
+  });
+});
+
 describe("deliveryNotice — PUBLICO-22", () => {
   it("solo retiro: avisa que se retira en el local, con la dirección si la hay", () => {
     expect(deliveryNotice({ entrega: ["retiro"], direccion: "San Martín 100" })).toEqual({

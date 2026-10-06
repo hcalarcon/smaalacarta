@@ -11,6 +11,8 @@ export const PAYMENT_OPTIONS = [
   { key: "efectivo", label: "Efectivo" },
   { key: "transferencia", label: "Transferencia" },
   { key: "tarjeta", label: "Crédito o débito" },
+  // Solo se ofrece al cliente si SMA a la Carta cargó las credenciales del negocio (MP-1).
+  { key: "mercadopago", label: "Mercado Pago" },
 ] as const;
 
 export const ALL_DELIVERY = DELIVERY_OPTIONS.map((o) => o.key) as string[];

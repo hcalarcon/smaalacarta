@@ -539,6 +539,33 @@ ADMIN-CONFIG-10, ADMIN-PLAN-4). Migración `20261007000000_servicios_independien
       negocios con `plan_completo` que hoy usen `/menu.html` o `/pdf` sin tenerlos: al aplicar la
       migración esas direcciones dejan de responder
 
+## Etapa 6p — Cobro con Mercado Pago (checkout)
+
+Cobro con Checkout Pro. Fase 1: solo el negocio de Herni, con las credenciales cargadas a mano en
+`payment_credentials` (sin pantalla para dueños). Los endpoints viven en `admin/app/api/mp/` (la clave de
+servicio nunca va en `web/`); la confirmación llega por webhook, verificada contra la API de Mercado Pago y
+con la firma `x-signature`. Requisitos en `docs/SPEC.md` (MP-1 a 7, PUBLICO-35 a 38, SEGUIMIENTO-20 y 21,
+ADMIN-CONFIG-21, ADMIN-PEDIDOS-17 a 19). Migración `20261008000000_mercadopago.sql`. La puesta en marcha,
+paso a paso (cuenta, aplicación, credenciales, webhook y pruebas), está en [MERCADOPAGO.md](MERCADOPAGO.md).
+
+- [x] [herni] Migración: `payment_credentials` (RLS sin políticas), `orders.payment_status` y `mp_payment_id`,
+      `order_events.kind`, `mercadopago` en `payment_options`, `create_public_order`, `public_menu`,
+      `set_order_status`, `public_order_tracking` y `confirm_order_payment` (solo `service_role`)
+- [x] [herni] `admin/src/lib/mp/` (firma, CORS, freno, cliente de la API, reglas de `/create`, `/webhook` y
+      `/verify`) y los route handlers de `admin/app/api/mp/`
+- [x] [herni] Menú: opción "Mercado Pago" en el checkout (es/en/pt), redirección al link de pago y, en el
+      seguimiento, "Esperando el pago" con reintento, verificación periódica y "Pago confirmado"; variante de
+      pedido anticipado sin línea de tiempo
+- [x] [herni] Panel: etiqueta "Esperando pago" / "Pagado" / "Pago fallido" y avance bloqueado hasta el pago
+- [ ] [herni] `npm run db:types` después de aplicar la migración a la base propia (los tipos de esta rama se
+      escribieron a mano) y seguir la guía de [MERCADOPAGO.md](MERCADOPAGO.md) antes y después del PR
+- [ ] [por asignar] Ofrecer Mercado Pago a clientes con OAuth: una sola aplicación de SMA a la Carta y cada negocio
+      conecta su cuenta desde Configuración (un solo webhook y una sola clave)
+- [ ] [por asignar] Cancelar solos los pedidos que quedan en "Esperando pago" (hoy el negocio los cancela a mano)
+- [ ] [por asignar] El tablero no debería sonar ni contar como "Nuevo pedido" un pedido que todavía espera el pago
+- [ ] [por asignar] Cupos de pedidos por semana por negocio
+- [ ] [por asignar] ¿Más de un día de entrega elegible en los pedidos anticipados?
+
 ## Etapa 7 — Pendientes técnicos (backlog)
 
 - [ ] [por asignar] **Marketplace** ("un lugar donde encontrar de todo para

@@ -781,6 +781,12 @@ export default function SettingsForm({
               </label>
             ))}
           </div>
+          {paymentOptions.includes("mercadopago") ? (
+            <p className="mt-1.5 text-sm text-stone-500">
+              Mercado Pago le aparece a tus clientes solo cuando el equipo de SMA a la Carta termina de
+              conectar tu cuenta.
+            </p>
+          ) : null}
           {fieldErrors.paymentOptions ? (
             <p className="mt-1.5 text-sm text-red-600">{fieldErrors.paymentOptions}</p>
           ) : null}

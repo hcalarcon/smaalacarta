@@ -3,7 +3,7 @@
 
 import { cssUrl } from "../../menu-app/lib/html.js";
 import { headerBackground } from "../../menu-app/lib/info.js";
-import { LANGS, t } from "../../menu-app/lib/i18n.js";
+import { LANGS, LOCALES, t } from "../../menu-app/lib/i18n.js";
 
 const CODE = /^[0-9a-f]{20}$/;
 
@@ -154,4 +154,22 @@ export function scheduledNotice(programado, lang) {
   if (Number.isNaN(date.getTime())) return null;
 
   return t("tracker.scheduled", lang, { time: timeFormatter.format(date) });
+}
+
+// "Tu pedido es para el sábado, 10 de octubre" (PUBLICO-38): el día del pedido anticipado, en la
+// hora de Argentina y en el idioma del cliente. Sin fecha válida, null.
+export function preorderNotice(programado, lang) {
+  if (typeof programado !== "string") return null;
+
+  const date = new Date(programado);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const day = new Intl.DateTimeFormat(LOCALES[lang] ?? LOCALES.es, {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    timeZone: "America/Argentina/Buenos_Aires",
+  }).format(date);
+
+  return t("tracker.preorderFor", lang, { day });
 }

@@ -4,6 +4,7 @@ import {
   normalizeAlias,
   normalizeCbu,
   normalizeDeliveryPayment,
+  PAYMENT_OPTIONS,
   validateDeliveryPayment,
 } from "./payment";
 import { DEFAULT_SETTINGS, normalizeSettingsText, validateSettings } from "./validation";
@@ -107,6 +108,21 @@ describe("normalizeDeliveryPayment — ADMIN-CONFIG-12", () => {
       transferAlias: "",
       transferCbu: "",
     });
+  });
+});
+
+describe("Mercado Pago como medio de pago — ADMIN-CONFIG-21", () => {
+  it("es una opción más, pero no está en la configuración por defecto", () => {
+    expect(PAYMENT_OPTIONS.map((o) => o.key)).toContain("mercadopago");
+    expect(PAYMENT_OPTIONS.find((o) => o.key === "mercadopago")?.label).toBe("Mercado Pago");
+    expect(DEFAULT_SETTINGS.paymentOptions).not.toContain("mercadopago");
+  });
+
+  it("se puede elegir solo o junto a otros, y no pide alias ni CBU", () => {
+    expect(validateDeliveryPayment({ ...base, paymentOptions: ["mercadopago"] })).toEqual({ ok: true });
+    expect(
+      validateDeliveryPayment({ ...base, paymentOptions: ["efectivo", "mercadopago"], transferAlias: "", transferCbu: "" }),
+    ).toEqual({ ok: true });
   });
 });
 

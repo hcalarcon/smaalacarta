@@ -293,6 +293,39 @@ body {
   font-weight: 600;
 }
 
+.pay-btn {
+  display: block;
+  width: 100%;
+  margin-top: 0.9rem;
+  background: #009ee3;
+  color: #fff;
+  border: 0;
+  padding: 0.8rem 1rem;
+  border-radius: 0.75rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pay-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.pay-error {
+  margin-top: 0.6rem;
+  color: #b91c1c;
+  font-size: 0.9rem;
+}
+
+.pay-error:empty {
+  display: none;
+}
+
+.pay-paid .status-title {
+  color: #15803d;
+}
+
 .contact {
   display: block;
   text-align: center;

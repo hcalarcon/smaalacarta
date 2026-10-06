@@ -123,3 +123,24 @@ describe("boardColumn", () => {
     expect(boardColumn("volando")).toBe("cerrados");
   });
 });
+
+describe("pago pendiente — ADMIN-PEDIDOS-18", () => {
+  // Con Mercado Pago sin pagar (awaiting) o con el pago fallido, solo se puede cancelar: la misma
+  // regla que `set_order_status` en la base.
+  it.each(["awaiting", "failed"])("con el pago %s solo se puede cancelar, desde cualquier estado", (pago) => {
+    for (const desde of STATUSES) {
+      const esperado = isFinal(desde) ? [] : ["cancelled"];
+      expect(nextStatuses(desde, pago)).toEqual(esperado);
+
+      for (const hasta of STATUSES) {
+        expect(canTransition(desde, hasta, pago)).toBe(esperado.includes(hasta));
+      }
+    }
+  });
+
+  it.each(["paid", "not_required", undefined, null])("con el pago %s no cambia nada", (pago) => {
+    for (const desde of STATUSES) {
+      expect(nextStatuses(desde, pago)).toEqual(nextStatuses(desde));
+    }
+  });
+});

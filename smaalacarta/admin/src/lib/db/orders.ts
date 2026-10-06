@@ -10,6 +10,7 @@ export type OrderItem = {
 };
 
 export type OrderEvent = {
+  kind: string;
   status: string;
   created_at: string;
   note: string | null;
@@ -24,6 +25,7 @@ export type Order = {
   customer_name: string | null;
   delivery: string | null;
   payment: string | null;
+  payment_status: string;
   source: "web" | "manual";
   scheduled_for: string | null;
   preorder: boolean;
@@ -35,8 +37,8 @@ export type Order = {
 };
 
 const SELECT =
-  "id, order_number, status, total, notes, customer_name, delivery, payment, source, scheduled_for, preorder, code, created_at, updated_at, " +
-  "order_items(name, quantity, unit_price, sort_order), order_events(status, created_at, note)";
+  "id, order_number, status, total, notes, customer_name, delivery, payment, payment_status, source, scheduled_for, preorder, code, created_at, updated_at, " +
+  "order_items(name, quantity, unit_price, sort_order), order_events(kind, status, created_at, note)";
 
 // Los pedidos más recientes del negocio, con su detalle y su línea de tiempo. El RLS
 // deja ver solo los del negocio (ADMIN-PEDIDOS-2); el filtro por negocio es doble
@@ -58,9 +60,10 @@ export async function listOrders(businessId: string, limit = 150): Promise<Order
   return ((data ?? []) as unknown as Order[]).map((order) => ({
     ...order,
     order_items: [...(order.order_items ?? [])].sort((a, b) => a.sort_order - b.sort_order),
-    order_events: [...(order.order_events ?? [])].sort((a, b) =>
-      a.created_at.localeCompare(b.created_at),
-    ),
+    // Los eventos de pago (`kind = 'payment'`) no son pasos de la línea de tiempo.
+    order_events: (order.order_events ?? [])
+      .filter((event) => event.kind === "status")
+      .sort((a, b) => a.created_at.localeCompare(b.created_at)),
   }));
 }
 
