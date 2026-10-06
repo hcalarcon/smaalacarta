@@ -3,6 +3,9 @@
 import { useState } from "react";
 
 import TranslationsFields from "@/components/menu/TranslationsFields";
+import ProductOptionGroupsPicker, {
+  type PickerGroup,
+} from "@/components/menu/ProductOptionGroupsPicker";
 import ImageUploader from "@/components/ui/ImageUploader";
 import { Product } from "@/lib/db/products";
 import type { Translations } from "@/lib/menu/translations";
@@ -15,6 +18,11 @@ type ProductDialogProps = {
   onClose: () => void;
   // Categoría donde se crea un producto nuevo; al editar no se usa.
   categoryId: string | null;
+  // Grupos de opciones del negocio, los que ya tiene este producto (en su orden) y si está
+  // en alguna promoción (ADMIN-OPCIONES-13).
+  optionGroups: PickerGroup[];
+  initialGroupIds: string[];
+  inPromotion: boolean;
   onSubmit: (
     data: {
       id?: string;
@@ -26,6 +34,7 @@ type ProductDialogProps = {
       image_url: string | null;
       featured: boolean;
       sold_out: boolean;
+      option_group_ids: string[];
     } & Translations,
   ) => Promise<void>;
 };
@@ -36,6 +45,9 @@ function ProductDialogForm({
   businessId,
   onClose,
   categoryId,
+  optionGroups,
+  initialGroupIds,
+  inPromotion,
   onSubmit,
 }: ProductDialogProps) {
   const editing = mode === "edit" && initialData;
@@ -61,6 +73,7 @@ function ProductDialogForm({
     description_en: editing ? (initialData.description_en ?? "") : "",
     description_pt: editing ? (initialData.description_pt ?? "") : "",
   });
+  const [groupIds, setGroupIds] = useState(initialGroupIds);
   const [loading, setLoading] = useState(false);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -81,6 +94,7 @@ function ProductDialogForm({
         image_url: imageUrl || null,
         featured,
         sold_out: soldOut,
+        option_group_ids: groupIds,
         ...translations,
       });
     } finally {
@@ -191,6 +205,13 @@ function ProductDialogForm({
                 Sin stock
               </label>
             </div>
+
+            <ProductOptionGroupsPicker
+              groups={optionGroups}
+              value={groupIds}
+              onChange={setGroupIds}
+              inPromotion={inPromotion}
+            />
 
             <TranslationsFields
               value={translations}

@@ -1,3 +1,4 @@
+import { listRequiredGroupProductIds } from "@/lib/db/options";
 import { deleteRecord, updateRecord } from "@/lib/db/resources";
 import { sortByOrder } from "@/lib/menu/ordering";
 import type { PromotionType } from "@/lib/promotions/validation";
@@ -78,10 +79,13 @@ export async function getPromotion(businessId: string, id: string) {
 export async function listProductsForPromotions(businessId: string) {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("categories")
-    .select("id, name, sort_order, created_at, products(id, name, price, active, sort_order, created_at)")
-    .eq("business_id", businessId);
+  const [{ data, error }, requiredGroupProducts] = await Promise.all([
+    supabase
+      .from("categories")
+      .select("id, name, sort_order, created_at, products(id, name, price, active, sort_order, created_at)")
+      .eq("business_id", businessId),
+    listRequiredGroupProductIds(businessId),
+  ]);
 
   if (error) {
     throw new Error(error.message);
@@ -94,6 +98,8 @@ export async function listProductsForPromotions(businessId: string) {
       price: Number(product.price),
       active: product.active as boolean,
       categoryName: category.name as string,
+      // Un producto con opciones obligatorias no puede estar en una promoción (ADMIN-OPCIONES-14).
+      hasRequiredGroup: requiredGroupProducts.has(product.id as string),
     })),
   );
 }

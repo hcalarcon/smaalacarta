@@ -569,6 +569,28 @@ paso a paso (cuenta, aplicación, credenciales, webhook y pruebas), está en [ME
 - [ ] [por asignar] Cupos de pedidos por semana por negocio
 - [ ] [por asignar] ¿Más de un día de entrega elegible en los pedidos anticipados?
 
+## Etapa 6q — Opciones y extras de producto
+
+Grupos de opciones reutilizables por negocio ("Extras", "Sabores", "Toppings") asociados a
+productos. Esta etapa es la **parte A** (base de datos y panel); el menú público y los pedidos
+van en la parte B. Requisitos en `docs/SPEC.md` (ADMIN-OPCIONES-1 a 16). Migración
+`20261009000000_opciones_y_extras.sql`.
+
+- [x] [herni] Migración: `option_groups`, `options`, `product_option_groups` con RLS y bloqueo por
+      suspensión, `save_option_group`, `set_product_option_groups`, límites (30 opciones por grupo,
+      6 grupos por producto) y `save_promotion` con la regla de grupos obligatorios
+- [x] [herni] Admin: sección "Opciones y extras" en Menú, selector en el producto, chip "Con
+      opciones" y productos con grupo obligatorio deshabilitados en promociones
+- [ ] [herni] **Probar a mano**: crear un grupo (arrastrar opciones, precio extra, sin stock), asociarlo
+      a un producto, ver el chip "Con opciones" y comprobar que un producto con grupo obligatorio
+      aparece deshabilitado en el editor de promociones
+- [ ] [herni] Parte B: `public_menu` y `create_public_order` con opciones (el menú no debería
+      ofrecer un producto con grupo obligatorio sin pedir la elección), menú interactivo y estático
+- [ ] [por asignar] Traducir grupos y opciones (es/en/pt)
+- [ ] [por asignar] "Incluye N y el resto cuesta X"
+- [ ] [por asignar] Extras en los pedidos manuales del panel
+- [ ] [por asignar] Extras dentro de las promociones (hoy un producto con grupo obligatorio no puede estar en una)
+
 ## Etapa 7 — Pendientes técnicos (backlog)
 
 - [ ] [por asignar] **Marketplace** ("un lugar donde encontrar de todo para

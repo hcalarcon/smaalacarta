@@ -1,10 +1,10 @@
 import {
   getRecord,
   getRecords,
-  insertRecord,
   updateRecord,
   deleteRecord,
 } from "@/lib/db/resources";
+import { createClient } from "@/lib/supabase-server";
 import {
   toProductInsert,
   toProductUpdate,
@@ -23,6 +23,8 @@ export type Product = {
   image_url: string | null;
   featured: boolean;
   sold_out: boolean;
+  // Lo completa la página del menú: el producto tiene algún grupo de opciones (ADMIN-OPCIONES-13).
+  has_options?: boolean;
   name_en: string | null;
   name_pt: string | null;
   description_en: string | null;
@@ -43,7 +45,20 @@ export async function createProduct(
   businessId: string,
   payload: ProductInput & { category_id: string },
 ) {
-  await insertRecord("products", toProductInsert(businessId, payload));
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("products")
+    .insert(toProductInsert(businessId, payload))
+    .select("id")
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  // El id hace falta para asociarle grupos de opciones enseguida (ADMIN-OPCIONES-13).
+  return data.id;
 }
 
 export async function updateProduct(

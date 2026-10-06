@@ -28,6 +28,7 @@ import Field from "@/components/ui/Field";
 import FormAlert from "@/components/ui/FormAlert";
 import { moveItem } from "@/lib/menu/ordering";
 import { formatMoney, promotionPricing } from "@/lib/promotions/pricing";
+import { REQUIRED_GROUP_PROMO_REASON } from "@/lib/menu/options";
 import type { PromotionType } from "@/lib/promotions/validation";
 
 export type ProductOption = {
@@ -36,6 +37,8 @@ export type ProductOption = {
   price: number;
   active: boolean;
   categoryName: string;
+  // Tiene un grupo de opciones obligatorio: no se puede agregar a una promoción.
+  hasRequiredGroup?: boolean;
 };
 
 export type PromotionInitial = {
@@ -83,19 +86,25 @@ function PaletteItem({
   added: boolean;
   onAdd: () => void;
 }) {
+  const blocked = !!product.hasRequiredGroup;
+
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: PALETTE + product.id,
-    disabled: added,
+    disabled: added || blocked,
   });
 
   return (
     <li
       ref={setNodeRef}
       className={`flex items-center gap-2 rounded-xl border border-line bg-white px-2 py-2 ${
-        added ? "opacity-50" : ""
+        added || blocked ? "opacity-50" : ""
       } ${isDragging ? "opacity-40" : ""}`}
     >
-      {added ? <span className="w-8" /> : <DragHandle {...attributes} {...listeners} />}
+      {added || blocked ? (
+        <span className="w-8" />
+      ) : (
+        <DragHandle {...attributes} {...listeners} />
+      )}
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-stone-900">
@@ -105,13 +114,17 @@ function PaletteItem({
           )}
         </p>
         <p className="text-xs text-stone-500">{formatMoney(product.price)}</p>
+        {blocked ? (
+          <p className="text-xs text-amber-700">{REQUIRED_GROUP_PROMO_REASON}</p>
+        ) : null}
       </div>
 
       <button
         type="button"
         onClick={onAdd}
-        disabled={added}
+        disabled={added || blocked}
         aria-label={`Agregar ${product.name}`}
+        title={blocked ? REQUIRED_GROUP_PROMO_REASON : undefined}
         className="rounded-lg bg-brand-soft px-2.5 py-1 text-sm font-semibold text-brand transition hover:bg-line disabled:cursor-default disabled:opacity-40"
       >
         {added ? "✓" : "+"}
@@ -244,6 +257,9 @@ export default function PromotionEditor({
   );
 
   function addProduct(productId: string, index?: number) {
+    // También por si se suelta o se agrega por otro camino: la base lo rechazaría igual.
+    if (byId.get(productId)?.hasRequiredGroup) return;
+
     setSelectedIds((prev) => {
       if (prev.includes(productId)) return prev;
       const next = [...prev];

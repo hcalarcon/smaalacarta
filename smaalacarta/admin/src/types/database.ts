@@ -271,6 +271,100 @@ export type Database = {
           },
         ]
       }
+      option_groups: {
+        Row: {
+          active: boolean
+          allow_repeat: boolean
+          business_id: string
+          created_at: string
+          id: string
+          max_select: number
+          min_select: number
+          name: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          allow_repeat?: boolean
+          business_id: string
+          created_at?: string
+          id?: string
+          max_select?: number
+          min_select?: number
+          name: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          allow_repeat?: boolean
+          business_id?: string
+          created_at?: string
+          id?: string
+          max_select?: number
+          min_select?: number
+          name?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "option_groups_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      options: {
+        Row: {
+          active: boolean
+          business_id: string
+          created_at: string
+          group_id: string
+          id: string
+          name: string
+          price_delta: number
+          sold_out: boolean
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          active?: boolean
+          business_id: string
+          created_at?: string
+          group_id: string
+          id?: string
+          name: string
+          price_delta?: number
+          sold_out?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          active?: boolean
+          business_id?: string
+          created_at?: string
+          group_id?: string
+          id?: string
+          name?: string
+          price_delta?: number
+          sold_out?: boolean
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "options_group_id_business_id_fkey"
+            columns: ["group_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "option_groups"
+            referencedColumns: ["id", "business_id"]
+          },
+        ]
+      }
       order_counters: {
         Row: {
           business_id: string
@@ -500,6 +594,42 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "businesses"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      product_option_groups: {
+        Row: {
+          business_id: string
+          group_id: string
+          product_id: string
+          sort_order: number
+        }
+        Insert: {
+          business_id: string
+          group_id: string
+          product_id: string
+          sort_order?: number
+        }
+        Update: {
+          business_id?: string
+          group_id?: string
+          product_id?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "product_option_groups_group_id_business_id_fkey"
+            columns: ["group_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "option_groups"
+            referencedColumns: ["id", "business_id"]
+          },
+          {
+            foreignKeyName: "product_option_groups_product_id_business_id_fkey"
+            columns: ["product_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id", "business_id"]
           },
         ]
       }
@@ -784,6 +914,11 @@ export type Database = {
           opens_at: string
         }[]
       }
+      product_has_required_group: {
+        Args: { p_product_id: string }
+        Returns: boolean
+      }
+      product_in_promotion: { Args: { p_product_id: string }; Returns: boolean }
       public_business_pdf: {
         Args: { p_slug: string; p_via_path?: boolean }
         Returns: Json
@@ -824,6 +959,19 @@ export type Database = {
         }
         Returns: undefined
       }
+      save_option_group: {
+        Args: {
+          p_active: boolean
+          p_allow_repeat: boolean
+          p_business_id: string
+          p_id: string
+          p_max_select: number
+          p_min_select: number
+          p_name: string
+          p_options: Json
+        }
+        Returns: string
+      }
       save_promotion: {
         Args: {
           p_active: boolean
@@ -840,6 +988,14 @@ export type Database = {
       }
       set_order_status: {
         Args: { p_note?: string; p_order_id: string; p_status: string }
+        Returns: undefined
+      }
+      set_product_option_groups: {
+        Args: {
+          p_business_id: string
+          p_group_ids: string[]
+          p_product_id: string
+        }
         Returns: undefined
       }
     }

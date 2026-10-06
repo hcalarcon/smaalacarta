@@ -881,6 +881,8 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   `external_reference` sea un pedido de ese negocio y llama a `confirm_order_payment` con el monto de la API
   (`approved` → `paid`, `rejected` o `cancelled` → `failed`, los demás se ignoran). Responde 200 rápido y no
   confía en el redirect de vuelta.
+- **MP-4b** Un pago que Mercado Pago no encuentra (404) se ignora con 200; los demás fallos de consulta
+  responden 5xx para que reintente.
 - **MP-5** `GET /admin/api/mp/verify?code=` busca en Mercado Pago los pagos del pedido
   (`external_reference`) y confirma si hay uno aprobado; no consulta más de una vez cada pocos segundos por
   pedido. Devuelve solo el estado de pago.
@@ -962,6 +964,59 @@ Cubierto por: `src/lib/db/promotions.test.ts` (ADMIN-PROMOS-2, 3, 5 y 6) y
 - **ADMIN-PROMOS-5** Un negocio solo ve, edita y borra sus propias promociones.
 - **ADMIN-PROMOS-6** Borrar un producto lo saca de sus promociones; borrar una
   promoción no borra sus productos.
+
+---
+
+## ADMIN-OPCIONES — Opciones y extras de producto
+
+*Parte A (base de datos y panel); el menú público y los pedidos van en una parte B.
+Aplicado por `supabase/migrations/*_opciones_y_extras.sql`, `src/lib/menu/options.ts`,
+`src/lib/db/options.ts`, `app/dashboard/menu`. Cubierto por: `src/lib/db/options.test.ts`
+(ADMIN-OPCIONES-1 a 11), `src/lib/menu/options.test.ts` (reglas puras, ADMIN-OPCIONES-1 a 6)
+`src/components/menu/options-ui.test.tsx` (ADMIN-OPCIONES-13 y 14) y
+`app/dashboard/menu/actions/options.test.ts` (ADMIN-OPCIONES-15 y 16).*
+
+Un grupo de opciones ("Extras", "Sabores", "Toppings") se define una vez por negocio y se
+asocia a varios productos. Un helado con 2 toppings incluidos es un grupo con máximo 2 y
+precios en 0; no existe "incluye N y el resto cuesta X".
+
+- **ADMIN-OPCIONES-1** Un grupo tiene nombre, `min_select` (0 = opcional, 1 o más = obligatorio),
+  `max_select` (mayor o igual que el mínimo y que 1), `allow_repeat` (elegir la misma opción más
+  de una vez) y `active`; la base rechaza (23514) uno que no cumple y el panel dice por qué.
+- **ADMIN-OPCIONES-2** Una opción tiene nombre, `price_delta` (0 o más; nunca negativo), `active`
+  y `sold_out`.
+- **ADMIN-OPCIONES-3** Guardar un grupo con sus opciones es atómico (`save_option_group`): si algo
+  falla no queda un grupo a medias. Al editar, las opciones con `id` se conservan, las que ya no
+  vienen se borran y el orden es el enviado.
+- **ADMIN-OPCIONES-4** Un grupo tiene de 1 a 30 opciones.
+- **ADMIN-OPCIONES-5** Si el grupo no permite repetir, su mínimo no puede superar la cantidad de
+  opciones (sería imposible de cumplir).
+- **ADMIN-OPCIONES-6** Un producto tiene hasta 6 grupos, sin repetir; se asocian con
+  `set_product_option_groups`, que reemplaza los anteriores y guarda el orden elegido.
+- **ADMIN-OPCIONES-7** Un negocio solo ve, crea, edita y borra sus propios grupos, opciones y
+  asociaciones, y no puede asociar un grupo o un producto de otro negocio.
+- **ADMIN-OPCIONES-8** Borrar un grupo borra sus opciones y sus asociaciones con productos; borrar
+  una opción o un producto no toca nada más.
+- **ADMIN-OPCIONES-9** Reordenar los grupos guarda la posición de cada uno (0, 1, 2…) solo dentro
+  del negocio.
+- **ADMIN-OPCIONES-10** Un producto con algún grupo obligatorio no puede estar en una promoción:
+  la base rechaza (P0014, con un mensaje claro) asociar un grupo obligatorio a un producto que está
+  en una promoción, agregar a una promoción un producto con grupo obligatorio, y volver obligatorio
+  un grupo asociado a un producto que está en una promoción.
+- **ADMIN-OPCIONES-11** Un negocio suspendido no puede crear ni editar grupos, opciones ni
+  asociaciones (mismo bloqueo que el resto del panel).
+- **ADMIN-OPCIONES-12** En Menú, la sección "Opciones y extras" lista los grupos (con su regla,
+  p. ej. "Obligatorio: elegí 1" o "Opcional, hasta 3"), permite crearlos, editarlos y borrarlos con
+  confirmación, y reordenarlos arrastrando. El diálogo del grupo permite ordenar las opciones
+  arrastrando, y fijar su precio extra, si están activas y si están sin stock.
+- **ADMIN-OPCIONES-13** El formulario del producto tiene un selector múltiple "Opciones y extras"
+  con el orden de los grupos (hasta 6), y la tarjeta del producto muestra el chip "Con opciones" si
+  tiene algún grupo.
+- **ADMIN-OPCIONES-14** En el editor de promociones, un producto con grupo obligatorio aparece
+  deshabilitado y con el motivo, y no se puede agregar.
+- **ADMIN-OPCIONES-15** Todo esto solo existe si el negocio tiene menú digital (`hasDigitalMenu()`).
+- **ADMIN-OPCIONES-16** Las acciones del servidor toman el negocio de la sesión
+  (`requireBusiness()`) y rechazan un `businessId` distinto.
 
 ---
 
