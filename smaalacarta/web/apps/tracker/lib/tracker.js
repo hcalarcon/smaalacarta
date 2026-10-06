@@ -173,3 +173,37 @@ export function preorderNotice(programado, lang) {
 
   return t("tracker.preorderFor", lang, { day });
 }
+
+// Una línea del detalle del pedido (SEGUIMIENTO-23): "2 × Helado", el total de la línea y, debajo,
+// las opciones que se eligieron (`+ Frutilla ×2`). Todo con textContent: ni el nombre del producto
+// ni el de las opciones se interpretan nunca como HTML.
+export function itemRow(doc, item, money) {
+  const li = doc.createElement("li");
+
+  const name = doc.createElement("span");
+  name.textContent = `${item.cantidad} × ${item.nombre}`;
+
+  const price = doc.createElement("span");
+  price.textContent = money.format(Number(item.precio) * Number(item.cantidad));
+
+  li.append(name, price);
+
+  const options = Array.isArray(item.opciones)
+    ? item.opciones.filter((o) => o && typeof o === "object" && typeof o.nombre === "string" && o.nombre !== "")
+    : [];
+
+  if (options.length > 0) {
+    const list = doc.createElement("ul");
+    list.className = "item-opciones";
+
+    for (const option of options) {
+      const row = doc.createElement("li");
+      row.textContent = `+ ${option.nombre}${Number(option.cantidad) > 1 ? ` ×${option.cantidad}` : ""}`;
+      list.appendChild(row);
+    }
+
+    li.appendChild(list);
+  }
+
+  return li;
+}

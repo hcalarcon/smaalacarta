@@ -340,3 +340,91 @@ describe("renderStaticMenuPage con productos sin stock — ESTATICO-7", () => {
     expect(html).not.toContain("etiqueta-agotado");
   });
 });
+
+describe("opciones y extras de solo lectura — ESTATICO-8", () => {
+  const hamburguesa = {
+    nombre: "Hamburguesa",
+    precio: 1000,
+    opciones: [
+      {
+        id: "g1", nombre: "Punto", min: 1, max: 1, repetir: false,
+        opciones: [{ id: "a", nombre: "Jugoso", precio: 0 }, { id: "b", nombre: "Cocido", precio: 0 }],
+      },
+      {
+        id: "g2", nombre: "Extras", min: 0, max: 2, repetir: false,
+        opciones: [
+          { id: "c", nombre: "Queso", precio: 500 },
+          { id: "d", nombre: "Panceta", precio: 800 },
+          { id: "e", nombre: "Huevo", precio: 0, agotado: true },
+        ],
+      },
+      { id: "g3", nombre: "Salsas", min: 0, max: 1, repetir: false, opciones: [{ id: "f", nombre: "Mayo", precio: 50 }] },
+      {
+        id: "g4", nombre: "Sabores", min: 2, max: 4, repetir: true,
+        opciones: [{ id: "h", nombre: "Frutilla", precio: 0 }],
+      },
+    ],
+  };
+
+  const render = (items, extra = {}) =>
+    renderStaticMenuPage({ ...base, ...extra, menu: { categorias: [{ nombre: "Comidas", items }] } });
+  const textOf = (html) => new DOMParser().parseFromString(html, "text/html");
+  const lines = (html) =>
+    [...textOf(html).querySelectorAll(".opciones-estatico")].map((p) => p.textContent.replace(/\s+/g, " ").trim());
+
+  it("lista bajo el producto cada grupo con sus opciones y el extra de las que cuestan", () => {
+    const l = lines(render([hamburguesa]));
+
+    expect(l[1]).toBe("Extras: Queso +$500 · Panceta +$800 · Huevo (Sin stock) (hasta 2)");
+  });
+
+  it("dice qué hay que elegir en los grupos obligatorios y no pone '+$0'", () => {
+    const l = lines(render([hamburguesa]));
+
+    expect(l[0]).toBe("Punto: Jugoso · Cocido (elegí 1)");
+    expect(l[3]).toBe("Sabores: Frutilla (elegí de 2 a 4)");
+    expect(l.join(" ")).not.toContain("+$0");
+  });
+
+  it("un grupo opcional de un solo lugar no lleva aclaración", () => {
+    expect(lines(render([hamburguesa]))[2]).toBe("Salsas: Mayo +$50");
+  });
+
+  it("es solo texto: sin carrito, sin casillas ni botones para elegir", () => {
+    const doc = textOf(render([hamburguesa]));
+
+    expect(doc.querySelector("input, select, button")).toBeNull();
+    expect(doc.querySelector("#carrito-panel, .btn-add")).toBeNull();
+  });
+
+  it("un producto sin opciones no muestra nada extra", () => {
+    expect(lines(render([{ nombre: "Café", precio: 1000 }, { nombre: "Té", precio: 1, opciones: [] }]))).toEqual([]);
+  });
+
+  it("los nombres de grupos y opciones se escapan", () => {
+    const html = render([
+      {
+        nombre: "X", precio: 1,
+        opciones: [
+          { id: "g", nombre: "<b>Grupo</b>", min: 0, max: 2, repetir: false, opciones: [{ id: "o", nombre: '<img src=x onerror="a()">', precio: 5 }] },
+        ],
+      },
+    ]);
+
+    expect(html).not.toContain("<img src=x");
+    expect(html).not.toContain("<b>Grupo</b>");
+    expect(html).toContain("&lt;b&gt;Grupo&lt;/b&gt;");
+    expect(textOf(html).querySelector(".opciones-estatico").textContent).toContain('<img src=x onerror="a()">');
+  });
+
+  it("los textos se traducen: 'hasta' y 'elegí' en inglés y portugués", () => {
+    const enPage = renderStaticMenuPage({ ...base, lang: "en", menu: { categorias: [{ nombre: "Comidas", items: [hamburguesa] }] } });
+    const ptPage = renderStaticMenuPage({ ...base, lang: "pt", menu: { categorias: [{ nombre: "Comidas", items: [hamburguesa] }] } });
+
+    expect(lines(enPage)[0]).toBe("Punto: Jugoso · Cocido (pick 1)");
+    expect(lines(enPage)[1]).toContain("(up to 2)");
+    expect(lines(enPage)[1]).toContain("Huevo (Out of stock)");
+    expect(lines(ptPage)[0]).toBe("Punto: Jugoso · Cocido (escolha 1)");
+    expect(lines(ptPage)[1]).toContain("(até 2)");
+  });
+});

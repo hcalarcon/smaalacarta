@@ -543,3 +543,291 @@ html {
   background: #fff;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
 }
+
+/* OPCIONES Y EXTRAS (PUBLICO-45, 46 y ESTATICO-8). La estructura es común; cada plantilla pone su
+   forma (radios, tipografía, botón) en su styles.css. Los colores salen de las variables de la
+   plantilla (--card, --text, --muted, --border), así que se leen igual en claro y en oscuro.
+   --opc-accent es el color de marca para texto y bordes; --opc-bg y --opc-on son el fondo del
+   botón y el texto que se lee sobre él (lib/colors.js). */
+body.no-scroll-opciones {
+  overflow: hidden;
+}
+
+.opciones-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  animation: opciones-fade 0.2s ease-out;
+}
+
+.opciones-hoja {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 560px;
+  max-height: 88vh;
+  background: var(--card, #fff);
+  color: var(--text, #111);
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.25);
+  animation: opciones-subir 0.25s ease-out;
+  outline: none;
+}
+
+@supports (height: 1dvh) {
+  .opciones-hoja {
+    max-height: 88dvh;
+  }
+}
+
+@keyframes opciones-subir {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@keyframes opciones-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.opciones-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.1rem 0.75rem;
+  border-bottom: 1px solid var(--border, #eee);
+}
+
+.opciones-titulo {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.opciones-cerrar {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--muted, #6b7280);
+}
+
+.opciones-cerrar:hover {
+  background: var(--border, #eee);
+}
+
+.opciones-grupos {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.25rem 1.1rem 0.5rem;
+}
+
+.opciones-grupo {
+  border: none;
+  margin: 0;
+  padding: 0.9rem 0 0.4rem;
+  min-width: 0;
+}
+
+.opciones-grupo + .opciones-grupo {
+  border-top: 1px solid var(--border, #eee);
+}
+
+.opciones-grupo-cabecera {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  width: 100%;
+  margin-bottom: 0.35rem;
+  padding: 0;
+  float: left;
+}
+
+.opciones-grupo-titulo {
+  font-weight: 700;
+}
+
+.opciones-regla {
+  flex: none;
+  font-size: 0.78rem;
+  color: var(--muted, #6b7280);
+}
+
+.opciones-regla.obligatoria {
+  font-weight: 700;
+  color: var(--opc-accent, var(--brand-ink, var(--primary, #111)));
+}
+
+.opciones-grupo-cabecera + .opciones-opcion {
+  clear: both;
+}
+
+.opciones-opcion {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 44px;
+  padding: 0.35rem 0;
+  cursor: pointer;
+}
+
+.opciones-opcion input[type="radio"],
+.opciones-opcion input[type="checkbox"] {
+  flex: none;
+  width: 1.2rem;
+  height: 1.2rem;
+  margin: 0;
+  accent-color: var(--opc-accent, var(--brand, var(--primary, #111)));
+  cursor: pointer;
+}
+
+.opcion-nombre {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.opcion-precio {
+  flex: none;
+  font-size: 0.9rem;
+  color: var(--muted, #6b7280);
+}
+
+.opciones-opcion.agotada {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.opciones-opcion.agotada input {
+  cursor: not-allowed;
+}
+
+.opcion-agotada {
+  flex: none;
+  padding: 0.1rem 0.5rem;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.opcion-contador {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.opcion-contador button {
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border, #ddd);
+  border-radius: 50%;
+  font-size: 1.2rem;
+  line-height: 1;
+  color: var(--text, #111);
+}
+
+.opcion-menos,
+.opcion-mas {
+  flex: none;
+}
+
+.opcion-contador button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.opcion-cantidad {
+  min-width: 1.4rem;
+  text-align: center;
+  font-weight: 700;
+}
+
+.opciones-pie {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1.1rem calc(0.85rem + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--border, #eee);
+  background: var(--card, #fff);
+}
+
+.opciones-total {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.opciones-agregar {
+  flex: none;
+  min-width: 140px;
+  min-height: 46px;
+  padding: 0.6rem 1.4rem;
+  border-radius: 12px;
+  font-weight: 700;
+  background: var(--opc-bg, var(--brand, var(--primary, #111)));
+  color: var(--opc-on, var(--on-brand, #fff));
+}
+
+.opciones-agregar:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Lo elegido, bajo el nombre del producto en el carrito. */
+.item-opciones {
+  list-style: none;
+  margin: 0.15rem 0 0.25rem;
+  padding: 0;
+  font-size: 0.8rem;
+  color: var(--muted, #6b7280);
+}
+
+.item-opciones li::before {
+  content: "+ ";
+}
+
+/* Menú estático: las opciones de un producto, de solo lectura. */
+.opciones-estatico {
+  margin-top: 0.3rem;
+  font-size: 0.8rem;
+  line-height: 1.35;
+  color: var(--muted, #6b7280);
+}
+
+@media (min-width: 700px) {
+  .opciones-overlay {
+    align-items: center;
+  }
+
+  .opciones-hoja {
+    border-radius: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .opciones-overlay,
+  .opciones-hoja {
+    animation: none;
+  }
+}

@@ -17,6 +17,9 @@ let THEME = null;
 let STOCK = null;
 let PREORDERS = null;
 let MERCADOPAGO = null;
+let OPTIONS = null;
+let OPTIONS_SHEET = null;
+let CART_LINES = null;
 
 // Idioma de la interfaz (IDIOMA-1 a 4) y el menú tal como vino, sin las secciones armadas.
 let LANG = "es";
@@ -171,6 +174,9 @@ async function init() {
       stockLib,
       preordersLib,
       mercadopagoLib,
+      optionsLib,
+      optionsSheetLib,
+      cartLinesLib,
     ] = await Promise.all([
       import("/apps/menu-app/lib/hostname.js"),
       import("/apps/menu-app/lib/html.js"),
@@ -189,7 +195,13 @@ async function init() {
       import("/apps/menu-app/lib/stock.js"),
       import("/apps/menu-app/lib/preorders.js"),
       import("/apps/menu-app/lib/mercadopago.js"),
+      import("/apps/menu-app/lib/options.js"),
+      import("/apps/menu-app/lib/options-sheet.js"),
+      import("/apps/menu-app/lib/cart-lines.js"),
     ]);
+    OPTIONS = optionsLib;
+    OPTIONS_SHEET = optionsSheetLib;
+    CART_LINES = cartLinesLib;
     PRICE = priceLib;
     WA_WINDOW = waWindow;
     CHECKOUT = checkoutLib;
@@ -642,14 +654,11 @@ function renderMenu(menu) {
 
       const btn = d.querySelector(".btn-add");
 
-      if (btn) btn.onclick = () => {
-        addToCart(p);
-
-        // 🎯 animación producto
+      // Animaciones de "agregado" del producto y del botón.
+      const confirmAdded = () => {
         d.classList.add("adding");
         setTimeout(() => d.classList.remove("adding"), 350);
 
-        // 🎯 animación botón
         btn.classList.add("added");
         btn.textContent = "✓";
 
@@ -657,6 +666,26 @@ function renderMenu(menu) {
           btn.classList.remove("added");
           btn.textContent = "+";
         }, 600);
+      };
+
+      if (btn) btn.onclick = () => {
+        // Un producto con grupos de opciones abre la hoja para elegir (PUBLICO-45); uno sin grupos
+        // se agrega directo, como siempre.
+        if (OPTIONS.hasOptions(p)) {
+          OPTIONS_SHEET.openOptionsSheet({
+            item: p,
+            t: tr,
+            formatPrice: PRICE.formatPrice,
+            onAdd: (chosen) => {
+              addToCart(p, chosen);
+              confirmAdded();
+            },
+          });
+          return;
+        }
+
+        addToCart(p);
+        confirmAdded();
       };
 
       grid.appendChild(d); // 👈 clave
@@ -715,17 +744,12 @@ function initSearch() {
 }
 
 // CARRITO
-function addToCart(p) {
+// `chosen` son las opciones elegidas (PUBLICO-46): la misma elección suma cantidad y otra elección
+// es otra línea; sin opciones se agrupa como siempre (por id, o por nombre en los menús de JSON).
+function addToCart(p, chosen = []) {
   if (!p) return;
 
-  // Con id (menú de Supabase) se agrupa por id; los menús de JSON, por nombre.
-  const existente = cart.find((i) => (p.id ? i.id === p.id : i.nombre === p.nombre));
-
-  if (existente) {
-    existente.cantidad++;
-  } else {
-    cart.push({ ...p, cantidad: 1 });
-  }
+  cart = CART_LINES.addLine(cart, p, chosen);
 
   saveCart();
   updateCart();
@@ -751,10 +775,15 @@ function updateCart() {
     const d = document.createElement("div");
     d.className = "carrito-item";
 
+    // Una línea con opciones muestra lo elegido y su subtotal con los extras (PUBLICO-46).
+    const conOpciones = Array.isArray(i.elegidas) && i.elegidas.length > 0;
+    const precioLinea = conOpciones ? CART_LINES.lineSubtotal(i) : i.precio;
+
     d.innerHTML = `
       <div class="item-info">
         <h4>${HTML.escapeHtml(i.nombre || "")}</h4>
-        <span class="item-precio">$${HTML.escapeHtml(PRICE.formatPrice(i.precio))}</span>
+        ${conOpciones ? `<ul class="item-opciones"></ul>` : ""}
+        <span class="item-precio">$${HTML.escapeHtml(PRICE.formatPrice(precioLinea))}</span>
       </div>
       <div class="item-controls">
         <button class="btn-minus"><svg width="16" height="16" viewBox="0 0 24 24">
@@ -775,6 +804,15 @@ function updateCart() {
         </button>
       </div>
     `;
+
+    if (conOpciones) {
+      const lista = d.querySelector(".item-opciones");
+      for (const option of i.elegidas) {
+        const li = document.createElement("li");
+        li.textContent = option.cantidad > 1 ? `${option.nombre} ×${option.cantidad}` : option.nombre;
+        lista.appendChild(li);
+      }
+    }
 
     const btnMinus = d.querySelector(".btn-minus");
     const btnPlus = d.querySelector(".btn-plus");
@@ -964,15 +1002,10 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
 
   msg += `\n🧾 *Detalle del pedido:*\n\n`;
 
-  cart.forEach((i) => {
-    const precio = i.precio || 0; // importante si algún item no lo tiene
-    const subtotal = precio * i.cantidad;
-
-    total += subtotal;
-
-    msg += `• ${i.nombreEs ?? i.nombre} x${i.cantidad}\n`;
-    msg += `  $${PRICE.formatPrice(precio)} c/u → $${PRICE.formatPrice(subtotal)}\n\n`;
-  });
+  // Cada ítem con sus opciones debajo; el precio por unidad y el subtotal ya incluyen los extras.
+  const detail = CART_LINES.whatsappDetail(cart, PRICE.formatPrice);
+  msg += detail.text;
+  total += detail.total;
 
   msg += `━━━━━━━━━━━━━━\n`;
   msg += `💰 *TOTAL: $${PRICE.formatPrice(total)}*\n\n`;
@@ -1026,6 +1059,12 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     } else if (result.reason === "out_of_stock") {
       WA_WINDOW?.discardPlaceholder(placeholder);
       alert(tr("error.outOfStock"));
+      await refreshMenu();
+      return;
+    } else if (result.reason === "invalid_options") {
+      // Las opciones cambiaron desde que se armó el carrito: se vuelve a pedir el menú y se limpia.
+      WA_WINDOW?.discardPlaceholder(placeholder);
+      alert(tr("error.invalidOptions"));
       await refreshMenu();
       return;
     } else if (result.reason === "invalid_delivery" || result.reason === "invalid_payment") {

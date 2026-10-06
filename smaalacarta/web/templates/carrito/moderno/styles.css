@@ -863,3 +863,33 @@ body {
     transform: translate(-50%, 0);
   }
 }
+
+/* OPCIONES Y EXTRAS (PUBLICO-45, 46 y ESTATICO-8): la hoja y las líneas del carrito con la forma
+   de moderno. Todo sale de las variables de la plantilla, así que sirve en claro y en oscuro. */
+.opciones-hoja {
+  border-radius: 24px 24px 0 0;
+}
+
+.opciones-agregar {
+  background: linear-gradient(135deg, var(--brand), var(--brand-2));
+  color: var(--on-brand-mix, #fff);
+  border-radius: 12px;
+}
+
+.opciones-regla.obligatoria {
+  color: var(--brand-ink);
+}
+
+.opcion-contador button:hover:not(:disabled) {
+  border-color: var(--brand);
+}
+
+:root[data-tema="oscuro"] .opciones-hoja {
+  border: 1px solid var(--border);
+  border-bottom: none;
+}
+
+/* El color de marca oscurecido no se lee sobre el fondo oscuro: ahí va el texto de la plantilla. */
+:root[data-tema="oscuro"] .opciones-regla.obligatoria {
+  color: var(--text);
+}
