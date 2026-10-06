@@ -539,6 +539,14 @@ ADMIN-CONFIG-10, ADMIN-PLAN-4). Migración `20261007000000_servicios_independien
       negocios con `plan_completo` que hoy usen `/menu.html` o `/pdf` sin tenerlos: al aplicar la
       migración esas direcciones dejan de responder
 
+## Etapa 6p — Cobro con Mercado Pago (checkout)
+
+Cobro con Checkout Pro. Fase 1: solo el negocio de Herni. La puesta en marcha, paso a paso
+(cuenta, aplicación, credenciales, webhook y pruebas), está en [MERCADOPAGO.md](MERCADOPAGO.md).
+
+- [ ] [herni] Seguir la guía de [MERCADOPAGO.md](MERCADOPAGO.md) antes del PR y con el PR mergeado
+- [ ] [por asignar] Conexión por OAuth: una sola aplicación de SMA a la Carta, cada negocio conecta su cuenta desde Configuración (un solo webhook y una sola clave). Hasta entonces, cada negocio nuevo se configura a mano según la guía
+
 ## Etapa 7 — Pendientes técnicos (backlog)
 
 - [ ] [por asignar] **Marketplace** ("un lugar donde encontrar de todo para
