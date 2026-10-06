@@ -2,6 +2,8 @@
 
 import type { Order } from "@/lib/db/orders";
 import { timeAgo } from "@/lib/orders/format";
+import PaymentBadge from "./PaymentBadge";
+import { isPaymentPending, PAYMENT_BLOCK_REASON } from "@/lib/orders/payment";
 import { orderBadge } from "@/lib/orders/scheduled";
 import { primaryAction, STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
@@ -24,6 +26,7 @@ export default function OrderCard({
   const action = primaryAction(order.status);
   const extra = order.order_items.length - SHOWN_ITEMS;
   const scheduled = orderBadge(order);
+  const blocked = isPaymentPending(order.payment_status);
 
   return (
     <article className="rounded-xl border border-line bg-white p-3 shadow-sm">
@@ -49,6 +52,12 @@ export default function OrderCard({
         </p>
       ) : null}
 
+      {order.payment_status && order.payment_status !== "not_required" ? (
+        <p className="mt-2">
+          <PaymentBadge status={order.payment_status} />
+        </p>
+      ) : null}
+
       <ul className="mt-2 space-y-0.5 text-xs text-stone-600">
         {order.order_items.slice(0, SHOWN_ITEMS).map((item, index) => (
           <li key={index} className="truncate">
@@ -68,7 +77,8 @@ export default function OrderCard({
           <button
             type="button"
             onClick={() => onAdvance(action.status)}
-            disabled={busy}
+            disabled={busy || blocked}
+            title={blocked ? PAYMENT_BLOCK_REASON : undefined}
             className="flex-1 rounded-lg bg-brand px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60"
           >
             {busy ? "Guardando…" : action.label}
@@ -82,6 +92,8 @@ export default function OrderCard({
           Detalle
         </button>
       </div>
+
+      {blocked ? <p className="mt-1.5 text-[11px] text-stone-500">{PAYMENT_BLOCK_REASON}</p> : null}
     </article>
   );
 }

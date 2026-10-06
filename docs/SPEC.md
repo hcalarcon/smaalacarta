@@ -224,6 +224,20 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   cierra. En tema oscuro, los controles nativos (el reloj del horario, la lista del select) se
   dibujan oscuros, y en `moderno` los botones + y − de
   cantidad usan el color del negocio, no negro. Solo se prueba mirándolo en el navegador.
+- **PUBLICO-35** `public_menu` incluye `mercadopago` en `config.pagos` solo si el negocio lo tiene entre sus
+  medios de pago **y** tiene credenciales cargadas y habilitadas (MP-1); nada de `payment_credentials` sale
+  por `public_menu`.
+- **PUBLICO-36** El checkout ofrece "Mercado Pago" (español, inglés y portugués) solo si `config.pagos` lo
+  trae (`lib/checkout-options.js`). Con ese medio guarda el pedido como siempre, pide el link de pago a
+  `/admin/api/mp/create` (nunca manda montos) y redirige a él, sin abrir WhatsApp. Si pedir el link falla,
+  avisa y lleva al seguimiento del pedido, que se puede cancelar.
+- **PUBLICO-37** El seguimiento de un pedido con Mercado Pago en "awaiting" o "failed" dice "Esperando el
+  pago" (o "El pago no se completó") con un botón para reintentar, y mientras esté en "awaiting" consulta
+  `/admin/api/mp/verify` al cargar y cada pocos segundos; al pasar a "paid" dice "Pago confirmado". Todo
+  con `textContent`.
+- **PUBLICO-38** El seguimiento de un pedido anticipado pagado con Mercado Pago muestra solo "Pago
+  confirmado" o "Esperando el pago" y "Tu pedido es para el <día>" (hora de Argentina), sin línea de
+  tiempo de estados; mismo flujo de verificación y reintento.
 
 ## BUSQUEDA — Buscador
 
@@ -319,6 +333,11 @@ llegando al negocio por WhatsApp.
   pedido anticipado exige que el cierre no sea temporal (`P0005`), guarda `preorder = true` y
   `scheduled_for` = el inicio de la próxima apertura. Cuando el negocio abre, el pedido normal
   funciona como siempre (SEGUIMIENTO-9).
+- **SEGUIMIENTO-20** `create_public_order` con `p_payment = 'mercadopago'` rechaza (`invalid_payment`, `P0008`)
+  si el negocio no tiene credenciales habilitadas (MP-1) y, si no, crea el pedido con
+  `payment_status = 'awaiting'`; con cualquier otro medio queda `not_required`.
+- **SEGUIMIENTO-21** `public_order_tracking` entrega `pago` (`awaiting`, `paid` o `failed`) solo en los
+  pedidos con Mercado Pago y `anticipado: true` en los anticipados; nunca credenciales ni el id del pago.
 
 ## PWA — Instalar el menú en el celular
 
@@ -778,6 +797,8 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   "Aceptar pedidos anticipados" y, por cada día con horario, un selector de día de corte y la hora
   (visibles solo con la casilla tildada); los errores salen en español junto al campo. Solo se
   prueba mirándolo en el navegador.
+- **ADMIN-CONFIG-21** "Mercado Pago" es un medio de pago más en "Entrega y pago" (`payment_options`
+  acepta `mercadopago`). Que se ofrezca depende de las credenciales (MP-1), que no se cargan desde el panel.
 
 ## ADMIN-PEDIDOS — Pedidos
 
@@ -827,6 +848,46 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   en los anticipados el distintivo con la fecha ("Para el sáb 10/10", hora de Argentina) en lugar
   de la hora, y ordena los Nuevos por esa fecha junto con los programados
   (`src/lib/orders/scheduled.ts`).
+- **ADMIN-PEDIDOS-17** Un pedido guarda su estado de pago (`orders.payment_status`: `not_required`,
+  `awaiting`, `paid`, `failed`) y el id del pago (`mp_payment_id`). El tablero y el detalle muestran
+  "Esperando pago", "Pagado" o "Pago fallido" en los pedidos con Mercado Pago (`src/lib/orders/payment.ts`).
+- **ADMIN-PEDIDOS-18** Mientras un pedido es con Mercado Pago y no está pagado, solo se puede cancelar:
+  `set_order_status` lo exige (`P0004`), `canTransition` y `nextStatuses` lo reflejan y el botón de avanzar
+  queda deshabilitado con el motivo.
+- **ADMIN-PEDIDOS-19** El pedido manual no usa Mercado Pago: el diálogo no lo ofrece y el pedido queda
+  `not_required`.
+
+## MP — Cobro con Mercado Pago (Checkout Pro)
+
+*Aplicado por `supabase/migrations/*_mercadopago.sql`, `src/lib/mp/`, `app/api/mp/` y, en `web/`,
+`apps/menu-app/lib/mercadopago.js` y `apps/tracker`. Cubierto por `src/lib/db/mercadopago.test.ts`
+(contra Postgres real), `src/lib/mp/*.test.ts` y los tests de `web/`. Guía de puesta en marcha:
+[MERCADOPAGO.md](MERCADOPAGO.md).*
+
+- **MP-1** Las credenciales de cada negocio viven en `payment_credentials` (token de acceso, secreto del
+  webhook, `enabled`), con RLS activo y sin políticas: ni `anon` ni `authenticated` la leen ni escriben;
+  solo la clave de servicio. Se cargan a mano en SQL; no hay pantalla para dueños.
+- **MP-2** `confirm_order_payment(pedido, id de pago, estado, monto)` solo la ejecuta `service_role`. Con
+  `paid` marca el pedido pagado, guarda el id del pago y registra un evento, pero no confirma si el monto
+  no coincide con `orders.total`. Con `failed` marca el pago fallido. Es idempotente y un pago `paid` nunca
+  vuelve a `failed`.
+- **MP-3** `POST /admin/api/mp/create` recibe solo el código del pedido, exige que sea con Mercado Pago, que
+  esté en `awaiting` o `failed` y que el negocio tenga credenciales habilitadas, y crea la preferencia con
+  los ítems de `order_items` (el precio sale del servidor), `external_reference` = id del pedido,
+  `back_urls` a `https://<slug>.smaalacarta.com.ar/pedido/<código>`, `auto_return` `approved` y
+  `notification_url` con `?b=<business_id>`. Devuelve solo `init_point`.
+- **MP-4** `POST /admin/api/mp/webhook?b=` valida la firma `x-signature` con el secreto de ese negocio antes
+  de hacer nada (firma inválida: 401); luego consulta el pago a la API de Mercado Pago, comprueba que su
+  `external_reference` sea un pedido de ese negocio y llama a `confirm_order_payment` con el monto de la API
+  (`approved` → `paid`, `rejected` o `cancelled` → `failed`, los demás se ignoran). Responde 200 rápido y no
+  confía en el redirect de vuelta.
+- **MP-5** `GET /admin/api/mp/verify?code=` busca en Mercado Pago los pagos del pedido
+  (`external_reference`) y confirma si hay uno aprobado; no consulta más de una vez cada pocos segundos por
+  pedido. Devuelve solo el estado de pago.
+- **MP-6** Los endpoints responden a CORS solo para `https://*.smaalacarta.com.ar` (y `localhost` fuera de
+  producción); cualquier otro origen no recibe `Access-Control-Allow-Origin`.
+- **MP-7** El token y el secreto de un negocio nunca salen de la base ni aparecen en una respuesta, un log o
+  un mensaje de error.
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 

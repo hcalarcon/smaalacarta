@@ -19,6 +19,9 @@ const SUPABASE_STUBS = `
   create role authenticated nologin;
   grant usage on schema public, auth to anon, authenticated;
   grant execute on function auth.uid() to anon, authenticated;
+  -- La clave de servicio de Supabase: saltea el RLS (solo la usan los endpoints de admin/).
+  create role service_role nologin bypassrls;
+  grant usage on schema public, auth to service_role;
 
   -- Storage: lo mínimo que usan las migraciones y las políticas de los buckets.
   create schema storage;
@@ -68,7 +71,7 @@ export async function createTestDb(): Promise<TestDb> {
 
   // Supabase da estos permisos por defecto; lo que limita es el RLS.
   await db.exec(
-    "grant all on all tables in schema public to anon, authenticated; grant all on all tables in schema storage to anon, authenticated;",
+    "grant all on all tables in schema public to anon, authenticated, service_role; grant all on all tables in schema storage to anon, authenticated;",
   );
 
   return db;
@@ -93,6 +96,21 @@ export async function asUser(
       rows: result.rows,
       affected: result.affectedRows ?? result.rows.length,
     };
+  } catch (error) {
+    const e = error as Error & { code?: string };
+    return { ok: false, error: e.message, code: e.code };
+  } finally {
+    await db.exec("reset role");
+  }
+}
+
+// Ejecuta `sql` como la clave de servicio (`service_role`), como lo hacen los endpoints de admin/.
+export async function asService(db: TestDb, sql: string): Promise<QueryResult> {
+  await db.exec("set role service_role");
+
+  try {
+    const result = await db.query<Record<string, unknown>>(sql);
+    return { ok: true, rows: result.rows, affected: result.affectedRows ?? result.rows.length };
   } catch (error) {
     const e = error as Error & { code?: string };
     return { ok: false, error: e.message, code: e.code };

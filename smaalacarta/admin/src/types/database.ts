@@ -300,6 +300,7 @@ export type Database = {
           changed_by: string | null
           created_at: string
           id: string
+          kind: string
           note: string | null
           order_id: string
           status: string
@@ -309,6 +310,7 @@ export type Database = {
           changed_by?: string | null
           created_at?: string
           id?: string
+          kind?: string
           note?: string | null
           order_id: string
           status: string
@@ -318,6 +320,7 @@ export type Database = {
           changed_by?: string | null
           created_at?: string
           id?: string
+          kind?: string
           note?: string | null
           order_id?: string
           status?: string
@@ -406,9 +409,11 @@ export type Database = {
           customer_name: string | null
           delivery: string | null
           id: string
+          mp_payment_id: string | null
           notes: string | null
           order_number: string
           payment: string | null
+          payment_status: string
           preorder: boolean
           scheduled_for: string | null
           source: string
@@ -424,9 +429,11 @@ export type Database = {
           customer_name?: string | null
           delivery?: string | null
           id?: string
+          mp_payment_id?: string | null
           notes?: string | null
           order_number: string
           payment?: string | null
+          payment_status?: string
           preorder?: boolean
           scheduled_for?: string | null
           source?: string
@@ -442,9 +449,11 @@ export type Database = {
           customer_name?: string | null
           delivery?: string | null
           id?: string
+          mp_payment_id?: string | null
           notes?: string | null
           order_number?: string
           payment?: string | null
+          payment_status?: string
           preorder?: boolean
           scheduled_for?: string | null
           source?: string
@@ -457,6 +466,38 @@ export type Database = {
             foreignKeyName: "orders_business_id_fkey"
             columns: ["business_id"]
             isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_credentials: {
+        Row: {
+          business_id: string
+          created_at: string
+          enabled: boolean
+          mp_access_token: string
+          mp_webhook_secret: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          enabled?: boolean
+          mp_access_token: string
+          mp_webhook_secret: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          enabled?: boolean
+          mp_access_token?: string
+          mp_webhook_secret?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_credentials_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
             referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
@@ -672,6 +713,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      confirm_order_payment: {
+        Args: {
+          p_amount: number
+          p_order_id: string
+          p_payment_id: string
+          p_status: string
+        }
+        Returns: string
+      }
       create_business_with_owner: {
         Args: {
           p_name: string

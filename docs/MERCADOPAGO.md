@@ -17,6 +17,9 @@ Con el PR mergeado
 
 - [ ] Aplicar la migración a la base propia (apagar el servidor antes).
 - [ ] INSERT en `payment_credentials` (access token, secret del webhook, `enabled = true`) desde el SQL editor de Supabase.
+  Con marcadores (los valores reales los pegás vos, nunca en el repo ni en el chat):
+  `insert into payment_credentials (business_id, mp_access_token, mp_webhook_secret, enabled) values ('<business_id>', '<access token>', '<secret del webhook>', true);`
+  La clave secreta del webhook la da Mercado Pago al guardar la URL del paso siguiente: si todavía no la tenés, insertá con un valor provisorio y `enabled = false`, y después `update payment_credentials set mp_webhook_secret = '<secret del webhook>', enabled = true where business_id = '<business_id>';`.
 - [ ] En la aplicación de Mercado Pago, Notificaciones: URL `https://www.smaalacarta.com.ar/admin/api/mp/webhook?b=<business_id>`, evento "Pagos", y guardar la clave secreta.
 - [ ] En Configuración del negocio: tildar "Mercado Pago" como medio de pago.
 
