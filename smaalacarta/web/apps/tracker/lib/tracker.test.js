@@ -7,6 +7,7 @@ import {
   langSearch,
   pageTitle,
   parseTrackingCode,
+  preorderNotice,
   safeColor,
   scheduledNotice,
   statusView,
@@ -257,5 +258,23 @@ describe("scheduledNotice — SEGUIMIENTO-18", () => {
     expect(scheduledNotice(null, "es")).toBeNull();
     expect(scheduledNotice("no es una fecha", "es")).toBeNull();
     expect(scheduledNotice(12345, "es")).toBeNull();
+  });
+});
+
+describe("preorderNotice — PUBLICO-38", () => {
+  it("dice el día del pedido anticipado, en hora de Argentina y en cada idioma", () => {
+    // 15:00 UTC = 12:00 en Argentina: sábado 10 de octubre de 2026.
+    expect(preorderNotice("2026-10-10T15:00:00Z", "es")).toMatch(/^Tu pedido es para el sábado.*10 de octubre/);
+    expect(preorderNotice("2026-10-10T15:00:00Z", "en")).toMatch(/^Your order is for Saturday.*October 10|10 October/);
+    expect(preorderNotice("2026-10-10T15:00:00Z", "pt")).toMatch(/^Seu pedido é para sábado.*10 de outubro/);
+  });
+
+  it("usa el día de Argentina, no el de UTC", () => {
+    // 01:00 UTC del domingo = 22:00 del sábado en Argentina.
+    expect(preorderNotice("2026-10-11T01:00:00Z", "es")).toMatch(/sábado/);
+  });
+
+  it("sin fecha válida no hay aviso", () => {
+    for (const value of [null, undefined, "", "no es una fecha", 5]) expect(preorderNotice(value, "es")).toBeNull();
   });
 });

@@ -22,10 +22,20 @@ function group(all, enabled) {
   return { options, single: options.length === 1 ? options[0] : null };
 }
 
+// Mercado Pago (PUBLICO-36) solo se ofrece si `config.pagos` lo trae: sin la lista (JSON de demos)
+// se ofrecen los tres de siempre, nunca un cobro en línea.
+function paymentGroup(enabled) {
+  if (!Array.isArray(enabled)) return group(PAYMENT, enabled);
+
+  const picked = [...PAYMENT.filter((option) => enabled.includes(option)), ...(enabled.includes("mercadopago") ? ["mercadopago"] : [])];
+  const options = picked.length ? picked : PAYMENT;
+  return { options, single: options.length === 1 ? options[0] : null };
+}
+
 export function checkoutOptions(config) {
   return {
     delivery: group(DELIVERY, config?.entrega),
-    payment: group(PAYMENT, config?.pagos),
+    payment: paymentGroup(config?.pagos),
   };
 }
 

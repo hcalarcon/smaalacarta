@@ -1,6 +1,7 @@
 // Página de seguimiento de un pedido (SEGUIMIENTO-8). Todo lo que viene de la base se
 // muestra con textContent: nunca se arma HTML con datos del pedido ni del negocio.
 import { LANGS, LOCALES, resolveLang, t } from "/apps/menu-app/lib/i18n.js";
+import { createPayment, shouldVerify, trackerLayout, verifyPayment } from "/apps/menu-app/lib/mercadopago.js";
 import { markHandoffSent, pendingHandoff } from "/apps/menu-app/lib/orders.js";
 import { whatsappDigits } from "/apps/menu-app/lib/phone.js";
 import { SUPABASE } from "/apps/menu-app/supabase-config.js";
@@ -11,6 +12,7 @@ import {
   langSearch,
   pageTitle,
   parseTrackingCode,
+  preorderNotice,
   scheduledNotice,
   statusView,
   stepLabels,
@@ -18,6 +20,8 @@ import {
 } from "/apps/tracker/lib/tracker.js";
 
 const REFRESH_MS = 15000;
+// Con el pago por Mercado Pago pendiente se consulta más seguido (PUBLICO-37).
+const VERIFY_MS = 5000;
 
 const app = document.getElementById("app");
 const code = parseTrackingCode(window.location.pathname, window.location.search);
@@ -130,6 +134,50 @@ function applyTheme(negocio) {
   return theme;
 }
 
+// El estado del pago con Mercado Pago (PUBLICO-37 y 38): esperando, fallido o confirmado. Con
+// pago pendiente o fallido hay un botón para pagar o reintentar. Todo con textContent.
+function paymentCard(data, pay) {
+  const titles = { awaiting: "awaitingTitle", failed: "failedTitle", paid: "paidTitle" };
+  const texts = { awaiting: "awaitingText", failed: "failedText", paid: "paidText" };
+
+  const card = el("section", { className: `card pay pay-${pay.state}` }, [
+    el("p", { className: "status-title", text: t(`tracker.pay.${titles[pay.state]}`, lang) }),
+    el("p", { className: "status-text", text: t(`tracker.pay.${texts[pay.state]}`, lang) }),
+  ]);
+
+  // Pedido anticipado: lo único que dice el seguimiento, además del pago, es para qué día es.
+  if (pay.preorder) {
+    const day = preorderNotice(data.pedido.programado, lang);
+    if (day) card.appendChild(el("p", { className: "status-scheduled", text: day }));
+  }
+
+  if (pay.state === "paid") return card;
+
+  const error = el("p", { className: "pay-error", attrs: { role: "alert" } });
+  const button = el("button", {
+    className: "pay-btn",
+    text: t(pay.state === "failed" ? "tracker.pay.retry" : "tracker.pay.button", lang),
+    attrs: { type: "button" },
+  });
+
+  button.addEventListener("click", async () => {
+    button.disabled = true;
+    error.textContent = "";
+
+    const result = await createPayment({ code });
+    if (result.ok) {
+      window.location.href = result.url;
+      return;
+    }
+
+    button.disabled = false;
+    error.textContent = t("tracker.pay.error", lang);
+  });
+
+  card.append(button, error);
+  return card;
+}
+
 function render(data, { stale }) {
   current = { kind: "data", data, stale };
   const view = statusView(data.pedido.estado, lang);
@@ -171,6 +219,11 @@ function render(data, { stale }) {
     );
   }
 
+  // Pago con Mercado Pago. En un pedido anticipado es lo único que se muestra del estado: sin
+  // pasos ni línea de tiempo (PUBLICO-38). Un pedido cancelado ya no se cobra.
+  const layout = trackerLayout(data.pedido);
+  if (layout.pay) nodes.push(paymentCard(data, layout.pay));
+
   // Estado actual y camino recorrido.
   const status = el("section", { className: `card ${view.cancelled ? "status-cancelled" : ""}` }, [
     el("p", { className: "status-title", text: view.title }),
@@ -196,7 +249,7 @@ function render(data, { stale }) {
   if (scheduled) {
     status.insertBefore(el("p", { className: "status-scheduled", text: scheduled }), status.firstChild);
   }
-  nodes.push(status);
+  if (layout.status) nodes.push(status);
 
   // Detalle.
   if (Array.isArray(data.items) && data.items.length > 0) {
@@ -222,7 +275,7 @@ function render(data, { stale }) {
   }
 
   // Línea de tiempo.
-  const events = timeline(data.eventos, lang);
+  const events = layout.timeline ? timeline(data.eventos, lang) : [];
   if (events.length > 0) {
     nodes.push(
       el("section", { className: "card" }, [
@@ -306,6 +359,32 @@ async function start() {
   }
 
   let keepGoing = await refresh();
+
+  // Mercado Pago: al cargar (el cliente vuelve de pagar y el aviso puede tardar) y cada pocos
+  // segundos mientras el pago esté pendiente, se pide al servidor que lo confirme; si cambió, se
+  // vuelve a leer el pedido (PUBLICO-37).
+  let verifying = false;
+  async function verifyNow() {
+    if (verifying || !last || !shouldVerify(last.pedido)) return;
+
+    verifying = true;
+    try {
+      const result = await verifyPayment({ code });
+      if (result.ok && result.pago !== last.pedido.pago) await refresh();
+    } finally {
+      verifying = false;
+    }
+  }
+
+  verifyNow();
+  const payTimer = setInterval(() => {
+    if (last && !shouldVerify(last.pedido)) {
+      clearInterval(payTimer);
+      return;
+    }
+
+    if (document.visibilityState === "visible") verifyNow();
+  }, VERIFY_MS);
 
   const timer = setInterval(async () => {
     if (!keepGoing) {
