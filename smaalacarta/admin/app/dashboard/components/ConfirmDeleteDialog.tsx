@@ -21,7 +21,7 @@ export default function ConfirmDeleteDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl">
+      <div className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl bg-white p-6 shadow-xl supports-[height:1dvh]:max-h-[90dvh]">
         <h2 className="text-xl font-semibold text-brand">{title}</h2>
 
         <p className="mt-2 text-sm text-stone-500">{description}</p>

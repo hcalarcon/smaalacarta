@@ -76,7 +76,7 @@ export default function OrderDetailDialog({
         aria-modal="true"
         aria-label={`Pedido ${order.order_number}`}
         onClick={(event) => event.stopPropagation()}
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"
+        className="max-h-[90vh] supports-[height:1dvh]:max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"
       >
         <div className="flex items-start justify-between gap-4">
           <div>

@@ -15,17 +15,19 @@ type ProductDialogProps = {
   onClose: () => void;
   // Categoría donde se crea un producto nuevo; al editar no se usa.
   categoryId: string | null;
-  onSubmit: (data: {
-    id?: string;
-    category_id: string | null;
-    name: string;
-    description?: string;
-    price: number;
-    active: boolean;
-    image_url: string | null;
-    featured: boolean;
-    sold_out: boolean;
-  } & Translations) => Promise<void>;
+  onSubmit: (
+    data: {
+      id?: string;
+      category_id: string | null;
+      name: string;
+      description?: string;
+      price: number;
+      active: boolean;
+      image_url: string | null;
+      featured: boolean;
+      sold_out: boolean;
+    } & Translations,
+  ) => Promise<void>;
 };
 
 function ProductDialogForm({
@@ -93,9 +95,9 @@ function ProductDialogForm({
     >
       <div
         onClick={(event) => event.stopPropagation()}
-        className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl"
+        className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl supports-[height:1dvh]:max-h-[90dvh]"
       >
-        <div className="mb-4">
+        <div className="shrink-0 p-5 pb-3">
           <h2 className="text-xl font-semibold text-brand">
             {mode === "edit" ? "Editar producto" : "Nuevo producto"}
           </h2>
@@ -107,91 +109,96 @@ function ProductDialogForm({
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
-            <div>
-              <label className="mb-1 block text-sm font-medium">Nombre</label>
+        <form onSubmit={handleSubmit} className="flex min-h-0 flex-1 flex-col">
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-5 py-1">
+            <div className="grid gap-4 sm:grid-cols-[1fr_auto]">
+              <div>
+                <label className="mb-1 block text-sm font-medium">Nombre</label>
 
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full rounded-2xl border border-line-strong px-4 py-2.5"
-                placeholder="Ej. Coca Cola"
-                required
+                <input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full rounded-2xl border border-line-strong px-4 py-2.5"
+                  placeholder="Ej. Coca Cola"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="mb-1 block text-sm font-medium">Precio</label>
+
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  className="w-full rounded-2xl border border-line-strong px-4 py-2.5 sm:w-32"
+                  placeholder="3500"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm font-medium">
+                  Descripción
+                </label>
+
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full rounded-2xl border border-line-strong px-4 py-2.5"
+                  rows={2}
+                  placeholder="Descripción opcional"
+                />
+              </div>
+
+              <ImageUploader
+                businessId={businessId}
+                label="Imagen (opcional)"
+                value={imageUrl}
+                onChange={setImageUrl}
               />
             </div>
 
-            <div>
-              <label className="mb-1 block text-sm font-medium">Precio</label>
-
-              <input
-                type="number"
-                min="0"
-                step="0.01"
-                value={price}
-                onChange={(e) => setPrice(e.target.value)}
-                className="w-full rounded-2xl border border-line-strong px-4 py-2.5 sm:w-32"
-                placeholder="3500"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
-              <label className="mb-1 block text-sm font-medium">
-                Descripción
+            <div className="flex flex-wrap gap-4">
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={active}
+                  onChange={(e) => setActive(e.target.checked)}
+                />
+                Producto activo
               </label>
 
-              <textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className="w-full rounded-2xl border border-line-strong px-4 py-2.5"
-                rows={2}
-                placeholder="Descripción opcional"
-              />
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={featured}
+                  onChange={(e) => setFeatured(e.target.checked)}
+                />
+                Destacado
+              </label>
+
+              <label className="flex items-center gap-2 text-sm">
+                <input
+                  type="checkbox"
+                  checked={soldOut}
+                  onChange={(e) => setSoldOut(e.target.checked)}
+                />
+                Sin stock
+              </label>
             </div>
 
-            <ImageUploader
-              businessId={businessId}
-              label="Imagen (opcional)"
-              value={imageUrl}
-              onChange={setImageUrl}
+            <TranslationsFields
+              value={translations}
+              onChange={setTranslations}
             />
           </div>
 
-          <div className="flex flex-wrap gap-4">
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={active}
-                onChange={(e) => setActive(e.target.checked)}
-              />
-              Producto activo
-            </label>
-
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={featured}
-                onChange={(e) => setFeatured(e.target.checked)}
-              />
-              Destacado
-            </label>
-
-            <label className="flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={soldOut}
-                onChange={(e) => setSoldOut(e.target.checked)}
-              />
-              Sin stock
-            </label>
-          </div>
-
-          <TranslationsFields value={translations} onChange={setTranslations} />
-
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="flex shrink-0 justify-end gap-3 border-t border-line p-4">
             <button
               type="button"
               onClick={onClose}
@@ -223,5 +230,7 @@ function ProductDialogForm({
 export default function ProductDialog(props: ProductDialogProps) {
   if (!props.open) return null;
 
-  return <ProductDialogForm key={props.initialData?.id ?? "nuevo"} {...props} />;
+  return (
+    <ProductDialogForm key={props.initialData?.id ?? "nuevo"} {...props} />
+  );
 }
