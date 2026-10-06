@@ -66,7 +66,7 @@ function CategoryDialogForm({
     >
       <div
         onClick={(event) => event.stopPropagation()}
-        className="w-full max-w-md rounded-3xl bg-white p-5 shadow-2xl"
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl supports-[height:1dvh]:max-h-[90dvh]"
       >
         <div className="mb-4">
           <h2 className="text-2xl font-bold text-brand">

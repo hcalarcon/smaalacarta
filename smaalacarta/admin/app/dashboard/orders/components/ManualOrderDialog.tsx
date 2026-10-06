@@ -89,7 +89,7 @@ function Form({
         onSubmit={handleSubmit}
         onClick={(event) => event.stopPropagation()}
         noValidate
-        className="max-h-[90vh] w-full max-w-xl space-y-4 overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"
+        className="max-h-[90vh] supports-[height:1dvh]:max-h-[90dvh] w-full max-w-xl space-y-4 overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"
       >
         <div>
           <h2 className="text-xl font-semibold text-brand">Pedido manual</h2>

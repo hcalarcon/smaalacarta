@@ -149,7 +149,7 @@ export default function BusinessProfileForm({
         >
           <div
             onClick={(event) => event.stopPropagation()}
-            className="w-full max-w-md rounded-3xl bg-white p-5 shadow-2xl"
+            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-3xl bg-white p-5 shadow-2xl supports-[height:1dvh]:max-h-[90dvh]"
           >
             <h2 className="text-lg font-semibold text-brand">
               Cambiaste el nombre
