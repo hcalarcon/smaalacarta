@@ -557,6 +557,9 @@ paso a paso (cuenta, aplicación, credenciales, webhook y pruebas), está en [ME
       seguimiento, "Esperando el pago" con reintento, verificación periódica y "Pago confirmado"; variante de
       pedido anticipado sin línea de tiempo
 - [x] [herni] Panel: etiqueta "Esperando pago" / "Pagado" / "Pago fallido" y avance bloqueado hasta el pago
+- [x] [herni] Pruebas automáticas del cobro antes de producción: flujo completo contra Postgres real con
+      Mercado Pago simulado (`src/lib/mp/flujo.test.ts`) y pegamento de los endpoints (`app/api/mp/routes.test.ts`).
+      Lo que no se automatiza (pagar en el checkout real) sigue en [MERCADOPAGO.md](MERCADOPAGO.md)
 - [ ] [herni] `npm run db:types` después de aplicar la migración a la base propia (los tipos de esta rama se
       escribieron a mano) y seguir la guía de [MERCADOPAGO.md](MERCADOPAGO.md) antes y después del PR
 - [ ] [por asignar] Ofrecer Mercado Pago a clientes con OAuth: una sola aplicación de SMA a la Carta y cada negocio
