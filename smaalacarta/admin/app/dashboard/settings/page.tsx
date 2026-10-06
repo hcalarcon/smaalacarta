@@ -7,18 +7,21 @@ import ShareSection from "./components/ShareSection";
 import Section from "@/components/ui/Section";
 import { getSettings } from "@/lib/db/settings";
 import { requireBusiness } from "@/lib/get-current-business";
-import { hasDigitalMenu } from "@/lib/plan-access";
+import { hasDigitalMenu, hasPdf } from "@/lib/plan-access";
 
 export const metadata: Metadata = { title: "Configuración" };
 
 export default async function SettingsPage() {
   const { business } = await requireBusiness();
   const settings = await getSettings(business.id, business.whatsapp);
-  const digitalMenu = hasDigitalMenu({
+  const plan = {
     planPdf: business.plan_pdf,
     planWeb: business.plan_web,
     planCompleto: business.plan_completo,
-  });
+  };
+  const digitalMenu = hasDigitalMenu(plan);
+  // "Menú en PDF" solo con plan_pdf: plan_completo solo no habilita ese servicio (ADMIN-PLAN-4).
+  const pdfService = hasPdf(plan);
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
@@ -48,6 +51,7 @@ export default async function SettingsPage() {
         businessId={business.id}
         initial={settings}
         digitalMenu={digitalMenu}
+        pdfService={pdfService}
       />
 
       <Section

@@ -132,12 +132,15 @@ export default function SettingsForm({
   businessId,
   initial,
   digitalMenu,
+  pdfService,
 }: {
   businessId: string;
   initial: SettingsInput;
   // Sin plan_web ni plan_completo (solo QR + PDF), no hay menú digital: se
   // esconde todo lo que no sea el PDF (ADMIN-PLAN-1).
   digitalMenu: boolean;
+  // Sin plan_pdf no hay servicio de PDF: se esconde "Menú en PDF" (ADMIN-PLAN-4).
+  pdfService: boolean;
 }) {
   const router = useRouter();
 
@@ -462,6 +465,7 @@ export default function SettingsForm({
       </Section>
       </> : null}
 
+      {pdfService ? (
       <Section
         title="Menú en PDF"
         description="Para el plan QR + PDF: un archivo que se linkea aparte del menú digital, no hace falta publicar este último."
@@ -476,6 +480,7 @@ export default function SettingsForm({
           <p className="text-sm text-red-600">{fieldErrors.menuPdfUrl}</p>
         ) : null}
       </Section>
+      ) : null}
 
       {digitalMenu ? <>
       <Section

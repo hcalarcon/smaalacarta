@@ -8,25 +8,53 @@ describe("menuUrl — ADMIN-RESUMEN-2", () => {
   });
 });
 
-describe("menuLinks — RUTAS-4", () => {
-  it("con plan_completo, todo por subdominio (lo que tenga)", () => {
-    expect(menuLinks("ana", { planPdf: true, planWeb: true, planCompleto: true })).toEqual({
+describe("menuLinks — RUTAS-4 y 5", () => {
+  const plan = (planPdf: boolean, planWeb: boolean, planCompleto: boolean) => ({ planPdf, planWeb, planCompleto });
+
+  it("con los tres planes, todo por subdominio", () => {
+    expect(menuLinks("ana", plan(true, true, true))).toEqual({
       interactivo: "https://ana.smaalacarta.com.ar",
       estatico: "https://ana.smaalacarta.com.ar/menu.html",
       pdf: "https://ana.smaalacarta.com.ar/pdf",
     });
   });
 
-  it("sin plan_completo, el interactivo no existe y el resto va por path", () => {
-    expect(menuLinks("ana", { planPdf: true, planWeb: true, planCompleto: false })).toEqual({
+  it("sin plan_completo, el interactivo no existe y el estático y el PDF van por path", () => {
+    expect(menuLinks("ana", plan(true, true, false))).toEqual({
       interactivo: null,
       estatico: "https://smaalacarta.com.ar/ana/menu.html",
       pdf: "https://smaalacarta.com.ar/ana/pdf",
     });
   });
 
-  it("sin el plan de un servicio, esa dirección es null", () => {
-    expect(menuLinks("ana", { planPdf: false, planWeb: false, planCompleto: false })).toEqual({
+  it("plan_completo solo no habilita el estático ni el PDF: solo el interactivo", () => {
+    expect(menuLinks("ana", plan(false, false, true))).toEqual({
+      interactivo: "https://ana.smaalacarta.com.ar",
+      estatico: null,
+      pdf: null,
+    });
+  });
+
+  it("cada servicio exige su plan; plan_completo solo decide subdominio o path", () => {
+    expect(menuLinks("ana", plan(false, true, true))).toEqual({
+      interactivo: "https://ana.smaalacarta.com.ar",
+      estatico: "https://ana.smaalacarta.com.ar/menu.html",
+      pdf: null,
+    });
+    expect(menuLinks("ana", plan(true, false, true))).toEqual({
+      interactivo: "https://ana.smaalacarta.com.ar",
+      estatico: null,
+      pdf: "https://ana.smaalacarta.com.ar/pdf",
+    });
+    expect(menuLinks("ana", plan(true, false, false))).toEqual({
+      interactivo: null,
+      estatico: null,
+      pdf: "https://smaalacarta.com.ar/ana/pdf",
+    });
+  });
+
+  it("sin ningún plan, no hay direcciones", () => {
+    expect(menuLinks("ana", plan(false, false, false))).toEqual({
       interactivo: null,
       estatico: null,
       pdf: null,

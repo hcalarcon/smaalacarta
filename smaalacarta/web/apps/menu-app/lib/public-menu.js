@@ -36,13 +36,15 @@ export function normalizePublicMenu(data) {
 }
 
 // `viaPath` avisa que se llegó por el path de la landing (RUTAS-4, el rewrite hacia
-// `/menu.html?ruta=<slug>`): la función exige `plan_web` y que el negocio no tenga
-// `plan_completo`. Por subdominio sigue el criterio de siempre (`published` y `active`).
+// `/menu.html?ruta=<slug>`) e `isStatic` que lo pide el menú estático (RUTAS-5): el estático exige
+// `plan_web` (por path, sin `plan_completo`; por subdominio, con él) y el interactivo, solo
+// `plan_completo`. En los dos casos, además `published` y `active`.
 export async function fetchPublicMenu({
   url,
   key,
   slug,
   viaPath = false,
+  isStatic = false,
   fetchImpl = globalThis.fetch,
 }) {
   if (!isSupabaseConfigured({ url, key }) || !slug) return null;
@@ -56,7 +58,7 @@ export async function fetchPublicMenu({
     const res = await fetchImpl(`${url.trim().replace(/\/+$/, "")}/rest/v1/rpc/public_menu`, {
       method: "POST",
       headers,
-      body: JSON.stringify({ p_slug: slug, p_via_path: viaPath }),
+      body: JSON.stringify({ p_slug: slug, p_via_path: viaPath, p_static: isStatic }),
       // Un menú que no responde no puede dejar la pantalla en blanco.
       signal:
         typeof AbortSignal !== "undefined" && AbortSignal.timeout

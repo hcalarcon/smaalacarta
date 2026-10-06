@@ -10,6 +10,11 @@ export function hasDigitalMenu(plan: BusinessPlan) {
   return plan.planWeb || plan.planCompleto;
 }
 
+// El servicio de PDF (QR + PDF) es de `plan_pdf`: `plan_completo` solo no lo habilita (RUTAS-5).
+export function hasPdf(plan: BusinessPlan) {
+  return plan.planPdf;
+}
+
 export function hasOrders(plan: BusinessPlan) {
   return plan.planCompleto;
 }

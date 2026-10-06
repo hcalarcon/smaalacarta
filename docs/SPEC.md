@@ -57,13 +57,20 @@ comportamiento que ya existe, una app por rama:
   externo desde `landing/vercel.json` hacia este proyecto (el negocio nunca deja
   el dominio de la landing: el rewrite es transparente para el navegador). Ese
   camino exige el plan del servicio (`plan_pdf`/`plan_web`) y que el negocio NO
-  tenga `plan_completo` — si lo tiene, se sirve por subdominio, no por path. El
+  tenga `plan_completo` — si lo tiene, ese servicio se sirve por subdominio, no por path. El
   slug llega distinto según el caso: por query (`?ruta=<slug>`) en el estático,
   que corre del lado del servidor; por el propio `pathname` del navegador
   (`/<slug>/pdf`) en el PDF, que corre del lado del cliente y nunca ve la query
-  del rewrite. El subdominio, a su vez, exige `plan_completo`: sin él, un negocio
-  no responde por subdominio en ningún servicio (interactivo, estático ni PDF),
-  solo por path.
+  del rewrite. El subdominio, a su vez, exige `plan_completo` además del plan del servicio
+  (el interactivo solo exige `plan_completo`): sin él, un negocio no responde por
+  subdominio en ningún servicio, solo por path (RUTAS-5).
+- **RUTAS-5** Los tres servicios de un negocio son independientes: el interactivo exige
+  `plan_completo`; el estático (`/menu.html`) exige `plan_web`; el PDF (`/pdf`) exige `plan_pdf`.
+  Estático y PDF van por subdominio si además hay `plan_completo` y por el path del dominio raíz si
+  no. `plan_completo` no habilita el estático ni el PDF por sí solo. `public_menu` recibe
+  `p_static` (el estático lo manda en `true`; el interactivo no responde por path) y
+  `public_business_pdf` exige `plan_pdf`; `published`, `active` y la suspensión siguen igual. Un
+  test contra Postgres real cubre las ocho combinaciones de planes en cada servicio y ruta.
 
 ## HORARIO — Abierto o cerrado
 
@@ -354,7 +361,7 @@ en PDF" de Configuración (`app/dashboard/settings`) y `web/apps/pdf`. Cubierto 
   el plan "QR + PDF", no depende de ningún negocio real.
 - **PDF-5** `smaalacarta.com.ar/<slug>/pdf` (RUTAS-4) exige `plan_pdf` y que el
   negocio no tenga `plan_completo`; `<slug>.smaalacarta.com.ar/pdf` (subdominio)
-  exige `plan_completo`, tenga o no `plan_pdf`.
+  exige `plan_pdf` **y** `plan_completo`. `plan_completo` solo no habilita el PDF.
 
 ## ESTATICO — Menú web de solo lectura
 
@@ -380,9 +387,9 @@ en JS puro.*
   promo en el producto y usa el mismo encabezado (estado dentro de `.header-top`).
 - **ESTATICO-5** `smaalacarta.com.ar/<slug>/menu.html` (RUTAS-4) exige `plan_web` y
   que el negocio no tenga `plan_completo`; `<slug>.smaalacarta.com.ar/menu.html`
-  (subdominio) exige `plan_completo`, tenga o no `plan_web`. Mismo criterio para
-  el menú interactivo (`<slug>.smaalacarta.com.ar`) y para crear un pedido: sin
-  `plan_completo`, no responden.
+  (subdominio) exige `plan_web` **y** `plan_completo`. `plan_completo` solo no
+  habilita el estático. El menú interactivo (`<slug>.smaalacarta.com.ar`) y crear
+  un pedido exigen `plan_completo`: sin él, no responden.
 - **ESTATICO-6** `moderno.smaalacarta.com.ar/menu.html` (también `clasico` y
   `minimal`) muestra la demo de solo lectura, sin pedir nada a Supabase: sale de
   los mismos JSON que usa el menú interactivo para las demos
@@ -718,9 +725,10 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
 - **ADMIN-CONFIG-10** "Compartir" y el botón "Ver mi menú" del header muestran
   solo las direcciones que de verdad responden, según el plan del negocio
   (`src/lib/menu-url.ts`, `menuLinks()`/`primaryMenuLink()`, mismo criterio que
-  RUTAS-4): con `plan_completo`, el subdominio (interactivo, y estático/PDF si
-  además los tiene); sin él, el path del dominio raíz para el estático y el PDF,
-  si los tiene, y ningún link para el interactivo. También muestra qué plan
+  RUTAS-4 y 5): el interactivo solo con `plan_completo`; el estático solo con
+  `plan_web` y el PDF solo con `plan_pdf`, y la ruta de esos dos (subdominio o
+  path del dominio raíz) la decide `plan_completo`. Un test compara `menuLinks()`
+  con lo que responde la base en las ocho combinaciones de planes. También muestra qué plan
   tiene el negocio (badges), de solo lectura: solo el superadmin lo cambia.
 - **ADMIN-CONFIG-11** El negocio elige qué tipos de entrega ofrece (`delivery`,
   `retiro`) y qué medios de pago (`efectivo`, `transferencia`, `tarjeta`): al
@@ -867,6 +875,8 @@ Cubierto por `src/lib/db/suspension.test.ts`, contra Postgres real.*
 - **ADMIN-PLAN-3** El header muestra un botón por cada servicio público que el
   negocio realmente tenga ("Ver carrito", "Ver menú", "Ver QR" — mismas
   direcciones que `menuLinks()`, RUTAS-4), no uno solo fijo.
+- **ADMIN-PLAN-4** Sin `plan_pdf` (`hasPdf()`), Configuración no muestra la sección "Menú en
+  PDF": ese servicio no responde, aunque el negocio tenga `plan_completo`.
 
 ## ADMIN-PROMOS — Promociones
 

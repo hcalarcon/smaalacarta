@@ -116,7 +116,7 @@ describe("fetchPublicMenu — PUBLICO-6", () => {
     const [url, init] = fetchImpl.mock.calls[0];
     expect(url).toBe("https://x.supabase.co/rest/v1/rpc/public_menu");
     expect(init.method).toBe("POST");
-    expect(JSON.parse(init.body)).toEqual({ p_slug: "ana", p_via_path: false });
+    expect(JSON.parse(init.body)).toEqual({ p_slug: "ana", p_via_path: false, p_static: false });
     expect(init.headers.apikey).toBe("sb_publishable_abc");
     expect(init.headers["Content-Type"]).toBe("application/json");
   });
@@ -127,6 +127,17 @@ describe("fetchPublicMenu — PUBLICO-6", () => {
     expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({
       p_slug: "ana",
       p_via_path: true,
+      p_static: false,
+    });
+  });
+
+  it("el menú estático manda p_static en true, para que la base exija plan_web (RUTAS-5)", async () => {
+    const fetchImpl = fakeFetch(respuesta);
+    await fetchPublicMenu({ ...base, viaPath: true, isStatic: true, fetchImpl });
+    expect(JSON.parse(fetchImpl.mock.calls[0][1].body)).toEqual({
+      p_slug: "ana",
+      p_via_path: true,
+      p_static: true,
     });
   });
 
