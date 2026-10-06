@@ -29,7 +29,7 @@ export default async function handler(req, res) {
     remote = getDemoMenu(target.slug);
   } else if (isSupabaseConfigured(SUPABASE)) {
     try {
-      remote = await fetchPublicMenu({ ...SUPABASE, slug: target.slug, viaPath: target.viaPath });
+      remote = await fetchPublicMenu({ ...SUPABASE, slug: target.slug, viaPath: target.viaPath, isStatic: true });
     } catch {
       remote = null;
     }

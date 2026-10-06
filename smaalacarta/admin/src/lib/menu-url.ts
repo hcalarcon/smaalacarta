@@ -15,8 +15,9 @@ export type MenuLinks = {
   // El menú interactivo (con carrito) solo existe por subdominio (RUTAS-4): sin
   // plan_completo, no hay dirección que mostrar.
   interactivo: string | null;
-  // El estático y el PDF van por subdominio si además tiene plan_completo, o por
-  // el path del dominio raíz si no — nunca los dos al mismo tiempo (RUTAS-4).
+  // El estático exige plan_web y el PDF plan_pdf (RUTAS-5): plan_completo solo no los
+  // habilita. Van por subdominio si además tiene plan_completo, o por el path del
+  // dominio raíz si no — nunca los dos al mismo tiempo (RUTAS-4).
   estatico: string | null;
   pdf: string | null;
 };
@@ -29,12 +30,8 @@ export function menuLinks(slug: string, plan: BusinessPlan): MenuLinks {
 
   return {
     interactivo: plan.planCompleto ? sub : null,
-    estatico: plan.planCompleto
-      ? `${sub}/menu.html`
-      : plan.planWeb
-        ? `${path}/menu.html`
-        : null,
-    pdf: plan.planCompleto ? `${sub}/pdf` : plan.planPdf ? `${path}/pdf` : null,
+    estatico: plan.planWeb ? `${plan.planCompleto ? sub : path}/menu.html` : null,
+    pdf: plan.planPdf ? `${plan.planCompleto ? sub : path}/pdf` : null,
   };
 }
 

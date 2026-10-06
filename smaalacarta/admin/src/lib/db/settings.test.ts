@@ -102,9 +102,9 @@ beforeAll(async () => {
 
   await db.exec(`
     insert into super_admins (user_id) values ('${SUPER}');
-    -- plan_completo: el PDF por subdominio (p_via_path = false) ahora lo exige.
-    insert into businesses (id, name, slug, plan_completo) values
-      ('${NEG_ANA}', 'Ana', 'ana', true), ('${NEG_BETO}', 'Beto', 'beto', true);
+    -- plan_completo y plan_pdf: el PDF por subdominio (p_via_path = false) exige los dos (RUTAS-5).
+    insert into businesses (id, name, slug, plan_completo, plan_pdf) values
+      ('${NEG_ANA}', 'Ana', 'ana', true, true), ('${NEG_BETO}', 'Beto', 'beto', true, true);
     insert into business_users (business_id, user_id) values
       ('${NEG_ANA}', '${ANA}'), ('${NEG_BETO}', '${BETO}');
   `);
@@ -422,33 +422,37 @@ describe("PDF del menú — PDF-1", () => {
   });
 });
 
-describe("ruteo por plan — RUTAS-4 y PDF-5", () => {
-  it("por subdominio (p_via_path = false), con plan_completo, responde", async () => {
+describe("ruteo por plan — RUTAS-4, 5 y PDF-5", () => {
+  const set = (sql: string) => asUser(db, SUPER, `update businesses set ${sql} where id = '${NEG_ANA}'`);
+
+  it("por subdominio (p_via_path = false), con plan_pdf y plan_completo, responde", async () => {
     expect(await publicPdf("ana", null, false)).not.toBeNull();
   });
 
   it("por subdominio, sin plan_completo no responde", async () => {
-    await asUser(db, SUPER, `update businesses set plan_completo = false where id = '${NEG_ANA}'`);
+    await set("plan_completo = false");
     expect(await publicPdf("ana", null, false)).toBeNull();
   });
 
-  it("por path, sin plan_pdf no responde", async () => {
-    expect(await publicPdf("ana", null, true)).toBeNull();
-  });
-
   it("por path, con plan_pdf y sin plan_completo sí responde", async () => {
-    await asUser(db, SUPER, `update businesses set plan_pdf = true where id = '${NEG_ANA}'`);
     expect(await publicPdf("ana", null, true)).not.toBeNull();
   });
 
-  it("con plan_completo: responde por subdominio y ya no por path", async () => {
-    await asUser(db, SUPER, `update businesses set plan_completo = true where id = '${NEG_ANA}'`);
+  it("por path, sin plan_pdf no responde", async () => {
+    await set("plan_pdf = false");
+    expect(await publicPdf("ana", null, true)).toBeNull();
+  });
+
+  it("plan_completo solo no habilita el PDF, ni por subdominio ni por path", async () => {
+    await set("plan_completo = true");
+    expect(await publicPdf("ana", null, false)).toBeNull();
+    expect(await publicPdf("ana", null, true)).toBeNull();
+  });
+
+  it("con plan_pdf y plan_completo: responde por subdominio y ya no por path", async () => {
+    await set("plan_pdf = true");
     expect(await publicPdf("ana", null, false)).not.toBeNull();
     expect(await publicPdf("ana", null, true)).toBeNull();
-
-    await asUser(
-      db, SUPER, `update businesses set plan_pdf = false where id = '${NEG_ANA}'`,
-    );
   });
 });
 

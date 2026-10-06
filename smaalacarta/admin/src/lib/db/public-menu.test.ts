@@ -33,8 +33,12 @@ type Menu = {
   menu: { categorias: { nombre: string; tipo?: string; descripcion?: string; items: Item[] }[] };
 };
 
-async function publicMenu(slug: string, user: string | null = null, viaPath = false) {
-  const r = await asUser(db, user, `select public.public_menu('${slug}', ${viaPath}) as menu`);
+async function publicMenu(slug: string, user: string | null = null, viaPath = false, isStatic = false) {
+  const r = await asUser(
+    db,
+    user,
+    `select public.public_menu('${slug}', ${viaPath}, ${isStatic}) as menu`,
+  );
   if (!r.ok) throw new Error(r.error);
   return r.rows[0].menu as Menu | null;
 }
@@ -386,25 +390,31 @@ describe("ruteo por plan — RUTAS-4 y ESTATICO-5", () => {
     `);
   });
 
-  it("por subdominio (p_via_path = false), sin plan_completo no responde", async () => {
-    expect(await publicMenu("con-plan-web", null, false)).toBeNull();
+  it("el estático por subdominio (p_via_path = false) exige plan_web y plan_completo: solo plan_web no responde", async () => {
+    expect(await publicMenu("con-plan-web", null, false, true)).toBeNull();
   });
 
-  it("por path (p_via_path = true), con plan_web y sin plan_completo, sí responde", async () => {
-    expect(await publicMenu("con-plan-web", null, true)).not.toBeNull();
+  it("el estático por path (p_via_path = true), con plan_web y sin plan_completo, sí responde", async () => {
+    expect(await publicMenu("con-plan-web", null, true, true)).not.toBeNull();
   });
 
-  it("por path, sin plan_web no responde", async () => {
+  it("el estático por path, sin plan_web no responde", async () => {
     await asUser(db, SUPER, `update businesses set plan_web = false where id = '${NEG_PLAN}'`);
-    expect(await publicMenu("con-plan-web", null, true)).toBeNull();
+    expect(await publicMenu("con-plan-web", null, true, true)).toBeNull();
     await asUser(db, SUPER, `update businesses set plan_web = true where id = '${NEG_PLAN}'`);
   });
 
-  it("con plan_completo: responde por subdominio y ya no por path", async () => {
+  it("con plan_web y plan_completo: el estático responde por subdominio y ya no por path", async () => {
     await asUser(db, SUPER, `update businesses set plan_completo = true where id = '${NEG_PLAN}'`);
-    expect(await publicMenu("con-plan-web", null, false)).not.toBeNull();
-    expect(await publicMenu("con-plan-web", null, true)).toBeNull();
-    await asUser(db, SUPER, `update businesses set plan_completo = false where id = '${NEG_PLAN}'`);
+    expect(await publicMenu("con-plan-web", null, false, true)).not.toBeNull();
+    expect(await publicMenu("con-plan-web", null, true, true)).toBeNull();
+  });
+
+  it("plan_completo sin plan_web no habilita el estático (RUTAS-5), pero sí el interactivo", async () => {
+    await asUser(db, SUPER, `update businesses set plan_web = false where id = '${NEG_PLAN}'`);
+    expect(await publicMenu("con-plan-web", null, false, true)).toBeNull();
+    expect(await publicMenu("con-plan-web", null, false, false)).not.toBeNull();
+    await asUser(db, SUPER, `update businesses set plan_web = true, plan_completo = false where id = '${NEG_PLAN}'`);
   });
 });
 

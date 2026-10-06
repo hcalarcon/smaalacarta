@@ -523,6 +523,22 @@ negocio está cerrado" de la Etapa 6c.
       ver el aviso y hacer un pedido en miércoles, comprobar el badge en el tablero, y ver que después del
       corte el menú queda cerrado como siempre y que al abrir funciona el pedido normal
 
+## Etapa 6o — Servicios independientes
+
+Los tres servicios de un negocio no dependen entre sí: el interactivo exige `plan_completo`, el
+estático `plan_web` y el PDF `plan_pdf`; `plan_completo` solo decide subdominio o path y ya no
+habilita estático ni PDF por sí solo. Requisitos en `docs/SPEC.md` (RUTAS-5, PDF-5, ESTATICO-5,
+ADMIN-CONFIG-10, ADMIN-PLAN-4). Migración `20261007000000_servicios_independientes.sql`.
+
+- [x] [herni] Migración: `public_menu(p_slug, p_via_path, p_static)` y `public_business_pdf` exigen su
+      plan; test contra Postgres real con las ocho combinaciones × servicio × ruta, y `menuLinks()`
+      comparado con lo que responde la base
+- [x] [herni] Panel: `menuLinks()` por servicio; "Menú en PDF" en Configuración solo con `plan_pdf`
+- [x] [herni] Web: `fetchPublicMenu` manda `p_static` y `static-menu.js` lo usa
+- [ ] [herni] **Antes de mergear: revisar `/superadmin`** y tildar `plan_web` / `plan_pdf` en los
+      negocios con `plan_completo` que hoy usen `/menu.html` o `/pdf` sin tenerlos: al aplicar la
+      migración esas direcciones dejan de responder
+
 ## Etapa 7 — Pendientes técnicos (backlog)
 
 - [ ] [por asignar] **Marketplace** ("un lugar donde encontrar de todo para
