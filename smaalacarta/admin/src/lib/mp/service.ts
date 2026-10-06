@@ -139,6 +139,8 @@ export async function handleWebhook(
   try {
     payment = await deps.mp.getPayment(credentials.accessToken, input.dataId);
   } catch (error) {
+    // Un pago inexistente (p. ej. la notificación simulada del panel) no se arregla reintentando.
+    if (error instanceof MpApiError && error.status === 404) return reply(200, { ignored: true });
     console.error("mp/webhook: no se pudo consultar el pago", failureStatus(error));
     // 5xx: Mercado Pago reintenta.
     return reply(502, { error: "mp_unavailable" });

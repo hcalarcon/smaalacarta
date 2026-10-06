@@ -881,6 +881,8 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   `external_reference` sea un pedido de ese negocio y llama a `confirm_order_payment` con el monto de la API
   (`approved` → `paid`, `rejected` o `cancelled` → `failed`, los demás se ignoran). Responde 200 rápido y no
   confía en el redirect de vuelta.
+- **MP-4b** Un pago que Mercado Pago no encuentra (404) se ignora con 200; los demás fallos de consulta
+  responden 5xx para que reintente.
 - **MP-5** `GET /admin/api/mp/verify?code=` busca en Mercado Pago los pagos del pedido
   (`external_reference`) y confirma si hay uno aprobado; no consulta más de una vez cada pocos segundos por
   pedido. Devuelve solo el estado de pago.

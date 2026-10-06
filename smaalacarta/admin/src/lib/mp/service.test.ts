@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
-import type { MpPayment } from "./api";
+import { MpApiError, type MpPayment } from "./api";
 import { createRateLimiter } from "./rate-limit";
 import {
   createPayment,
@@ -269,6 +269,26 @@ describe("POST /webhook — MP-4", () => {
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
     const deps = makeDeps();
     deps.mp.getPayment.mockRejectedValue(new Error("caído"));
+
+    expect((await handleWebhook(deps, signed())).status).toBe(502);
+    error.mockRestore();
+  });
+
+  it("un pago que Mercado Pago no encuentra (404) se ignora con 200 sin confirmar ni loguear error", async () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const deps = makeDeps();
+    deps.mp.getPayment.mockRejectedValue(new MpApiError(404));
+
+    expect(await handleWebhook(deps, signed())).toEqual({ status: 200, body: { ignored: true } });
+    expect(deps.confirmPayment).not.toHaveBeenCalled();
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+
+  it.each([500, 503, 401, 403])("si la API responde %i sigue en 502 para que reintente", async (status) => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const deps = makeDeps();
+    deps.mp.getPayment.mockRejectedValue(new MpApiError(status));
 
     expect((await handleWebhook(deps, signed())).status).toBe(502);
     error.mockRestore();
