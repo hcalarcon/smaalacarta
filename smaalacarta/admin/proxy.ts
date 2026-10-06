@@ -30,7 +30,8 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Todo salvo archivos estáticos e imágenes.
-    "/((?!_next/static|_next/image|favicon.ico|.*\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    // Todo salvo archivos estáticos, imágenes y los endpoints de Mercado Pago (sin sesión: el menú y
+    // Mercado Pago los llaman desde afuera, y se autentican solos).
+    "/((?!_next/static|_next/image|favicon.ico|api/mp/|.*\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };
