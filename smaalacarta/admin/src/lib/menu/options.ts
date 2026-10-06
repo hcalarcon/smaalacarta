@@ -127,3 +127,8 @@ export function optionGroupErrorMessage(error: DbError) {
       return "No pudimos guardar el grupo. Probá de nuevo.";
   }
 }
+
+// Por qué un producto con grupo obligatorio no aparece disponible en el editor de promociones
+// (ADMIN-OPCIONES-14).
+export const REQUIRED_GROUP_PROMO_REASON =
+  "Tiene opciones obligatorias: no puede estar en una promoción.";

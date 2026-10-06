@@ -5,7 +5,7 @@ import { toOrderRows } from "@/lib/menu/ordering";
 // actualización filtra por negocio y por id, así que un id ajeno no cambia nada
 // (ADMIN-MENU-5), y el RLS lo respalda.
 export async function saveOrder(
-  table: "categories" | "products",
+  table: "categories" | "products" | "option_groups",
   businessId: string,
   orderedIds: string[],
 ) {

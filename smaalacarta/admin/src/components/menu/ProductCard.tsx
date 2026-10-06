@@ -99,6 +99,13 @@ export default function ProductCard({
           >
             {product.sold_out ? "Sin stock" : "Con stock"}
           </button>
+
+          {/* Tiene grupos de opciones y extras (ADMIN-OPCIONES-13). */}
+          {product.has_options ? (
+            <span className="whitespace-nowrap rounded-full bg-accent-soft px-2 py-0.5 text-[11px] font-medium text-brand">
+              Con opciones
+            </span>
+          ) : null}
         </div>
 
         <div className="flex items-center gap-1.5">

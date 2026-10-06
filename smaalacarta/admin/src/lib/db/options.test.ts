@@ -166,7 +166,7 @@ describe("guardar un grupo con sus opciones — ADMIN-OPCIONES-1 a 3", () => {
     expect(rows[2].id).toBe(a.id);
     expect(await count("options", `group_id = '${id}'`)).toBe(3);
 
-    const g = await db.query(`select name from option_groups where id = '${id}'`);
+    const g = await db.query<{ name: string }>(`select name from option_groups where id = '${id}'`);
     expect(g.rows[0].name).toBe("Renombrado");
   });
 
@@ -190,7 +190,7 @@ describe("guardar un grupo con sus opciones — ADMIN-OPCIONES-1 a 3", () => {
 
     expect(r.ok).toBe(false);
     expect((await optionsOf(id)).map((o) => o.name)).toEqual(["X", "Y"]);
-    expect((await db.query(`select name from option_groups where id = '${id}'`)).rows[0].name).toBe("Estable");
+    expect((await db.query<{ name: string }>(`select name from option_groups where id = '${id}'`)).rows[0].name).toBe("Estable");
   });
 
   it.each([
@@ -340,7 +340,7 @@ describe("aislamiento entre negocios — ADMIN-OPCIONES-7", () => {
     const del = await asUser(db, BETO, `delete from option_groups where id = '${id}'`);
     expect(del.ok && del.affected).toBe(0);
 
-    expect((await db.query(`select name from option_groups where id = '${id}'`)).rows[0].name).toBe("De Ana");
+    expect((await db.query<{ name: string }>(`select name from option_groups where id = '${id}'`)).rows[0].name).toBe("De Ana");
   });
 
   it("no puede asociar un grupo ajeno a un producto propio, ni un producto ajeno", async () => {
@@ -526,7 +526,7 @@ describe("grupos obligatorios y promociones — ADMIN-OPCIONES-10", () => {
     const r = await saveGroup(ANA, { id: g, name: "Por endurecer", min: 1, max: 2 });
     expect(r.ok).toBe(false);
     expect(!r.ok && r.code).toBe("P0014");
-    expect((await db.query(`select min_select from option_groups where id = '${g}'`)).rows[0].min_select).toBe(0);
+    expect((await db.query<{ min_select: number }>(`select min_select from option_groups where id = '${g}'`)).rows[0].min_select).toBe(0);
 
     await setGroups(ANA, PRO_P, []);
   });

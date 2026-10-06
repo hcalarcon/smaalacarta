@@ -23,7 +23,8 @@ export async function createProductAction(
     sold_out?: boolean;
   } & Translations,
 ) {
-  await createProduct(businessId, data);
+  // Devuelve el id para poder asociarle grupos de opciones (ADMIN-OPCIONES-13).
+  return createProduct(businessId, data);
 }
 
 export async function updateProductAction(

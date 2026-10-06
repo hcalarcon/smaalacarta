@@ -973,7 +973,8 @@ Cubierto por: `src/lib/db/promotions.test.ts` (ADMIN-PROMOS-2, 3, 5 y 6) y
 Aplicado por `supabase/migrations/*_opciones_y_extras.sql`, `src/lib/menu/options.ts`,
 `src/lib/db/options.ts`, `app/dashboard/menu`. Cubierto por: `src/lib/db/options.test.ts`
 (ADMIN-OPCIONES-1 a 11), `src/lib/menu/options.test.ts` (reglas puras, ADMIN-OPCIONES-1 a 6)
-y `app/dashboard/menu/actions/options.test.ts` (ADMIN-OPCIONES-16).*
+`src/components/menu/options-ui.test.tsx` (ADMIN-OPCIONES-13 y 14) y
+`app/dashboard/menu/actions/options.test.ts` (ADMIN-OPCIONES-15 y 16).*
 
 Un grupo de opciones ("Extras", "Sabores", "Toppings") se define una vez por negocio y se
 asocia a varios productos. Un helado con 2 toppings incluidos es un grupo con máximo 2 y

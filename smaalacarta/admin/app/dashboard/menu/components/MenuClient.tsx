@@ -31,6 +31,9 @@ import {
 } from "@/lib/menu/translations";
 import { matchesStatusFilter, type StatusFilter } from "@/lib/menu/product-fields";
 import ProductDialog from "./dialogs/ProductDialog";
+import OptionGroupsSection from "./OptionGroupsSection";
+import { setProductOptionGroupsAction } from "../actions/options";
+import type { OptionGroup } from "@/lib/db/options";
 
 type Category = {
   id: string;
@@ -47,6 +50,12 @@ type Category = {
 type MenuClientProps = {
   businessId: string;
   initialCategories: Category[];
+  // Opciones y extras (ADMIN-OPCIONES-12 y 13): los grupos del negocio, los de cada producto
+  // (en su orden), cuántos productos usa cada grupo y los productos que están en promociones.
+  optionGroups: OptionGroup[];
+  productGroupLinks: Record<string, string[]>;
+  groupUsage: Record<string, number>;
+  productIdsInPromotions: string[];
 };
 
 // Sin tildes ni mayúsculas, para que buscar "papas" encuentre "Papás".
@@ -60,6 +69,10 @@ function normalize(text: string) {
 export default function MenuClient({
   businessId,
   initialCategories,
+  optionGroups,
+  productGroupLinks,
+  groupUsage,
+  productIdsInPromotions,
 }: MenuClientProps) {
   const router = useRouter();
 
@@ -253,7 +266,10 @@ export default function MenuClient({
     image_url: string | null;
     featured: boolean;
     sold_out: boolean;
+    option_group_ids: string[];
   } & Translations) {
+    let productId = data.id;
+
     if (data.id) {
       await updateProductAction(businessId, data.id, {
         name: data.name,
@@ -269,7 +285,7 @@ export default function MenuClient({
       // Un producto nuevo siempre nace dentro de una categoría (ADMIN-MENU-1).
       if (!data.category_id) return;
 
-      await createProductAction(businessId, {
+      productId = await createProductAction(businessId, {
         category_id: data.category_id,
         name: data.name,
         description: data.description,
@@ -280,6 +296,24 @@ export default function MenuClient({
         sold_out: data.sold_out,
         ...pickTranslations(data),
       });
+    }
+
+    // Los grupos se guardan aparte (con su propia regla de promociones): solo si cambiaron.
+    const before = data.id ? (productGroupLinks[data.id] ?? []) : [];
+    const changed = data.option_group_ids.join() !== before.join();
+
+    if (productId && changed) {
+      const result = await setProductOptionGroupsAction(
+        businessId,
+        productId,
+        data.option_group_ids,
+      );
+
+      setError(
+        result.ok
+          ? null
+          : `El producto se guardó, pero sus opciones no: ${result.error}`,
+      );
     }
 
     setProductDialogOpen(false);
@@ -475,6 +509,12 @@ export default function MenuClient({
         ) : (
           <CreateCategoryButton empty onClick={handleCreateCategory} />
         )}
+
+        <OptionGroupsSection
+          businessId={businessId}
+          initialGroups={optionGroups}
+          usage={groupUsage}
+        />
       </div>
 
       <CategoryDialog
@@ -516,6 +556,13 @@ export default function MenuClient({
         initialData={editingProduct ?? undefined}
         categoryId={selectedCategoryId}
         businessId={businessId}
+        optionGroups={optionGroups}
+        initialGroupIds={
+          editingProduct ? (productGroupLinks[editingProduct.id] ?? []) : []
+        }
+        inPromotion={
+          !!editingProduct && productIdsInPromotions.includes(editingProduct.id)
+        }
         onSubmit={handleProductSubmit}
       />
     </>

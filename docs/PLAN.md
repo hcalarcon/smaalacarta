@@ -576,11 +576,14 @@ productos. Esta etapa es la **parte A** (base de datos y panel); el menú públi
 van en la parte B. Requisitos en `docs/SPEC.md` (ADMIN-OPCIONES-1 a 16). Migración
 `20261009000000_opciones_y_extras.sql`.
 
-- [ ] [herni] Migración: `option_groups`, `options`, `product_option_groups` con RLS y bloqueo por
+- [x] [herni] Migración: `option_groups`, `options`, `product_option_groups` con RLS y bloqueo por
       suspensión, `save_option_group`, `set_product_option_groups`, límites (30 opciones por grupo,
       6 grupos por producto) y `save_promotion` con la regla de grupos obligatorios
-- [ ] [herni] Admin: sección "Opciones y extras" en Menú, selector en el producto, chip "Con
+- [x] [herni] Admin: sección "Opciones y extras" en Menú, selector en el producto, chip "Con
       opciones" y productos con grupo obligatorio deshabilitados en promociones
+- [ ] [herni] **Probar a mano**: crear un grupo (arrastrar opciones, precio extra, sin stock), asociarlo
+      a un producto, ver el chip "Con opciones" y comprobar que un producto con grupo obligatorio
+      aparece deshabilitado en el editor de promociones
 - [ ] [herni] Parte B: `public_menu` y `create_public_order` con opciones (el menú no debería
       ofrecer un producto con grupo obligatorio sin pedir la elección), menú interactivo y estático
 - [ ] [por asignar] Traducir grupos y opciones (es/en/pt)
