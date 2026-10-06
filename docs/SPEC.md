@@ -903,8 +903,8 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   queda deshabilitado con el motivo.
 - **ADMIN-PEDIDOS-19** El pedido manual no usa Mercado Pago: el diálogo no lo ofrece y el pedido queda
   `not_required`.
-- **ADMIN-PEDIDOS-20** El tablero, el detalle y el historial de pedidos muestran las opciones elegidas
-  bajo cada ítem (`+ Queso x1`).
+- **ADMIN-PEDIDOS-20** El tablero y el detalle del pedido (que también se abre desde el historial, cuya
+  tabla no lista ítems) muestran las opciones elegidas bajo cada ítem (`+ Queso`, `+ Frutilla ×2`).
 - **ADMIN-PEDIDOS-21** El pedido manual (`create_manual_order`) no exige ni valida opciones en esta
   versión: sus ítems nunca las llevan.
 

@@ -83,3 +83,64 @@ describe("detalle con Mercado Pago — ADMIN-PEDIDOS-18", () => {
     expect(screen.getByRole("button", { name: "Listo" })).toBeTruthy();
   });
 });
+
+describe("opciones bajo cada ítem — ADMIN-PEDIDOS-20", () => {
+  const withOptions = order({
+    payment_status: "paid",
+    order_items: [
+      {
+        name: "Helado",
+        quantity: 2,
+        unit_price: 3300,
+        sort_order: 1,
+        options: [
+          { grupo: "Sabores", nombre: "Frutilla", cantidad: 2, precio: 0 },
+          { grupo: "Toppings", nombre: "Chocolate", cantidad: 1, precio: 300 },
+        ],
+      },
+      { name: "Café", quantity: 1, unit_price: 1000, sort_order: 2, options: null },
+    ],
+  } as unknown as Partial<Order>);
+
+  it("el tablero muestra las opciones bajo el ítem", () => {
+    card(withOptions);
+
+    expect(screen.getByText("2 × Helado")).toBeTruthy();
+    expect(screen.getByText("+ Frutilla ×2")).toBeTruthy();
+    expect(screen.getByText("+ Chocolate")).toBeTruthy();
+    expect(screen.getByText("1 × Café")).toBeTruthy();
+  });
+
+  it("el detalle (que también se abre desde el historial) las muestra, con el subtotal con extras", () => {
+    detail(withOptions);
+
+    expect(screen.getByText("+ Frutilla ×2")).toBeTruthy();
+    expect(screen.getByText("+ Chocolate")).toBeTruthy();
+    expect(screen.getByText(/6\.600/)).toBeTruthy();
+  });
+
+  it("un pedido sin opciones (manual o anterior) se ve como siempre", () => {
+    const { container } = card(order());
+
+    expect(screen.getByText("2 × Café")).toBeTruthy();
+    expect(container.textContent).not.toContain("+ ");
+  });
+
+  it("las opciones se escriben como texto, nunca como HTML", () => {
+    const peligroso = order({
+      order_items: [
+        {
+          name: "X",
+          quantity: 1,
+          unit_price: 1,
+          sort_order: 1,
+          options: [{ grupo: "g", nombre: "<img src=x onerror=alert(1)>", cantidad: 1, precio: 0 }],
+        },
+      ],
+    } as unknown as Partial<Order>);
+    const { container } = card(peligroso);
+
+    expect(container.querySelector("img")).toBeNull();
+    expect(screen.getByText("+ <img src=x onerror=alert(1)>")).toBeTruthy();
+  });
+});

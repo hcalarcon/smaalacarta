@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase-server";
+import type { OrderItemOption } from "@/lib/orders/item-options";
 import type { ManualOrderInput } from "@/lib/orders/manual-order";
 import { todayAtIso } from "@/lib/orders/scheduled";
 
@@ -7,6 +8,8 @@ export type OrderItem = {
   quantity: number;
   unit_price: number;
   sort_order: number;
+  // Lo que el cliente eligió (grupo, nombre, cantidad y precio del momento); nulo sin opciones.
+  options: OrderItemOption[] | null;
 };
 
 export type OrderEvent = {
@@ -38,7 +41,7 @@ export type Order = {
 
 const SELECT =
   "id, order_number, status, total, notes, customer_name, delivery, payment, payment_status, source, scheduled_for, preorder, code, created_at, updated_at, " +
-  "order_items(name, quantity, unit_price, sort_order), order_events(kind, status, created_at, note)";
+  "order_items(name, quantity, unit_price, sort_order, options), order_events(kind, status, created_at, note)";
 
 // Los pedidos más recientes del negocio, con su detalle y su línea de tiempo. El RLS
 // deja ver solo los del negocio (ADMIN-PEDIDOS-2); el filtro por negocio es doble

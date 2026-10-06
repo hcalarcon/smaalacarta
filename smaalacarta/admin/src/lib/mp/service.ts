@@ -1,3 +1,5 @@
+import { itemTitle, type OrderItemOption } from "@/lib/orders/item-options";
+
 import { MpApiError, type MpApi, type MpPayment } from "./api";
 import { createRateLimiter } from "./rate-limit";
 import { verifyWebhookSignature } from "./signature";
@@ -16,7 +18,8 @@ export type OrderRecord = {
   status: string;
   payment: string | null;
   paymentStatus: PaymentStatus;
-  items: { name: string; quantity: number; unitPrice: number }[];
+  // `options` es lo que el cliente eligió en el ítem; su precio ya está dentro de `unitPrice` (MP-8).
+  items: { name: string; quantity: number; unitPrice: number; options?: OrderItemOption[] | null }[];
 };
 
 export type Credentials = { accessToken: string; webhookSecret: string; enabled: boolean };
@@ -83,7 +86,7 @@ export async function createPayment(deps: MpDeps, input: { code?: unknown }): Pr
   try {
     const preference = await deps.mp.createPreference(credentials.accessToken, {
       items: order.items.map((item) => ({
-        title: item.name,
+        title: itemTitle(item.name, item.options),
         quantity: item.quantity,
         unit_price: Number(item.unitPrice),
         currency_id: "ARS",
