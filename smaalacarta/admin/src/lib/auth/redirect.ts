@@ -17,9 +17,3 @@ export function safeNextPath(next: string | null | undefined) {
 
   return isAllowedPath ? next : DEFAULT_PATH;
 }
-
-// Destino después de abrir el link de un mail (confirmar cuenta o recuperar
-// contraseña): además del panel, puede ser la pantalla de nueva contraseña.
-export function callbackDestination(next: string | null | undefined) {
-  return next === "/restablecer" ? next : safeNextPath(next);
-}

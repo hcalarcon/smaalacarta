@@ -22,33 +22,17 @@ describe("redirectForRoute — ADMIN-AUTH-7", () => {
     expect(redirectForRoute("/dashboard/menu", true)).toBeNull();
   });
 
-  it.each(["/login", "/recuperar"])(
-    "manda al panel a quien ya tiene sesión y entra a %s",
-    (path) => {
-      expect(redirectForRoute(path, true)).toBe("/dashboard");
-    },
-  );
+  it("manda al panel a quien ya tiene sesión y entra a /login", () => {
+    expect(redirectForRoute("/login", true)).toBe("/dashboard");
+  });
 
-  it.each(["/login", "/recuperar"])(
-    "deja ver %s a quien no tiene sesión",
-    (path) => {
-      expect(redirectForRoute(path, false)).toBeNull();
-    },
-  );
+  it("deja ver /login a quien no tiene sesión", () => {
+    expect(redirectForRoute("/login", false)).toBeNull();
+  });
 
   it("no hay registro público: /registro no recibe trato especial", () => {
     expect(redirectForRoute("/registro", true)).toBeNull();
     expect(redirectForRoute("/registro", false)).toBeNull();
-  });
-
-  it("no toca /restablecer: se entra con el link del mail, ya con sesión", () => {
-    expect(redirectForRoute("/restablecer", true)).toBeNull();
-    expect(redirectForRoute("/restablecer", false)).toBeNull();
-  });
-
-  it("no toca /auth/callback", () => {
-    expect(redirectForRoute("/auth/callback", false)).toBeNull();
-    expect(redirectForRoute("/auth/callback", true)).toBeNull();
   });
 
   it("no confunde prefijos parecidos con el panel", () => {
@@ -142,19 +126,16 @@ describe("accessState con superadmin — ADMIN-SUPER-9", () => {
 });
 
 describe("contraseña temporal — ADMIN-SUPER-10", () => {
-  it.each(["/dashboard", "/dashboard/menu", "/superadmin", "/superadmin/negocios/x", "/login", "/recuperar", "/sin-negocio"])(
+  it.each(["/dashboard", "/dashboard/menu", "/superadmin", "/superadmin/negocios/x", "/login", "/sin-negocio"])(
     "manda %s al cambio de contraseña",
     (path) => {
       expect(redirectForRoute(path, true, true)).toBe("/cambiar-contrasena");
     },
   );
 
-  it.each(["/cambiar-contrasena", "/restablecer", "/auth/callback"])(
-    "deja pasar %s: ahí se elige la contraseña propia",
-    (path) => {
-      expect(redirectForRoute(path, true, true)).toBeNull();
-    },
-  );
+  it("deja pasar /cambiar-contrasena: ahí se elige la contraseña propia", () => {
+    expect(redirectForRoute("/cambiar-contrasena", true, true)).toBeNull();
+  });
 
   it("sin la marca no cambia nada", () => {
     expect(redirectForRoute("/dashboard", true, false)).toBeNull();
@@ -187,48 +168,5 @@ describe("hasTemporaryPassword — ADMIN-SUPER-10", () => {
     [{ must_change_password: 1 }],
   ])("es falso con %j", (metadata) => {
     expect(hasTemporaryPassword(metadata as never)).toBe(false);
-  });
-});
-
-describe("sesión de recuperación confinada a /restablecer — ADMIN-AUTH-15", () => {
-  const recovery = (path: string, hasUser = true, mustChange = false) =>
-    redirectForRoute(path, hasUser, mustChange, true);
-
-  it.each([
-    "/dashboard",
-    "/dashboard/menu",
-    "/superadmin",
-    "/superadmin/negocios/x",
-    "/login",
-    "/recuperar",
-    "/cambiar-contrasena",
-    "/sin-negocio",
-    "/",
-  ])("con marca de recuperación válida, manda %s a /restablecer", (path) => {
-    expect(recovery(path)).toBe("/restablecer");
-  });
-
-  it.each(["/restablecer", "/auth/callback"])(
-    "con marca de recuperación, %s sigue accesible (también el cierre de sesión, que se manda desde /restablecer)",
-    (path) => {
-      expect(recovery(path)).toBeNull();
-    },
-  );
-
-  it("sin marca, o con la marca vencida o inválida, no confina: flujo normal", () => {
-    expect(redirectForRoute("/dashboard", true, false, false)).toBeNull();
-    expect(redirectForRoute("/dashboard", true)).toBeNull();
-    expect(redirectForRoute("/login", true)).toBe("/dashboard");
-  });
-
-  it("sin sesión la marca no importa", () => {
-    expect(recovery("/dashboard", false)).toBe("/login?next=%2Fdashboard");
-    expect(recovery("/login", false)).toBeNull();
-  });
-
-  it("gana sobre la contraseña temporal: la cuenta con temporal también elige acá su contraseña", () => {
-    expect(recovery("/dashboard", true, true)).toBe("/restablecer");
-    expect(recovery("/cambiar-contrasena", true, true)).toBe("/restablecer");
-    expect(recovery("/restablecer", true, true)).toBeNull();
   });
 });

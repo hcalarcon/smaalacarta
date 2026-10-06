@@ -541,8 +541,8 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
 *Aplicado por `src/lib/get-current-business.ts`, `src/lib/auth/`, `proxy.ts`,
 `app/(auth)` y las políticas de RLS en `supabase/migrations/`. Cubierto por:
 `src/lib/auth/*.test.ts` (ADMIN-AUTH-4 a 8) y `src/lib/db/policies.test.ts`
-(ADMIN-AUTH-1 a 3, contra Postgres real). El envío de mails y el flujo completo de
-recuperación se prueban a mano.*
+(ADMIN-AUTH-1 a 3, contra Postgres real). No hay recuperación de contraseña por mail:
+la restablece el superadmin (ADMIN-AUTH-16).*
 
 - **ADMIN-AUTH-1** Al registrarse un usuario se le crea un perfil con su email.
   Nadie ve ni edita el perfil de otro.
@@ -556,47 +556,50 @@ recuperación se prueban a mano.*
 - **ADMIN-AUTH-4** Iniciar sesión pide un email con formato válido y una
   contraseña; si Supabase rechaza las credenciales el usuario ve un mensaje en
   español que no dice cuál de los dos datos falló.
-- **ADMIN-AUTH-5** Una contraseña nueva (al restablecerla) tiene al menos 8
+- **ADMIN-AUTH-5** Una contraseña nueva (al cambiarla) tiene al menos 8
   caracteres y coincide con su confirmación.
 - **ADMIN-AUTH-6** Después de iniciar sesión el usuario vuelve a la página del
   panel que había pedido; una dirección que no sea una ruta interna del panel se
   ignora y va a `/dashboard`.
 - **ADMIN-AUTH-7** Sin sesión, las rutas del panel llevan a `/login`; con
-  sesión, `/login` y `/recuperar` llevan a `/dashboard`. No hay registro
+  sesión, `/login` lleva a `/dashboard`. No hay registro
   público: las cuentas las crea el equipo de SMA a la Carta.
 - **ADMIN-AUTH-8** Un usuario con sesión pero sin negocio no vuelve a `/login`:
   ve un aviso de que su cuenta no tiene negocio asignado y puede cerrar sesión.
-- **ADMIN-AUTH-9** Pedir recuperar la contraseña muestra el mismo mensaje
-  exista o no una cuenta con ese email.
+- ~~**ADMIN-AUTH-9** Pedir recuperar la contraseña muestra el mismo mensaje
+  exista o no una cuenta con ese email.~~ *Reemplazado por ADMIN-AUTH-16: no hay recuperación por mail.*
 - **ADMIN-AUTH-10** Cambiar la contraseña con sesión iniciada (desde
   Configuración o, con la temporal, en `/cambiar-contrasena`) pide la
   contraseña actual y la valida contra Supabase antes de guardar la nueva; si
   no coincide, no se toca nada. La nueva tiene que ser distinta de la actual.
-- **ADMIN-AUTH-11** El link del mail de recuperar contraseña vuelve a
+- ~~**ADMIN-AUTH-11** El link del mail de recuperar contraseña vuelve a
   `<origen>/admin/auth/callback?next=/restablecer`, en producción y en localhost: el basePath
-  (`src/lib/base-path.ts`, el mismo que usa `next.config.ts`) se suma en un solo lugar.
-- **ADMIN-AUTH-12** `/auth/callback` responde con un redirect relativo que suma el basePath (el
+  (`src/lib/base-path.ts`, el mismo que usa `next.config.ts`) se suma en un solo lugar.~~ *Reemplazado por ADMIN-AUTH-16.*
+- ~~**ADMIN-AUTH-12** `/auth/callback` responde con un redirect relativo que suma el basePath (el
   navegador conserva el dominio con el que entró, p. ej. `www.smaalacarta.com.ar`, y no pasa al host
   interno del deploy): el link de recuperación sigue a `/admin/restablecer`, el de confirmar cuenta a
   `/admin/dashboard`, y uno inválido o vencido a `/admin/login?error=link`. Si el canje del `code` falla (o el link no lo trae) se loguea en el
-  servidor el motivo, nunca el `code`.
-- **ADMIN-AUTH-13** `/restablecer` (el destino del link del mail de recuperación) pide solo la
+  servidor el motivo, nunca el `code`.~~ *Reemplazado por ADMIN-AUTH-16.*
+- ~~**ADMIN-AUTH-13** `/restablecer` (el destino del link del mail de recuperación) pide solo la
   contraseña nueva y su repetición, sin la actual, que quien llega ahí no recuerda: la sesión que
   abrió el link es la prueba de identidad. Valida la nueva como el cambio normal y, si la cuenta
   tenía una contraseña temporal, borra la marca `must_change_password` en el mismo paso. El cambio
-  desde Configuración y `/cambiar-contrasena` siguen pidiendo la actual (ADMIN-AUTH-10).
-- **ADMIN-AUTH-14** `/restablecer` y su acción solo valen con una sesión de recuperación: al canjear
+  desde Configuración y `/cambiar-contrasena` siguen pidiendo la actual (ADMIN-AUTH-10).~~ *Reemplazado por ADMIN-AUTH-16.*
+- ~~**ADMIN-AUTH-14** `/restablecer` y su acción solo valen con una sesión de recuperación: al canjear
   un link con `next=/restablecer`, `/auth/callback` deja una cookie `sma-recovery` httpOnly, de 15
   minutos, acotada al panel y firmada con una clave del servidor, atada al usuario. Sin esa marca (una
   sesión normal que entra a mano a `/restablecer`) se va a `/dashboard` y la acción no cambia nada; la
-  marca se borra al guardar la contraseña. Sin clave en el servidor falla cerrado.
-- **ADMIN-AUTH-15** Mientras la sesión tenga una marca de recuperación válida (cookie `sma-recovery`,
+  marca se borra al guardar la contraseña. Sin clave en el servidor falla cerrado.~~ *Reemplazado por ADMIN-AUTH-16.*
+- ~~**ADMIN-AUTH-15** Mientras la sesión tenga una marca de recuperación válida (cookie `sma-recovery`,
   ADMIN-AUTH-14) y no se haya guardado la contraseña nueva, `proxy.ts` deja al usuario solo en
   `/restablecer` y `/auth/callback` y manda cualquier otra ruta a `/restablecer` (`redirectForRoute`,
   también por encima de la contraseña temporal): con "atrás" o escribiendo `/dashboard` no queda
   logueado sin haberla cambiado. El cierre de sesión se manda desde `/restablecer` y descarta la
   marca; guardar la contraseña también la borra. Con la marca vencida o inválida no confina (flujo
-  normal).
+  normal).~~ *Reemplazado por ADMIN-AUTH-16.*
+- **ADMIN-AUTH-16** Solo el superadmin restablece contraseñas (ADMIN-SUPER-11): el panel no ofrece
+  recuperarla por mail, y la pantalla de login indica pedirla al equipo de SMA a la Carta con un
+  link de WhatsApp al mismo número que usa la landing.
 
 ## ADMIN-SUPER — Superadmin y alta de cuentas
 
@@ -984,8 +987,9 @@ se resuelve en su propia rama `fix/`.
   servidor. Ver [PLAN.md](PLAN.md).
 - **Recuperar la contraseña por mail no llega a los clientes.** El mail por defecto
   de Supabase solo entrega a miembros del equipo del proyecto y permite 2 por hora;
-  sin un SMTP propio, `/recuperar` no le sirve a un cliente. Por eso el
-  restablecimiento lo hace el superadmin (ADMIN-SUPER-11). La marca de "contraseña
+  sin un SMTP propio no le sirve a un cliente, así que se quitó (`/recuperar`,
+  `/restablecer` y `/auth/callback` ya no existen). El restablecimiento lo hace el
+  superadmin (ADMIN-SUPER-11, ADMIN-AUTH-16). La marca de "contraseña
   temporal" la respeta la app, no la base: quien use la API con su sesión puede
   saltearla, pero solo para su propia cuenta.
 - **Superadmin: roles sin efecto.** Un miembro puede ser `owner` o `staff`, pero
