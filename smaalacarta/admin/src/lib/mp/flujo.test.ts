@@ -3,6 +3,8 @@ import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { asService, asUser, createTestDb, type TestDb } from "@/test/db";
 
+import type { OrderItemOption } from "@/lib/orders/item-options";
+
 import type { MpPayment } from "./api";
 import { createPayment, handleWebhook, verifyPayment, type MpDeps, type OrderRecord } from "./service";
 import { signWebhook } from "./signature";
@@ -79,8 +81,8 @@ async function findOrder(column: "code" | "id", value: string): Promise<OrderRec
   const r = rows[0];
 
   const items = (
-    await db.query<{ name: string; quantity: number; unit_price: string }>(
-      "select name, quantity, unit_price from order_items where order_id = $1 order by sort_order",
+    await db.query<{ name: string; quantity: number; unit_price: string; options: OrderItemOption[] | null }>(
+      "select name, quantity, unit_price, options from order_items where order_id = $1 order by sort_order",
       [r.id],
     )
   ).rows;
@@ -94,7 +96,12 @@ async function findOrder(column: "code" | "id", value: string): Promise<OrderRec
     status: r.status,
     payment: r.payment,
     paymentStatus: r.payment_status as OrderRecord["paymentStatus"],
-    items: items.map((i) => ({ name: i.name, quantity: i.quantity, unitPrice: Number(i.unit_price) })),
+    items: items.map((i) => ({
+      name: i.name,
+      quantity: i.quantity,
+      unitPrice: Number(i.unit_price),
+      options: i.options,
+    })),
   };
 }
 
@@ -353,5 +360,88 @@ describe("flujo de cobro con Mercado Pago, de punta a punta", () => {
 
     expect((await handleWebhook(deps, notification(NEG_A, SECRET_A, Number(payment.id)))).status).toBe(200);
     expect((await stored(order.id)).payment_status).toBe("paid");
+  });
+});
+
+describe("cobro de un pedido con opciones y extras — MP-8", () => {
+  const CAT_A = "c1000000-0000-0000-0000-000000000011";
+  const HELADO = "d1000000-0000-0000-0000-0000000000a1";
+  const G_SABORES = "9a000000-0000-0000-0000-0000000000a1";
+  const G_TOPPINGS = "9a000000-0000-0000-0000-0000000000a2";
+  const FRUTILLA = "0a000000-0000-0000-0000-0000000000a1";
+  const LIMON = "0a000000-0000-0000-0000-0000000000a2";
+  const CHOCOLATE = "0a000000-0000-0000-0000-0000000000a3";
+
+  beforeAll(async () => {
+    await db.exec(`
+      insert into products (id, business_id, category_id, name, price)
+        values ('${HELADO}', '${NEG_A}', '${CAT_A}', 'Helado', 3000);
+      insert into option_groups (id, business_id, name, min_select, max_select, allow_repeat, sort_order) values
+        ('${G_SABORES}', '${NEG_A}', 'Sabores', 1, 3, true, 0),
+        ('${G_TOPPINGS}', '${NEG_A}', 'Toppings', 0, 2, false, 1);
+      insert into options (id, group_id, business_id, name, price_delta, sort_order) values
+        ('${FRUTILLA}', '${G_SABORES}', '${NEG_A}', 'Frutilla', 0, 0),
+        ('${LIMON}', '${G_SABORES}', '${NEG_A}', 'Limón', 0, 1),
+        ('${CHOCOLATE}', '${G_TOPPINGS}', '${NEG_A}', 'Chocolate', 300, 0);
+      insert into product_option_groups (product_id, group_id, business_id, sort_order) values
+        ('${HELADO}', '${G_SABORES}', '${NEG_A}', 0),
+        ('${HELADO}', '${G_TOPPINGS}', '${NEG_A}', 1);
+    `);
+  });
+
+  async function orderWithOptions(quantity: number) {
+    const options = JSON.stringify([
+      { id: FRUTILLA, quantity: 2 },
+      { id: LIMON, quantity: 1 },
+      { id: CHOCOLATE, quantity: 1 },
+    ]);
+    const r = await asUser(
+      db,
+      null,
+      `select public.create_public_order('ana', 'Cliente', 'retiro', 'mercadopago', null,
+         '[{"id":"${HELADO}","kind":"product","quantity":${quantity},"options":${options}}]'::jsonb) as result`,
+    );
+    if (!r.ok) throw new Error(r.error);
+    const { code } = r.rows[0].result as { code: string };
+    return (await findOrder("code", code))!;
+  }
+
+  it("el total de la preferencia coincide con orders.total y el título lleva las opciones", async () => {
+    const sim = fakeMp();
+    const order = await orderWithOptions(2);
+
+    // Helado $3000 + topping $300 = $3300 por unidad, 2 unidades.
+    expect(order.total).toBe(6600);
+
+    const created = await createPayment(realDeps(sim.mp), { code: order.code });
+    expect(created.status).toBe(200);
+
+    const { items } = sim.preferences[0].input;
+    expect(items).toEqual([
+      { title: "Helado (Frutilla ×2, Limón, Chocolate)", quantity: 2, unit_price: 3300, currency_id: "ARS" },
+    ]);
+
+    const sum = items.reduce((acc, item) => acc + item.unit_price * item.quantity, 0);
+    expect(sum).toBe(order.total);
+
+    const stored = await db.query<{ total: string }>("select total from orders where id = $1", [order.id]);
+    expect(sum).toBe(Number(stored.rows[0].total));
+  });
+
+  it("un pago por el total con extras se confirma; por el precio sin extras, no", async () => {
+    const sim = fakeMp();
+    const deps = realDeps(sim.mp);
+
+    const ok = await orderWithOptions(1);
+    const approved = sim.pay(ok, "approved", 3300);
+    expect((await handleWebhook(deps, notification(NEG_A, SECRET_A, Number(approved.id)))).body).toEqual({
+      result: "paid",
+    });
+
+    const bad = await orderWithOptions(1);
+    const short = sim.pay(bad, "approved", 3000);
+    expect((await handleWebhook(deps, notification(NEG_A, SECRET_A, Number(short.id)))).body).not.toEqual({
+      result: "paid",
+    });
   });
 });

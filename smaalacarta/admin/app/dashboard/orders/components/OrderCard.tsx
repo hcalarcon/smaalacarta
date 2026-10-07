@@ -3,6 +3,7 @@
 import type { Order } from "@/lib/db/orders";
 import { timeAgo } from "@/lib/orders/format";
 import PaymentBadge from "./PaymentBadge";
+import { itemOptionLines } from "@/lib/orders/item-options";
 import { isPaymentPending, PAYMENT_BLOCK_REASON } from "@/lib/orders/payment";
 import { orderBadge } from "@/lib/orders/scheduled";
 import { primaryAction, STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
@@ -60,8 +61,15 @@ export default function OrderCard({
 
       <ul className="mt-2 space-y-0.5 text-xs text-stone-600">
         {order.order_items.slice(0, SHOWN_ITEMS).map((item, index) => (
-          <li key={index} className="truncate">
-            {item.quantity} × {item.name}
+          <li key={index}>
+            <span className="block truncate">
+              {item.quantity} × {item.name}
+            </span>
+            {itemOptionLines(item.options).map((line) => (
+              <span key={line} className="block truncate pl-3 text-[11px] text-stone-500">
+                {line}
+              </span>
+            ))}
           </li>
         ))}
         {extra > 0 ? <li className="text-stone-400">y {extra} más…</li> : null}

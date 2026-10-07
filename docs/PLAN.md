@@ -584,8 +584,14 @@ van en la parte B. Requisitos en `docs/SPEC.md` (ADMIN-OPCIONES-1 a 16). Migraci
 - [ ] [herni] **Probar a mano**: crear un grupo (arrastrar opciones, precio extra, sin stock), asociarlo
       a un producto, ver el chip "Con opciones" y comprobar que un producto con grupo obligatorio
       aparece deshabilitado en el editor de promociones
-- [ ] [herni] Parte B: `public_menu` y `create_public_order` con opciones (el menú no debería
-      ofrecer un producto con grupo obligatorio sin pedir la elección), menú interactivo y estático
+- [x] [herni] Parte B: `public_menu`, `create_public_order` y `public_order_tracking` con opciones
+      (migración `20261010000000_opciones_en_menu_y_pedidos.sql`), menú interactivo (hoja inferior,
+      carrito, WhatsApp), estático, seguimiento, tablero y detalle de pedidos y cobro con Mercado Pago
+      (requisitos PUBLICO-39 a 49, SEGUIMIENTO-22 y 23, ESTATICO-8, ADMIN-PEDIDOS-20 y 21, MP-8)
+- [ ] [herni] **Probar a mano la parte B**: elegir opciones en el menú interactivo (radio, casillas y
+      contador, producto agotado, precio en vivo) en las tres plantillas, en claro y oscuro y en el
+      celular; ver las líneas del carrito y el mensaje de WhatsApp; hacer un pedido y mirarlo en el
+      tablero, el seguimiento y el link de Mercado Pago; ver el texto de solo lectura en el estático
 - [ ] [por asignar] Traducir grupos y opciones (es/en/pt)
 - [ ] [por asignar] "Incluye N y el resto cuesta X"
 - [ ] [por asignar] Extras en los pedidos manuales del panel

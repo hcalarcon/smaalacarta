@@ -683,3 +683,38 @@ body {
   margin-bottom: 8px;
   opacity: 0.6;
 }
+
+/* OPCIONES Y EXTRAS (PUBLICO-45, 46 y ESTATICO-8): la hoja y las líneas del carrito con la forma
+   de clásico (serif, esquinas casi rectas). Todo sale de las variables de la plantilla, así que
+   sirve en claro y en oscuro. */
+.opciones-hoja {
+  border-radius: 6px 6px 0 0;
+  border-top: 3px solid var(--primary);
+}
+
+.opciones-titulo,
+.opciones-grupo-titulo {
+  font-family: var(--serif);
+}
+
+.opciones-regla.obligatoria {
+  color: var(--text);
+  border-bottom: 2px solid var(--primary);
+}
+
+.opciones-agregar {
+  background: var(--primary);
+  color: var(--on-brand, #fff);
+  border-radius: 4px;
+  font-family: var(--serif);
+  letter-spacing: 0.03em;
+}
+
+.opcion-contador button {
+  border-radius: 4px;
+}
+
+:root[data-tema="oscuro"] .opciones-hoja {
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--primary);
+}

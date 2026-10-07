@@ -4,6 +4,7 @@ import {
   brandTheme,
   fetchTracking,
   isFinalStatus,
+  itemRow,
   langSearch,
   pageTitle,
   parseTrackingCode,
@@ -276,5 +277,65 @@ describe("preorderNotice — PUBLICO-38", () => {
 
   it("sin fecha válida no hay aviso", () => {
     for (const value of [null, undefined, "", "no es una fecha", 5]) expect(preorderNotice(value, "es")).toBeNull();
+  });
+});
+
+describe("itemRow — SEGUIMIENTO-23", () => {
+  const money = { format: (n) => `$${n}` };
+
+  it("muestra la cantidad, el nombre y el total de la línea, sin opciones si no hay", () => {
+    const li = itemRow(document, { nombre: "Café", cantidad: 2, precio: 1000 }, money);
+
+    expect(li.tagName).toBe("LI");
+    expect(li.textContent).toBe("2 × Café$2000");
+    expect(li.querySelector(".item-opciones")).toBeNull();
+  });
+
+  it("lista las opciones bajo el ítem, con ×N si se repite, y el total incluye los extras", () => {
+    const li = itemRow(
+      document,
+      {
+        nombre: "Helado",
+        cantidad: 2,
+        precio: 3300,
+        opciones: [
+          { grupo: "Sabores", nombre: "Frutilla", cantidad: 2, precio: 0 },
+          { grupo: "Toppings", nombre: "Chocolate", cantidad: 1, precio: 300 },
+        ],
+      },
+      money,
+    );
+
+    const lines = [...li.querySelectorAll(".item-opciones li")].map((n) => n.textContent);
+    expect(lines).toEqual(["+ Frutilla ×2", "+ Chocolate"]);
+    expect(li.textContent).toContain("$6600");
+  });
+
+  it("todo se escribe como texto: un nombre con HTML no crea elementos", () => {
+    const li = itemRow(
+      document,
+      {
+        nombre: "<img src=x onerror=alert(1)>",
+        cantidad: 1,
+        precio: 1,
+        opciones: [{ grupo: "<b>g</b>", nombre: "<script>alert(1)</script>", cantidad: 1, precio: 0 }],
+      },
+      money,
+    );
+
+    expect(li.querySelector("img, script, b")).toBeNull();
+    expect(li.querySelector(".item-opciones li").textContent).toBe("+ <script>alert(1)</script>");
+  });
+
+  it("ignora opciones mal formadas sin romper la página", () => {
+    const li = itemRow(
+      document,
+      { nombre: "X", cantidad: 1, precio: 1, opciones: [null, { nombre: "" }, "texto", { nombre: "Ok", cantidad: 1 }] },
+      money,
+    );
+
+    expect([...li.querySelectorAll(".item-opciones li")].map((n) => n.textContent)).toEqual(["+ Ok"]);
+    expect(itemRow(document, { nombre: "Y", cantidad: 1, precio: 1, opciones: "no es lista" }, money)
+      .querySelector(".item-opciones")).toBeNull();
   });
 });

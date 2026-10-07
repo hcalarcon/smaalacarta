@@ -18,6 +18,7 @@ import {
   socialLinks,
 } from "./info.js";
 import { DEFAULT_LANG, normalizeLang, t } from "./i18n.js";
+import { hasOptions } from "./options.js";
 import { buildEnhancedMenu } from "./menu.js";
 import { isOpenNow, nextOpening, openingText } from "./schedule.js";
 
@@ -42,6 +43,35 @@ function socialIconSvg(key) {
     : "";
 }
 
+// Qué hay que elegir en un grupo, para el texto de solo lectura: nada en un grupo opcional de un
+// solo lugar, "hasta N" si es opcional y admite varios, y "elegí N" o "elegí de N a M" si es obligatorio.
+function optionsRule(group, lang) {
+  if (group.min < 1) return group.max > 1 ? t("static.upTo", lang, { max: group.max }) : "";
+  if (group.min === group.max) return t("static.pick", lang, { n: group.min });
+  return t("static.pickRange", lang, { min: group.min, max: group.max });
+}
+
+// Opciones y extras de un producto (ESTATICO-8): una línea por grupo, solo texto, sin elegir nada
+// ("Extras: Queso +$500 · Panceta +$800 (hasta 2)"). Todo dato del negocio pasa por `escapeHtml`.
+function optionsLines(item, lang) {
+  if (!hasOptions(item)) return "";
+
+  return item.opciones
+    .map((group) => {
+      const options = (group.opciones ?? [])
+        .map((option) => {
+          const extra = Number(option.precio) > 0 ? ` +$${escapeHtml(formatPrice(option.precio))}` : "";
+          const soldOut = option.agotado === true ? ` (${escapeHtml(t("item.soldOut", lang))})` : "";
+          return `${escapeHtml(option.nombre)}${extra}${soldOut}`;
+        })
+        .join(" · ");
+      const rule = optionsRule(group, lang);
+
+      return `<p class="opciones-estatico">${escapeHtml(group.nombre)}: ${options}${rule ? ` (${escapeHtml(rule)})` : ""}</p>`;
+    })
+    .join("");
+}
+
 function productCard(item, lang) {
   const image = safeHttpUrl(item?.imagen);
   // Igual que el interactivo: la plantilla dibuja la etiqueta de la promo desde el atributo.
@@ -57,6 +87,7 @@ function productCard(item, lang) {
       <p>${escapeHtml(item?.descripcion || "")}</p>
       ${item?.precioAnterior ? `<span class="precio-anterior">$${escapeHtml(formatPrice(item.precioAnterior))}</span>` : ""}
       <div class="producto-precio">$${escapeHtml(formatPrice(item?.precio))}</div>
+      ${optionsLines(item, lang)}
       ${soldOut ? `<span class="etiqueta-agotado">${escapeHtml(t("item.soldOut", lang))}</span>` : ""}
     </div>
   </article>`;

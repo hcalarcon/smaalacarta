@@ -238,6 +238,45 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
 - **PUBLICO-38** El seguimiento de un pedido anticipado pagado con Mercado Pago muestra solo "Pago
   confirmado" o "Esperando el pago" y "Tu pedido es para el <día>" (hora de Argentina), sin línea de
   tiempo de estados; mismo flujo de verificación y reintento.
+- **PUBLICO-39** `public_menu` entrega en cada producto con grupos de opciones `opciones`:
+  `[{id, nombre, min, max, repetir, opciones: [{id, nombre, precio, agotado}]}]`, en el orden del
+  panel. Solo van los grupos activos asociados a ese producto y sus opciones activas (un grupo sin
+  opciones activas no se entrega). Un producto sin grupos no lleva la clave, y las promociones nunca
+  llevan `opciones`.
+- **PUBLICO-40** `create_public_order` acepta en cada ítem de producto `options: [{id, quantity}]` y
+  rechaza con `P0014` (motivo `invalid_options`) una opción que no es activa, de un grupo activo
+  asociado a ese producto; una elección cuya suma por grupo no está entre `min` y `max`; una opción
+  elegida más de una vez en un grupo que no permite repetir; un producto con grupo obligatorio pedido
+  sin opciones; y cualquier opción en una promoción o combo. Un grupo sin opciones activas no se exige.
+- **PUBLICO-41** Una opción agotada (`sold_out`) rechaza el pedido con `P0009` (`out_of_stock`), como un
+  producto sin stock.
+- **PUBLICO-42** El navegador manda solo ids y cantidades de opciones; el servidor calcula todo precio:
+  el `unit_price` del ítem es el precio del producto más la suma de `price_delta × cantidad` de lo
+  elegido, y el total del pedido lo incluye. `order_items.options` guarda la foto de lo elegido
+  (`[{grupo, nombre, cantidad, precio}]`): un cambio de precio o de nombre posterior no altera un
+  pedido hecho.
+- **PUBLICO-43** Un pedido puede llevar dos líneas del mismo producto con distinta elección de
+  opciones; la misma elección en dos líneas sigue siendo un ítem repetido (`22023`).
+- **PUBLICO-44** `lib/options.js` (funciones puras): valida una elección contra `min`, `max` y
+  `repetir`, calcula el precio con extras y arma una firma estable de la elección para agrupar las
+  líneas iguales del carrito.
+- **PUBLICO-45** En el menú interactivo, un producto con grupos abre al tocar "+" una hoja inferior con
+  cada grupo (título, "Obligatorio" u "Opcional, hasta N", radio si el máximo es 1, casillas si es
+  mayor y contador +/− si permite repetir), las opciones agotadas deshabilitadas con "Sin stock", el
+  precio total en vivo y el botón "Agregar" deshabilitado hasta que la elección sea válida. Un producto
+  sin grupos se agrega directo, como siempre.
+- **PUBLICO-46** En el carrito, una línea con opciones las muestra y su subtotal incluye los extras; el
+  mismo producto con la misma elección suma cantidad y con otra elección es otra línea. Un carrito
+  guardado antes de las opciones (sin ellas) sigue funcionando.
+- **PUBLICO-47** `reconcileCart` quita del carrito, y avisa, las líneas cuyas opciones ya no existen o
+  están agotadas, las que dejaron de cumplir `min`/`max`, y las de un producto que ahora exige opciones y
+  no las tiene.
+- **PUBLICO-48** `buildOrderItems` manda las opciones como `{id, quantity}`, nunca precios. El mensaje de
+  WhatsApp lista cada opción bajo su ítem (`  + Queso x1`) y suma los extras al subtotal y al total.
+- **PUBLICO-49** Los textos de las opciones están en español, inglés y portugués; los nombres de grupos y
+  opciones salen como los cargó el negocio. Todo dato del negocio se escribe con `textContent` o
+  `escapeHtml`. Los estilos de la hoja y de las líneas del carrito están en `base.css` y en las tres
+  plantillas, en claro y oscuro (el aspecto solo se comprueba mirándolo en el navegador).
 
 ## BUSQUEDA — Buscador
 
@@ -338,6 +377,11 @@ llegando al negocio por WhatsApp.
   `payment_status = 'awaiting'`; con cualquier otro medio queda `not_required`.
 - **SEGUIMIENTO-21** `public_order_tracking` entrega `pago` (`awaiting`, `paid` o `failed`) solo en los
   pedidos con Mercado Pago y `anticipado: true` en los anticipados; nunca credenciales ni el id del pago.
+- **SEGUIMIENTO-22** `public_order_tracking` entrega en cada ítem `opciones` (`grupo`, `nombre`,
+  `cantidad`, `precio`) tal como quedaron guardadas en el pedido, sin ids; un ítem sin opciones no lleva
+  la clave.
+- **SEGUIMIENTO-23** La página de seguimiento muestra las opciones bajo cada ítem, escritas con
+  `textContent`.
 
 ## PWA — Instalar el menú en el celular
 
@@ -415,6 +459,9 @@ en JS puro.*
   (`web/data/demos/<slug>/`), no del plan de un negocio.
 - **ESTATICO-7** El menú estático muestra un producto sin stock atenuado y con la etiqueta "Sin
   stock", en las tres plantillas y en los dos temas.
+- **ESTATICO-8** Bajo cada producto con opciones, el menú estático muestra un texto de solo lectura
+  ("Extras: Queso +$500 · Panceta +$800 (hasta 2)"), sin carrito ni selección; los datos del negocio
+  pasan por `escapeHtml`.
 
 ## IDIOMA — Menú público en español, inglés y portugués
 
@@ -856,6 +903,10 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   queda deshabilitado con el motivo.
 - **ADMIN-PEDIDOS-19** El pedido manual no usa Mercado Pago: el diálogo no lo ofrece y el pedido queda
   `not_required`.
+- **ADMIN-PEDIDOS-20** El tablero y el detalle del pedido (que también se abre desde el historial, cuya
+  tabla no lista ítems) muestran las opciones elegidas bajo cada ítem (`+ Queso`, `+ Frutilla ×2`).
+- **ADMIN-PEDIDOS-21** El pedido manual (`create_manual_order`) no exige ni valida opciones en esta
+  versión: sus ítems nunca las llevan.
 
 ## MP — Cobro con Mercado Pago (Checkout Pro)
 
@@ -890,6 +941,9 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   producción); cualquier otro origen no recibe `Access-Control-Allow-Origin`.
 - **MP-7** El token y el secreto de un negocio nunca salen de la base ni aparecen en una respuesta, un log o
   un mensaje de error.
+- **MP-8** Los ítems de la preferencia de pago salen de `order_items` (su `unit_price` ya incluye los
+  extras) y llevan las opciones elegidas en el título; la suma de la preferencia coincide con
+  `orders.total`.
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 

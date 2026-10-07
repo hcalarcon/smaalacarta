@@ -3,6 +3,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { openOptionsSheet } from "./options-sheet.js";
 import { renderStaticMenuPage } from "./static-page.js";
 
 // Las tres plantillas sirven a los dos menús (el interactivo y el estático) y a las demos.
@@ -123,5 +124,65 @@ describe("plantillas — calidad pareja", () => {
     const contrast = 1.05 / (luminance + 0.05);
 
     expect(contrast).toBeGreaterThanOrEqual(4.5);
+  });
+});
+
+describe("plantillas — opciones y extras (PUBLICO-45, 46 y 49)", () => {
+  // Una hoja con todo lo que sabe dibujar: radio, casillas, contador y una opción agotada.
+  const producto = {
+    id: "p1",
+    nombre: "Hamburguesa",
+    precio: 1000,
+    opciones: [
+      { id: "g1", nombre: "Punto", min: 1, max: 1, repetir: false, opciones: [{ id: "a", nombre: "Jugoso", precio: 0 }] },
+      {
+        id: "g2", nombre: "Extras", min: 0, max: 2, repetir: false,
+        opciones: [{ id: "b", nombre: "Queso", precio: 500 }, { id: "c", nombre: "Huevo", precio: 0, agotado: true }],
+      },
+      { id: "g3", nombre: "Sabores", min: 1, max: 3, repetir: true, opciones: [{ id: "d", nombre: "Frutilla", precio: 0 }] },
+    ],
+  };
+
+  function clasesDeLaHoja() {
+    document.body.innerHTML = "";
+    const sheet = openOptionsSheet({ item: producto, t: (k) => k, formatPrice: String, onAdd() {} });
+    const classes = new Set();
+    document.querySelectorAll(".opciones-overlay, .opciones-overlay *").forEach((node) => {
+      node.classList.forEach((c) => classes.add(c));
+    });
+    sheet.close();
+    return [...classes];
+  }
+
+  it.each(TEMPLATES)("%s: toda clase de la hoja de opciones tiene estilo", (name) => {
+    const css = [base, templateCss[name], desktop].join("\n");
+    const sinEstilo = clasesDeLaHoja().filter((c) => !new RegExp(`\\.${c}(?![\\w-])`).test(css));
+
+    expect(sinEstilo).toEqual([]);
+  });
+
+  it.each(TEMPLATES)("%s: la línea del carrito con opciones y el texto del estático tienen estilo", (name) => {
+    const css = [base, templateCss[name]].join("\n");
+
+    expect(css).toMatch(/\.item-opciones\b/);
+    expect(css).toMatch(/\.opciones-estatico\b/);
+  });
+
+  it.each(TEMPLATES)("%s: la hoja tiene su forma propia y su variante para el tema oscuro", (name) => {
+    expect(templateCss[name]).toMatch(/\.opciones-hoja\s*\{/);
+    expect(templateCss[name]).toMatch(/\.opciones-agregar\s*\{/);
+    expect(templateCss[name]).toMatch(/:root\[data-tema="oscuro"\][^{]*\.opciones-hoja/);
+  });
+
+  it("la hoja usa los colores de la plantilla (claro y oscuro), no colores fijos de fondo o texto", () => {
+    const bloque = base.slice(base.indexOf("OPCIONES Y EXTRAS"));
+    const hoja = bloque.match(/\.opciones-hoja\s*\{[^}]*\}/)[0];
+
+    expect(hoja).toMatch(/background:\s*var\(--card/);
+    expect(hoja).toMatch(/color:\s*var\(--text/);
+  });
+
+  it("el botón Agregar no usa blanco fijo sobre el color de la marca", () => {
+    expect(base).toMatch(/\.opciones-agregar\s*\{[^}]*color:\s*var\(--opc-on/);
   });
 });

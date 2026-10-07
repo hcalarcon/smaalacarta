@@ -441,6 +441,7 @@ export type Database = {
           business_id: string
           id: string
           name: string
+          options: Json | null
           order_id: string
           product_id: string | null
           promotion_id: string | null
@@ -452,6 +453,7 @@ export type Database = {
           business_id: string
           id?: string
           name: string
+          options?: Json | null
           order_id: string
           product_id?: string | null
           promotion_id?: string | null
@@ -463,6 +465,7 @@ export type Database = {
           business_id?: string
           id?: string
           name?: string
+          options?: Json | null
           order_id?: string
           product_id?: string | null
           promotion_id?: string | null
@@ -928,6 +931,10 @@ export type Database = {
         Returns: Json
       }
       public_order_tracking: { Args: { p_code: string }; Returns: Json }
+      resolve_order_options: {
+        Args: { p_business_id: string; p_options: Json; p_product_id: string }
+        Returns: Json
+      }
       save_business_settings: {
         Args: {
           p_address: string

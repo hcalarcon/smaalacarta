@@ -9,6 +9,7 @@ import {
   fetchTracking,
   brandTheme,
   isFinalStatus,
+  itemRow,
   langSearch,
   pageTitle,
   parseTrackingCode,
@@ -259,12 +260,8 @@ function render(data, { stale }) {
         el(
           "ul",
           { className: "items" },
-          data.items.map((item) =>
-            el("li", {}, [
-              el("span", { text: `${item.cantidad} × ${item.nombre}` }),
-              el("span", { text: money.format(Number(item.precio) * Number(item.cantidad)) }),
-            ]),
-          ),
+          // Cada línea con las opciones que se eligieron debajo (SEGUIMIENTO-23).
+          data.items.map((item) => itemRow(document, item, money)),
         ),
         el("p", { className: "total" }, [
           el("span", { text: t("tracker.total", lang) }),

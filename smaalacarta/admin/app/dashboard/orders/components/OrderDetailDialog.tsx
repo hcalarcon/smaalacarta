@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import type { Order } from "@/lib/db/orders";
 import { formatDateTime, trackingUrl } from "@/lib/orders/format";
 import PaymentBadge from "./PaymentBadge";
+import { itemOptionLines } from "@/lib/orders/item-options";
 import { isPaymentPending, PAYMENT_BLOCK_REASON } from "@/lib/orders/payment";
 import { orderBadge } from "@/lib/orders/scheduled";
 import { nextStatuses, STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
@@ -105,13 +106,20 @@ export default function OrderDetailDialog({
 
         <ul className="mt-5 divide-y divide-line">
           {order.order_items.map((item, index) => (
-            <li key={index} className="flex items-baseline justify-between gap-3 py-2 text-sm">
-              <span className="min-w-0 text-stone-800">
-                {item.quantity} × {item.name}
-              </span>
-              <span className="shrink-0 text-stone-600">
-                {formatMoney(Number(item.unit_price) * item.quantity)}
-              </span>
+            <li key={index} className="py-2 text-sm">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="min-w-0 text-stone-800">
+                  {item.quantity} × {item.name}
+                </span>
+                <span className="shrink-0 text-stone-600">
+                  {formatMoney(Number(item.unit_price) * item.quantity)}
+                </span>
+              </div>
+              {itemOptionLines(item.options).map((line) => (
+                <p key={line} className="pl-4 text-xs text-stone-500">
+                  {line}
+                </p>
+              ))}
             </li>
           ))}
         </ul>

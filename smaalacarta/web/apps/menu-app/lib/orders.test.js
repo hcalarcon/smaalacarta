@@ -37,6 +37,39 @@ describe("buildOrderItems — SEGUIMIENTO-2 y 7", () => {
     expect(buildOrderItems([{ id: ID_CAFE, cantidad: 1 }, { nombre: "Sin id", cantidad: 1 }])).toBeNull();
   });
 
+  it("manda las opciones elegidas como {id, quantity}, sin nombres ni precios — PUBLICO-48", () => {
+    const items = buildOrderItems([
+      {
+        id: ID_CAFE,
+        nombre: "Café",
+        precio: 1500,
+        cantidad: 2,
+        elegidas: [
+          { id: "o-queso", grupo: "Extras", nombre: "Queso", cantidad: 1, precio: 500 },
+          { id: "o-frutilla", grupo: "Sabores", nombre: "Frutilla", cantidad: 2, precio: 0 },
+        ],
+      },
+      { id: ID_COMBO, esPromo: true, nombre: "Combo", precio: 1500, cantidad: 1 },
+    ]);
+
+    expect(items[0]).toEqual({
+      id: ID_CAFE,
+      kind: "product",
+      quantity: 2,
+      options: [
+        { id: "o-queso", quantity: 1 },
+        { id: "o-frutilla", quantity: 2 },
+      ],
+    });
+    expect(JSON.stringify(items)).not.toMatch(/precio|price|Queso|Extras/);
+    // Un ítem sin opciones no lleva la clave.
+    expect(items[1]).not.toHaveProperty("options");
+  });
+
+  it("una elección vacía no manda la clave (carritos viejos)", () => {
+    expect(buildOrderItems([{ id: ID_CAFE, cantidad: 1, elegidas: [] }])[0]).not.toHaveProperty("options");
+  });
+
   it("un carrito vacío no arma pedido", () => {
     expect(buildOrderItems([])).toBeNull();
     expect(buildOrderItems(undefined)).toBeNull();
@@ -113,6 +146,7 @@ describe("createOrder — SEGUIMIENTO-1 y 7", () => {
     ["P0005", "closed"],
     ["P0007", "invalid_delivery"],
     ["P0008", "invalid_payment"],
+    ["P0014", "invalid_options"],
     ["P0009", "out_of_stock"],
     ["P0011", "scheduling_disabled"],
     ["P0012", "invalid_schedule"],

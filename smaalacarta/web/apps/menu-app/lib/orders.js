@@ -5,6 +5,7 @@
 import { isSupabaseConfigured } from "./public-menu.js";
 import { PAYMENT } from "./checkout-options.js";
 import { LANGS } from "./i18n.js";
+import { toOrderOptions } from "./options.js";
 import { whatsappDigits } from "./phone.js";
 
 // Del carrito a lo que pide la base: `id`, tipo y cantidad. Nunca precios. Devuelve
@@ -23,6 +24,10 @@ export function buildOrderItems(cart) {
       id: item.id,
       kind: item.esPromo ? "promo" : "product",
       quantity: item.cantidad,
+      // Opciones elegidas: solo ids y cantidades, nunca precios (PUBLICO-48).
+      ...(Array.isArray(item.elegidas) && item.elegidas.length > 0
+        ? { options: toOrderOptions(item.elegidas) }
+        : {}),
     });
   }
 
@@ -38,6 +43,7 @@ const REASONS = {
   P0009: "out_of_stock", // un producto del pedido está sin stock
   P0011: "scheduling_disabled", // el negocio no acepta pedidos programados
   P0012: "invalid_schedule", // la hora elegida no es válida (ya pasó, falta anticipación o está cerrado)
+  P0014: "invalid_options", // las opciones elegidas no son válidas (cambiaron, no corresponden o no cumplen las reglas)
   P0013: "preorder_closed", // ya no se toman pedidos anticipados (pasó el corte, no los acepta o está abierto)
   P0001: "unavailable", // un producto ya no está disponible
   P0002: "unavailable", // el negocio no existe o no está publicado

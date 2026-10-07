@@ -578,3 +578,38 @@ body {
   margin-bottom: 6px;
   opacity: 0.5;
 }
+
+/* OPCIONES Y EXTRAS (PUBLICO-45, 46 y ESTATICO-8): la hoja y las líneas del carrito con la forma
+   de minimal (sin esquinas redondas, filas con línea). Todo sale de las variables de la
+   plantilla, así que sirve en claro y en oscuro. */
+.opciones-hoja {
+  border-radius: 0;
+  border-top: 2px solid var(--text);
+}
+
+.opciones-opcion {
+  border-bottom: 1px solid var(--border);
+}
+
+.opciones-regla.obligatoria {
+  color: var(--text);
+  border-bottom: 2px solid var(--primary);
+}
+
+.opciones-agregar {
+  background: var(--primary);
+  color: var(--on-brand, #fff);
+  border-radius: 0;
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.opcion-contador button {
+  border-radius: 0;
+}
+
+:root[data-tema="oscuro"] .opciones-hoja {
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--text);
+}

@@ -231,6 +231,25 @@ body {
   border-bottom: 0;
 }
 
+/* Las opciones elegidas van debajo de la línea (SEGUIMIENTO-23). */
+.items li {
+  flex-wrap: wrap;
+}
+
+.item-opciones {
+  flex: 0 0 100%;
+  list-style: none;
+  padding: 0;
+  font-size: 0.85rem;
+  color: var(--muted, #6b7280);
+}
+
+.item-opciones li {
+  display: list-item;
+  padding: 0;
+  border: 0;
+}
+
 .total {
   display: flex;
   justify-content: space-between;

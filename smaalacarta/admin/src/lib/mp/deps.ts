@@ -1,5 +1,6 @@
 import "server-only";
 
+import type { OrderItemOption } from "@/lib/orders/item-options";
 import { createAdminClient } from "@/lib/supabase-admin";
 
 import { createMpApi } from "./api";
@@ -7,7 +8,7 @@ import type { MpDeps, OrderRecord, PaymentStatus } from "./service";
 
 const ORDER_SELECT =
   "id, business_id, code, total, status, payment, payment_status, businesses(slug), " +
-  "order_items(name, quantity, unit_price, sort_order)";
+  "order_items(name, quantity, unit_price, sort_order, options)";
 
 type OrderRow = {
   id: string;
@@ -18,7 +19,15 @@ type OrderRow = {
   payment: string | null;
   payment_status: string;
   businesses: { slug: string } | { slug: string }[] | null;
-  order_items: { name: string; quantity: number; unit_price: number; sort_order: number }[] | null;
+  order_items:
+    | {
+        name: string;
+        quantity: number;
+        unit_price: number;
+        sort_order: number;
+        options: OrderItemOption[] | null;
+      }[]
+    | null;
 };
 
 function toRecord(row: OrderRow): OrderRecord {
@@ -35,7 +44,12 @@ function toRecord(row: OrderRow): OrderRecord {
     paymentStatus: row.payment_status as PaymentStatus,
     items: [...(row.order_items ?? [])]
       .sort((a, b) => a.sort_order - b.sort_order)
-      .map((item) => ({ name: item.name, quantity: item.quantity, unitPrice: Number(item.unit_price) })),
+      .map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        unitPrice: Number(item.unit_price),
+        options: item.options,
+      })),
   };
 }
 
