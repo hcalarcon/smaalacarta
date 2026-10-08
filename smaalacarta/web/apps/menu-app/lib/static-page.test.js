@@ -21,6 +21,10 @@ const base = {
 };
 
 describe("renderStaticMenuPage — Etapa 6e", () => {
+  it("carga el visor de imágenes (ESTATICO-9)", () => {
+    expect(renderStaticMenuPage(base)).toContain('<script src="/apps/menu-app/lightbox.js"></script>');
+  });
+
   it("muestra el nombre, la descripción, la categoría y el producto", () => {
     const html = renderStaticMenuPage(base);
 

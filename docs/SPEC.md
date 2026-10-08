@@ -462,6 +462,9 @@ en JS puro.*
 - **ESTATICO-8** Bajo cada producto con opciones, el menú estático muestra un texto de solo lectura
   ("Extras: Queso +$500 · Panceta +$800 (hasta 2)"), sin carrito ni selección; los datos del negocio
   pasan por `escapeHtml`.
+- **ESTATICO-9** Al tocar la foto de un producto, en el menú interactivo y en el estático, se abre
+  ampliada sobre un fondo oscuro, sin ocupar el 100% de la pantalla. Se cierra con la ✕, con
+  `Esc` o tocando el fondo. Lo hace `web/apps/menu-app/lightbox.js`, que ambos cargan.
 
 ## IDIOMA — Menú público en español, inglés y portugués
 
