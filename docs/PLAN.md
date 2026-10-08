@@ -621,6 +621,10 @@ van en la parte B. Requisitos en `docs/SPEC.md` (ADMIN-OPCIONES-1 a 16). Migraci
       `/superadmin/imagenes` (con probador y reporte de productos sin coincidencia). Seed de ~66
       entradas con Noto Emoji (Apache 2.0) en `landing/assets/defaults/`. Migración
       `20261012000000_imagenes_predeterminadas.sql`
+- [x] [herni] Seed ampliado de imágenes predeterminadas (ADMIN-SUPER-25 y 26): nombre único en
+      `default_images` (`20261014000000_imagenes_predeterminadas_nombre_unico.sql`) y 75 filas más
+      desde `admin/scripts/seed-default-images.mjs` (`20261015000000_seed_imagenes_predeterminadas_ampliado.sql`),
+      que suma claves a las entradas existentes y crea 20 nuevas; 23 SVG nuevos de Noto Emoji
 - [ ] [por asignar] Reemplazar las ilustraciones (Noto Emoji) por fotos libres propias, subiéndolas
       desde `/superadmin/imagenes`
 
