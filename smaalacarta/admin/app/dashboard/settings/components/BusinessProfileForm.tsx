@@ -100,6 +100,7 @@ export default function BusinessProfileForm({
       {error ? <FormAlert tone="error">{error}</FormAlert> : null}
 
       <Section
+        id="datos"
         title="Datos del negocio"
         description="El nombre y la URL de tu menú público."
       >

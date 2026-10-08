@@ -597,6 +597,11 @@ van en la parte B. Requisitos en `docs/SPEC.md` (ADMIN-OPCIONES-1 a 16). Migraci
 - [ ] [por asignar] Extras en los pedidos manuales del panel
 - [ ] [por asignar] Extras dentro de las promociones (hoy un producto con grupo obligatorio no puede estar en una)
 
+- [x] [herni] Configuración: índice de secciones (fijo al costado en escritorio, barra
+      horizontal en celular, sección actual resaltada, salto con hash y foco; solo las secciones
+      que el plan permite) y arreglo de la vista previa de imágenes que no se refrescaba al
+      cambiar de una URL rota a una válida (ADMIN-CONFIG-22 a 24)
+
 ## Etapa 7 — Pendientes técnicos (backlog)
 
 - [ ] [por asignar] **Marketplace** ("un lugar donde encontrar de todo para

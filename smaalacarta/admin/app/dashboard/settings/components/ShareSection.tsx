@@ -79,6 +79,7 @@ export default function ShareSection({
 
   return (
     <Section
+      id="compartir"
       title="Compartir"
       description="El código QR de tu menú, para imprimir o pegar en el local."
     >

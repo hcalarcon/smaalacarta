@@ -849,6 +849,16 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   prueba mirándolo en el navegador.
 - **ADMIN-CONFIG-21** "Mercado Pago" es un medio de pago más en "Entrega y pago" (`payment_options`
   acepta `mercadopago`). Que se ofrezca depende de las credenciales (MP-1), que no se cargan desde el panel.
+- **ADMIN-CONFIG-22** Configuración muestra un índice de sus secciones, y `settingsSections(plan)`
+  devuelve solo las que el plan permite, en el orden de la pantalla: Datos del negocio, Compartir y
+  Contraseña siempre; Publicación, Apariencia, Horarios, Pedidos anticipados, Cierre temporal,
+  Entrega y pago, Pedidos programados y Contacto con menú digital; Menú en PDF con `plan_pdf`.
+- **ADMIN-CONFIG-23** El índice resalta la sección que se está viendo (`aria-current`); al tocar una
+  entrada la pantalla salta a esa sección (scroll suave, o sin animación si el usuario prefiere
+  menos movimiento), pone `#id` en la URL y le da el foco.
+- **ADMIN-CONFIG-24** Una imagen que falló al cargar vuelve a intentarse cuando cambia su dirección:
+  en `ImageUploader` y en la vista previa de la cabecera, pasar de una URL rota a una válida muestra
+  la imagen.
 
 ## ADMIN-PEDIDOS — Pedidos
 

@@ -9,6 +9,7 @@ import FormAlert from "@/components/ui/FormAlert";
 import ImageUploader from "@/components/ui/ImageUploader";
 import PdfUploader from "@/components/ui/PdfUploader";
 import Section from "@/components/ui/Section";
+import HeaderPreview from "./HeaderPreview";
 import { DELIVERY_OPTIONS, PAYMENT_OPTIONS, hasTransfer } from "@/lib/settings/payment";
 import type { PreorderCutoffs } from "@/lib/settings/preorders";
 import {
@@ -180,7 +181,6 @@ export default function SettingsForm({
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<string, string>>>({});
-  const [imageBroken, setImageBroken] = useState(false);
 
   // El aviso de guardado es un toast: se va solo a los 3 segundos.
   useEffect(() => {
@@ -292,6 +292,7 @@ export default function SettingsForm({
 
       {digitalMenu ? <>
       <Section
+        id="publicacion"
         title="Publicación"
         description="Mientras esté apagado, tu menú no se muestra al público."
       >
@@ -306,7 +307,7 @@ export default function SettingsForm({
         </label>
       </Section>
 
-      <Section title="Apariencia" description="Cómo ven tus clientes el menú.">
+      <Section id="apariencia" title="Apariencia" description="Cómo ven tus clientes el menú.">
         <div>
           <span className="mb-1.5 block text-sm font-medium text-brand">Plantilla</span>
           <div className="grid gap-2 sm:grid-cols-3">
@@ -378,19 +379,13 @@ export default function SettingsForm({
           businessId={businessId}
           label="Imagen de cabecera (opcional)"
           value={headerImageUrl}
-          onChange={(url) => {
-            setHeaderImageUrl(url);
-            setImageBroken(false);
-          }}
+          onChange={setHeaderImageUrl}
         />
 
         <Field
           label="…o pegá la dirección de una imagen"
           value={headerImageUrl}
-          onChange={(event) => {
-            setHeaderImageUrl(event.target.value);
-            setImageBroken(false);
-          }}
+          onChange={(event) => setHeaderImageUrl(event.target.value)}
           placeholder="https://…/cabecera.jpg"
           hint="Dirección de una imagen (https)."
           error={fieldErrors.headerImageUrl}
@@ -409,31 +404,11 @@ export default function SettingsForm({
           el menú en el celular; sin logo se usa el de SMA a la Carta.
         </p>
 
-        {/* Vista previa de la cabecera: colores de marca y, si carga, la imagen. */}
-        <div
-          className="relative h-32 overflow-hidden rounded-2xl"
-          style={{
-            background: `linear-gradient(135deg, ${primaryColor}, ${secondaryColor})`,
-          }}
-        >
-          {headerImageUrl.trim() && !imageBroken ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={headerImageUrl.trim()}
-              alt=""
-              onError={() => setImageBroken(true)}
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          ) : null}
-          <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/50 to-transparent p-4">
-            <span className="text-lg font-semibold text-white">Vista previa</span>
-          </div>
-        </div>
-        {imageBroken ? (
-          <p className="-mt-3 text-sm text-amber-700">
-            No pudimos cargar esa imagen. Revisá la dirección.
-          </p>
-        ) : null}
+        <HeaderPreview
+          imageUrl={headerImageUrl}
+          primaryColor={primaryColor}
+          secondaryColor={secondaryColor}
+        />
 
         <div>
           <label
@@ -467,6 +442,7 @@ export default function SettingsForm({
 
       {pdfService ? (
       <Section
+        id="pdf"
         title="Menú en PDF"
         description="Para el plan QR + PDF: un archivo que se linkea aparte del menú digital, no hace falta publicar este último."
       >
@@ -484,6 +460,7 @@ export default function SettingsForm({
 
       {digitalMenu ? <>
       <Section
+        id="horarios"
         title="Horarios"
         description="Con horarios cargados, el menú muestra si estás abierto o cerrado. Un horario puede pasar la medianoche (20:00 a 02:00)."
       >
@@ -623,6 +600,7 @@ export default function SettingsForm({
       </Section>
 
       <Section
+        id="anticipados"
         title="Pedidos anticipados"
         description="Si vendés solo ciertos días, tus clientes pueden dejar el pedido mientras estás cerrado, para tu próxima apertura, hasta un corte que elegís para cada día."
       >
@@ -686,6 +664,7 @@ export default function SettingsForm({
       </Section>
 
       <Section
+        id="cierre"
         title="Cierre temporal"
         description="Para vacaciones u otros cierres: el menú muestra que estás cerrado y no deja enviar pedidos."
       >
@@ -739,6 +718,7 @@ export default function SettingsForm({
       </Section>
 
       <Section
+        id="entrega-pago"
         title="Entrega y pago"
         description="Qué ofrecés en el checkout del menú. Si dejás una sola opción en un grupo, tus clientes no tienen que elegir."
       >
@@ -819,6 +799,7 @@ export default function SettingsForm({
       </Section>
 
       <Section
+        id="programados"
         title="Pedidos programados"
         description="Dejá que tus clientes elijan para qué hora de hoy es el pedido, dentro de tus horarios de atención."
       >
@@ -853,6 +834,7 @@ export default function SettingsForm({
       </Section>
 
       <Section
+        id="contacto"
         title="Contacto"
         description="Los pedidos, el envío y el retiro se arreglan con tus clientes por WhatsApp."
       >
