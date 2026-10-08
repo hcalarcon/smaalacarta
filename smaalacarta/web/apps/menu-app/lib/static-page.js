@@ -219,6 +219,7 @@ ${categoryNav(categorias)}
 <main class="menu-container" id="menu">${categorias.map((cat) => categorySection(cat, lang)).join("")}</main>
 ${footer(config)}
 ${whatsappContact(config, lang)}
+<script src="/apps/menu-app/lightbox.js"></script>
 </body>
 </html>`;
 }

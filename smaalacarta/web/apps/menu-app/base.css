@@ -831,3 +831,46 @@ body.no-scroll-opciones {
     animation: none;
   }
 }
+
+/* Foto ampliada (ESTATICO-9): fondo oscuro, la foto no ocupa toda la pantalla */
+.producto > img {
+  cursor: zoom-in;
+}
+
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  background: rgba(0, 0, 0, 0.75);
+  cursor: zoom-out;
+}
+
+.lightbox img {
+  max-width: min(90vw, 640px);
+  max-height: 80vh;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  cursor: default;
+}
+
+.lightbox-cerrar {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.9);
+  color: #111;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+}
