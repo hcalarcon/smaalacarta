@@ -45,6 +45,8 @@ export type SettingsInput = {
   // Punto de enfoque de la imagen de cabecera, enteros de 0 a 100 (ADMIN-CONFIG-25 y 26).
   headerImageX: number;
   headerImageY: number;
+  // Ilustraciones de muestra en los productos sin foto (ADMIN-CONFIG-31).
+  showDefaultImages: boolean;
   logoUrl: string;
   // El PDF del menú (Etapa 6e): independiente de `published`, no se muestra en
   // el menú digital, solo se linkea aparte (QR).
@@ -86,6 +88,7 @@ export const DEFAULT_SETTINGS: SettingsInput = {
   headerImageUrl: "",
   headerImageX: CENTER,
   headerImageY: CENTER,
+  showDefaultImages: true,
   logoUrl: "",
   menuPdfUrl: "",
   schedule: {},

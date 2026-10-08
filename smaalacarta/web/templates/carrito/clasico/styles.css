@@ -718,3 +718,13 @@ body {
   border: 1px solid var(--border);
   border-top: 3px solid var(--primary);
 }
+
+/* Etiqueta de las imágenes de muestra (PUBLICO-55): en la serif de la plantilla, en claro y oscuro */
+.etiqueta-ilustrativa {
+  font-family: var(--serif);
+}
+
+.producto > img.imagen-ilustrativa,
+.producto > img.imagen-logo {
+  border-color: var(--border);
+}

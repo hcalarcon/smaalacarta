@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 
+import { DEFAULT_LOGO } from "./info.js";
 import { renderStaticMenuPage } from "./static-page.js";
 
 const base = {
@@ -203,8 +204,9 @@ describe("renderStaticMenuPage — Etapa 6e", () => {
   });
 
   it("el logo se muestra si el negocio lo cargó", () => {
-    const sinLogo = renderStaticMenuPage(base);
-    expect(sinLogo).not.toContain("<img");
+    // La cabecera no lleva logo si el negocio no lo cargó (las tarjetas sí: PUBLICO-54).
+    const cabecera = (html) => html.slice(html.indexOf("<header"), html.indexOf("</header>"));
+    expect(cabecera(renderStaticMenuPage(base))).not.toContain("<img");
 
     const conLogo = renderStaticMenuPage({
       ...base,
@@ -226,7 +228,9 @@ describe("renderStaticMenuPage — Etapa 6e", () => {
       },
     });
 
-    expect(html).not.toContain("<img");
+    // La dirección peligrosa no llega al HTML: la tarjeta usa el logo de reemplazo.
+    expect(html).not.toContain("javascript:");
+    expect(html).toContain('class="imagen-logo"');
   });
 });
 
@@ -456,5 +460,71 @@ describe("opciones y extras de solo lectura — ESTATICO-8", () => {
     expect(lines(enPage)[1]).toContain("Huevo (Out of stock)");
     expect(lines(ptPage)[0]).toBe("Punto: Jugoso · Cocido (escolha 1)");
     expect(lines(ptPage)[1]).toContain("(até 2)");
+  });
+});
+
+describe("imagen de cada producto — ESTATICO-11", () => {
+  const menuWith = (items, config = {}) => ({
+    config: { ...base.config, ...config },
+    menu: { categorias: [{ nombre: "Comidas", items }] },
+  });
+  const card = (html, nombre) => html.split("<article").find((chunk) => chunk.includes(nombre)) ?? "";
+
+  it("la foto propia se ve como siempre, sin etiqueta ni clase especial", () => {
+    const html = renderStaticMenuPage(menuWith([{ nombre: "Torta", precio: 1, imagen: "https://cdn.example.com/t.jpg" }]));
+    const torta = card(html, "Torta");
+
+    expect(torta).toContain('<img src="https://cdn.example.com/t.jpg" alt="">');
+    expect(torta).not.toContain("imagen-ilustrativa");
+    expect(torta).not.toContain("etiqueta-ilustrativa");
+  });
+
+  it("una ilustración lleva su clase y la etiqueta «Imagen ilustrativa»", () => {
+    const html = renderStaticMenuPage(
+      menuWith([
+        {
+          nombre: "Pizza",
+          precio: 1,
+          imagen: "https://www.smaalacarta.com.ar/assets/defaults/pizza.svg",
+          imagenIlustrativa: true,
+        },
+      ]),
+    );
+    const pizza = card(html, "Pizza");
+
+    expect(pizza).toContain('class="imagen-ilustrativa"');
+    expect(pizza).toContain('<span class="etiqueta-ilustrativa">Imagen ilustrativa</span>');
+  });
+
+  it("la etiqueta sale en el idioma del menú", () => {
+    const item = { nombre: "Pizza", precio: 1, imagen: "https://x.test/p.svg", imagenIlustrativa: true };
+    expect(renderStaticMenuPage({ ...menuWith([item]), lang: "en" })).toContain("Illustrative image");
+    expect(renderStaticMenuPage({ ...menuWith([item]), lang: "pt" })).toContain("Imagem ilustrativa");
+  });
+
+  it("sin imagen, la tarjeta muestra el logo del negocio, sin etiqueta", () => {
+    const html = renderStaticMenuPage(menuWith([{ nombre: "Plato", precio: 1 }], { logo: "https://cdn.example.com/logo.png" }));
+    const plato = card(html, "Plato");
+
+    expect(plato).toContain('<img class="imagen-logo" src="https://cdn.example.com/logo.png" alt="">');
+    expect(plato).not.toContain("etiqueta-ilustrativa");
+  });
+
+  it("sin imagen ni logo, el de SMA a la Carta", () => {
+    const html = renderStaticMenuPage(menuWith([{ nombre: "Plato", precio: 1 }]));
+    expect(card(html, "Plato")).toContain(`class="imagen-logo" src="${DEFAULT_LOGO}"`);
+  });
+
+  it("escapa la dirección del logo", () => {
+    const html = renderStaticMenuPage(menuWith([{ nombre: "Plato", precio: 1 }], { logo: 'https://x.test/a"onerror="x' }));
+    expect(card(html, "Plato")).not.toContain('"onerror="x"');
+  });
+
+  it("las promociones de Ofertas no llevan imagen", () => {
+    const html = renderStaticMenuPage({
+      config: base.config,
+      menu: { categorias: [{ nombre: "Ofertas", tipo: "ofertas", items: [{ nombre: "Combo", esPromo: true, precio: 1 }] }] },
+    });
+    expect(card(html, "Combo")).not.toContain("<img");
   });
 });

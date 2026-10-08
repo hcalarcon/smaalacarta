@@ -832,9 +832,30 @@ body.no-scroll-opciones {
   }
 }
 
-/* Foto ampliada (ESTATICO-9): fondo oscuro, la foto no ocupa toda la pantalla */
-.producto > img {
+/* Foto ampliada (ESTATICO-9): fondo oscuro, la foto no ocupa toda la pantalla. Las ilustraciones
+   y el logo de reemplazo no se amplían. */
+.producto > img:not(.imagen-ilustrativa):not(.imagen-logo) {
   cursor: zoom-in;
+}
+
+/* Imagen ilustrativa y logo de reemplazo (PUBLICO-54 a 57): se ven enteros (contain) sobre un fondo
+   neutro que sale de las variables de la plantilla, así que sirve en tema claro y oscuro. */
+.producto > img.imagen-ilustrativa,
+.producto > img.imagen-logo {
+  object-fit: contain;
+  padding: 6px;
+  box-sizing: border-box;
+  background: var(--bg, #f4f4f8);
+  border: 1px solid var(--border, rgba(127, 127, 127, 0.25));
+  cursor: default;
+}
+
+.etiqueta-ilustrativa {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.7rem;
+  font-style: italic;
+  color: var(--muted, #6b7280);
 }
 
 .lightbox {

@@ -640,15 +640,18 @@ function renderMenu(menu) {
         d.setAttribute("data-promo", p.promo);
       }
 
-      const imagen = HTML.safeHttpUrl(p.imagen);
+      // Foto propia, ilustración de la base o logo (PUBLICO-54); las ilustraciones y el logo no se amplían.
+      const imagen = INFO.productImage(p, window.CONFIG);
+      const imagenClase = { illustration: "imagen-ilustrativa", logo: "imagen-logo" }[imagen?.kind];
 
       d.innerHTML = `
-        ${imagen ? `<img src="${HTML.escapeHtml(imagen)}" alt="">` : ""}
+        ${imagen ? `<img${imagenClase ? ` class="${imagenClase}"` : ""} src="${HTML.escapeHtml(imagen.src)}" alt="">` : ""}
         <div class="producto-info">
           <h3>${HTML.escapeHtml(p.nombre)}</h3>
           <p>${HTML.escapeHtml(p.descripcion || "")}</p>
           ${p.precioAnterior ? `<span class="precio-anterior">$${HTML.escapeHtml(PRICE.formatPrice(p.precioAnterior))}</span>` : ""}
           <div class="producto-precio">$${HTML.escapeHtml(PRICE.formatPrice(p.precio))}</div>
+          ${imagen?.kind === "illustration" ? `<span class="etiqueta-ilustrativa">${HTML.escapeHtml(tr("item.illustrative"))}</span>` : ""}
           ${soldOut ? `<span class="etiqueta-agotado">${HTML.escapeHtml(tr("item.soldOut"))}</span>` : ""}
         </div>
         ${soldOut ? "" : `<button class="btn-add">+</button>`}

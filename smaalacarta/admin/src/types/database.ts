@@ -63,6 +63,7 @@ export type Database = {
           schedule: Json
           scheduled_lead_minutes: number
           secondary_color: string
+          show_default_images: boolean
           tagline: string | null
           template: string
           temporarily_closed: boolean
@@ -94,6 +95,7 @@ export type Database = {
           schedule?: Json
           scheduled_lead_minutes?: number
           secondary_color?: string
+          show_default_images?: boolean
           tagline?: string | null
           template?: string
           temporarily_closed?: boolean
@@ -125,6 +127,7 @@ export type Database = {
           schedule?: Json
           scheduled_lead_minutes?: number
           secondary_color?: string
+          show_default_images?: boolean
           tagline?: string | null
           template?: string
           temporarily_closed?: boolean
@@ -276,6 +279,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      default_images: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          image_url: string
+          keywords: string[]
+          name: string
+          priority: number
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          image_url: string
+          keywords?: string[]
+          name: string
+          priority?: number
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          image_url?: string
+          keywords?: string[]
+          name?: string
+          priority?: number
+        }
+        Relationships: []
       }
       option_groups: {
         Row: {
@@ -898,6 +931,15 @@ export type Database = {
         }
         Returns: Json
       }
+      default_images_unmatched: {
+        Args: never
+        Returns: {
+          business_count: number
+          example_name: string
+          normalized_name: string
+          product_count: number
+        }[]
+      }
       is_open_now: {
         Args: { p_at: string; p_schedule: Json }
         Returns: boolean
@@ -916,6 +958,7 @@ export type Database = {
       is_valid_schedule: { Args: { p_schedule: Json }; Returns: boolean }
       new_tracking_code: { Args: never; Returns: string }
       next_order_number: { Args: { p_business_id: string }; Returns: number }
+      normalize_words: { Args: { p_text: string }; Returns: string[] }
       preorder_window: {
         Args: { p_cutoffs: Json; p_now: string; p_schedule: Json }
         Returns: {
@@ -964,6 +1007,7 @@ export type Database = {
           p_schedule: Json
           p_scheduled_lead_minutes: number
           p_secondary_color: string
+          p_show_default_images?: boolean
           p_tagline: string
           p_template: string
           p_temporarily_closed: boolean
@@ -1012,6 +1056,16 @@ export type Database = {
           p_product_id: string
         }
         Returns: undefined
+      }
+      suggest_default_image: {
+        Args: { p_category?: string; p_name: string }
+        Returns: {
+          by_category: boolean
+          id: string
+          image_url: string
+          keyword: string
+          name: string
+        }[]
       }
     }
     Enums: {

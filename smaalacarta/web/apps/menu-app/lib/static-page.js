@@ -13,6 +13,7 @@ import {
   closedNotice,
   headerBackground,
   headerPosition,
+  productImage,
   mapsUrl,
   reopenText,
   socialIconPath,
@@ -73,8 +74,10 @@ function optionsLines(item, lang) {
     .join("");
 }
 
-function productCard(item, lang) {
-  const image = safeHttpUrl(item?.imagen);
+function productCard(item, lang, config) {
+  // Foto propia, ilustración de la base o logo (PUBLICO-54); las ilustraciones y el logo no se amplían.
+  const image = productImage(item, config);
+  const imageClass = { illustration: "imagen-ilustrativa", logo: "imagen-logo" }[image?.kind];
   // Igual que el interactivo: la plantilla dibuja la etiqueta de la promo desde el atributo.
   const promo = item?.promo ? ` data-promo="${escapeHtml(item.promo)}"` : "";
 
@@ -82,19 +85,20 @@ function productCard(item, lang) {
   const soldOut = item?.agotado === true;
 
   return `<article class="producto${soldOut ? " agotado" : ""}"${promo}>
-    ${image ? `<img src="${escapeHtml(image)}" alt="">` : ""}
+    ${image ? `<img${imageClass ? ` class="${imageClass}"` : ""} src="${escapeHtml(image.src)}" alt="">` : ""}
     <div class="producto-info">
       <h3>${escapeHtml(item?.nombre)}</h3>
       <p>${escapeHtml(item?.descripcion || "")}</p>
       ${item?.precioAnterior ? `<span class="precio-anterior">$${escapeHtml(formatPrice(item.precioAnterior))}</span>` : ""}
       <div class="producto-precio">$${escapeHtml(formatPrice(item?.precio))}</div>
       ${optionsLines(item, lang)}
+      ${image?.kind === "illustration" ? `<span class="etiqueta-ilustrativa">${escapeHtml(t("item.illustrative", lang))}</span>` : ""}
       ${soldOut ? `<span class="etiqueta-agotado">${escapeHtml(t("item.soldOut", lang))}</span>` : ""}
     </div>
   </article>`;
 }
 
-function categorySection(cat, lang) {
+function categorySection(cat, lang, config) {
   const items = Array.isArray(cat?.items) ? cat.items : [];
   if (items.length === 0) return "";
 
@@ -103,7 +107,7 @@ function categorySection(cat, lang) {
 
   return `<section class="categoria${tipo}" id="${escapeHtml(id)}">
     <h2 class="categoria-titulo">${escapeHtml(cat.nombre)}</h2>
-    <div class="categoria-grid">${items.map((item) => productCard(item, lang)).join("")}</div>
+    <div class="categoria-grid">${items.map((item) => productCard(item, lang, config)).join("")}</div>
   </section>`;
 }
 
@@ -218,7 +222,7 @@ export function renderStaticMenuPage({ config, menu, lang: requestedLang } = {})
 </header>
 ${aviso}
 ${categoryNav(categorias)}
-<main class="menu-container" id="menu">${categorias.map((cat) => categorySection(cat, lang)).join("")}</main>
+<main class="menu-container" id="menu">${categorias.map((cat) => categorySection(cat, lang, config)).join("")}</main>
 ${footer(config)}
 ${whatsappContact(config, lang)}
 <script src="/apps/menu-app/lightbox.js"></script>

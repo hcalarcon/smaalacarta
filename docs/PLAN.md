@@ -612,6 +612,18 @@ van en la parte B. Requisitos en `docs/SPEC.md` (ADMIN-OPCIONES-1 a 16). Migraci
 - [ ] [por asignar] Zoom de la imagen de cabecera (hoy solo se elige el punto de enfoque, no el
       acercamiento)
 
+- [x] [herni] Imágenes predeterminadas por producto (ADMIN-CONFIG-31 y 32, ADMIN-SUPER-17 a 24,
+      PUBLICO-51 a 57, ESTATICO-11): un producto sin foto muestra una ilustración elegida por
+      coincidencia con su nombre (o su categoría), resuelta en `public_menu` con
+      `suggest_default_image`; la foto propia siempre gana. Sin coincidencia, o con el interruptor
+      "Mostrar imágenes de muestra" apagado, se ve el logo del negocio (o el de SMA a la Carta). Las
+      ilustraciones se marcan «Imagen ilustrativa» (es/en/pt). El superadmin las administra en
+      `/superadmin/imagenes` (con probador y reporte de productos sin coincidencia). Seed de ~66
+      entradas con Noto Emoji (Apache 2.0) en `landing/assets/defaults/`. Migración
+      `20261012000000_imagenes_predeterminadas.sql`
+- [ ] [por asignar] Reemplazar las ilustraciones (Noto Emoji) por fotos libres propias, subiéndolas
+      desde `/superadmin/imagenes`
+
 ## Etapa 7 — Pendientes técnicos (backlog)
 
 - [ ] [por asignar] **Marketplace** ("un lugar donde encontrar de todo para

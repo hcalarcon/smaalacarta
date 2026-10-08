@@ -51,4 +51,9 @@ export const superAdminLinks: NavLink[] = [
     label: "Nuevo negocio",
     icon: "M12 5v14M5 12h14",
   },
+  {
+    href: "/superadmin/imagenes",
+    label: "Imágenes",
+    icon: "M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1zM8.5 10a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM21 16l-5-5-8 8",
+  },
 ];

@@ -186,3 +186,21 @@ describe("plantillas — opciones y extras (PUBLICO-45, 46 y 49)", () => {
     expect(base).toMatch(/\.opciones-agregar\s*\{[^}]*color:\s*var\(--opc-on/);
   });
 });
+
+describe("imágenes de muestra y logo de reemplazo — PUBLICO-56 y 57", () => {
+  it("el visor de fotos (ESTATICO-9) no amplía ilustraciones ni el logo", () => {
+    const lightbox = read("../lightbox.js");
+    expect(lightbox).toContain(":not(.imagen-ilustrativa):not(.imagen-logo)");
+    expect(base).toMatch(/\.producto > img:not\(\.imagen-ilustrativa\):not\(\.imagen-logo\)\s*\{[^}]*zoom-in/);
+  });
+
+  it.each(TEMPLATES)("%s: estiliza la etiqueta «Imagen ilustrativa»", (name) => {
+    expect(`${base}\n${templateCss[name]}`).toMatch(/\.etiqueta-ilustrativa\s*\{/);
+    expect(templateCss[name]).toMatch(/\.etiqueta-ilustrativa\s*\{/);
+  });
+
+  it("las ilustraciones y el logo se ven enteros sobre un fondo neutro, en claro y oscuro", () => {
+    expect(base).toMatch(/img\.imagen-logo\s*\{[^}]*object-fit:\s*contain/);
+    expect(base).toMatch(/img\.imagen-logo\s*\{[^}]*background:\s*var\(--bg/);
+  });
+});

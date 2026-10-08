@@ -281,6 +281,21 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   devuelve `"x% y%"` solo con enteros de 0 a 100 y `""` en cualquier otro caso (nunca texto del dato en el
   estilo); `headerBackground` queda igual. El menú interactivo la aplica como `background-position` de la
   cabecera, y sin posición queda centrada como antes.
+- **PUBLICO-51** Un producto sin imagen propia (o con una vacía) sale de `public_menu` con `imagen` = la
+  ilustración que sugiere `suggest_default_image(nombre, categoría)`, sin escribir nada en `products`. La imagen
+  propia siempre gana.
+- **PUBLICO-52** Con `show_default_images` apagado, o sin coincidencia, o con la entrada inactiva, el producto
+  sale sin `imagen` y el menú muestra el logo del negocio.
+- **PUBLICO-53** Una imagen que viene de una ilustración sale con `imagenIlustrativa: true`; una imagen propia
+  nunca lo lleva. La sugerencia se calcula una sola vez por producto.
+- **PUBLICO-54** `productImage(item, config)` resuelve qué muestra la tarjeta: la imagen del producto; si falta, el
+  logo del negocio; si tampoco hay, el de SMA a la Carta (`DEFAULT_LOGO`). Solo se aceptan direcciones http(s).
+- **PUBLICO-55** La ilustración lleva la etiqueta "Imagen ilustrativa" (`item.illustrative`, en español, inglés y
+  portugués); el logo de reemplazo no la lleva.
+- **PUBLICO-56** La ilustración y el logo se ven con `object-fit: contain` sobre un fondo neutro (clases
+  `imagen-ilustrativa` e `imagen-logo`) y no se pueden ampliar: la lupa (ESTATICO-9) es solo para fotos propias.
+- **PUBLICO-57** Los estilos de la ilustración, el logo y la etiqueta están en `base.css` y en las tres
+  plantillas, en claro y oscuro (el aspecto solo se comprueba mirándolo en el navegador).
 
 ## BUSQUEDA — Buscador
 
@@ -473,6 +488,9 @@ en JS puro.*
   `Esc` o tocando el fondo. Lo hace `web/apps/menu-app/lightbox.js`, que ambos cargan.
 - **ESTATICO-10** El menú estático aplica la posición de la imagen de cabecera como `background-position` en el
   `style` de la cabecera, con `headerPosition` (solo enteros de 0 a 100, escapado como el resto del `style`).
+- **ESTATICO-11** El menú estático muestra lo mismo que el interactivo (PUBLICO-51 a 56): ilustración con su
+  etiqueta "Imagen ilustrativa", o el logo, con las mismas clases y sin la lupa. Todo dato del negocio pasa por
+  `escapeHtml`.
 
 ## IDIOMA — Menú público en español, inglés y portugués
 
@@ -737,6 +755,32 @@ primer ingreso.
   quedaron con `plan_completo = true` (es lo que ya tenían de hecho: subdominio
   sin restricción de plan); solo un negocio nuevo arranca sin plan hasta que el
   superadmin elija uno.
+- **ADMIN-SUPER-17** `normalize_words(texto)` pasa a minúsculas, quita tildes y eñes (con `translate`, sin
+  `unaccent`), deja solo letras y números separados en palabras, y singulariza las de más de 4 letras: quita la
+  `s` final, y la `es` si termina en `nes` o `ches`.
+- **ADMIN-SUPER-18** `default_images` guarda las ilustraciones (nombre, palabras clave, imagen https, prioridad,
+  activa). Las palabras clave se normalizan al guardar (sin vacías ni repetidas). Cualquiera lee las activas; solo
+  el superadmin ve las inactivas y escribe, edita o borra.
+- **ADMIN-SUPER-19** El bucket `default-images` es público, admite WebP, PNG, JPG y SVG de hasta 1 MB, y solo el
+  superadmin escribe en él.
+- **ADMIN-SUPER-20** `suggest_default_image(nombre, categoría)` devuelve la entrada activa que mejor coincide: una
+  entrada coincide si todas las palabras de alguna de sus claves están en el nombre; puntaje = palabras de la clave
+  + prioridad, así que la más específica gana ("milanesa napolitana" sobre "milanesa"). La categoría es una
+  segunda pasada que queda siempre por debajo del nombre. Desempata por prioridad, nombre e id. Sin coincidencia no
+  devuelve nada.
+- **ADMIN-SUPER-21** `/superadmin/imagenes` (solo superadmin) lista las entradas con miniatura, nombre, claves como
+  chips, estado y prioridad, y permite crear, editar y borrar, subiendo la imagen al bucket `default-images`. Las
+  claves se escriben separadas por coma (`parseKeywords`); `validateDefaultImage` exige nombre de hasta 80
+  caracteres, al menos una clave, una dirección https y una prioridad entera de -100 a 100, y
+  `validateDefaultImageFile` solo deja subir WebP, PNG, JPG o SVG de hasta 1 MB.
+- **ADMIN-SUPER-22** Esa pantalla tiene un probador: dado un nombre de producto (y opcionalmente una categoría)
+  muestra la imagen y la entrada que coinciden, o que no hay, usando `suggest_default_image` (una sola fuente de
+  verdad).
+- **ADMIN-SUPER-23** "Productos sin coincidencia" (`default_images_unmatched()`) lista los nombres de los
+  productos activos, con categoría activa, de los negocios publicados y activos que no tienen imagen propia ni
+  sugerida, agrupados por nombre normalizado, con la cantidad de negocios y de productos, de más a menos
+  repetidos. Solo el superadmin puede pedirlo (para los demás da `42501`).
+- **ADMIN-SUPER-24** Cada acción de esa pantalla comprueba que quien la pide es superadmin antes de actuar.
 
 ## ADMIN-MENU — Categorías y productos
 
@@ -889,6 +933,13 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   abierto/cerrado, y refleja sin guardar los colores, la imagen, su punto de enfoque, el logo, el nombre
   y la descripción. Los datos del negocio viajan al `iframe` como datos y se escriben con `textContent`,
   nunca dentro del HTML del documento.
+- **ADMIN-CONFIG-31** Apariencia tiene el interruptor "Mostrar imágenes de muestra en productos sin foto"
+  (`business_settings.show_default_images`, por defecto prendido). `save_business_settings` lo recibe con valor
+  por defecto `true`, así que el panel anterior no lo apaga por accidente.
+- **ADMIN-CONFIG-32** En el diálogo de un producto sin imagen, el panel muestra de solo lectura qué se verá
+  (`defaultImageHint`): la ilustración que sugiere `suggest_default_image`, o el logo del negocio si no hay
+  coincidencia o el interruptor está apagado, con la aclaración de que subir una foto propia la reemplaza. Con
+  imagen propia no muestra nada.
 
 ## ADMIN-PEDIDOS — Pedidos
 

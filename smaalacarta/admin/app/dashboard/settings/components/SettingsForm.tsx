@@ -156,6 +156,7 @@ export default function SettingsForm({
   const [secondaryColor, setSecondaryColor] = useState(initial.secondaryColor);
   const [headerImageUrl, setHeaderImageUrl] = useState(initial.headerImageUrl);
   const [headerFocus, setHeaderFocus] = useState({ x: initial.headerImageX, y: initial.headerImageY });
+  const [showDefaultImages, setShowDefaultImages] = useState(initial.showDefaultImages);
   const [logoUrl, setLogoUrl] = useState(initial.logoUrl);
   const [menuPdfUrl, setMenuPdfUrl] = useState(initial.menuPdfUrl);
   const [whatsapp, setWhatsapp] = useState(initial.whatsapp);
@@ -249,6 +250,7 @@ export default function SettingsForm({
         headerImageUrl,
         headerImageX: headerFocus.x,
         headerImageY: headerFocus.y,
+        showDefaultImages,
         logoUrl,
         menuPdfUrl,
         schedule: toSchedule(days, scheduleEnabled),
@@ -409,6 +411,25 @@ export default function SettingsForm({
           Cuadrado, de al menos 512 × 512 px. Es el ícono cuando tus clientes instalan
           el menú en el celular; sin logo se usa el de SMA a la Carta.
         </p>
+
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={showDefaultImages}
+            onChange={(event) => setShowDefaultImages(event.target.checked)}
+            className="mt-1 h-5 w-5"
+          />
+          <span>
+            <span className="block font-medium text-stone-900">
+              Mostrar imágenes de muestra en productos sin foto
+            </span>
+            <span className="block text-sm text-stone-500">
+              Los productos sin foto muestran una ilustración según su nombre, marcada como «Imagen
+              ilustrativa». Apagado (o si no hay una que coincida), muestran tu logo. Una foto propia
+              siempre tiene prioridad.
+            </span>
+          </span>
+        </label>
 
         <HeaderPreview
           businessName={businessName}

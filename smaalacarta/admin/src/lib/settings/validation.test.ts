@@ -18,6 +18,16 @@ const valid = {
   reopensOn: "",
 };
 
+describe("showDefaultImages — ADMIN-CONFIG-31", () => {
+  it("por defecto las imágenes de muestra están prendidas", () => {
+    expect(DEFAULT_SETTINGS.showDefaultImages).toBe(true);
+  });
+
+  it("apagadas también es válido", () => {
+    expect(validateSettings({ ...valid, showDefaultImages: false })).toEqual({ ok: true });
+  });
+});
+
 describe("validateSettings — ADMIN-CONFIG-2", () => {
   it("acepta una configuración válida", () => {
     expect(validateSettings(valid)).toEqual({ ok: true });

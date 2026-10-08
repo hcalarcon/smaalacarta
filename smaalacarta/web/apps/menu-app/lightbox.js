@@ -1,4 +1,4 @@
-// Foto del producto ampliada (ESTATICO-9). Script suelto, sin módulos: lo cargan el menú
+// Foto del producto ampliada (ESTATICO-9). Las ilustraciones y el logo de reemplazo no se amplían. Script suelto, sin módulos: lo cargan el menú
 // interactivo y el estático. Delegación de eventos, así sirve para tarjetas que se
 // dibujan después. La foto se asigna por propiedad (nunca como HTML).
 (function () {
@@ -45,7 +45,7 @@
   }
 
   document.addEventListener("click", (e) => {
-    const img = e.target instanceof Element ? e.target.closest(".producto > img") : null;
+    const img = e.target instanceof Element ? e.target.closest(".producto > img:not(.imagen-ilustrativa):not(.imagen-logo)") : null;
     if (img && img.src) open(img.src);
   });
 })();

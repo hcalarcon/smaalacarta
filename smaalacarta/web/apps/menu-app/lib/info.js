@@ -97,6 +97,22 @@ export function positionText(posicion) {
   return valid(posicion?.x) && valid(posicion?.y) ? `${posicion.x}% ${posicion.y}%` : "";
 }
 
+// Logo de SMA a la Carta: lo último que se muestra en un producto sin imagen cuando el negocio
+// tampoco cargó el suyo (PUBLICO-54).
+export const DEFAULT_LOGO = "https://www.smaalacarta.com.ar/assets/logo.png";
+
+// Qué imagen lleva la tarjeta de un producto (PUBLICO-51 a 54): su foto; si es una ilustración que
+// eligió la base por el nombre, "illustration"; y sin imagen, el logo del negocio o el de SMA a la
+// Carta. Las promociones de Ofertas no llevan imagen. Solo direcciones http(s).
+export function productImage(item, config) {
+  if (item?.esPromo === true) return null;
+
+  const own = safeHttpUrl(item?.imagen);
+  if (own) return { kind: item.imagenIlustrativa === true ? "illustration" : "photo", src: own };
+
+  return { kind: "logo", src: safeHttpUrl(config?.logo) || DEFAULT_LOGO };
+}
+
 // Lo que es solo de las demos (PUBLICO-11): el aviso "¿Querés este menú en tu negocio?"
 // y el botón "Volver" a la landing.
 export function isDemoMenu(type) {

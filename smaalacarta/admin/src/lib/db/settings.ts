@@ -38,6 +38,7 @@ export async function getSettings(
     headerImageUrl: data.header_image_url ?? "",
     headerImageX: data.header_image_x,
     headerImageY: data.header_image_y,
+    showDefaultImages: data.show_default_images,
     logoUrl: data.logo_url ?? "",
     menuPdfUrl: data.menu_pdf_url ?? "",
     schedule: (data.schedule ?? {}) as Schedule,
@@ -56,6 +57,29 @@ export async function getSettings(
     scheduledLeadMinutes: data.scheduled_lead_minutes,
     preordersEnabled: data.preorders_enabled,
     preorderCutoffs: (data.preorder_cutoffs ?? {}) as PreorderCutoffs,
+  };
+}
+
+// Lo que el diálogo de un producto necesita saber para avisar qué se verá sin foto (ADMIN-CONFIG-32).
+export async function getDefaultImageSettings(
+  businessId: string,
+): Promise<{ enabled: boolean; hasLogo: boolean }> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("business_settings")
+    .select("show_default_images, logo_url")
+    .eq("business_id", businessId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  // Un negocio que todavía no guardó su configuración tiene los valores por defecto.
+  return {
+    enabled: data?.show_default_images ?? true,
+    hasLogo: Boolean(data?.logo_url),
   };
 }
 
@@ -96,6 +120,7 @@ export async function saveSettings(
     p_preorder_cutoffs: input.preorderCutoffs,
     p_header_image_x: input.headerImageX,
     p_header_image_y: input.headerImageY,
+    p_show_default_images: input.showDefaultImages,
   });
 
   return error ? { error: { code: error.code, message: error.message } } : {};

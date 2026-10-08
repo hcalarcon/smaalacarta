@@ -56,6 +56,8 @@ type MenuClientProps = {
   productGroupLinks: Record<string, string[]>;
   groupUsage: Record<string, number>;
   productIdsInPromotions: string[];
+  // Imágenes de muestra de los productos sin foto (ADMIN-CONFIG-32).
+  defaultImages: { enabled: boolean; hasLogo: boolean };
 };
 
 // Sin tildes ni mayúsculas, para que buscar "papas" encuentre "Papás".
@@ -73,6 +75,7 @@ export default function MenuClient({
   productGroupLinks,
   groupUsage,
   productIdsInPromotions,
+  defaultImages,
 }: MenuClientProps) {
   const router = useRouter();
 
@@ -563,6 +566,13 @@ export default function MenuClient({
         inPromotion={
           !!editingProduct && productIdsInPromotions.includes(editingProduct.id)
         }
+        categoryName={
+          categories.find(
+            (category) =>
+              category.id === (editingProduct?.category_id ?? selectedCategoryId),
+          )?.name ?? null
+        }
+        defaultImages={defaultImages}
         onSubmit={handleProductSubmit}
       />
     </>
