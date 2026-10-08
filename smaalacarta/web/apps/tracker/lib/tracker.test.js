@@ -186,6 +186,13 @@ describe("brandTheme — SEGUIMIENTO-11", () => {
     expect(t.accent).toBe("#d97706");
   });
 
+  it("lleva la posición de la imagen solo si son enteros de 0 a 100 (SEGUIMIENTO-24)", () => {
+    const img = "https://cdn.example.com/a.jpg";
+    expect(brandTheme({ ...negocio, imagen: img, posicion: { x: 10, y: 90 } }).position).toBe("10% 90%");
+    expect(brandTheme({ ...negocio, imagen: img, posicion: { x: "10;", y: 90 } }).position).toBe("");
+    expect(brandTheme({ ...negocio, imagen: img }).position).toBe("");
+  });
+
   it("una imagen que no es https no se usa", () => {
     const t = brandTheme({ ...negocio, imagen: "javascript:alert(1)" });
     expect(t.header).not.toContain("javascript");

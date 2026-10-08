@@ -36,6 +36,8 @@ export async function getSettings(
     primaryColor: data.primary_color,
     secondaryColor: data.secondary_color,
     headerImageUrl: data.header_image_url ?? "",
+    headerImageX: data.header_image_x,
+    headerImageY: data.header_image_y,
     logoUrl: data.logo_url ?? "",
     menuPdfUrl: data.menu_pdf_url ?? "",
     schedule: (data.schedule ?? {}) as Schedule,
@@ -92,6 +94,8 @@ export async function saveSettings(
     p_scheduled_lead_minutes: input.scheduledLeadMinutes,
     p_preorders_enabled: input.preordersEnabled,
     p_preorder_cutoffs: input.preorderCutoffs,
+    p_header_image_x: input.headerImageX,
+    p_header_image_y: input.headerImageY,
   });
 
   return error ? { error: { code: error.code, message: error.message } } : {};

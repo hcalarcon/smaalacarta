@@ -78,6 +78,32 @@ describe("renderStaticMenuPage — Etapa 6e", () => {
     expect(headerLine.match(/style="/g)).toHaveLength(1);
   });
 
+  it("aplica la posición de la imagen de cabecera, en el mismo style (ESTATICO-10)", () => {
+    const html = renderStaticMenuPage({
+      ...base,
+      config: {
+        ...base.config,
+        header: { imagen: "https://cdn.example.com/cabecera.jpg", posicion: { x: 20, y: 80 } },
+      },
+    });
+
+    const headerLine = html.split("\n").find((line) => line.includes('class="header"'));
+    expect(headerLine).toContain("background-position: 20% 80%");
+    expect(headerLine.match(/style="/g)).toHaveLength(1);
+  });
+
+  it("sin posición válida no agrega background-position (ESTATICO-10)", () => {
+    const html = renderStaticMenuPage({
+      ...base,
+      config: {
+        ...base.config,
+        header: { imagen: "https://cdn.example.com/a.jpg", posicion: { x: "1;x", y: 5 } },
+      },
+    });
+
+    expect(html).not.toContain("background-position");
+  });
+
   it("usa la plantilla y los colores del negocio", () => {
     const html = renderStaticMenuPage(base);
 

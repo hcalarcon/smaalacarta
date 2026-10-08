@@ -2,7 +2,7 @@
 // Solo lógica: el dibujo está en tracker.js y usa siempre textContent.
 
 import { cssUrl } from "../../menu-app/lib/html.js";
-import { headerBackground } from "../../menu-app/lib/info.js";
+import { headerBackground, positionText } from "../../menu-app/lib/info.js";
 import { LANGS, LOCALES, t } from "../../menu-app/lib/i18n.js";
 
 const CODE = /^[0-9a-f]{20}$/;
@@ -121,7 +121,10 @@ export function brandTheme(negocio) {
     cssUrl,
   );
 
-  return { brand, accent, header, plain: header === "" };
+  // La posición solo cuenta si hay imagen (PUBLICO-50 / SEGUIMIENTO-24).
+  const position = negocio?.imagen ? positionText(negocio?.posicion) : "";
+
+  return { brand, accent, header, position, plain: header === "" };
 }
 
 // Título de la pestaña en el idioma elegido (IDIOMA-13).

@@ -277,7 +277,7 @@ describe("configuración — PUBLICO-4", () => {
       tipo: "cliente",
       telefono: "5493510000001",
       colores: { primary: "#112233", secondary: "#445566" },
-      header: { imagen: "https://ejemplo.com/cabecera.jpg" },
+      header: { imagen: "https://ejemplo.com/cabecera.jpg", posicion: { x: 50, y: 50 } },
       horarios: { lunes: ["12:00-15:00"], domingo: [] },
       direccion: "Calle 123, Córdoba",
       redes: {

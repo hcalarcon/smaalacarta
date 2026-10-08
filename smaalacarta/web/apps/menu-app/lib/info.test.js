@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   closedNotice,
   headerBackground,
+  headerPosition,
   isDemoMenu,
   mapsUrl,
   reopenText,
@@ -151,5 +152,29 @@ describe("reopenText en otros idiomas — IDIOMA-1", () => {
     expect(reopenText("2030-01-15", "en")).toBe("We reopen on 15/01");
     expect(reopenText("2030-01-15", "pt")).toBe("Reabrimos em 15/01");
     expect(reopenText("basura", "en")).toBe("");
+  });
+});
+
+describe("headerPosition — PUBLICO-50", () => {
+  const withPos = (x, y) => ({ header: { imagen: "https://x.com/a.jpg", posicion: { x, y } } });
+
+  it('devuelve "x% y%" con enteros de 0 a 100', () => {
+    expect(headerPosition(withPos(20, 80))).toBe("20% 80%");
+    expect(headerPosition(withPos(0, 100))).toBe("0% 100%");
+  });
+
+  it("sin posición no hay nada que pintar (queda centrada)", () => {
+    expect(headerPosition({})).toBe("");
+    expect(headerPosition({ header: { imagen: "https://x.com/a.jpg" } })).toBe("");
+    expect(headerPosition(null)).toBe("");
+  });
+
+  it("nunca deja pasar texto, decimales ni valores fuera de rango", () => {
+    expect(headerPosition(withPos("20; background:url(x)", 50))).toBe("");
+    expect(headerPosition(withPos("20", 50))).toBe("");
+    expect(headerPosition(withPos(20.5, 50))).toBe("");
+    expect(headerPosition(withPos(-1, 50))).toBe("");
+    expect(headerPosition(withPos(50, 101))).toBe("");
+    expect(headerPosition(withPos(Number.NaN, 50))).toBe("");
   });
 });

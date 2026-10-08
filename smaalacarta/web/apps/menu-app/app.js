@@ -467,6 +467,8 @@ function renderHeader(c) {
   if (header) {
     const background = INFO.headerBackground(c, HTML.cssUrl);
     if (background) header.style.backgroundImage = background;
+    const position = INFO.headerPosition(c);
+    if (position) header.style.backgroundPosition = position;
   }
 
   const cierre = INFO.closedNotice(c);

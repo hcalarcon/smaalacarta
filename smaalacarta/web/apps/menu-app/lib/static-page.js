@@ -12,6 +12,7 @@ import { formatPrice } from "./price.js";
 import {
   closedNotice,
   headerBackground,
+  headerPosition,
   mapsUrl,
   reopenText,
   socialIconPath,
@@ -188,8 +189,9 @@ export function renderStaticMenuPage({ config, menu, lang: requestedLang } = {})
   // `cssUrl` devuelve `url("…")`, con comillas adentro: hay que escaparlas para
   // que no corten el atributo `style="…"` a la mitad (rompía toda la cabecera).
   const headerImage = headerBackground(config, cssUrl);
+  const headerPos = headerPosition(config);
   const headerStyle = headerImage
-    ? ` style="background-image: ${escapeHtml(headerImage)}"`
+    ? ` style="background-image: ${escapeHtml(headerImage)}${headerPos ? `; background-position: ${escapeHtml(headerPos)}` : ""}"`
     : "";
   const logo = safeHttpUrl(config?.logo);
 

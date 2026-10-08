@@ -49,6 +49,8 @@ export type Database = {
           delivery_options: string[]
           facebook_url: string | null
           header_image_url: string | null
+          header_image_x: number
+          header_image_y: number
           instagram_url: string | null
           logo_url: string | null
           menu_pdf_url: string | null
@@ -78,6 +80,8 @@ export type Database = {
           delivery_options?: string[]
           facebook_url?: string | null
           header_image_url?: string | null
+          header_image_x?: number
+          header_image_y?: number
           instagram_url?: string | null
           logo_url?: string | null
           menu_pdf_url?: string | null
@@ -107,6 +111,8 @@ export type Database = {
           delivery_options?: string[]
           facebook_url?: string | null
           header_image_url?: string | null
+          header_image_x?: number
+          header_image_y?: number
           instagram_url?: string | null
           logo_url?: string | null
           menu_pdf_url?: string | null
@@ -944,6 +950,8 @@ export type Database = {
           p_delivery_options: string[]
           p_facebook_url: string
           p_header_image_url: string
+          p_header_image_x: number
+          p_header_image_y: number
           p_instagram_url: string
           p_logo_url: string
           p_menu_pdf_url: string

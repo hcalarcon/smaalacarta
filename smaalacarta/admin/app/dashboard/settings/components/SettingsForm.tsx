@@ -131,11 +131,14 @@ function ColorField({
 
 export default function SettingsForm({
   businessId,
+  businessName,
   initial,
   digitalMenu,
   pdfService,
 }: {
   businessId: string;
+  // Para la vista previa del menú.
+  businessName: string;
   initial: SettingsInput;
   // Sin plan_web ni plan_completo (solo QR + PDF), no hay menú digital: se
   // esconde todo lo que no sea el PDF (ADMIN-PLAN-1).
@@ -152,6 +155,7 @@ export default function SettingsForm({
   const [primaryColor, setPrimaryColor] = useState(initial.primaryColor);
   const [secondaryColor, setSecondaryColor] = useState(initial.secondaryColor);
   const [headerImageUrl, setHeaderImageUrl] = useState(initial.headerImageUrl);
+  const [headerFocus, setHeaderFocus] = useState({ x: initial.headerImageX, y: initial.headerImageY });
   const [logoUrl, setLogoUrl] = useState(initial.logoUrl);
   const [menuPdfUrl, setMenuPdfUrl] = useState(initial.menuPdfUrl);
   const [whatsapp, setWhatsapp] = useState(initial.whatsapp);
@@ -243,6 +247,8 @@ export default function SettingsForm({
         primaryColor,
         secondaryColor,
         headerImageUrl,
+        headerImageX: headerFocus.x,
+        headerImageY: headerFocus.y,
         logoUrl,
         menuPdfUrl,
         schedule: toSchedule(days, scheduleEnabled),
@@ -405,10 +411,22 @@ export default function SettingsForm({
         </p>
 
         <HeaderPreview
-          imageUrl={headerImageUrl}
+          businessName={businessName}
+          tagline={tagline}
+          template={template}
+          theme={theme}
           primaryColor={primaryColor}
           secondaryColor={secondaryColor}
+          imageUrl={headerImageUrl}
+          logoUrl={logoUrl}
+          focus={headerFocus}
+          onFocusChange={setHeaderFocus}
         />
+        {fieldErrors.headerImageX || fieldErrors.headerImageY ? (
+          <p className="-mt-3 text-sm text-red-600">
+            {fieldErrors.headerImageX ?? fieldErrors.headerImageY}
+          </p>
+        ) : null}
 
         <div>
           <label

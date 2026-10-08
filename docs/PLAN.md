@@ -602,6 +602,16 @@ van en la parte B. Requisitos en `docs/SPEC.md` (ADMIN-OPCIONES-1 a 16). Migraci
       que el plan permite) y arreglo de la vista previa de imágenes que no se refrescaba al
       cambiar de una URL rota a una válida (ADMIN-CONFIG-22 a 24)
 
+- [x] [herni] Imagen de cabecera acomodable y vista previa fiel (ADMIN-CONFIG-25 a 30, PUBLICO-50,
+      ESTATICO-10, SEGUIMIENTO-24): el negocio arrastra la imagen (o usa las flechas) para elegir
+      qué parte se ve; se guarda como `header_image_x`/`header_image_y` (0 a 100) y los tres menús
+      la aplican como `background-position`. La vista previa de Apariencia es un `iframe` con el CSS
+      real de `web/` (base de la URL en `MENU_ASSETS_URL`, se pisa con
+      `NEXT_PUBLIC_MENU_ASSETS_URL` en desarrollo), en celular y escritorio, con plantilla, tema y
+      abierto/cerrado alternables. Migración `20261011000000_posicion_imagen_cabecera.sql`
+- [ ] [por asignar] Zoom de la imagen de cabecera (hoy solo se elige el punto de enfoque, no el
+      acercamiento)
+
 ## Etapa 7 — Pendientes técnicos (backlog)
 
 - [ ] [por asignar] **Marketplace** ("un lugar donde encontrar de todo para

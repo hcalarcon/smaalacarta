@@ -277,6 +277,10 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   opciones salen como los cargó el negocio. Todo dato del negocio se escribe con `textContent` o
   `escapeHtml`. Los estilos de la hoja y de las líneas del carrito están en `base.css` y en las tres
   plantillas, en claro y oscuro (el aspecto solo se comprueba mirándolo en el navegador).
+- **PUBLICO-50** `public_menu` entrega `config.header.posicion` `{x, y}` (enteros de 0 a 100). `headerPosition(config)`
+  devuelve `"x% y%"` solo con enteros de 0 a 100 y `""` en cualquier otro caso (nunca texto del dato en el
+  estilo); `headerBackground` queda igual. El menú interactivo la aplica como `background-position` de la
+  cabecera, y sin posición queda centrada como antes.
 
 ## BUSQUEDA — Buscador
 
@@ -382,6 +386,8 @@ llegando al negocio por WhatsApp.
   la clave.
 - **SEGUIMIENTO-23** La página de seguimiento muestra las opciones bajo cada ítem, escritas con
   `textContent`.
+- **SEGUIMIENTO-24** `public_order_tracking` entrega `negocio.posicion` `{x, y}` y la cabecera del seguimiento la
+  aplica con `headerPosition` (solo enteros de 0 a 100).
 
 ## PWA — Instalar el menú en el celular
 
@@ -465,6 +471,8 @@ en JS puro.*
 - **ESTATICO-9** Al tocar la foto de un producto, en el menú interactivo y en el estático, se abre
   ampliada sobre un fondo oscuro, sin ocupar el 100% de la pantalla. Se cierra con la ✕, con
   `Esc` o tocando el fondo. Lo hace `web/apps/menu-app/lightbox.js`, que ambos cargan.
+- **ESTATICO-10** El menú estático aplica la posición de la imagen de cabecera como `background-position` en el
+  `style` de la cabecera, con `headerPosition` (solo enteros de 0 a 100, escapado como el resto del `style`).
 
 ## IDIOMA — Menú público en español, inglés y portugués
 
@@ -859,6 +867,28 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
 - **ADMIN-CONFIG-24** Una imagen que falló al cargar vuelve a intentarse cuando cambia su dirección:
   en `ImageUploader` y en la vista previa de la cabecera, pasar de una URL rota a una válida muestra
   la imagen.
+- **ADMIN-CONFIG-25** El negocio acomoda qué parte de la imagen de cabecera se ve: `business_settings`
+  guarda `header_image_x` y `header_image_y` (enteros de 0 a 100, por defecto 50 y 50 = centro);
+  `save_business_settings` los recibe, y la base rechaza un valor fuera de rango.
+- **ADMIN-CONFIG-26** `validateSettings` acepta `headerImageX` y `headerImageY` solo si son enteros de 0 a
+  100; `normalizeFocus` deja cualquier otro valor en el rango (lo redondea y lo acota, y un valor que no
+  es número vuelve a 50).
+- **ADMIN-CONFIG-27** En la vista previa se mueve el punto de enfoque arrastrando la cabecera (mouse o
+  dedo), con las flechas del teclado (2 puntos; 10 con Mayús) o con "Centrar"; el doble clic también
+  centra. `dragFocus` mueve el punto al revés del arrastre, proporcional a lo que la imagen sobra de la
+  cabecera en ese eje, y no lo mueve en un eje donde no sobra nada. Un indicador marca el punto.
+- **ADMIN-CONFIG-28** La vista previa de Apariencia es un `iframe` que carga el CSS real del menú
+  (`base.css` y la plantilla, desde `MENU_ASSETS_URL`, que `NEXT_PUBLIC_MENU_ASSETS_URL` pisa) y arma con
+  sus mismas clases una cabecera con logo, nombre y chip abierto/cerrado, la barra de categorías, una
+  tarjeta de producto, el "+", el carrito flotante, el botón de WhatsApp y el de cierre. Se ve en
+  celular y en escritorio. `menuPreviewDocument` solo usa clases que existen en esos CSS.
+- **ADMIN-CONFIG-29** La vista previa calcula los colores de lectura (`--on-brand`, `--on-header`,
+  `--brand-ink`, …) con `previewBrandVariables`, que da lo mismo que `brandVariables` de
+  `web/apps/menu-app/lib/colors.js` para los mismos colores.
+- **ADMIN-CONFIG-30** La vista previa deja elegir plantilla y tema (claro u oscuro) y alternar
+  abierto/cerrado, y refleja sin guardar los colores, la imagen, su punto de enfoque, el logo, el nombre
+  y la descripción. Los datos del negocio viajan al `iframe` como datos y se escriben con `textContent`,
+  nunca dentro del HTML del documento.
 
 ## ADMIN-PEDIDOS — Pedidos
 

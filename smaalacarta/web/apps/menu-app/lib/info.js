@@ -85,6 +85,18 @@ export function headerBackground(config, cssUrl) {
   return "";
 }
 
+// Punto de enfoque de la imagen de cabecera (PUBLICO-50): "x% y%" para `background-position`.
+// Solo salen enteros de 0 a 100; cualquier otra cosa (texto, decimales, fuera de rango) da ""
+// y la cabecera queda centrada. Nunca se copia texto del dato al estilo.
+export function headerPosition(config) {
+  return positionText(config?.header?.posicion);
+}
+
+export function positionText(posicion) {
+  const valid = (n) => Number.isInteger(n) && n >= 0 && n <= 100;
+  return valid(posicion?.x) && valid(posicion?.y) ? `${posicion.x}% ${posicion.y}%` : "";
+}
+
 // Lo que es solo de las demos (PUBLICO-11): el aviso "¿Querés este menú en tu negocio?"
 // y el botón "Volver" a la landing.
 export function isDemoMenu(type) {

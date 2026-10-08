@@ -55,6 +55,7 @@ export default async function SettingsPage() {
 
           <SettingsForm
             businessId={business.id}
+            businessName={business.name}
             initial={settings}
             digitalMenu={digitalMenu}
             pdfService={pdfService}
