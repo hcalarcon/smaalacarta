@@ -11,7 +11,7 @@ export const DEMO_SLUGS = ["moderno", "clasico", "minimal"];
 // datos (restricción `businesses_slug_reserved`) y en el admin (`RESERVED_SLUGS`).
 export const RESERVED_SUBDOMAINS = [
   "www", "app", "admin", "api", "demo", "demos", "mail", "static", "assets",
-  "cdn", "dev", "staging", "panel", "login", "landing",
+  "cdn", "dev", "staging", "panel", "login", "landing", "explorar",
 ];
 
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/;

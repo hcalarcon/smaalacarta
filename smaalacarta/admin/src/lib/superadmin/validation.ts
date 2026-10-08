@@ -10,6 +10,7 @@ export type MemberRole = (typeof MEMBER_ROLES)[number];
 export const RESERVED_SLUGS = [
   "www", "app", "admin", "api", "demo", "demos", "moderno", "clasico", "minimal",
   "mail", "static", "assets", "cdn", "dev", "staging", "panel", "login", "landing",
+  "explorar",
 ] as const;
 
 const SLUG_PATTERN = /^[a-z0-9]+(-[a-z0-9]+)*$/;

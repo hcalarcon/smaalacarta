@@ -43,6 +43,7 @@ describe("demos y reservados — RUTAS-2", () => {
       [
         "www", "app", "admin", "api", "demo", "demos", "moderno", "clasico", "minimal",
         "mail", "static", "assets", "cdn", "dev", "staging", "panel", "login", "landing",
+  "explorar",
       ].sort(),
     );
   });

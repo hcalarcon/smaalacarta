@@ -737,7 +737,7 @@ primer ingreso.
   persona vuelve a quedar obligada a cambiarla. No puede hacerlo con otro
   superadmin ni con quien no es miembro de ese negocio.
 - **ADMIN-SUPER-12** Un negocio no puede llamarse con un slug reservado (`www`,
-  `admin`, `app`, `api`, `demo`, `moderno`, `clasico`, `minimal`…): serían
+  `admin`, `app`, `api`, `demo`, `moderno`, `clasico`, `minimal`, `explorar`…): serían
   subdominios que no abren un negocio.
 - **ADMIN-SUPER-13** El plan de un negocio no es un valor único: son tres
   capacidades combinables (`plan_pdf`, `plan_web`, `plan_completo`, una por cada
@@ -781,6 +781,14 @@ primer ingreso.
   sugerida, agrupados por nombre normalizado, con la cantidad de negocios y de productos, de más a menos
   repetidos. Solo el superadmin puede pedirlo (para los demás da `42501`).
 - **ADMIN-SUPER-24** Cada acción de esa pantalla comprueba que quien la pide es superadmin antes de actuar.
+- **ADMIN-SUPER-25** Dos entradas de `default_images` no pueden tener el mismo nombre (sin distinguir mayúsculas
+  ni espacios de los bordes): la base lo exige con un índice único sobre `lower(name)`, y la migración que lo crea
+  junta antes las claves de los duplicados que ya existan en la más antigua y borra el resto.
+- **ADMIN-SUPER-26** El seed ampliado (`admin/scripts/seed-default-images.mjs`) no duplica entradas: cada fila del
+  script apunta a una entrada existente (por nombre o por imagen), a la que le suma las claves, o a una nueva; la
+  migración que genera es idempotente (`ON CONFLICT`) y las frases de varias palabras ganan por especificidad
+  ("milanesa napolitana" antes que "milanesa", "papas fritas" antes que "papa"). Toda imagen del seed existe
+  en `landing/assets/defaults/`.
 
 ## ADMIN-MENU — Categorías y productos
 

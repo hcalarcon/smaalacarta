@@ -161,7 +161,7 @@ describe("validateMember — ADMIN-SUPER-4", () => {
 });
 
 describe("slugs reservados — ADMIN-SUPER-12", () => {
-  it.each(["www", "admin", "app", "api", "demo", "moderno", "clasico", "minimal"])(
+  it.each(["www", "admin", "app", "api", "demo", "moderno", "clasico", "minimal", "explorar"])(
     "rechaza %s",
     (slug) => {
       const r = validateNewBusiness({
@@ -183,6 +183,7 @@ describe("slugs reservados — ADMIN-SUPER-12", () => {
       [
         "www", "app", "admin", "api", "demo", "demos", "moderno", "clasico", "minimal",
         "mail", "static", "assets", "cdn", "dev", "staging", "panel", "login", "landing",
+  "explorar",
       ].sort(),
     );
   });
