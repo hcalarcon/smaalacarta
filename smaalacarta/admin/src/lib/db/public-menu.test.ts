@@ -166,7 +166,10 @@ describe("categorías y productos — PUBLICO-2", () => {
   });
 
   it("lo que no se cargó no aparece, y destacado es false por defecto", async () => {
+    // Sin ilustraciones de muestra (PUBLICO-51): acá se mira solo lo que el negocio cargó.
+    await db.exec(`update business_settings set show_default_images = false where business_id = '${NEG_ANA}'`);
     const menu = await publicMenu("ana");
+    await db.exec(`update business_settings set show_default_images = true where business_id = '${NEG_ANA}'`);
     const te = menu!.menu.categorias.find((c) => c.nombre === "Bebidas")!.items[1];
 
     expect(te).toEqual({
@@ -277,7 +280,7 @@ describe("configuración — PUBLICO-4", () => {
       tipo: "cliente",
       telefono: "5493510000001",
       colores: { primary: "#112233", secondary: "#445566" },
-      header: { imagen: "https://ejemplo.com/cabecera.jpg" },
+      header: { imagen: "https://ejemplo.com/cabecera.jpg", posicion: { x: 50, y: 50 } },
       horarios: { lunes: ["12:00-15:00"], domingo: [] },
       direccion: "Calle 123, Córdoba",
       redes: {

@@ -7,6 +7,7 @@ import {
   normalizeDeliveryPayment,
   validateDeliveryPayment,
 } from "./payment";
+import { CENTER, isFocus } from "./header-focus";
 import { normalizePreorders, validatePreorders, type PreorderCutoffs } from "./preorders";
 import { validateSchedule, type Schedule } from "./schedule";
 import {
@@ -41,6 +42,11 @@ export type SettingsInput = {
   primaryColor: string;
   secondaryColor: string;
   headerImageUrl: string;
+  // Punto de enfoque de la imagen de cabecera, enteros de 0 a 100 (ADMIN-CONFIG-25 y 26).
+  headerImageX: number;
+  headerImageY: number;
+  // Ilustraciones de muestra en los productos sin foto (ADMIN-CONFIG-31).
+  showDefaultImages: boolean;
   logoUrl: string;
   // El PDF del menú (Etapa 6e): independiente de `published`, no se muestra en
   // el menú digital, solo se linkea aparte (QR).
@@ -80,6 +86,9 @@ export const DEFAULT_SETTINGS: SettingsInput = {
   primaryColor: "#5a4a3a",
   secondaryColor: "#d97706",
   headerImageUrl: "",
+  headerImageX: CENTER,
+  headerImageY: CENTER,
+  showDefaultImages: true,
   logoUrl: "",
   menuPdfUrl: "",
   schedule: {},
@@ -108,6 +117,8 @@ type Field =
   | "primaryColor"
   | "secondaryColor"
   | "headerImageUrl"
+  | "headerImageX"
+  | "headerImageY"
   | "logoUrl"
   | "menuPdfUrl"
   | "schedule"
@@ -181,6 +192,14 @@ export function validateSettings(input: SettingsInput): ValidationResult<Field> 
 
   if (input.headerImageUrl.trim() && !IMAGE_URL.test(input.headerImageUrl.trim())) {
     errors.headerImageUrl = "Ingresá una dirección que empiece con https://";
+  }
+
+  if (!isFocus(input.headerImageX)) {
+    errors.headerImageX = "El punto de enfoque tiene que ser un número entero de 0 a 100.";
+  }
+
+  if (!isFocus(input.headerImageY)) {
+    errors.headerImageY = "El punto de enfoque tiene que ser un número entero de 0 a 100.";
   }
 
   if (input.logoUrl.trim() && !IMAGE_URL.test(input.logoUrl.trim())) {

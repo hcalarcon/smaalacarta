@@ -893,3 +893,8 @@ body {
 :root[data-tema="oscuro"] .opciones-regla.obligatoria {
   color: var(--text);
 }
+
+/* Etiqueta de las imágenes de muestra (PUBLICO-55): discreta, con el gris de la plantilla en claro y oscuro */
+.etiqueta-ilustrativa {
+  letter-spacing: 0.01em;
+}

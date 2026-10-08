@@ -27,7 +27,9 @@ export default function ImageUploader({
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [broken, setBroken] = useState(false);
+  // La dirección que falló: si el valor cambia, deja de contar como rota (ADMIN-CONFIG-24).
+  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
+  const broken = brokenUrl === value;
 
   async function handleFile(file: File) {
     setError(null);
@@ -59,7 +61,6 @@ export default function ImageUploader({
 
       const { data } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path);
 
-      setBroken(false);
       onChange(data.publicUrl);
     } catch {
       setError("No pudimos subir la imagen. Probá de nuevo.");
@@ -81,7 +82,7 @@ export default function ImageUploader({
             <img
               src={value}
               alt=""
-              onError={() => setBroken(true)}
+              onError={() => setBrokenUrl(value)}
               className="h-full w-full object-cover"
             />
           ) : (

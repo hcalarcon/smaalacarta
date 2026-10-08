@@ -277,6 +277,25 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   opciones salen como los cargó el negocio. Todo dato del negocio se escribe con `textContent` o
   `escapeHtml`. Los estilos de la hoja y de las líneas del carrito están en `base.css` y en las tres
   plantillas, en claro y oscuro (el aspecto solo se comprueba mirándolo en el navegador).
+- **PUBLICO-50** `public_menu` entrega `config.header.posicion` `{x, y}` (enteros de 0 a 100). `headerPosition(config)`
+  devuelve `"x% y%"` solo con enteros de 0 a 100 y `""` en cualquier otro caso (nunca texto del dato en el
+  estilo); `headerBackground` queda igual. El menú interactivo la aplica como `background-position` de la
+  cabecera, y sin posición queda centrada como antes.
+- **PUBLICO-51** Un producto sin imagen propia (o con una vacía) sale de `public_menu` con `imagen` = la
+  ilustración que sugiere `suggest_default_image(nombre, categoría)`, sin escribir nada en `products`. La imagen
+  propia siempre gana.
+- **PUBLICO-52** Con `show_default_images` apagado, o sin coincidencia, o con la entrada inactiva, el producto
+  sale sin `imagen` y el menú muestra el logo del negocio.
+- **PUBLICO-53** Una imagen que viene de una ilustración sale con `imagenIlustrativa: true`; una imagen propia
+  nunca lo lleva. La sugerencia se calcula una sola vez por producto.
+- **PUBLICO-54** `productImage(item, config)` resuelve qué muestra la tarjeta: la imagen del producto; si falta, el
+  logo del negocio; si tampoco hay, el de SMA a la Carta (`DEFAULT_LOGO`). Solo se aceptan direcciones http(s).
+- **PUBLICO-55** La ilustración lleva la etiqueta "Imagen ilustrativa" (`item.illustrative`, en español, inglés y
+  portugués); el logo de reemplazo no la lleva.
+- **PUBLICO-56** La ilustración y el logo se ven con `object-fit: contain` sobre un fondo neutro (clases
+  `imagen-ilustrativa` e `imagen-logo`) y no se pueden ampliar: la lupa (ESTATICO-9) es solo para fotos propias.
+- **PUBLICO-57** Los estilos de la ilustración, el logo y la etiqueta están en `base.css` y en las tres
+  plantillas, en claro y oscuro (el aspecto solo se comprueba mirándolo en el navegador).
 
 ## BUSQUEDA — Buscador
 
@@ -382,6 +401,8 @@ llegando al negocio por WhatsApp.
   la clave.
 - **SEGUIMIENTO-23** La página de seguimiento muestra las opciones bajo cada ítem, escritas con
   `textContent`.
+- **SEGUIMIENTO-24** `public_order_tracking` entrega `negocio.posicion` `{x, y}` y la cabecera del seguimiento la
+  aplica con `headerPosition` (solo enteros de 0 a 100).
 
 ## PWA — Instalar el menú en el celular
 
@@ -465,6 +486,11 @@ en JS puro.*
 - **ESTATICO-9** Al tocar la foto de un producto, en el menú interactivo y en el estático, se abre
   ampliada sobre un fondo oscuro, sin ocupar el 100% de la pantalla. Se cierra con la ✕, con
   `Esc` o tocando el fondo. Lo hace `web/apps/menu-app/lightbox.js`, que ambos cargan.
+- **ESTATICO-10** El menú estático aplica la posición de la imagen de cabecera como `background-position` en el
+  `style` de la cabecera, con `headerPosition` (solo enteros de 0 a 100, escapado como el resto del `style`).
+- **ESTATICO-11** El menú estático muestra lo mismo que el interactivo (PUBLICO-51 a 56): ilustración con su
+  etiqueta "Imagen ilustrativa", o el logo, con las mismas clases y sin la lupa. Todo dato del negocio pasa por
+  `escapeHtml`.
 
 ## IDIOMA — Menú público en español, inglés y portugués
 
@@ -711,7 +737,7 @@ primer ingreso.
   persona vuelve a quedar obligada a cambiarla. No puede hacerlo con otro
   superadmin ni con quien no es miembro de ese negocio.
 - **ADMIN-SUPER-12** Un negocio no puede llamarse con un slug reservado (`www`,
-  `admin`, `app`, `api`, `demo`, `moderno`, `clasico`, `minimal`…): serían
+  `admin`, `app`, `api`, `demo`, `moderno`, `clasico`, `minimal`, `explorar`…): serían
   subdominios que no abren un negocio.
 - **ADMIN-SUPER-13** El plan de un negocio no es un valor único: son tres
   capacidades combinables (`plan_pdf`, `plan_web`, `plan_completo`, una por cada
@@ -729,6 +755,40 @@ primer ingreso.
   quedaron con `plan_completo = true` (es lo que ya tenían de hecho: subdominio
   sin restricción de plan); solo un negocio nuevo arranca sin plan hasta que el
   superadmin elija uno.
+- **ADMIN-SUPER-17** `normalize_words(texto)` pasa a minúsculas, quita tildes y eñes (con `translate`, sin
+  `unaccent`), deja solo letras y números separados en palabras, y singulariza las de más de 4 letras: quita la
+  `s` final, y la `es` si termina en `nes` o `ches`.
+- **ADMIN-SUPER-18** `default_images` guarda las ilustraciones (nombre, palabras clave, imagen https, prioridad,
+  activa). Las palabras clave se normalizan al guardar (sin vacías ni repetidas). Cualquiera lee las activas; solo
+  el superadmin ve las inactivas y escribe, edita o borra.
+- **ADMIN-SUPER-19** El bucket `default-images` es público, admite WebP, PNG, JPG y SVG de hasta 1 MB, y solo el
+  superadmin escribe en él.
+- **ADMIN-SUPER-20** `suggest_default_image(nombre, categoría)` devuelve la entrada activa que mejor coincide: una
+  entrada coincide si todas las palabras de alguna de sus claves están en el nombre; puntaje = palabras de la clave
+  + prioridad, así que la más específica gana ("milanesa napolitana" sobre "milanesa"). La categoría es una
+  segunda pasada que queda siempre por debajo del nombre. Desempata por prioridad, nombre e id. Sin coincidencia no
+  devuelve nada.
+- **ADMIN-SUPER-21** `/superadmin/imagenes` (solo superadmin) lista las entradas con miniatura, nombre, claves como
+  chips, estado y prioridad, y permite crear, editar y borrar, subiendo la imagen al bucket `default-images`. Las
+  claves se escriben separadas por coma (`parseKeywords`); `validateDefaultImage` exige nombre de hasta 80
+  caracteres, al menos una clave, una dirección https y una prioridad entera de -100 a 100, y
+  `validateDefaultImageFile` solo deja subir WebP, PNG, JPG o SVG de hasta 1 MB.
+- **ADMIN-SUPER-22** Esa pantalla tiene un probador: dado un nombre de producto (y opcionalmente una categoría)
+  muestra la imagen y la entrada que coinciden, o que no hay, usando `suggest_default_image` (una sola fuente de
+  verdad).
+- **ADMIN-SUPER-23** "Productos sin coincidencia" (`default_images_unmatched()`) lista los nombres de los
+  productos activos, con categoría activa, de los negocios publicados y activos que no tienen imagen propia ni
+  sugerida, agrupados por nombre normalizado, con la cantidad de negocios y de productos, de más a menos
+  repetidos. Solo el superadmin puede pedirlo (para los demás da `42501`).
+- **ADMIN-SUPER-24** Cada acción de esa pantalla comprueba que quien la pide es superadmin antes de actuar.
+- **ADMIN-SUPER-25** Dos entradas de `default_images` no pueden tener el mismo nombre (sin distinguir mayúsculas
+  ni espacios de los bordes): la base lo exige con un índice único sobre `lower(name)`, y la migración que lo crea
+  junta antes las claves de los duplicados que ya existan en la más antigua y borra el resto.
+- **ADMIN-SUPER-26** El seed ampliado (`admin/scripts/seed-default-images.mjs`) no duplica entradas: cada fila del
+  script apunta a una entrada existente (por nombre o por imagen), a la que le suma las claves, o a una nueva; la
+  migración que genera es idempotente (`ON CONFLICT`) y las frases de varias palabras ganan por especificidad
+  ("milanesa napolitana" antes que "milanesa", "papas fritas" antes que "papa"). Toda imagen del seed existe
+  en `landing/assets/defaults/`.
 
 ## ADMIN-MENU — Categorías y productos
 
@@ -849,6 +909,45 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   prueba mirándolo en el navegador.
 - **ADMIN-CONFIG-21** "Mercado Pago" es un medio de pago más en "Entrega y pago" (`payment_options`
   acepta `mercadopago`). Que se ofrezca depende de las credenciales (MP-1), que no se cargan desde el panel.
+- **ADMIN-CONFIG-22** Configuración muestra un índice de sus secciones, y `settingsSections(plan)`
+  devuelve solo las que el plan permite, en el orden de la pantalla: Datos del negocio, Compartir y
+  Contraseña siempre; Publicación, Apariencia, Horarios, Pedidos anticipados, Cierre temporal,
+  Entrega y pago, Pedidos programados y Contacto con menú digital; Menú en PDF con `plan_pdf`.
+- **ADMIN-CONFIG-23** El índice resalta la sección que se está viendo (`aria-current`); al tocar una
+  entrada la pantalla salta a esa sección (scroll suave, o sin animación si el usuario prefiere
+  menos movimiento), pone `#id` en la URL y le da el foco.
+- **ADMIN-CONFIG-24** Una imagen que falló al cargar vuelve a intentarse cuando cambia su dirección:
+  en `ImageUploader` y en la vista previa de la cabecera, pasar de una URL rota a una válida muestra
+  la imagen.
+- **ADMIN-CONFIG-25** El negocio acomoda qué parte de la imagen de cabecera se ve: `business_settings`
+  guarda `header_image_x` y `header_image_y` (enteros de 0 a 100, por defecto 50 y 50 = centro);
+  `save_business_settings` los recibe, y la base rechaza un valor fuera de rango.
+- **ADMIN-CONFIG-26** `validateSettings` acepta `headerImageX` y `headerImageY` solo si son enteros de 0 a
+  100; `normalizeFocus` deja cualquier otro valor en el rango (lo redondea y lo acota, y un valor que no
+  es número vuelve a 50).
+- **ADMIN-CONFIG-27** En la vista previa se mueve el punto de enfoque arrastrando la cabecera (mouse o
+  dedo), con las flechas del teclado (2 puntos; 10 con Mayús) o con "Centrar"; el doble clic también
+  centra. `dragFocus` mueve el punto al revés del arrastre, proporcional a lo que la imagen sobra de la
+  cabecera en ese eje, y no lo mueve en un eje donde no sobra nada. Un indicador marca el punto.
+- **ADMIN-CONFIG-28** La vista previa de Apariencia es un `iframe` que carga el CSS real del menú
+  (`base.css` y la plantilla, desde `MENU_ASSETS_URL`, que `NEXT_PUBLIC_MENU_ASSETS_URL` pisa) y arma con
+  sus mismas clases una cabecera con logo, nombre y chip abierto/cerrado, la barra de categorías, una
+  tarjeta de producto, el "+", el carrito flotante, el botón de WhatsApp y el de cierre. Se ve en
+  celular y en escritorio. `menuPreviewDocument` solo usa clases que existen en esos CSS.
+- **ADMIN-CONFIG-29** La vista previa calcula los colores de lectura (`--on-brand`, `--on-header`,
+  `--brand-ink`, …) con `previewBrandVariables`, que da lo mismo que `brandVariables` de
+  `web/apps/menu-app/lib/colors.js` para los mismos colores.
+- **ADMIN-CONFIG-30** La vista previa deja elegir plantilla y tema (claro u oscuro) y alternar
+  abierto/cerrado, y refleja sin guardar los colores, la imagen, su punto de enfoque, el logo, el nombre
+  y la descripción. Los datos del negocio viajan al `iframe` como datos y se escriben con `textContent`,
+  nunca dentro del HTML del documento.
+- **ADMIN-CONFIG-31** Apariencia tiene el interruptor "Mostrar imágenes de muestra en productos sin foto"
+  (`business_settings.show_default_images`, por defecto prendido). `save_business_settings` lo recibe con valor
+  por defecto `true`, así que el panel anterior no lo apaga por accidente.
+- **ADMIN-CONFIG-32** En el diálogo de un producto sin imagen, el panel muestra de solo lectura qué se verá
+  (`defaultImageHint`): la ilustración que sugiere `suggest_default_image`, o el logo del negocio si no hay
+  coincidencia o el interruptor está apagado, con la aclaración de que subir una foto propia la reemplaza. Con
+  imagen propia no muestra nada.
 
 ## ADMIN-PEDIDOS — Pedidos
 

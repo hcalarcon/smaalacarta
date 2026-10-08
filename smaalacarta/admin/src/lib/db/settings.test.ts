@@ -39,6 +39,8 @@ type Settings = {
   leadMinutes?: number;
   preorders?: boolean;
   cutoffs?: unknown;
+  headerX?: number;
+  headerY?: number;
 };
 
 const sqlText = (value: string | null | undefined, fallback: string | null) => {
@@ -81,7 +83,9 @@ function save(user: string | null, s: Settings = {}) {
        ${s.allowScheduled ?? true},
        ${s.leadMinutes ?? 30},
        ${s.preorders ?? false},
-       '${JSON.stringify(s.cutoffs ?? {})}'::jsonb)`,
+       '${JSON.stringify(s.cutoffs ?? {})}'::jsonb,
+       ${s.headerX ?? 50},
+       ${s.headerY ?? 50})`,
   );
 }
 

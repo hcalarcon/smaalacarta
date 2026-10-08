@@ -4,6 +4,7 @@ import MenuClient from "./components/MenuClient";
 
 import { requireBusiness } from "@/lib/get-current-business";
 import { getCategoriesWithProducts } from "@/lib/db/categories";
+import { getDefaultImageSettings } from "@/lib/db/settings";
 import {
   listOptionGroups,
   listProductGroupLinks,
@@ -27,12 +28,13 @@ export default async function MenuPage() {
     redirect("/dashboard");
   }
 
-  const [categories, optionGroups, productGroupLinks, productIdsInPromotions] =
+  const [categories, optionGroups, productGroupLinks, productIdsInPromotions, defaultImages] =
     await Promise.all([
       getCategoriesWithProducts(current.business.id),
       listOptionGroups(current.business.id),
       listProductGroupLinks(current.business.id),
       listProductIdsInPromotions(current.business.id),
+      getDefaultImageSettings(current.business.id),
     ]);
 
   // Cuántos productos usa cada grupo.
@@ -58,6 +60,7 @@ export default async function MenuPage() {
       productGroupLinks={productGroupLinks}
       groupUsage={groupUsage}
       productIdsInPromotions={productIdsInPromotions}
+      defaultImages={defaultImages}
     />
   );
 }

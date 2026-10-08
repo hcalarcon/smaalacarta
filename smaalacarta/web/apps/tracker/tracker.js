@@ -194,6 +194,7 @@ function render(data, { stale }) {
     el("p", { className: "tracker-number", text: t("tracker.order", lang, { n: data.pedido.numero }) }),
   ]);
   if (theme.header) headerNode.style.backgroundImage = theme.header;
+  if (theme.position) headerNode.style.backgroundPosition = theme.position;
   dockLangSelector(headerNode);
   nodes.push(headerNode);
 

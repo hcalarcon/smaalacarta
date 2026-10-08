@@ -6,6 +6,7 @@ import TranslationsFields from "@/components/menu/TranslationsFields";
 import ProductOptionGroupsPicker, {
   type PickerGroup,
 } from "@/components/menu/ProductOptionGroupsPicker";
+import DefaultImageHint from "../DefaultImageHint";
 import ImageUploader from "@/components/ui/ImageUploader";
 import { Product } from "@/lib/db/products";
 import type { Translations } from "@/lib/menu/translations";
@@ -23,6 +24,10 @@ type ProductDialogProps = {
   optionGroups: PickerGroup[];
   initialGroupIds: string[];
   inPromotion: boolean;
+  // Imágenes de muestra (ADMIN-CONFIG-32): nombre de la categoría del producto, si el negocio las tiene
+  // prendidas y si cargó su logo.
+  categoryName: string | null;
+  defaultImages: { enabled: boolean; hasLogo: boolean };
   onSubmit: (
     data: {
       id?: string;
@@ -48,6 +53,8 @@ function ProductDialogForm({
   optionGroups,
   initialGroupIds,
   inPromotion,
+  categoryName,
+  defaultImages,
   onSubmit,
 }: ProductDialogProps) {
   const editing = mode === "edit" && initialData;
@@ -176,6 +183,14 @@ function ProductDialogForm({
                 onChange={setImageUrl}
               />
             </div>
+
+            <DefaultImageHint
+              name={name}
+              categoryName={categoryName}
+              hasOwnImage={imageUrl !== ""}
+              enabled={defaultImages.enabled}
+              hasLogo={defaultImages.hasLogo}
+            />
 
             <div className="flex flex-wrap gap-4">
               <label className="flex items-center gap-2 text-sm">

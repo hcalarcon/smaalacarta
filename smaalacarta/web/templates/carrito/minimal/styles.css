@@ -613,3 +613,16 @@ body {
   border: 1px solid var(--border);
   border-top: 2px solid var(--text);
 }
+
+/* Etiqueta de las imágenes de muestra (PUBLICO-55): chica y en mayúsculas, en claro y oscuro */
+.etiqueta-ilustrativa {
+  font-style: normal;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-size: 0.62rem;
+}
+
+.producto > img.imagen-ilustrativa,
+.producto > img.imagen-logo {
+  background: var(--card);
+}

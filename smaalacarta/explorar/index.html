@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>Explorar · SMA a la Carta</title>
+    <meta
+      name="description"
+      content="Dónde comer, tomar algo y pedir en San Martín de los Andes."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700;800&family=Instrument+Sans:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="explorar.css" />
+  </head>
+  <body>
+    <div class="ribbon">
+      Maqueta de demostración · los datos son de directorios públicos y pueden
+      estar desactualizados
+    </div>
+
+    <header class="top">
+      <div class="top-in">
+        <a class="brand" href="./" aria-label="SMA a la Carta · Explorar">
+          <span class="brand-dot" aria-hidden="true"></span>
+          <span>SMA a la Carta</span>
+          <em>explorar</em>
+        </a>
+        <a class="top-cta" href="#sumate">Sumá tu local</a>
+      </div>
+    </header>
+
+    <section class="hero">
+      <div class="hero-in">
+        <p class="hero-kicker">San Martín de los Andes</p>
+        <h1>¿Qué se come hoy?</h1>
+        <label class="search">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
+          <input
+            id="q"
+            type="search"
+            placeholder="Buscá un local, un plato o una calle"
+            autocomplete="off"
+          />
+        </label>
+      </div>
+    </section>
+
+    <main>
+      <nav class="cats" aria-label="Categorías">
+        <div class="cats-in" id="cats"></div>
+      </nav>
+
+      <section class="filters" aria-label="Filtros">
+        <div class="filters-in">
+          <button class="pill" id="f-menu" aria-pressed="false">
+            <span aria-hidden="true">📲</span> Con menú digital
+          </button>
+          <button class="pill" id="f-fav" aria-pressed="false">
+            <span aria-hidden="true">♥</span> Favoritos
+          </button>
+          <label class="select">
+            <span class="sr">Zona</span>
+            <select id="f-zona"></select>
+          </label>
+          <label class="select">
+            <span class="sr">Ordenar</span>
+            <select id="f-orden">
+              <option value="dest">Destacados primero</option>
+              <option value="az">A–Z</option>
+            </select>
+          </label>
+        </div>
+      </section>
+
+      <section class="destacados" id="destacados" aria-label="Destacados">
+        <div class="wrap">
+          <h2>Para pedir ahora</h2>
+          <p class="sub">Locales con su menú digital: ver la carta y armar el pedido.</p>
+        </div>
+        <div class="rail" id="rail"></div>
+      </section>
+
+      <section class="wrap results">
+        <div class="results-head">
+          <h2 id="results-title">Todos los locales</h2>
+          <p id="count" aria-live="polite"></p>
+        </div>
+        <div class="grid" id="grid"></div>
+        <div class="empty" id="empty" hidden>
+          <p class="empty-ico" aria-hidden="true">🍴</p>
+          <h3>No encontramos nada con esos filtros</h3>
+          <p>Probá con otra categoría o sacá algún filtro.</p>
+          <button class="btn ghost" id="reset">Limpiar filtros</button>
+        </div>
+      </section>
+
+      <section class="owners" id="sumate">
+        <div class="owners-in">
+          <p class="hero-kicker">¿Tenés un local?</p>
+          <h2>Que tus clientes vean tu carta y te pidan desde acá</h2>
+          <p>
+            Armamos tu menú digital con QR, pedidos por WhatsApp y seguimiento.
+            Tu local aparece en Explorar con tu carta real.
+          </p>
+          <a class="btn" href="https://smaalacarta.com.ar/#contacto">Quiero mi menú digital</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <p>
+        © SMA a la Carta · <a href="https://smaalacarta.com.ar">smaalacarta.com.ar</a>
+      </p>
+    </footer>
+
+    <div class="sheet-bg" id="sheet-bg" hidden></div>
+    <aside
+      class="sheet"
+      id="sheet"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="sheet-title"
+      hidden
+    ></aside>
+    <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+    <script type="module" src="explorar.js"></script>
+  </body>
+</html>

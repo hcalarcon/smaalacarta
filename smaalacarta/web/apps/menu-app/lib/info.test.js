@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   closedNotice,
   headerBackground,
+  DEFAULT_LOGO,
+  headerPosition,
+  productImage,
   isDemoMenu,
   mapsUrl,
   reopenText,
@@ -151,5 +154,72 @@ describe("reopenText en otros idiomas — IDIOMA-1", () => {
     expect(reopenText("2030-01-15", "en")).toBe("We reopen on 15/01");
     expect(reopenText("2030-01-15", "pt")).toBe("Reabrimos em 15/01");
     expect(reopenText("basura", "en")).toBe("");
+  });
+});
+
+describe("headerPosition — PUBLICO-50", () => {
+  const withPos = (x, y) => ({ header: { imagen: "https://x.com/a.jpg", posicion: { x, y } } });
+
+  it('devuelve "x% y%" con enteros de 0 a 100', () => {
+    expect(headerPosition(withPos(20, 80))).toBe("20% 80%");
+    expect(headerPosition(withPos(0, 100))).toBe("0% 100%");
+  });
+
+  it("sin posición no hay nada que pintar (queda centrada)", () => {
+    expect(headerPosition({})).toBe("");
+    expect(headerPosition({ header: { imagen: "https://x.com/a.jpg" } })).toBe("");
+    expect(headerPosition(null)).toBe("");
+  });
+
+  it("nunca deja pasar texto, decimales ni valores fuera de rango", () => {
+    expect(headerPosition(withPos("20; background:url(x)", 50))).toBe("");
+    expect(headerPosition(withPos("20", 50))).toBe("");
+    expect(headerPosition(withPos(20.5, 50))).toBe("");
+    expect(headerPosition(withPos(-1, 50))).toBe("");
+    expect(headerPosition(withPos(50, 101))).toBe("");
+    expect(headerPosition(withPos(Number.NaN, 50))).toBe("");
+  });
+});
+
+describe("productImage — PUBLICO-54", () => {
+  const config = { logo: "https://cdn.example.com/logo.png" };
+
+  it("la imagen del producto es una foto", () => {
+    expect(productImage({ imagen: "https://cdn.example.com/a.jpg" }, config)).toEqual({
+      kind: "photo",
+      src: "https://cdn.example.com/a.jpg",
+    });
+  });
+
+  it("una imagen marcada como ilustrativa es una ilustración", () => {
+    expect(
+      productImage({ imagen: "https://www.smaalacarta.com.ar/assets/defaults/pizza.svg", imagenIlustrativa: true }, config),
+    ).toEqual({ kind: "illustration", src: "https://www.smaalacarta.com.ar/assets/defaults/pizza.svg" });
+  });
+
+  it("sin imagen, el logo del negocio", () => {
+    expect(productImage({ nombre: "Plato" }, config)).toEqual({ kind: "logo", src: config.logo });
+    expect(productImage({ imagen: "" }, config)).toEqual({ kind: "logo", src: config.logo });
+  });
+
+  it("sin imagen ni logo, el de SMA a la Carta", () => {
+    expect(productImage({}, {})).toEqual({ kind: "logo", src: DEFAULT_LOGO });
+    expect(productImage({}, undefined)).toEqual({ kind: "logo", src: DEFAULT_LOGO });
+    expect(DEFAULT_LOGO).toMatch(/^https:\/\//);
+  });
+
+  it("una dirección que no es http(s) se descarta", () => {
+    expect(productImage({ imagen: "javascript:alert(1)" }, { logo: "data:image/png;base64,AAAA" })).toEqual({
+      kind: "logo",
+      src: DEFAULT_LOGO,
+    });
+  });
+
+  it("una foto propia nunca se marca como ilustración aunque llegue la bandera sin imagen", () => {
+    expect(productImage({ imagenIlustrativa: true }, config).kind).toBe("logo");
+  });
+
+  it("las promociones de la sección Ofertas no llevan imagen", () => {
+    expect(productImage({ esPromo: true, nombre: "Combo" }, config)).toBeNull();
   });
 });

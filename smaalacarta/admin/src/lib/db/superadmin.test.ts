@@ -178,7 +178,7 @@ describe("crear negocio con su dueño — ADMIN-SUPER-3 y 5", () => {
     ).toBe(0);
   });
 
-  it.each(["www", "admin", "app", "api", "demo", "moderno", "clasico", "minimal"])(
+  it.each(["www", "admin", "app", "api", "demo", "moderno", "clasico", "minimal", "explorar"])(
     "no acepta el slug reservado %s (ADMIN-SUPER-12)",
     async (slug) => {
       const r = await crear(SUPER, slug);

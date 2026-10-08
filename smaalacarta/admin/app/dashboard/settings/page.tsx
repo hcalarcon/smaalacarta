@@ -5,9 +5,11 @@ import BusinessProfileForm from "./components/BusinessProfileForm";
 import SettingsForm from "./components/SettingsForm";
 import ShareSection from "./components/ShareSection";
 import Section from "@/components/ui/Section";
+import SectionNav from "@/components/ui/SectionNav";
 import { getSettings } from "@/lib/db/settings";
 import { requireBusiness } from "@/lib/get-current-business";
 import { hasDigitalMenu, hasPdf } from "@/lib/plan-access";
+import { settingsSections } from "@/lib/settings/sections";
 
 export const metadata: Metadata = { title: "Configuración" };
 
@@ -24,7 +26,7 @@ export default async function SettingsPage() {
   const pdfService = hasPdf(plan);
 
   return (
-    <div className="mx-auto max-w-3xl space-y-8">
+    <div className="mx-auto max-w-5xl space-y-6">
       <section>
         <h1 className="text-3xl font-bold text-brand">Configuración</h1>
         <p className="mt-2 text-stone-500">
@@ -34,32 +36,40 @@ export default async function SettingsPage() {
         </p>
       </section>
 
-      <BusinessProfileForm
-        initialName={business.name}
-        initialSlug={business.slug}
-      />
+      <div className="items-start lg:grid lg:grid-cols-[11rem_minmax(0,1fr)] lg:gap-8">
+        <SectionNav sections={settingsSections({ digitalMenu, pdfService })} />
 
-      <ShareSection
-        name={business.name}
-        slug={business.slug}
-        planPdf={business.plan_pdf}
-        planWeb={business.plan_web}
-        planCompleto={business.plan_completo}
-      />
+        <div className="mt-4 min-w-0 space-y-8 lg:mt-0">
+          <BusinessProfileForm
+            initialName={business.name}
+            initialSlug={business.slug}
+          />
 
-      <SettingsForm
-        businessId={business.id}
-        initial={settings}
-        digitalMenu={digitalMenu}
-        pdfService={pdfService}
-      />
+          <ShareSection
+            name={business.name}
+            slug={business.slug}
+            planPdf={business.plan_pdf}
+            planWeb={business.plan_web}
+            planCompleto={business.plan_completo}
+          />
 
-      <Section
-        title="Contraseña"
-        description="Cambiá la contraseña de tu cuenta."
-      >
-        <ResetPasswordForm />
-      </Section>
+          <SettingsForm
+            businessId={business.id}
+            businessName={business.name}
+            initial={settings}
+            digitalMenu={digitalMenu}
+            pdfService={pdfService}
+          />
+
+          <Section
+            id="contrasena"
+            title="Contraseña"
+            description="Cambiá la contraseña de tu cuenta."
+          >
+            <ResetPasswordForm />
+          </Section>
+        </div>
+      </div>
     </div>
   );
 }
