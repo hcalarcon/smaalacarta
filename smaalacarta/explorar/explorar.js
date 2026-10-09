@@ -46,9 +46,8 @@ function filtrar() {
     );
     return q.split(/\s+/).every((p) => texto.includes(p));
   });
-  const peso = (l) => (l.m ? 2 : 0) + (l.dest ? 1 : 0);
   lista.sort((a, b) =>
-    estado.orden === "az" ? a.n.localeCompare(b.n, "es") : peso(b) - peso(a) || a.n.localeCompare(b.n, "es"),
+    estado.orden === "az" ? a.n.localeCompare(b.n, "es") : porPeso(a, b),
   );
   return lista;
 }
@@ -69,19 +68,38 @@ function tarjeta(l) {
   </article>`;
 }
 
+const peso = (l) => (l.m ? 2 : 0) + (l.dest ? 1 : 0);
+const porPeso = (a, b) => peso(b) - peso(a) || a.n.localeCompare(b.n, "es");
+
+function carriles() {
+  return CATEGORIAS.map((c) => {
+    const locales = LOCALES.filter((l) => l.c === c.id).sort(porPeso);
+    return `<section class="destacados" aria-label="${escapar(c.nombre)}">
+      <div class="wrap rail-head">
+        <h2><span aria-hidden="true">${c.icono}</span> ${escapar(c.nombre)}</h2>
+        <button class="more" data-more="${c.id}">Ver los ${locales.length} →</button>
+      </div>
+      <div class="rail">${locales.map(tarjeta).join("")}</div>
+    </section>`;
+  }).join("");
+}
+
 function dibujar() {
   const lista = filtrar();
-  $("grid").innerHTML = lista.map(tarjeta).join("");
-  $("empty").hidden = lista.length > 0;
-  $("count").textContent = `${lista.length} ${lista.length === 1 ? "local" : "locales"}`;
-  $("results-title").textContent = estado.cat
-    ? catPorId[estado.cat].nombre
-    : "Todos los locales";
-
-  // El carril de "para pedir" solo aparece sin filtros activos.
-  const sinFiltros = !estado.q && !estado.cat && !estado.zona && !estado.menu && !estado.fav;
+  // Sin filtros se ve la vitrina (carriles con scroll); al filtrar, la grilla.
+  const sinFiltros = !estado.q && !estado.cat && !estado.zona && !estado.menu && !estado.fav && estado.orden === "dest";
   $("destacados").hidden = !sinFiltros;
-  $("rail").innerHTML = LOCALES.filter((l) => l.m).map(tarjeta).join("");
+  $("sections").hidden = !sinFiltros;
+  $("results").hidden = sinFiltros;
+  if (sinFiltros) {
+    $("rail").innerHTML = LOCALES.filter((l) => l.m).sort(porPeso).map(tarjeta).join("");
+    $("sections").innerHTML = carriles();
+  } else {
+    $("grid").innerHTML = lista.map(tarjeta).join("");
+    $("empty").hidden = lista.length > 0;
+    $("count").textContent = `${lista.length} ${lista.length === 1 ? "local" : "locales"}`;
+    $("results-title").textContent = estado.cat ? catPorId[estado.cat].nombre : "Resultados";
+  }
 
   document.querySelectorAll(".cat").forEach((b) =>
     b.setAttribute("aria-pressed", String(b.dataset.cat === estado.cat)),
@@ -190,6 +208,13 @@ function iniciar() {
       }
       guardarFav();
       dibujar();
+      return;
+    }
+    const more = e.target.closest("[data-more]");
+    if (more) {
+      estado.cat = more.dataset.more;
+      dibujar();
+      window.scrollTo({ top: $("cats").offsetTop - 60, behavior: "smooth" });
       return;
     }
     if (e.target.closest("[data-demo]")) {

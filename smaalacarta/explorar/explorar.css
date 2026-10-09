@@ -265,13 +265,8 @@ a {
   margin: 0 auto;
   padding: 4px var(--gutter) 8px;
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.filters-in::-webkit-scrollbar {
-  display: none;
 }
 
 .pill,
@@ -331,8 +326,34 @@ a {
 
 .rail .card {
   flex: none;
-  width: 250px;
+  width: 232px;
   scroll-snap-align: start;
+}
+
+.rail {
+  scroll-padding-left: var(--gutter);
+}
+
+.rail-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.more {
+  background: none;
+  border: 0;
+  color: var(--cta);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  padding: 6px 0;
+}
+
+#sections .destacados {
+  padding-top: 14px;
 }
 
 /* ---- tarjetas ---- */
@@ -659,6 +680,45 @@ a {
   border-radius: 999px;
   font-size: 0.88rem;
   max-width: calc(100vw - 32px);
+}
+
+/* Celular: grilla de 2 columnas y tarjetas más compactas. */
+@media (max-width: 599px) {
+  .grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .cover {
+    height: 96px;
+  }
+
+  .card h3 {
+    font-size: 0.95rem;
+  }
+
+  .card-body {
+    padding: 10px 11px 12px;
+  }
+
+  .desc {
+    font-size: 0.78rem;
+  }
+
+  .badge {
+    font-size: 0.64rem;
+    padding: 2px 7px;
+    left: 8px;
+    bottom: 8px;
+  }
+
+  .rail .card {
+    width: 208px;
+  }
+
+  .rail .cover {
+    height: 112px;
+  }
 }
 
 @media (min-width: 720px) {
