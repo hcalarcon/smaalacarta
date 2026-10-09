@@ -129,14 +129,11 @@ function ColorField({
 
 export default function SettingsForm({
   businessId,
-  businessName,
   initial,
   digitalMenu,
   pdfService,
 }: {
   businessId: string;
-  // Para la vista previa del menú.
-  businessName: string;
   initial: SettingsInput;
   // Sin plan_web ni plan_completo (solo QR + PDF), no hay menú digital: se
   // esconde todo lo que no sea el PDF (ADMIN-PLAN-1).
@@ -178,7 +175,8 @@ export default function SettingsForm({
     toScheduleState(initial.schedule),
   );
 
-  const { reportSettings, settingsErrors: fieldErrors, save } = useSettingsSave();
+  // El nombre es el del formulario de Datos del negocio, sin guardar, para la vista previa.
+  const { name: businessName, reportSettings, settingsErrors: fieldErrors, save } = useSettingsSave();
 
   function updateDay(key: DayKey, change: (day: DayState) => DayState) {
     setDays((prev) => ({ ...prev, [key]: change(prev[key]) }));
@@ -292,15 +290,19 @@ export default function SettingsForm({
           celular la vista previa va arriba de la sección. */}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
         <AppearancePreview
-          businessName={businessName}
-          tagline={tagline}
-          template={template}
-          theme={theme}
-          primaryColor={primaryColor}
-          secondaryColor={secondaryColor}
-          imageUrl={headerImageUrl}
-          logoUrl={logoUrl}
-          focus={headerFocus}
+          businessId={businessId}
+          draft={{
+            name: businessName,
+            tagline,
+            template,
+            theme,
+            primaryColor,
+            secondaryColor,
+            imageUrl: headerImageUrl,
+            logoUrl,
+            focus: headerFocus,
+            schedule: toSchedule(days, scheduleEnabled),
+          }}
           onFocusChange={setHeaderFocus}
           className="sticky top-[7.5rem] z-10 self-start lg:col-start-2 lg:row-start-1 lg:top-24"
         />

@@ -949,18 +949,17 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   dedo), con las flechas del teclado (2 puntos; 10 con Mayús) o con "Centrar"; el doble clic también
   centra. `dragFocus` mueve el punto al revés del arrastre, proporcional a lo que la imagen sobra de la
   cabecera en ese eje, y no lo mueve en un eje donde no sobra nada. Un indicador marca el punto.
-- **ADMIN-CONFIG-28** La vista previa de Apariencia es un `iframe` que carga el CSS real del menú
-  (`base.css` y la plantilla, desde `MENU_ASSETS_URL`, que `NEXT_PUBLIC_MENU_ASSETS_URL` pisa) y arma con
-  sus mismas clases una cabecera con logo, nombre y chip abierto/cerrado, la barra de categorías, una
-  tarjeta de producto, el "+", el carrito flotante, el botón de WhatsApp y el de cierre. Se ve en
-  celular y en escritorio. `menuPreviewDocument` solo usa clases que existen en esos CSS.
-- **ADMIN-CONFIG-29** La vista previa calcula los colores de lectura (`--on-brand`, `--on-header`,
-  `--brand-ink`, …) con `previewBrandVariables`, que da lo mismo que `brandVariables` de
-  `web/apps/menu-app/lib/colors.js` para los mismos colores.
-- **ADMIN-CONFIG-30** La vista previa deja elegir plantilla y tema (claro u oscuro) y alternar
-  abierto/cerrado, y refleja sin guardar los colores, la imagen, su punto de enfoque, el logo, el nombre
-  y la descripción. Los datos del negocio viajan al `iframe` como datos y se escriben con `textContent`,
-  nunca dentro del HTML del documento.
+- **ADMIN-CONFIG-28** La vista previa de Apariencia es el menú real: un `iframe` que carga `web/apps/menu-app` con
+  `?preview=1` (PUBLICO-58 a 61, en `/apps/menu-app/index.html`) desde `MENU_ASSETS_URL`, que `NEXT_PUBLIC_MENU_ASSETS_URL` pisa en desarrollo
+  (un servidor estático sobre `web/`), y que se ve en celular y en escritorio. Ya no hay un HTML aparte que
+  imite las clases del menú.
+- **ADMIN-CONFIG-29** Los colores de lectura (`--on-brand`, `--on-header`, `--brand-ink`, …) los calcula el
+  propio menú con `brandVariables` de `web/apps/menu-app/lib/colors.js`; el panel solo manda los colores
+  elegidos.
+- **ADMIN-CONFIG-30** La vista previa refleja sin guardar la plantilla, el tema, los colores, la imagen de
+  cabecera y su punto de enfoque, el logo, el nombre, la descripción y los horarios del formulario
+  (`mergePreviewConfig`). Los datos del negocio viajan al `iframe` como datos (PUBLICO-59) y el menú los
+  escribe con `escapeHtml` o `textContent`.
 - **ADMIN-CONFIG-31** Apariencia tiene el interruptor "Mostrar imágenes de muestra en productos sin foto"
   (`business_settings.show_default_images`, por defecto prendido). `save_business_settings` lo recibe con valor
   por defecto `true`, así que el panel anterior no lo apaga por accidente.
@@ -991,19 +990,32 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
 - **ADMIN-CONFIG-40** En Apariencia, en escritorio, los controles van a la izquierda y una vista previa
   compacta fija (sticky) a la derecha; en celular, la vista previa compacta queda fija arriba de la sección y
   se puede colapsar (`aria-expanded`).
-- **ADMIN-CONFIG-41** La vista previa compacta es la misma vista del modal (un `iframe` con el CSS real del
-  menú, en formato celular) achicada al ancho disponible y recortada a la parte de arriba: cabecera con el
-  degradé o la imagen y su recorte, categorías y primer producto, con la plantilla, el tema y los colores
-  elegidos. Conserva el arrastre del punto de enfoque, las flechas y "Centrar imagen".
-- **ADMIN-CONFIG-42** "Ampliar" abre la vista previa completa (formatos Celular y Escritorio, plantilla, tema
-  y abierto/cerrado) en un modal que se cierra con Esc, con el botón o tocando afuera, y que sigue reflejando
-  los cambios en vivo; cerrado, esa vista no está en la página.
+- **ADMIN-CONFIG-41** La vista previa compacta es el menú real en formato celular, achicado al ancho disponible y
+  recortado a la parte de arriba: cabecera con el degradé o la imagen y su recorte, categorías y primer
+  producto, con la plantilla, el tema y los colores elegidos.
+- **ADMIN-CONFIG-42** "Ampliar" abre la misma vista en un modal grande (formatos Celular y Escritorio y cambio de
+  tema) que se cierra con Esc, con el botón o tocando afuera, y que sigue reflejando los cambios en vivo;
+  cerrado, esa vista no está en la página.
 - **ADMIN-CONFIG-43** `menu_preview(p_business_id)` devuelve el menú del negocio con el mismo formato que
   `public_menu` (config, categorías, productos, imágenes predeterminadas, opciones y agotados) a un miembro
   del negocio o a un superadmin, aunque no esté publicado ni tenga el plan del servicio; a cualquier otro, o
   sin sesión, le da error. `public_menu` conserva su contrato y sus filtros (published, active y plan): ahora
   decide si el negocio se muestra y arma el menú con `build_public_menu(p_business_id)`, función interna que
   la app no puede llamar.
+- **ADMIN-CONFIG-44** El panel le manda al `iframe` `{ type: "preview", config, menu }` (`previewPayload`) con
+  `postMessage` dirigido al origen del menú: con un pequeño retraso cuando cambia el formulario y enseguida
+  cuando el menú avisa `preview-ready`. Solo atiende mensajes de ese `iframe` y de ese origen. `config` es la
+  guardada (`menu_preview`) con los valores del formulario encima; lo que se vació en el formulario se quita, y
+  una imagen o un logo que no son https no se mandan.
+- **ADMIN-CONFIG-45** El arrastre del punto de enfoque y "Centrar imagen" se superponen a la cabecera usando el
+  rectángulo que informa el menú (`preview-header`), con la escala del `iframe` descontada; las flechas y el
+  doble clic también sirven. Sin imagen de cabecera no hay nada que arrastrar.
+- **ADMIN-CONFIG-46** El panel lee el menú con `fetchMenuPreview` (`menu_preview`, ADMIN-CONFIG-43), que nunca
+  lanza: un error de la base o una respuesta que no es un menú es `{ ok: false }`. Contra un menú local, el
+  `iframe` lleva `?admin=<origen del panel>` para que el menú acepte sus mensajes.
+- **ADMIN-CONFIG-47** La vista previa muestra su estado: "Cargando vista previa…" mientras llega el menú o el
+  `iframe` dibuja; si no se pudo leer el menú, o el menú no responde en 12 segundos, dice que no pudo
+  conectar y deja reintentar; un menú sin productos avisa que solo se ve la cabecera.
 
 ## ADMIN-PEDIDOS — Pedidos
 
