@@ -384,24 +384,16 @@ a {
 
 .cover {
   position: relative;
-  height: 112px;
-  display: grid;
-  place-items: center;
-  font-size: 3rem;
-  background: linear-gradient(135deg, var(--c), color-mix(in srgb, var(--c) 55%, #000));
+  height: 128px;
+  background: var(--c) center / cover no-repeat;
 }
 
+/* Degradé abajo: da lectura a la etiqueta sobre cualquier foto. */
 .cover::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 80% 0%, rgba(255, 255, 255, 0.22), transparent 55%);
-}
-
-.cover span {
-  position: relative;
-  z-index: 1;
-  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.3));
+  background: linear-gradient(to top, rgba(0, 0, 0, 0.45), transparent 55%);
 }
 
 .badge {
@@ -580,7 +572,7 @@ a {
 }
 
 .sheet .cover {
-  height: 140px;
+  height: 180px;
   border-radius: 24px 24px 0 0;
 }
 

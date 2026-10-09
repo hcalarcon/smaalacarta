@@ -57,7 +57,7 @@ function tarjeta(l) {
   const c = catPorId[l.c];
   const fav = favoritos.has(l.n);
   return `<article class="card" data-n="${escapar(l.n)}" tabindex="0" role="button" aria-label="${escapar(l.n)}, ${escapar(c.nombre)}">
-    <div class="cover" style="--c:${c.color}"><span>${c.icono}</span>
+    <div class="cover" style="--c:${c.color};background-image:url(img/${c.id}.jpg)">
       <span class="badge ${l.m ? "" : "off"}">${l.m ? "Menú digital" : "Sin menú digital"}</span>
     </div>
     <button class="fav" data-fav="${escapar(l.n)}" aria-pressed="${fav}" aria-label="${fav ? "Quitar de favoritos" : "Guardar en favoritos"}">${fav ? "♥" : "♡"}</button>
@@ -112,7 +112,7 @@ function abrirDetalle(nombre) {
          <a href="https://smaalacarta.com.ar/#contacto">Quiero mi menú →</a>
        </div>`;
   const hoja = $("sheet");
-  hoja.innerHTML = `<div class="cover" style="--c:${c.color}"><span>${c.icono}</span></div>
+  hoja.innerHTML = `<div class="cover" style="--c:${c.color};background-image:url(img/${c.id}.jpg)"></div>
     <button class="sheet-close" aria-label="Cerrar">✕</button>
     <div class="sheet-body">
       <div><p class="meta">${escapar(c.nombre)} · ${escapar(l.z)}</p>
