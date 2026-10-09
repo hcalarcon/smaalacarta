@@ -290,7 +290,7 @@ export default function SettingsForm({
       <Section id="apariencia" title="Apariencia" description="Cómo ven tus clientes el menú.">
       {/* Controles a la izquierda y vista previa compacta fija a la derecha (ADMIN-CONFIG-40); en
           celular la vista previa va arriba de la sección. */}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_19rem]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
         <AppearancePreview
           businessName={businessName}
           tagline={tagline}

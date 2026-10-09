@@ -135,7 +135,7 @@ export default function CompactPreview({
         onPointerCancel={() => (drag.current = null)}
         onDoubleClick={() => onFocusChange({ x: CENTER, y: CENTER })}
         style={style}
-        className={`relative flex h-24 select-none flex-col justify-end overflow-hidden rounded-xl p-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 lg:h-28 ${
+        className={`relative flex h-[6.6rem] select-none flex-col justify-end overflow-hidden rounded-xl p-3 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40 lg:h-[7.7rem] ${
           hasImage ? "cursor-grab active:cursor-grabbing" : ""
         } ${message.background ? "" : "bg-stone-100 text-stone-800"}`}
       >
@@ -176,7 +176,7 @@ export default function CompactPreview({
         srcDoc={srcDoc}
         onLoad={() => setLoads((n) => n + 1)}
         tabIndex={-1}
-        className="h-[88px] w-full rounded-xl border border-line"
+        className="h-[97px] w-full rounded-xl border border-line"
         style={{ background: "transparent" }}
       />
 

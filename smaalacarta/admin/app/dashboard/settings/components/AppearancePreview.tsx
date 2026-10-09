@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import CompactPreview from "./CompactPreview";
 import HeaderPreview from "./HeaderPreview";
@@ -83,10 +84,12 @@ function PreviewModal({ onClose, children }: { onClose: () => void; children: Re
     };
   }, []);
 
-  return (
+  // En el body: el aside es sticky y arma su propio contexto de apilado, y desde ahí el modal quedaba
+  // por debajo del encabezado del panel.
+  return createPortal(
     <div
       data-testid="preview-backdrop"
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-6"
+      className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-3 sm:p-6"
       onClick={onClose}
     >
       <div
@@ -110,6 +113,7 @@ function PreviewModal({ onClose, children }: { onClose: () => void; children: Re
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
