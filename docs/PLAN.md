@@ -609,6 +609,13 @@ van en la parte B. Requisitos en `docs/SPEC.md` (ADMIN-OPCIONES-1 a 16). Migraci
       real de `web/` (base de la URL en `MENU_ASSETS_URL`, se pisa con
       `NEXT_PUBLIC_MENU_ASSETS_URL` en desarrollo), en celular y escritorio, con plantilla, tema y
       abierto/cerrado alternables. Migración `20261011000000_posicion_imagen_cabecera.sql`
+- [ ] [herni] Configuración: ajustes de layout (ADMIN-CONFIG-33 a 42): un solo botón de guardar
+      (perfil primero, luego configuración), índice plegable, menos relleno y vista previa compacta
+      sticky en Apariencia con "Ampliar" a la vista completa en un modal
+- [x] [herni] Vista previa de Apariencia con el menú real (PUBLICO-58 a 61, ADMIN-CONFIG-43 a 47):
+      - [x] `web/`: modo `?preview=1` que dibuja la configuración que le manda el panel por `postMessage`
+      - [x] migración `20261017000000_vista_previa_menu.sql`: `build_public_menu` + `menu_preview(p_business_id)`
+      - [x] admin: el iframe del menú real reemplaza a `HeaderPreview`/`menu-preview.ts` (compacto y ampliado)
 - [ ] [por asignar] Zoom de la imagen de cabecera (hoy solo se elige el punto de enfoque, no el
       acercamiento)
 

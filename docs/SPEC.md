@@ -296,6 +296,23 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   `imagen-ilustrativa` e `imagen-logo`) y no se pueden ampliar: la lupa (ESTATICO-9) es solo para fotos propias.
 - **PUBLICO-57** Los estilos de la ilustración, el logo y la etiqueta están en `base.css` y en las tres
   plantillas, en claro y oscuro (el aspecto solo se comprueba mirándolo en el navegador).
+- **PUBLICO-58** Con `?preview=1` el menú interactivo entra en modo vista previa (`isPreviewMode`): no consulta
+  Supabase, no crea pedidos, no lee ni escribe `localStorage` (carrito, idioma, tema), no registra el service
+  worker ni el manifest, y no hace nada al tocar (agregar, abrir el carrito, enviar el pedido o seguir un link),
+  aunque los botones se ven igual.
+- **PUBLICO-59** La vista previa solo acepta mensajes `{ type: "preview", config, menu }` que vengan de la
+  ventana que la contiene y de un origen permitido: `https://www.smaalacarta.com.ar` y, solo si la página se
+  abrió desde localhost, la dirección local que indique `?admin=` (`allowedOrigins`, `isAllowedOrigin`).
+  `parsePreviewMessage` reconstruye los datos como datos planos y descarta el mensaje si el tipo no coincide, si
+  falta la configuración o las categorías, o si algún texto, lista, profundidad o cantidad de datos excede el
+  límite. `vercel.json` manda `frame-ancestors https://www.smaalacarta.com.ar` solo con `?preview=1`.
+- **PUBLICO-60** Cada mensaje válido vuelve a dibujar el menú sin recargar la página (si llegan varios seguidos,
+  se dibuja el último): `applyPreviewConfig` aplica la plantilla (solo `moderno`, `clasico` o `minimal`), el tema
+  y los colores, y quita las variables de color de la configuración anterior; luego se dibujan cabecera, logo,
+  descripción, horarios y productos con el mismo código que el menú público. Los textos del negocio siguen
+  pasando por `escapeHtml` o `textContent`.
+- **PUBLICO-61** La vista previa avisa al panel que está lista (`preview-ready`) y, tras cada dibujo o cambio de
+  tamaño, el rectángulo de la cabecera (`headerRect`, `preview-header`) solo al origen que le escribió.
 
 ## BUSQUEDA — Buscador
 
@@ -932,18 +949,17 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   dedo), con las flechas del teclado (2 puntos; 10 con Mayús) o con "Centrar"; el doble clic también
   centra. `dragFocus` mueve el punto al revés del arrastre, proporcional a lo que la imagen sobra de la
   cabecera en ese eje, y no lo mueve en un eje donde no sobra nada. Un indicador marca el punto.
-- **ADMIN-CONFIG-28** La vista previa de Apariencia es un `iframe` que carga el CSS real del menú
-  (`base.css` y la plantilla, desde `MENU_ASSETS_URL`, que `NEXT_PUBLIC_MENU_ASSETS_URL` pisa) y arma con
-  sus mismas clases una cabecera con logo, nombre y chip abierto/cerrado, la barra de categorías, una
-  tarjeta de producto, el "+", el carrito flotante, el botón de WhatsApp y el de cierre. Se ve en
-  celular y en escritorio. `menuPreviewDocument` solo usa clases que existen en esos CSS.
-- **ADMIN-CONFIG-29** La vista previa calcula los colores de lectura (`--on-brand`, `--on-header`,
-  `--brand-ink`, …) con `previewBrandVariables`, que da lo mismo que `brandVariables` de
-  `web/apps/menu-app/lib/colors.js` para los mismos colores.
-- **ADMIN-CONFIG-30** La vista previa deja elegir plantilla y tema (claro u oscuro) y alternar
-  abierto/cerrado, y refleja sin guardar los colores, la imagen, su punto de enfoque, el logo, el nombre
-  y la descripción. Los datos del negocio viajan al `iframe` como datos y se escriben con `textContent`,
-  nunca dentro del HTML del documento.
+- **ADMIN-CONFIG-28** La vista previa de Apariencia es el menú real: un `iframe` que carga `web/apps/menu-app` con
+  `?preview=1` (PUBLICO-58 a 61, en `/apps/menu-app/index.html`) desde `MENU_ASSETS_URL`, que `NEXT_PUBLIC_MENU_ASSETS_URL` pisa en desarrollo
+  (un servidor estático sobre `web/`), y que se ve en celular y en escritorio. Ya no hay un HTML aparte que
+  imite las clases del menú.
+- **ADMIN-CONFIG-29** Los colores de lectura (`--on-brand`, `--on-header`, `--brand-ink`, …) los calcula el
+  propio menú con `brandVariables` de `web/apps/menu-app/lib/colors.js`; el panel solo manda los colores
+  elegidos.
+- **ADMIN-CONFIG-30** La vista previa refleja sin guardar la plantilla, el tema, los colores, la imagen de
+  cabecera y su punto de enfoque, el logo, el nombre, la descripción y los horarios del formulario
+  (`mergePreviewConfig`). Los datos del negocio viajan al `iframe` como datos (PUBLICO-59) y el menú los
+  escribe con `escapeHtml` o `textContent`.
 - **ADMIN-CONFIG-31** Apariencia tiene el interruptor "Mostrar imágenes de muestra en productos sin foto"
   (`business_settings.show_default_images`, por defecto prendido). `save_business_settings` lo recibe con valor
   por defecto `true`, así que el panel anterior no lo apaga por accidente.
@@ -951,6 +967,55 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   (`defaultImageHint`): la ilustración que sugiere `suggest_default_image`, o el logo del negocio si no hay
   coincidencia o el interruptor está apagado, con la aclaración de que subir una foto propia la reemplaza. Con
   imagen propia no muestra nada.
+- **ADMIN-CONFIG-33** Configuración tiene un solo botón "Guardar cambios" (el flotante): guarda a la vez
+  Datos del negocio (nombre y URL) y el resto de la configuración. "Datos del negocio" no tiene botón propio;
+  "Contraseña" conserva el suyo porque es otra acción.
+- **ADMIN-CONFIG-34** Al guardar se valida todo en el navegador antes de enviar nada
+  (`validateBusinessProfile` y `validateSettings`): si algo es inválido no se guarda nada y cada error queda
+  en su campo.
+- **ADMIN-CONFIG-35** `runSave` guarda primero el perfil (si cambió) y solo si sale bien la configuración (si
+  cambió). Si el perfil falla (p. ej. la URL ya la usa otro negocio), no se guarda la configuración, los
+  cambios siguen marcados como sin guardar y el error queda en su campo.
+- **ADMIN-CONFIG-36** Si cambió el nombre y no la URL, al tocar guardar se pregunta si regenerar la URL
+  (`regenerateSuggestion`); según la respuesta se guarda con la URL actual o con la sugerida.
+- **ADMIN-CONFIG-37** El guardado muestra un único aviso "Cambios guardados", y junto al botón aparece
+  "Cambios sin guardar" mientras haya algo pendiente (en el perfil o en la configuración); sin cambios
+  pendientes el botón está desactivado.
+- **ADMIN-CONFIG-38** El índice de secciones se puede ocultar en escritorio con un botón (`aria-expanded`,
+  alcanzable con teclado): oculto, el contenido ocupa todo el ancho y queda un control mínimo para volver a
+  abrirlo. La elección se recuerda en `localStorage` (`useStoredFlag`); si el navegador no deja usarlo la
+  pantalla funciona igual. En celular sigue la barra de chips.
+- **ADMIN-CONFIG-39** La pantalla de Configuración usa menos relleno (contenedor más ancho, separaciones y
+  padding de las secciones más chicos) sin cambiar el resto del panel.
+- **ADMIN-CONFIG-40** En Apariencia, en escritorio, los controles van a la izquierda y una vista previa
+  compacta fija (sticky) a la derecha; en celular, la vista previa compacta queda fija arriba de la sección y
+  se puede colapsar (`aria-expanded`).
+- **ADMIN-CONFIG-41** La vista previa compacta es el menú real en formato celular, achicado al ancho disponible y
+  recortado a la parte de arriba: cabecera con el degradé o la imagen y su recorte, categorías y primer
+  producto, con la plantilla, el tema y los colores elegidos.
+- **ADMIN-CONFIG-42** "Ampliar" abre la misma vista en un modal grande (formatos Celular y Escritorio y cambio de
+  tema) que se cierra con Esc, con el botón o tocando afuera, y que sigue reflejando los cambios en vivo;
+  cerrado, esa vista no está en la página.
+- **ADMIN-CONFIG-43** `menu_preview(p_business_id)` devuelve el menú del negocio con el mismo formato que
+  `public_menu` (config, categorías, productos, imágenes predeterminadas, opciones y agotados) a un miembro
+  del negocio o a un superadmin, aunque no esté publicado ni tenga el plan del servicio; a cualquier otro, o
+  sin sesión, le da error. `public_menu` conserva su contrato y sus filtros (published, active y plan): ahora
+  decide si el negocio se muestra y arma el menú con `build_public_menu(p_business_id)`, función interna que
+  la app no puede llamar.
+- **ADMIN-CONFIG-44** El panel le manda al `iframe` `{ type: "preview", config, menu }` (`previewPayload`) con
+  `postMessage` dirigido al origen del menú: con un pequeño retraso cuando cambia el formulario y enseguida
+  cuando el menú avisa `preview-ready`. Solo atiende mensajes de ese `iframe` y de ese origen. `config` es la
+  guardada (`menu_preview`) con los valores del formulario encima; lo que se vació en el formulario se quita, y
+  una imagen o un logo que no son https no se mandan.
+- **ADMIN-CONFIG-45** El arrastre del punto de enfoque y "Centrar imagen" se superponen a la cabecera usando el
+  rectángulo que informa el menú (`preview-header`), con la escala del `iframe` descontada; las flechas y el
+  doble clic también sirven. Sin imagen de cabecera no hay nada que arrastrar.
+- **ADMIN-CONFIG-46** El panel lee el menú con `fetchMenuPreview` (`menu_preview`, ADMIN-CONFIG-43), que nunca
+  lanza: un error de la base o una respuesta que no es un menú es `{ ok: false }`. Contra un menú local, el
+  `iframe` lleva `?admin=<origen del panel>` para que el menú acepte sus mensajes.
+- **ADMIN-CONFIG-47** La vista previa muestra su estado: "Cargando vista previa…" mientras llega el menú o el
+  `iframe` dibuja; si no se pudo leer el menú, o el menú no responde en 12 segundos, dice que no pudo
+  conectar y deja reintentar; un menú sin productos avisa que solo se ve la cabecera.
 
 ## ADMIN-PEDIDOS — Pedidos
 

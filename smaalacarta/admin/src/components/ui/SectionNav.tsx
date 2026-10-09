@@ -4,9 +4,19 @@ import { useEffect, useRef, useState } from "react";
 
 import type { SettingsSection } from "@/lib/settings/sections";
 
-// Índice de una pantalla larga (ADMIN-CONFIG-23). Escritorio: columna fija al costado.
-// Celular: barra horizontal fija debajo del header, que centra la entrada activa.
-export default function SectionNav({ sections }: { sections: SettingsSection[] }) {
+// Índice de una pantalla larga (ADMIN-CONFIG-23). Escritorio: columna fija al costado, que se puede
+// ocultar (ADMIN-CONFIG-38) y deja un botón mínimo para volver a abrirla. Celular: barra horizontal
+// fija debajo del header, que centra la entrada activa.
+export default function SectionNav({
+  sections,
+  open = true,
+  onToggle,
+}: {
+  sections: SettingsSection[];
+  // Solo cuenta en escritorio: en celular la barra de chips siempre se ve.
+  open?: boolean;
+  onToggle?: () => void;
+}) {
   const [active, setActive] = useState(sections[0]?.id ?? "");
   const navRef = useRef<HTMLElement>(null);
 
@@ -66,6 +76,19 @@ export default function SectionNav({ sections }: { sections: SettingsSection[] }
       style={{ "--nav-top": "72px" } as React.CSSProperties}
       className="sticky top-[var(--nav-top)] z-20 -mx-4 flex gap-2 overflow-x-auto bg-cream/95 px-4 py-2 backdrop-blur md:-mx-6 md:px-6 lg:top-24 lg:mx-0 lg:flex-col lg:gap-1 lg:overflow-visible lg:bg-transparent lg:p-0 lg:backdrop-blur-none"
     >
+      {onToggle ? (
+        <button
+          type="button"
+          onClick={onToggle}
+          aria-expanded={open}
+          aria-label={open ? "Ocultar el índice de secciones" : "Mostrar el índice de secciones"}
+          title={open ? "Ocultar el índice" : "Mostrar el índice"}
+          className="hidden h-8 items-center gap-1.5 self-start rounded-xl px-2 text-sm font-medium text-stone-500 transition hover:bg-brand-soft hover:text-brand focus-visible:outline-2 focus-visible:outline-accent lg:flex"
+        >
+          <span aria-hidden>{open ? "‹" : "›"}</span>
+          {open ? <span>Ocultar</span> : null}
+        </button>
+      ) : null}
       {sections.map(({ id, label }) => (
         <a
           key={id}
@@ -73,6 +96,8 @@ export default function SectionNav({ sections }: { sections: SettingsSection[] }
           onClick={(event) => jump(event, id)}
           aria-current={active === id ? "true" : undefined}
           className={`shrink-0 whitespace-nowrap rounded-full px-3 py-1.5 text-sm font-medium transition lg:rounded-xl ${
+            open ? "" : "lg:hidden"
+          } ${
             active === id
               ? "bg-brand text-white lg:bg-brand-soft lg:text-brand"
               : "text-stone-600 hover:bg-brand-soft"

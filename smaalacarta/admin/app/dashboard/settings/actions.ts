@@ -5,10 +5,9 @@ import { revalidatePath } from "next/cache";
 import { updateBusinessProfile } from "@/lib/db/business";
 import { saveSettings } from "@/lib/db/settings";
 import { requireBusiness } from "@/lib/get-current-business";
-import { normalizeSchedule } from "@/lib/settings/schedule";
+import { prepareSettings } from "@/lib/settings/save-flow";
 import { settingsErrorMessage } from "@/lib/settings/messages";
 import {
-  normalizeSettingsText,
   validateSettings,
   type SettingsInput,
 } from "@/lib/settings/validation";
@@ -32,15 +31,7 @@ export async function saveSettingsAction(
 ): Promise<SaveSettingsResult> {
   const { business } = await requireBusiness();
 
-  const settings: SettingsInput = normalizeSettingsText({
-    ...input,
-    tagline: input.tagline.trim(),
-    headerImageUrl: input.headerImageUrl.trim(),
-    logoUrl: input.logoUrl.trim(),
-    menuPdfUrl: input.menuPdfUrl.trim(),
-    schedule: normalizeSchedule(input.schedule),
-    whatsapp: input.whatsapp.trim(),
-  });
+  const settings = prepareSettings(input);
 
   const validation = validateSettings(settings);
   if (!validation.ok) {

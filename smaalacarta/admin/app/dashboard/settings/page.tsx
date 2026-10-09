@@ -3,9 +3,10 @@ import type { Metadata } from "next";
 import ResetPasswordForm from "../../(auth)/components/ResetPasswordForm";
 import BusinessProfileForm from "./components/BusinessProfileForm";
 import SettingsForm from "./components/SettingsForm";
+import SettingsLayout from "./components/SettingsLayout";
+import SettingsSaveProvider from "./components/SettingsSaveProvider";
 import ShareSection from "./components/ShareSection";
 import Section from "@/components/ui/Section";
-import SectionNav from "@/components/ui/SectionNav";
 import { getSettings } from "@/lib/db/settings";
 import { requireBusiness } from "@/lib/get-current-business";
 import { hasDigitalMenu, hasPdf } from "@/lib/plan-access";
@@ -26,24 +27,21 @@ export default async function SettingsPage() {
   const pdfService = hasPdf(plan);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6">
+    // Un poco más ancho y con menos relleno que el resto del panel (ADMIN-CONFIG-39): los márgenes
+    // negativos le devuelven ancho al contenido solo en esta pantalla.
+    <div className="mx-auto max-w-6xl space-y-4 lg:-mx-3 xl:mx-auto">
       <section>
         <h1 className="text-3xl font-bold text-brand">Configuración</h1>
-        <p className="mt-2 text-stone-500">
+        <p className="mt-1 text-stone-500">
           {digitalMenu
             ? `Apariencia, horarios y contacto del menú de ${business.name}.`
             : `El PDF del menú de ${business.name}.`}
         </p>
       </section>
 
-      <div className="items-start lg:grid lg:grid-cols-[11rem_minmax(0,1fr)] lg:gap-8">
-        <SectionNav sections={settingsSections({ digitalMenu, pdfService })} />
-
-        <div className="mt-4 min-w-0 space-y-8 lg:mt-0">
-          <BusinessProfileForm
-            initialName={business.name}
-            initialSlug={business.slug}
-          />
+      <SettingsSaveProvider initialName={business.name} initialSlug={business.slug}>
+        <SettingsLayout sections={settingsSections({ digitalMenu, pdfService })}>
+          <BusinessProfileForm />
 
           <ShareSection
             name={business.name}
@@ -55,7 +53,6 @@ export default async function SettingsPage() {
 
           <SettingsForm
             businessId={business.id}
-            businessName={business.name}
             initial={settings}
             digitalMenu={digitalMenu}
             pdfService={pdfService}
@@ -68,8 +65,8 @@ export default async function SettingsPage() {
           >
             <ResetPasswordForm />
           </Section>
-        </div>
-      </div>
+        </SettingsLayout>
+      </SettingsSaveProvider>
     </div>
   );
 }

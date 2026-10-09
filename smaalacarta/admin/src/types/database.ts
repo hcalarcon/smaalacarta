@@ -885,6 +885,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      build_public_menu: { Args: { p_business_id: string }; Returns: Json }
       confirm_order_payment: {
         Args: {
           p_amount: number
@@ -956,6 +957,7 @@ export type Database = {
       is_super_admin: { Args: never; Returns: boolean }
       is_valid_preorder_cutoffs: { Args: { p_cutoffs: Json }; Returns: boolean }
       is_valid_schedule: { Args: { p_schedule: Json }; Returns: boolean }
+      menu_preview: { Args: { p_business_id: string }; Returns: Json }
       new_tracking_code: { Args: never; Returns: string }
       next_order_number: { Args: { p_business_id: string }; Returns: number }
       normalize_words: { Args: { p_text: string }; Returns: string[] }
