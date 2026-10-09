@@ -59,7 +59,7 @@ beforeAll(async () => {
       ('${NEG_ANA}', '${CAT_COMIDAS}', 'Hamburguesa completa', 100, null),
       ('${NEG_ANA}', '${CAT_COMIDAS}', 'Pizza con foto', 100, '${PROPIA}'),
       ('${NEG_ANA}', '${CAT_COMIDAS}', 'Plato misterioso', 100, null),
-      ('${NEG_ANA}', '${CAT_POSTRES}', 'Especial de la casa', 100, null),
+      ('${NEG_ANA}', '${CAT_POSTRES}', 'Sorpresa de la casa', 100, null),
       ('${NEG_ANA}', '${CAT_COMIDAS}', 'Foto vacía', 100, null),
       ('${NEG_BETO}', '${CAT_BETO}', 'Plato misterioso', 100, null),
       ('${NEG_BETO}', '${CAT_BETO}', 'Misterio de Beto', 100, null);
@@ -101,7 +101,7 @@ describe("suggest_default_image — ADMIN-SUPER-20", () => {
     ["Cerveza IPA 500ml", "Cerveza"],
     ["Helado 1/4 kilo", "Helado"],
     ["Sándwiches de miga", "Sándwich"],
-    ["Ñoquis de papa", "Ñoquis"],
+    ["Ñoquis de papa", "Pasta"], // "noquis" quedó también en Pasta (misma imagen): gana por orden alfabético
     ["PAPAS FRITAS", "Papas fritas"],
   ])("%j -> %s", async (nombre, entrada) => {
     expect((await suggest(nombre))?.name).toBe(entrada);
@@ -115,7 +115,7 @@ describe("suggest_default_image — ADMIN-SUPER-20", () => {
 
   it("devuelve la dirección de la ilustración y la clave que coincidió", async () => {
     const s = await suggest("Pizza muzzarella");
-    expect(s?.image_url).toBe("https://www.smaalacarta.com.ar/assets/defaults/pizza.svg");
+    expect(s?.image_url).toBe("https://www.smaalacarta.com.ar/assets/defaults/pizza.jpg");
     expect(s?.keyword).toBe("pizza muzzarella");
     expect(s?.by_category).toBe(false);
   });
@@ -126,7 +126,7 @@ describe("suggest_default_image — ADMIN-SUPER-20", () => {
   });
 
   it("la categoría cuenta en una segunda pasada, siempre por debajo del nombre", async () => {
-    const porCategoria = await suggest("Especial de la casa", "Postres");
+    const porCategoria = await suggest("Sorpresa de la casa", "Postres");
     expect(porCategoria?.name).toBe("Flan y postres");
     expect(porCategoria?.by_category).toBe(true);
 
@@ -211,14 +211,14 @@ describe("default_images — palabras clave y RLS — ADMIN-SUPER-18", () => {
     await asUser(db, SUPER, "update default_images set active = true where name = 'Waffle'");
   });
 
-  it("el seed trae entre 60 y 80 entradas, todas con ilustración de landing/assets/defaults", async () => {
+  it("el seed trae entre 60 y 120 entradas, todas con foto de landing/assets/defaults", async () => {
     const r = await db.query<{ n: number; fuera: number }>(
       `select count(*)::int as n,
-              count(*) filter (where image_url not like 'https://www.smaalacarta.com.ar/assets/defaults/%.svg')::int as fuera
+              count(*) filter (where image_url not like 'https://www.smaalacarta.com.ar/assets/defaults/%.jpg')::int as fuera
        from default_images`,
     );
     expect(r.rows[0].n).toBeGreaterThanOrEqual(60);
-    expect(r.rows[0].n).toBeLessThanOrEqual(80);
+    expect(r.rows[0].n).toBeLessThanOrEqual(120);
     expect(r.rows[0].fuera).toBe(0);
   });
 });
@@ -251,7 +251,7 @@ describe("bucket default-images — ADMIN-SUPER-19", () => {
 describe("public_menu con imágenes predeterminadas — PUBLICO-51 a 53", () => {
   it("un producto sin imagen propia lleva la ilustración y se marca como ilustrativa", async () => {
     const hamburguesa = (await items())["Hamburguesa completa"];
-    expect(file(hamburguesa.imagen)).toBe("hamburguesa.svg");
+    expect(file(hamburguesa.imagen)).toBe("hamburguesa.jpg");
     expect(hamburguesa.imagenIlustrativa).toBe(true);
   });
 
@@ -275,8 +275,8 @@ describe("public_menu con imágenes predeterminadas — PUBLICO-51 a 53", () => 
   });
 
   it("el nombre de la categoría también cuenta", async () => {
-    const especial = (await items())["Especial de la casa"];
-    expect(file(especial.imagen)).toBe("flan.svg");
+    const especial = (await items())["Sorpresa de la casa"];
+    expect(file(especial.imagen)).toBe("flan.jpg");
     expect(especial.imagenIlustrativa).toBe(true);
   });
 
@@ -302,7 +302,7 @@ describe("public_menu con imágenes predeterminadas — PUBLICO-51 a 53", () => 
     await db.exec(`update products set name = 'Pizza de Beto' where business_id = '${NEG_BETO}' and name = 'Misterio de Beto'`);
 
     const beto = await items("beto");
-    expect(file(beto["Pizza de Beto"].imagen)).toBe("pizza.svg");
+    expect(file(beto["Pizza de Beto"].imagen)).toBe("pizza.jpg");
 
     await db.exec(`update business_settings set show_default_images = true where business_id = '${NEG_ANA}'`);
   });

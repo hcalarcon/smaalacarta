@@ -789,6 +789,9 @@ primer ingreso.
   migración que genera es idempotente (`ON CONFLICT`) y las frases de varias palabras ganan por especificidad
   ("milanesa napolitana" antes que "milanesa", "papas fritas" antes que "papa"). Toda imagen del seed existe
   en `landing/assets/defaults/`.
+- **ADMIN-SUPER-27** Las imágenes predeterminadas del seed son fotos reales de uso libre (Pexels, sin
+  atribución), no ilustraciones: toda dirección del propio sitio en `default_images` termina en `.jpg` y el archivo
+  existe en `landing/assets/defaults/`. Las cargadas por el superadmin con otra dirección no se tocan.
 
 ## ADMIN-MENU — Categorías y productos
 
