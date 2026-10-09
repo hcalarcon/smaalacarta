@@ -625,8 +625,11 @@ van en la parte B. Requisitos en `docs/SPEC.md` (ADMIN-OPCIONES-1 a 16). Migraci
       `default_images` (`20261014000000_imagenes_predeterminadas_nombre_unico.sql`) y 75 filas más
       desde `admin/scripts/seed-default-images.mjs` (`20261015000000_seed_imagenes_predeterminadas_ampliado.sql`),
       que suma claves a las entradas existentes y crea 20 nuevas; 23 SVG nuevos de Noto Emoji
-- [ ] [por asignar] Reemplazar las ilustraciones (Noto Emoji) por fotos libres propias, subiéndolas
-      desde `/superadmin/imagenes`
+- [x] [herni] Imágenes predeterminadas con fotos reales de uso libre en lugar de las ilustraciones
+      (ADMIN-SUPER-27): 81 archivos `.jpg` de Pexels en `landing/assets/defaults/` y la migración
+      `20261016000000_imagenes_predeterminadas_fotos.sql`, que cambia `.svg` por `.jpg` en las direcciones
+      del propio sitio. Los `.svg` se borran cuando la migración esté en todas las bases
+- [ ] [por asignar] Fotos propias de cada producto o por rubro, subidas desde `/superadmin/imagenes`
 
 ## Etapa 7 — Pendientes técnicos (backlog)
 

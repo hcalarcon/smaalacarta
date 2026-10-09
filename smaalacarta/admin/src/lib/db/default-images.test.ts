@@ -115,7 +115,7 @@ describe("suggest_default_image — ADMIN-SUPER-20", () => {
 
   it("devuelve la dirección de la ilustración y la clave que coincidió", async () => {
     const s = await suggest("Pizza muzzarella");
-    expect(s?.image_url).toBe("https://www.smaalacarta.com.ar/assets/defaults/pizza.svg");
+    expect(s?.image_url).toBe("https://www.smaalacarta.com.ar/assets/defaults/pizza.jpg");
     expect(s?.keyword).toBe("pizza muzzarella");
     expect(s?.by_category).toBe(false);
   });
@@ -211,10 +211,10 @@ describe("default_images — palabras clave y RLS — ADMIN-SUPER-18", () => {
     await asUser(db, SUPER, "update default_images set active = true where name = 'Waffle'");
   });
 
-  it("el seed trae entre 60 y 120 entradas, todas con ilustración de landing/assets/defaults", async () => {
+  it("el seed trae entre 60 y 120 entradas, todas con foto de landing/assets/defaults", async () => {
     const r = await db.query<{ n: number; fuera: number }>(
       `select count(*)::int as n,
-              count(*) filter (where image_url not like 'https://www.smaalacarta.com.ar/assets/defaults/%.svg')::int as fuera
+              count(*) filter (where image_url not like 'https://www.smaalacarta.com.ar/assets/defaults/%.jpg')::int as fuera
        from default_images`,
     );
     expect(r.rows[0].n).toBeGreaterThanOrEqual(60);
@@ -251,7 +251,7 @@ describe("bucket default-images — ADMIN-SUPER-19", () => {
 describe("public_menu con imágenes predeterminadas — PUBLICO-51 a 53", () => {
   it("un producto sin imagen propia lleva la ilustración y se marca como ilustrativa", async () => {
     const hamburguesa = (await items())["Hamburguesa completa"];
-    expect(file(hamburguesa.imagen)).toBe("hamburguesa.svg");
+    expect(file(hamburguesa.imagen)).toBe("hamburguesa.jpg");
     expect(hamburguesa.imagenIlustrativa).toBe(true);
   });
 
@@ -276,7 +276,7 @@ describe("public_menu con imágenes predeterminadas — PUBLICO-51 a 53", () => 
 
   it("el nombre de la categoría también cuenta", async () => {
     const especial = (await items())["Sorpresa de la casa"];
-    expect(file(especial.imagen)).toBe("flan.svg");
+    expect(file(especial.imagen)).toBe("flan.jpg");
     expect(especial.imagenIlustrativa).toBe(true);
   });
 
@@ -302,7 +302,7 @@ describe("public_menu con imágenes predeterminadas — PUBLICO-51 a 53", () => 
     await db.exec(`update products set name = 'Pizza de Beto' where business_id = '${NEG_BETO}' and name = 'Misterio de Beto'`);
 
     const beto = await items("beto");
-    expect(file(beto["Pizza de Beto"].imagen)).toBe("pizza.svg");
+    expect(file(beto["Pizza de Beto"].imagen)).toBe("pizza.jpg");
 
     await db.exec(`update business_settings set show_default_images = true where business_id = '${NEG_ANA}'`);
   });

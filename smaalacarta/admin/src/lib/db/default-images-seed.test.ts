@@ -56,11 +56,13 @@ describe("default_images — nombre único — ADMIN-SUPER-25", () => {
 });
 
 describe("seed ampliado — ADMIN-SUPER-26", () => {
-  const migracion = () => {
-    const f = readdirSync(DIR_MIGRACIONES).find((a: string) => a.endsWith("_seed_imagenes_predeterminadas_ampliado.sql"));
+  const leer = (sufijo: string) => {
+    const f = readdirSync(DIR_MIGRACIONES).find((a: string) => a.endsWith(sufijo));
     expect(f).toBeDefined();
     return readFileSync(path.join(DIR_MIGRACIONES, f as string), "utf8");
   };
+  const migracion = () => leer("_seed_imagenes_predeterminadas_ampliado.sql");
+  const migracionFotos = () => leer("_imagenes_predeterminadas_fotos.sql");
 
   it("toda imagen de default_images existe en landing/assets/defaults", async () => {
     const r = await db.query<{ image_url: string }>("select image_url from default_images");
@@ -94,7 +96,24 @@ describe("seed ampliado — ADMIN-SUPER-26", () => {
       (await db.query("select name, keywords, image_url, priority from default_images order by name")).rows;
     const antes = await foto();
     await db.exec(migracion());
+    await db.exec(migracionFotos()); // el seed vuelve a poner el `.svg`; la migración de fotos lo cambia otra vez
     expect(await foto()).toEqual(antes);
+  });
+
+  it("las fotos son .jpg y correr su migración de nuevo no cambia nada — ADMIN-SUPER-27", async () => {
+    const urls = async () => (await db.query<{ image_url: string }>("select image_url from default_images order by name")).rows;
+    const antes = await urls();
+    expect(antes.every((x) => !x.image_url.endsWith(".svg"))).toBe(true);
+    await db.exec(migracionFotos());
+    expect(await urls()).toEqual(antes);
+  });
+
+  it("una imagen del superadmin con otra dirección no se toca — ADMIN-SUPER-27", async () => {
+    await db.exec("insert into default_images (name, keywords, image_url) values ('Propia SVG', array['propia svg'], 'https://x.test/propia.svg')");
+    await db.exec(migracionFotos());
+    const r = await db.query<{ image_url: string }>("select image_url from default_images where name = 'Propia SVG'");
+    expect(r.rows[0].image_url).toBe("https://x.test/propia.svg");
+    await db.exec("delete from default_images where name = 'Propia SVG'");
   });
 
   it.each([
