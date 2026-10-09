@@ -42,7 +42,9 @@ export function isAllowedOrigin(origin, allowed) {
 const MAX_STRING = 4000;
 const MAX_ARRAY = 1000;
 const MAX_KEYS = 100;
-const MAX_DEPTH = 8;
+// Un producto con opciones llega a 9 niveles (menú > categorías > categoría > items > item > opciones >
+// grupo > opciones > opción > campos); con margen para lo que se agregue.
+const MAX_DEPTH = 12;
 const MAX_NODES = 20000;
 const FORBIDDEN_KEYS = ["__proto__", "constructor", "prototype"];
 
