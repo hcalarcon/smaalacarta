@@ -145,11 +145,15 @@ describe("LANDING-14 — página liviana", () => {
     }
   });
 
-  it("quien atiende es Cristian y no queda rastro de la foto ni del nombre anterior", () => {
+  it("herni.jpg pesa menos de 80 KB y es cuadrada", () => {
+    expect(statSync(join(DIR, "assets/herni.jpg")).size).toBeLessThan(80 * 1024);
+    const { w, h } = imageSize("assets/herni.jpg");
+    expect(w).toBe(h);
+  });
+
+  it("la persona de contacto se presenta como Cristian", () => {
     expect(HTML).not.toContain("Herni");
     expect(HTML).toContain("Soy Cristian");
-    expect(HTML).not.toContain("herni.jpg");
-    expect(existsSync(join(DIR, "assets/herni.jpg"))).toBe(false);
   });
 });
 

@@ -433,6 +433,14 @@ h2 {
   gap: 1rem;
 }
 
+.quien img {
+  flex: none;
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
 /* Cierre */
 .final p {
   margin-bottom: 1rem;
