@@ -78,6 +78,25 @@ describe("parsePreviewMessage — PUBLICO-59", () => {
     ).toBeNull();
   });
 
+  it("acepta un producto con grupos de opciones (el menú más profundo que entrega menu_preview)", () => {
+    const withOptions = {
+      categorias: [
+        {
+          nombre: "Postres",
+          items: [
+            {
+              id: "p1",
+              nombre: "Waffle",
+              precio: 5000,
+              opciones: [{ id: "g1", nombre: "Salsa", min: 0, max: 1, opciones: [{ id: "o1", nombre: "Chocolate", precio: 200 }] }],
+            },
+          ],
+        },
+      ],
+    };
+    expect(parsePreviewMessage(message({ menu: withOptions }))?.menu).toEqual(withOptions);
+  });
+
   it("descarta lo que no es dato plano (funciones, __proto__, demasiado anidado)", () => {
     expect(parsePreviewMessage(message({ config: { nombre: () => 1 } }))).toBeNull();
     expect(parsePreviewMessage(message({ config: JSON.parse('{"__proto__": {"x": 1}}') }))).toBeNull();
