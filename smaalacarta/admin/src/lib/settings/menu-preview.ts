@@ -250,7 +250,7 @@ ${extraStyle}</style>
 `;
 }
 
-export function menuPreviewDocument(input: PreviewDocumentInput): string {
+export function menuPreviewDocument(input: { template: string; tema: string; assetsUrl: string }): string {
   const template = TEMPLATE_KEYS.includes(input.template) ? input.template : "moderno";
   const tema = TEMA_KEYS.includes(input.tema) ? input.tema : "claro";
   const assets = escapeAttr(input.assetsUrl);
