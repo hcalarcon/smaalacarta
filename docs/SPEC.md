@@ -296,6 +296,23 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   `imagen-ilustrativa` e `imagen-logo`) y no se pueden ampliar: la lupa (ESTATICO-9) es solo para fotos propias.
 - **PUBLICO-57** Los estilos de la ilustración, el logo y la etiqueta están en `base.css` y en las tres
   plantillas, en claro y oscuro (el aspecto solo se comprueba mirándolo en el navegador).
+- **PUBLICO-58** Con `?preview=1` el menú interactivo entra en modo vista previa (`isPreviewMode`): no consulta
+  Supabase, no crea pedidos, no lee ni escribe `localStorage` (carrito, idioma, tema), no registra el service
+  worker ni el manifest, y no hace nada al tocar (agregar, abrir el carrito, enviar el pedido o seguir un link),
+  aunque los botones se ven igual.
+- **PUBLICO-59** La vista previa solo acepta mensajes `{ type: "preview", config, menu }` que vengan de la
+  ventana que la contiene y de un origen permitido: `https://www.smaalacarta.com.ar` y, solo si la página se
+  abrió desde localhost, la dirección local que indique `?admin=` (`allowedOrigins`, `isAllowedOrigin`).
+  `parsePreviewMessage` reconstruye los datos como datos planos y descarta el mensaje si el tipo no coincide, si
+  falta la configuración o las categorías, o si algún texto, lista, profundidad o cantidad de datos excede el
+  límite. `vercel.json` manda `frame-ancestors https://www.smaalacarta.com.ar` solo con `?preview=1`.
+- **PUBLICO-60** Cada mensaje válido vuelve a dibujar el menú sin recargar la página (si llegan varios seguidos,
+  se dibuja el último): `applyPreviewConfig` aplica la plantilla (solo `moderno`, `clasico` o `minimal`), el tema
+  y los colores, y quita las variables de color de la configuración anterior; luego se dibujan cabecera, logo,
+  descripción, horarios y productos con el mismo código que el menú público. Los textos del negocio siguen
+  pasando por `escapeHtml` o `textContent`.
+- **PUBLICO-61** La vista previa avisa al panel que está lista (`preview-ready`) y, tras cada dibujo o cambio de
+  tamaño, el rectángulo de la cabecera (`headerRect`, `preview-header`) solo al origen que le escribió.
 
 ## BUSQUEDA — Buscador
 

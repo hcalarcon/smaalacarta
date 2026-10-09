@@ -1,6 +1,11 @@
 let cart = [];
 let MENU_GLOBAL = null;
 
+// Vista previa dentro del panel (PUBLICO-58 a 61): la misma app, sin Supabase, sin pedidos, sin
+// localStorage y sin acciones; dibuja lo que le manda el panel. Es lo mismo que `isPreviewMode` de
+// lib/preview.js, pero acá hace falta antes de cargar los módulos.
+const PREVIEW = new URLSearchParams(window.location.search).get("preview") === "1";
+
 // Módulos de /lib, cargados en init(): escape de HTML y datos del negocio.
 let HTML = null;
 let INFO = null;
@@ -223,6 +228,11 @@ async function init() {
     ORDERS = orders;
     SUPABASE_CFG = supabaseConfig.SUPABASE;
 
+    if (PREVIEW) {
+      await startPreview();
+      return;
+    }
+
     const result = resolveAppConfig(resolveBusinessFromHost, resolveDemoFromPath);
     if (!result) {
       console.error("No se encontró slug en la URL");
@@ -412,6 +422,8 @@ function setLang(lang) {
   if (LAST_THANKS && document.querySelector("#gracias-pedido")) showThanks(LAST_THANKS);
 }
 
+// Las hojas de la plantilla llevan `data-menu-template`: al cambiar de plantilla (vista previa) se
+// reemplazan por las nuevas en cuanto cargan, sin que la página se quede un momento sin estilo.
 function loadTemplate(template) {
   return new Promise((resolve, reject) => {
     if (!template) {
@@ -420,9 +432,16 @@ function loadTemplate(template) {
       return;
     }
 
+    const previous = [...document.querySelectorAll("link[data-menu-template]")];
+    if (previous.length > 0 && previous.every((link) => link.dataset.menuTemplate === template)) {
+      resolve();
+      return;
+    }
+
     const link = document.createElement("link");
     link.rel = "stylesheet";
     link.href = `/templates/carrito/${template}/styles.css`;
+    link.dataset.menuTemplate = template;
 
     // Después de la plantilla, y solo en pantallas anchas, el ajuste de escritorio
     // (PUBLICO-14). Si no carga, el menú se ve como antes.
@@ -431,7 +450,11 @@ function loadTemplate(template) {
       desktop.rel = "stylesheet";
       desktop.href = "/apps/menu-app/desktop.css";
       desktop.media = "(min-width: 1024px)";
-      desktop.onload = desktop.onerror = () => resolve();
+      desktop.dataset.menuTemplate = template;
+      desktop.onload = desktop.onerror = () => {
+        previous.forEach((old) => old.remove());
+        resolve();
+      };
       document.head.appendChild(desktop);
     };
 
@@ -465,10 +488,9 @@ function renderHeader(c) {
   if (descEl) descEl.textContent = c.descripcion || "";
 
   if (header) {
-    const background = INFO.headerBackground(c, HTML.cssUrl);
-    if (background) header.style.backgroundImage = background;
-    const position = INFO.headerPosition(c);
-    if (position) header.style.backgroundPosition = position;
+    // Se asigna siempre (también vacío): en la vista previa la misma cabecera se vuelve a dibujar.
+    header.style.backgroundImage = INFO.headerBackground(c, HTML.cssUrl) || "";
+    header.style.backgroundPosition = INFO.headerPosition(c) || "";
   }
 
   const cierre = INFO.closedNotice(c);
@@ -869,6 +891,7 @@ function updateCart() {
 
 // PERSISTENCIA
 function saveCart() {
+  if (PREVIEW) return; // la vista previa no toca el almacenamiento
   localStorage.setItem("cart", JSON.stringify(cart));
 }
 
@@ -902,6 +925,7 @@ async function refreshMenu() {
 }
 
 function loadCart() {
+  if (PREVIEW) return;
   const c = localStorage.getItem("cart");
   if (c) cart = JSON.parse(c);
   updateCart();
@@ -1445,6 +1469,108 @@ function restoreThanks() {
 function resetCheckout() {
   document.querySelector("#gracias-pedido")?.remove();
   $("#form-pedido")?.classList.remove("hidden");
+}
+
+// VISTA PREVIA (PUBLICO-58 a 61)
+// Espera `{ type: "preview", config, menu }` de un origen permitido, lo valida y lo dibuja con el mismo
+// código que el menú público. Una configuración nueva se vuelve a dibujar sin recargar la página; si
+// llegan varias seguidas, se dibuja la última. Nada de esto se ejecuta fuera de `?preview=1`.
+async function startPreview() {
+  const PV = await import("/apps/menu-app/lib/preview.js");
+
+  document.body.classList.add("preview");
+  document.querySelector(".cta-section")?.setAttribute("hidden", "");
+  document.querySelector(".btn-volver")?.setAttribute("hidden", "");
+
+  // Inerte: ni agregar al carrito, ni abrir el checkout, ni seguir links. Los botones se ven igual.
+  const block = (event) => {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+  };
+  ["click", "submit"].forEach((type) => document.addEventListener(type, block, true));
+
+  const allowed = PV.allowedOrigins({
+    hostname: window.location.hostname,
+    search: window.location.search,
+  });
+
+  let brandNames = [];
+  let target = null;
+  let pending = null;
+  let drawing = false;
+  let firstDraw = true;
+
+  function reportHeader() {
+    const rect = PV.headerRect(document);
+    if (!rect || !target) return;
+    window.parent.postMessage(
+      {
+        type: "preview-header",
+        rect,
+        width: document.documentElement.clientWidth,
+        height: document.documentElement.scrollHeight,
+      },
+      target,
+    );
+  }
+
+  async function draw({ config, menu }) {
+    window.CONFIG = config;
+    brandNames = PV.applyPreviewConfig(
+      document,
+      config,
+      COLORS.brandVariables(config.colores),
+      brandNames,
+    );
+    await loadTemplate(PV.previewTemplate(config));
+
+    BASE_MENU = menu;
+    MENU_GLOBAL = MENU.buildEnhancedMenu(menu, LANG);
+    renderMenu(MENU_GLOBAL);
+    renderCategorias(MENU_GLOBAL);
+    if (firstDraw) buildLangSelector();
+    applyStaticTexts();
+    renderHeader(config);
+
+    document.body.classList.remove("loading");
+    const loader = document.getElementById("loader");
+    if (loader) loader.style.display = "none";
+
+    if (firstDraw && typeof ResizeObserver !== "undefined") {
+      new ResizeObserver(reportHeader).observe(document.body);
+    }
+    firstDraw = false;
+    reportHeader();
+  }
+
+  async function drain() {
+    drawing = true;
+    try {
+      while (pending) {
+        const next = pending;
+        pending = null;
+        await draw(next);
+      }
+    } catch (err) {
+      console.error("No se pudo dibujar la vista previa:", err);
+    } finally {
+      drawing = false;
+    }
+  }
+
+  window.addEventListener("message", (event) => {
+    if (event.source !== window.parent || !PV.isAllowedOrigin(event.origin, allowed)) return;
+
+    const parsed = PV.parsePreviewMessage(event.data);
+    if (!parsed) return;
+
+    target = event.origin;
+    pending = parsed;
+    if (!drawing) drain();
+  });
+
+  // Avisa que está lista para recibir datos (no lleva nada del negocio, por eso va a cualquier origen).
+  window.parent.postMessage({ type: "preview-ready" }, "*");
 }
 
 // INIT
