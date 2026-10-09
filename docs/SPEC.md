@@ -998,6 +998,12 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
 - **ADMIN-CONFIG-42** "Ampliar" abre la vista previa completa (formatos Celular y Escritorio, plantilla, tema
   y abierto/cerrado) en un modal que se cierra con Esc, con el botón o tocando afuera, y que sigue reflejando
   los cambios en vivo; cerrado, esa vista no está en la página.
+- **ADMIN-CONFIG-43** `menu_preview(p_business_id)` devuelve el menú del negocio con el mismo formato que
+  `public_menu` (config, categorías, productos, imágenes predeterminadas, opciones y agotados) a un miembro
+  del negocio o a un superadmin, aunque no esté publicado ni tenga el plan del servicio; a cualquier otro, o
+  sin sesión, le da error. `public_menu` conserva su contrato y sus filtros (published, active y plan): ahora
+  decide si el negocio se muestra y arma el menú con `build_public_menu(p_business_id)`, función interna que
+  la app no puede llamar.
 
 ## ADMIN-PEDIDOS — Pedidos
 
