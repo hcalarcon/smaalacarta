@@ -22,29 +22,34 @@ const show = (props: Props = {}) => (
 );
 
 const header = () => screen.getByRole("group", { name: /Cabecera de la vista previa/ });
+const headerFrame = () => screen.getByTitle("Cabecera del menú") as HTMLIFrameElement;
 const buttonsFrame = () => screen.getByTitle("Botones del menú") as HTMLIFrameElement;
+const sentTo = (frame: HTMLIFrameElement) => vi.spyOn(frame.contentWindow!, "postMessage");
+const lastVars = (post: ReturnType<typeof sentTo>) =>
+  (post.mock.calls.at(-1)![0] as { vars: Record<string, string> }).vars;
 
-describe("AppearancePreview compacta — colores y tema (ADMIN-CONFIG-41)", () => {
-  it("muestra el nombre y la descripción en la cabecera", () => {
-    render(show());
-    expect(within(header()).getByText("Casa Resto")).toBeInTheDocument();
-    expect(within(header()).getByText("Cocina casera")).toBeInTheDocument();
+describe("AppearancePreview compacta — el menú real, achicado (ADMIN-CONFIG-41)", () => {
+  it("la cabecera es la misma vista del modal: un iframe con el CSS real y la plantilla elegida", () => {
+    const view = render(show());
+    expect(headerFrame().getAttribute("sandbox")).toBe("allow-scripts");
+    expect(headerFrame().getAttribute("srcdoc")).toContain("/apps/menu-app/base.css");
+    expect(headerFrame().getAttribute("srcdoc")).toContain('data-template="moderno"');
+
+    view.rerender(show({ template: "clasico" }));
+    expect(headerFrame().getAttribute("srcdoc")).toContain('data-template="clasico"');
   });
 
-  it("la cabecera sigue los colores elegidos, y el texto se lee sobre ellos", () => {
+  it("le manda al iframe los colores y el nombre cada vez que cambian", () => {
     const view = render(show());
-    expect(header().style.getPropertyValue("--color-primary")).toBe("#ff0000");
-    expect(header().style.getPropertyValue("--color-secondary")).toBe("#0000ff");
+    const post = sentTo(headerFrame());
 
-    // Sobre un amarillo claro el texto pasa a oscuro (lib/colors.js de web/).
-    view.rerender(show({ primaryColor: "#ffee00", secondaryColor: "#ffff66" }));
-    expect(header().style.getPropertyValue("--color-primary")).toBe("#ffee00");
-    expect(header().style.getPropertyValue("--on-header")).toBe("#111111");
+    view.rerender(show({ primaryColor: "#00aa00", businessName: "Lo de Ana" }));
+    expect(lastVars(post)["--color-primary"]).toBe("#00aa00");
+    expect((post.mock.calls.at(-1)![0] as { name: string }).name).toBe("Lo de Ana");
   });
 
-  it("la fila de botones es un iframe con el CSS real, la plantilla y el tema elegidos", () => {
+  it("la fila de botones es un iframe aparte con el CSS real, la plantilla y el tema elegidos", () => {
     const view = render(show());
-    expect(buttonsFrame().getAttribute("sandbox")).toBe("allow-scripts");
     expect(buttonsFrame().getAttribute("srcdoc")).toContain("/apps/menu-app/base.css");
     expect(buttonsFrame().getAttribute("srcdoc")).toContain('data-tema="claro"');
 
@@ -55,11 +60,10 @@ describe("AppearancePreview compacta — colores y tema (ADMIN-CONFIG-41)", () =
 
   it("le manda los colores al iframe de botones cada vez que cambian", () => {
     const view = render(show());
-    const post = vi.spyOn(buttonsFrame().contentWindow!, "postMessage");
+    const post = sentTo(buttonsFrame());
 
     view.rerender(show({ primaryColor: "#00aa00" }));
-    const last = post.mock.calls.at(-1)![0] as { vars: Record<string, string> };
-    expect(last.vars["--color-primary"]).toBe("#00aa00");
+    expect(lastVars(post)["--color-primary"]).toBe("#00aa00");
   });
 
   it("no trae la vista previa completa a la página", () => {
@@ -80,7 +84,7 @@ describe("AppearancePreview compacta — punto de enfoque (ADMIN-CONFIG-41)", ()
     expect(onFocusChange).toHaveBeenLastCalledWith({ x: 50, y: 50 });
   });
 
-  it("arrastrar la cabecera mueve el punto; el doble clic lo centra", () => {
+  it("arrastrar la cabecera del iframe mueve el punto; el doble clic lo centra", () => {
     const onFocusChange = vi.fn();
     render(show({ onFocusChange }));
 
@@ -89,16 +93,17 @@ describe("AppearancePreview compacta — punto de enfoque (ADMIN-CONFIG-41)", ()
     Object.defineProperty(probe, "naturalWidth", { value: 1200 });
     Object.defineProperty(probe, "naturalHeight", { value: 200 });
     fireEvent.load(probe);
-    Object.defineProperty(header(), "clientWidth", { value: 400 });
-    Object.defineProperty(header(), "clientHeight", { value: 200 });
 
-    act(() => {
-      fireEvent.pointerDown(header(), { clientX: 200, clientY: 100, button: 0 });
-      fireEvent.pointerMove(header(), { clientX: 280, clientY: 100 });
-    });
+    const send = (data: object) =>
+      act(() => {
+        window.dispatchEvent(new MessageEvent("message", { data, source: headerFrame().contentWindow }));
+      });
+
+    send({ sma: "drag", phase: "start", dx: 0, dy: 0, w: 400, h: 200 });
+    send({ sma: "drag", phase: "move", dx: 80, dy: 0, w: 400, h: 200 });
     expect(onFocusChange).toHaveBeenLastCalledWith({ x: 40, y: 50 });
 
-    fireEvent.doubleClick(header());
+    send({ sma: "center" });
     expect(onFocusChange).toHaveBeenLastCalledWith({ x: 50, y: 50 });
   });
 });

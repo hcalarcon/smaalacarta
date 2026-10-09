@@ -36,6 +36,11 @@ const pill = (active: boolean) =>
 // Vista previa fiel del menú (ADMIN-CONFIG-28 a 30) y selector del punto de enfoque de la imagen de
 // cabecera (ADMIN-CONFIG-27). Un error de carga de la imagen se recuerda por dirección, así que al
 // cambiarla se vuelve a intentar (ADMIN-CONFIG-24).
+// `compact`: la versión chica de Apariencia (ADMIN-CONFIG-41). Es el mismo iframe con el CSS real,
+// siempre en formato celular, sin los selectores, achicado al ancho disponible y recortado a la parte de
+// arriba del menú (cabecera, categorías y primer producto).
+const COMPACT_CROP_HEIGHT = 300;
+
 export default function HeaderPreview({
   businessName,
   tagline,
@@ -47,7 +52,9 @@ export default function HeaderPreview({
   logoUrl,
   focus,
   onFocusChange,
+  compact = false,
 }: {
+  compact?: boolean;
   businessName: string;
   tagline: string;
   template: string;
@@ -159,11 +166,14 @@ export default function HeaderPreview({
     onFocusChange(next);
   }
 
-  const spec = FORMATS[format];
-  const scale = format === "escritorio" && boxWidth > 0 ? Math.min(1, boxWidth / spec.width) : 1;
+  const spec = compact ? { ...FORMATS.celular, height: COMPACT_CROP_HEIGHT } : FORMATS[format];
+  const scale =
+    (compact || format === "escritorio") && boxWidth > 0 ? Math.min(1, boxWidth / spec.width) : 1;
 
   return (
     <div className="space-y-3">
+      {compact ? null : (
+        <>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="text-sm font-medium text-brand">Vista previa del menú</span>
         <div className="flex gap-1.5" role="group" aria-label="Formato de la vista previa">
@@ -217,13 +227,15 @@ export default function HeaderPreview({
           </button>
         </div>
       </div>
+        </>
+      )}
 
       {probe}
 
       <div
         tabIndex={0}
         role="group"
-        aria-label="Vista previa de la cabecera. Con las flechas del teclado movés el punto de enfoque de la imagen; con Mayús, de a más."
+        aria-label={`${compact ? "Cabecera de la vista previa" : "Vista previa de la cabecera"}. Con las flechas del teclado movés el punto de enfoque de la imagen; con Mayús, de a más.`}
         onKeyDown={handleKeyDown}
         className="rounded-2xl border border-line-strong bg-stone-100 p-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent/40"
       >
@@ -231,7 +243,7 @@ export default function HeaderPreview({
           <div style={{ width: spec.width * scale, height: spec.height * scale }}>
             <iframe
               ref={frameRef}
-              title="Vista previa del menú"
+              title={compact ? "Cabecera del menú" : "Vista previa del menú"}
               sandbox="allow-scripts"
               srcDoc={srcDoc}
               onLoad={() => setLoads((n) => n + 1)}
@@ -250,10 +262,14 @@ export default function HeaderPreview({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm text-stone-500">
+        <p className={compact ? "text-xs text-stone-500" : "text-sm text-stone-500"}>
           {hasImage
-            ? "Arrastrá la cabecera para elegir qué parte de la imagen se ve (también con las flechas). Doble clic la centra."
-            : "Así ven tus clientes el menú, con tus colores y la plantilla elegida."}
+            ? compact
+              ? "Arrastrá la cabecera para encuadrar la imagen."
+              : "Arrastrá la cabecera para elegir qué parte de la imagen se ve (también con las flechas). Doble clic la centra."
+            : compact
+              ? ""
+              : "Así ven tus clientes el menú, con tus colores y la plantilla elegida."}
         </p>
         {hasImage ? (
           <button
