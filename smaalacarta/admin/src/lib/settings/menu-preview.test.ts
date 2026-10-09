@@ -28,7 +28,7 @@ const TEMPLATE_CSS = Object.fromEntries(
 ) as Record<(typeof TEMPLATES)[number], string>;
 
 // Clases que el documento define por su cuenta, solo para la vista previa.
-const PREVIEW_ONLY = new Set(["sma-foco"]);
+const PREVIEW_ONLY = new Set(["sma-foco", "sma-fila", "sma-chico"]);
 
 const escapeRe = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 const hasSelector = (css: string, prefix: "." | "#", name: string) =>
@@ -57,6 +57,39 @@ describe("menuPreviewDocument — ADMIN-CONFIG-28", () => {
 
     const idsSinEstilo = [...ids].filter((id) => !id.startsWith("pv-") && !hasSelector(css, "#", id));
     expect(idsSinEstilo).toEqual([]);
+  });
+
+  it.each(TEMPLATES)(
+    "el modo botones solo usa clases con estilo en base.css o en la plantilla %s (ADMIN-CONFIG-41)",
+    (template) => {
+      const doc = menuPreviewDocument({
+        template,
+        tema: "oscuro",
+        assetsUrl: "https://menu.test",
+        mode: "botones",
+      });
+      const { classes, ids } = usedNames(doc);
+      const css = `${BASE_CSS}
+${DESKTOP_CSS}
+${TEMPLATE_CSS[template]}`;
+
+      for (const c of ["btn-cta", "btn-add", "btn-carrito", "badge-estado", "header"]) {
+        expect(classes.has(c), c).toBe(true);
+      }
+      expect([...classes].filter((c) => !PREVIEW_ONLY.has(c) && !hasSelector(css, ".", c))).toEqual([]);
+      expect([...ids].filter((id) => !id.startsWith("pv-") && !hasSelector(css, "#", id))).toEqual([]);
+      expect(doc).toContain('data-tema="oscuro"');
+      expect(doc).toContain(`href="https://menu.test/templates/carrito/${template}/styles.css"`);
+    },
+  );
+
+  it("el modo botones no trae el menú completo y recibe los colores por mensaje", () => {
+    const doc = menuPreviewDocument({ template: "moderno", tema: "claro", assetsUrl: "https://menu.test", mode: "botones" });
+    expect(doc).not.toContain('class="producto"');
+    expect(doc).not.toContain("categorias");
+    expect(doc).toContain("setProperty");
+    expect(doc).toContain("Abierto");
+    expect(doc).toContain("Cerrado");
   });
 
   it('incluye cabecera con logo y chip, categorías, tarjeta, "+", carrito, WhatsApp y cierre', () => {

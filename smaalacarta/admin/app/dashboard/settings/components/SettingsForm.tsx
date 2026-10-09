@@ -1,15 +1,13 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
-import { saveSettingsAction } from "../actions";
+import { useSettingsSave } from "./SettingsSaveProvider";
 import Field from "@/components/ui/Field";
-import FormAlert from "@/components/ui/FormAlert";
 import ImageUploader from "@/components/ui/ImageUploader";
 import PdfUploader from "@/components/ui/PdfUploader";
 import Section from "@/components/ui/Section";
-import HeaderPreview from "./HeaderPreview";
+import AppearancePreview from "./AppearancePreview";
 import { DELIVERY_OPTIONS, PAYMENT_OPTIONS, hasTransfer } from "@/lib/settings/payment";
 import type { PreorderCutoffs } from "@/lib/settings/preorders";
 import {
@@ -146,8 +144,6 @@ export default function SettingsForm({
   // Sin plan_pdf no hay servicio de PDF: se esconde "Menú en PDF" (ADMIN-PLAN-4).
   pdfService: boolean;
 }) {
-  const router = useRouter();
-
   const [published, setPublished] = useState(initial.published);
   const [template, setTemplate] = useState(initial.template);
   const [theme, setTheme] = useState(initial.theme);
@@ -182,25 +178,13 @@ export default function SettingsForm({
     toScheduleState(initial.schedule),
   );
 
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Partial<Record<string, string>>>({});
-
-  // El aviso de guardado es un toast: se va solo a los 3 segundos.
-  useEffect(() => {
-    if (!saved) return;
-    const timer = setTimeout(() => setSaved(false), 3000);
-    return () => clearTimeout(timer);
-  }, [saved]);
+  const { reportSettings, settingsErrors: fieldErrors, save } = useSettingsSave();
 
   function updateDay(key: DayKey, change: (day: DayState) => DayState) {
-    setSaved(false);
     setDays((prev) => ({ ...prev, [key]: change(prev[key]) }));
   }
 
   function updateCutoff(key: DayKey, change: Partial<CutoffRow>) {
-    setSaved(false);
     setCutoffs((prev) => ({ ...prev, [key]: { ...prev[key], ...change } }));
   }
 
@@ -216,12 +200,10 @@ export default function SettingsForm({
     key: string,
     checked: boolean,
   ) {
-    setSaved(false);
     set((prev) => (checked ? [...prev, key] : prev.filter((option) => option !== key)));
   }
 
   function copyMondayToAll() {
-    setSaved(false);
     setDays((prev) =>
       Object.fromEntries(
         DAYS.map(({ key }) => [
@@ -232,15 +214,8 @@ export default function SettingsForm({
     );
   }
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
-    setSaving(true);
-    setSaved(false);
-    setError(null);
-    setFieldErrors({});
-
-    try {
-      const result = await saveSettingsAction({
+  // Lo que edita el formulario, tal como se guarda. El botón flotante lo toma de SettingsSaveProvider.
+  const input: SettingsInput = {
         published,
         template,
         theme,
@@ -277,27 +252,24 @@ export default function SettingsForm({
             ]),
           ) as CutoffsState,
         ),
-      });
+      };
 
-      if (!result.ok) {
-        setError(result.error);
-        setFieldErrors(result.fieldErrors ?? {});
-        return;
-      }
-
-      setSaved(true);
-      router.refresh();
-    } catch {
-      setError("No pudimos guardar la configuración. Probá de nuevo.");
-    } finally {
-      setSaving(false);
-    }
-  }
+  const serialized = JSON.stringify(input);
+  useEffect(() => {
+    reportSettings(input);
+    // `input` se rearma en cada render; alcanza con avisar cuando cambia su contenido.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [serialized]);
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-6">
-      {error ? <FormAlert tone="error">{error}</FormAlert> : null}
-
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        save();
+      }}
+      noValidate
+      className="space-y-5"
+    >
       {digitalMenu ? <>
       <Section
         id="publicacion"
@@ -316,122 +288,10 @@ export default function SettingsForm({
       </Section>
 
       <Section id="apariencia" title="Apariencia" description="Cómo ven tus clientes el menú.">
-        <div>
-          <span className="mb-1.5 block text-sm font-medium text-brand">Plantilla</span>
-          <div className="grid gap-2 sm:grid-cols-3">
-            {TEMPLATES.map((option) => (
-              <button
-                key={option.key}
-                type="button"
-                onClick={() => setTemplate(option.key)}
-                aria-pressed={template === option.key}
-                className={`rounded-xl border px-4 py-3 text-sm font-medium transition ${
-                  template === option.key
-                    ? "border-brand bg-brand text-white"
-                    : "border-line-strong bg-white text-stone-700 hover:bg-brand-soft"
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-          {fieldErrors.template ? (
-            <p className="mt-1.5 text-sm text-red-600">{fieldErrors.template}</p>
-          ) : null}
-        </div>
-
-        <div>
-          <span className="mb-1.5 block text-sm font-medium text-brand">Tema por defecto</span>
-          <div className="grid gap-2 sm:grid-cols-3">
-            {THEMES.map((option) => (
-              <button
-                key={option.key}
-                type="button"
-                onClick={() => setTheme(option.key)}
-                aria-pressed={theme === option.key}
-                className={`rounded-xl border px-4 py-3 text-sm font-medium transition ${
-                  theme === option.key
-                    ? "border-brand bg-brand text-white"
-                    : "border-line-strong bg-white text-stone-700 hover:bg-brand-soft"
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
-          </div>
-          <p className="mt-1.5 text-sm text-stone-500">
-            Es el tema con el que se abre tu menú; tus clientes pueden cambiarlo con el botón del
-            menú.
-          </p>
-          {fieldErrors.theme ? (
-            <p className="mt-1.5 text-sm text-red-600">{fieldErrors.theme}</p>
-          ) : null}
-        </div>
-
-        <div className="grid gap-5 sm:grid-cols-2">
-          <ColorField
-            label="Color principal"
-            value={primaryColor}
-            onChange={(value) => setPrimaryColor(value)}
-            error={fieldErrors.primaryColor}
-          />
-          <ColorField
-            label="Color secundario"
-            value={secondaryColor}
-            onChange={(value) => setSecondaryColor(value)}
-            error={fieldErrors.secondaryColor}
-          />
-        </div>
-
-        <ImageUploader
-          businessId={businessId}
-          label="Imagen de cabecera (opcional)"
-          value={headerImageUrl}
-          onChange={setHeaderImageUrl}
-        />
-
-        <Field
-          label="…o pegá la dirección de una imagen"
-          value={headerImageUrl}
-          onChange={(event) => setHeaderImageUrl(event.target.value)}
-          placeholder="https://…/cabecera.jpg"
-          hint="Dirección de una imagen (https)."
-          error={fieldErrors.headerImageUrl}
-          inputMode="url"
-          autoCapitalize="none"
-        />
-
-        <ImageUploader
-          businessId={businessId}
-          label="Logo (opcional)"
-          value={logoUrl}
-          onChange={setLogoUrl}
-        />
-        <p className="-mt-3 text-sm text-stone-500">
-          Cuadrado, de al menos 512 × 512 px. Es el ícono cuando tus clientes instalan
-          el menú en el celular; sin logo se usa el de SMA a la Carta.
-        </p>
-
-        <label className="flex items-start gap-3">
-          <input
-            type="checkbox"
-            checked={showDefaultImages}
-            onChange={(event) => setShowDefaultImages(event.target.checked)}
-            className="mt-1 h-5 w-5"
-          />
-          <span>
-            <span className="block font-medium text-stone-900">
-              Mostrar imágenes de muestra en productos sin foto
-            </span>
-            <span className="block text-sm text-stone-500">
-              Los productos sin foto muestran una ilustración según su nombre, marcada como «Imagen
-              ilustrativa». Apagado (o si no hay una que coincida), muestran tu logo. Una foto propia
-              siempre tiene prioridad.
-            </span>
-          </span>
-        </label>
-
-        <HeaderPreview
+      {/* Controles a la izquierda y vista previa compacta fija a la derecha (ADMIN-CONFIG-40); en
+          celular la vista previa va arriba de la sección. */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_19rem]">
+        <AppearancePreview
           businessName={businessName}
           tagline={tagline}
           template={template}
@@ -442,40 +302,160 @@ export default function SettingsForm({
           logoUrl={logoUrl}
           focus={headerFocus}
           onFocusChange={setHeaderFocus}
+          className="sticky top-[7.5rem] z-10 self-start lg:col-start-2 lg:row-start-1 lg:top-24"
         />
-        {fieldErrors.headerImageX || fieldErrors.headerImageY ? (
-          <p className="-mt-3 text-sm text-red-600">
-            {fieldErrors.headerImageX ?? fieldErrors.headerImageY}
-          </p>
-        ) : null}
 
-        <div>
-          <label
-            htmlFor="tagline"
-            className="mb-1.5 block text-sm font-medium text-brand"
-          >
-            Descripción (opcional)
-          </label>
-          <textarea
-            id="tagline"
-            value={tagline}
-            onChange={(event) => setTagline(event.target.value)}
-            rows={2}
-            maxLength={TAGLINE_MAX + 20}
-            placeholder="Cocina casera desde 1990"
-            className="w-full rounded-xl border border-line-strong bg-white px-4 py-3 text-base focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
-          />
-          <p
-            className={`mt-1 text-right text-xs ${
-              tagline.length > TAGLINE_MAX ? "text-red-600" : "text-stone-400"
-            }`}
-          >
-            {tagline.length}/{TAGLINE_MAX}
-          </p>
-          {fieldErrors.tagline ? (
-            <p className="text-sm text-red-600">{fieldErrors.tagline}</p>
-          ) : null}
+        <div className="min-w-0 space-y-4 lg:col-start-1 lg:row-start-1">
+            <div>
+              <span className="mb-1.5 block text-sm font-medium text-brand">Plantilla</span>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {TEMPLATES.map((option) => (
+                  <button
+                    key={option.key}
+                    type="button"
+                    onClick={() => setTemplate(option.key)}
+                    aria-pressed={template === option.key}
+                    className={`rounded-xl border px-4 py-3 text-sm font-medium transition ${
+                      template === option.key
+                        ? "border-brand bg-brand text-white"
+                        : "border-line-strong bg-white text-stone-700 hover:bg-brand-soft"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              {fieldErrors.template ? (
+                <p className="mt-1.5 text-sm text-red-600">{fieldErrors.template}</p>
+              ) : null}
+            </div>
+
+            <div>
+              <span className="mb-1.5 block text-sm font-medium text-brand">Tema por defecto</span>
+              <div className="grid gap-2 sm:grid-cols-3">
+                {THEMES.map((option) => (
+                  <button
+                    key={option.key}
+                    type="button"
+                    onClick={() => setTheme(option.key)}
+                    aria-pressed={theme === option.key}
+                    className={`rounded-xl border px-4 py-3 text-sm font-medium transition ${
+                      theme === option.key
+                        ? "border-brand bg-brand text-white"
+                        : "border-line-strong bg-white text-stone-700 hover:bg-brand-soft"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-sm text-stone-500">
+                Es el tema con el que se abre tu menú; tus clientes pueden cambiarlo con el botón del
+                menú.
+              </p>
+              {fieldErrors.theme ? (
+                <p className="mt-1.5 text-sm text-red-600">{fieldErrors.theme}</p>
+              ) : null}
+            </div>
+
+            <div className="grid gap-5 sm:grid-cols-2">
+              <ColorField
+                label="Color principal"
+                value={primaryColor}
+                onChange={(value) => setPrimaryColor(value)}
+                error={fieldErrors.primaryColor}
+              />
+              <ColorField
+                label="Color secundario"
+                value={secondaryColor}
+                onChange={(value) => setSecondaryColor(value)}
+                error={fieldErrors.secondaryColor}
+              />
+            </div>
+
+            <ImageUploader
+              businessId={businessId}
+              label="Imagen de cabecera (opcional)"
+              value={headerImageUrl}
+              onChange={setHeaderImageUrl}
+            />
+
+            <Field
+              label="…o pegá la dirección de una imagen"
+              value={headerImageUrl}
+              onChange={(event) => setHeaderImageUrl(event.target.value)}
+              placeholder="https://…/cabecera.jpg"
+              hint="Dirección de una imagen (https)."
+              error={fieldErrors.headerImageUrl}
+              inputMode="url"
+              autoCapitalize="none"
+            />
+
+            <ImageUploader
+              businessId={businessId}
+              label="Logo (opcional)"
+              value={logoUrl}
+              onChange={setLogoUrl}
+            />
+            <p className="-mt-3 text-sm text-stone-500">
+              Cuadrado, de al menos 512 × 512 px. Es el ícono cuando tus clientes instalan
+              el menú en el celular; sin logo se usa el de SMA a la Carta.
+            </p>
+
+            <label className="flex items-start gap-3">
+              <input
+                type="checkbox"
+                checked={showDefaultImages}
+                onChange={(event) => setShowDefaultImages(event.target.checked)}
+                className="mt-1 h-5 w-5"
+              />
+              <span>
+                <span className="block font-medium text-stone-900">
+                  Mostrar imágenes de muestra en productos sin foto
+                </span>
+                <span className="block text-sm text-stone-500">
+                  Los productos sin foto muestran una ilustración según su nombre, marcada como «Imagen
+                  ilustrativa». Apagado (o si no hay una que coincida), muestran tu logo. Una foto propia
+                  siempre tiene prioridad.
+                </span>
+              </span>
+            </label>
+
+            {fieldErrors.headerImageX || fieldErrors.headerImageY ? (
+              <p className="-mt-3 text-sm text-red-600">
+                {fieldErrors.headerImageX ?? fieldErrors.headerImageY}
+              </p>
+            ) : null}
+
+            <div>
+              <label
+                htmlFor="tagline"
+                className="mb-1.5 block text-sm font-medium text-brand"
+              >
+                Descripción (opcional)
+              </label>
+              <textarea
+                id="tagline"
+                value={tagline}
+                onChange={(event) => setTagline(event.target.value)}
+                rows={2}
+                maxLength={TAGLINE_MAX + 20}
+                placeholder="Cocina casera desde 1990"
+                className="w-full rounded-xl border border-line-strong bg-white px-4 py-3 text-base focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+              />
+              <p
+                className={`mt-1 text-right text-xs ${
+                  tagline.length > TAGLINE_MAX ? "text-red-600" : "text-stone-400"
+                }`}
+              >
+                {tagline.length}/{TAGLINE_MAX}
+              </p>
+              {fieldErrors.tagline ? (
+                <p className="text-sm text-red-600">{fieldErrors.tagline}</p>
+              ) : null}
+            </div>
         </div>
+      </div>
       </Section>
       </> : null}
 
@@ -509,7 +489,6 @@ export default function SettingsForm({
             checked={scheduleEnabled}
             onChange={(event) => {
               setScheduleEnabled(event.target.checked);
-              setSaved(false);
             }}
             className="h-5 w-5"
           />
@@ -648,7 +627,6 @@ export default function SettingsForm({
             type="checkbox"
             checked={preordersEnabled}
             onChange={(event) => {
-              setSaved(false);
               setPreordersEnabled(event.target.checked);
             }}
             className="h-5 w-5"
@@ -847,7 +825,6 @@ export default function SettingsForm({
             type="checkbox"
             checked={allowScheduledOrders}
             onChange={(event) => {
-              setSaved(false);
               setAllowScheduledOrders(event.target.checked);
             }}
             className="h-5 w-5"
@@ -860,7 +837,6 @@ export default function SettingsForm({
             label="Minutos de anticipación"
             value={leadMinutes}
             onChange={(event) => {
-              setSaved(false);
               setLeadMinutes(event.target.value);
             }}
             inputMode="numeric"
@@ -917,28 +893,6 @@ export default function SettingsForm({
         </div>
       </Section>
       </> : null}
-
-      {saved ? (
-        <div
-          role="status"
-          className="fixed bottom-24 left-1/2 z-20 -translate-x-1/2 sm:bottom-6 rounded-xl bg-emerald-700 px-4 py-2 text-sm font-medium text-white shadow-lg"
-        >
-          Cambios guardados
-        </div>
-      ) : null}
-
-      {/* Flotante: fijo en la esquina de la pantalla, afuera de las tarjetas. El espacio de abajo
-          es para que, al final del formulario, no tape el último campo en pantallas angostas. */}
-      <div className="h-14 sm:hidden" aria-hidden />
-      <div className="fixed bottom-6 right-6 z-10">
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-xl bg-brand px-6 py-3 text-sm font-semibold text-white shadow-lg transition hover:bg-brand-hover disabled:opacity-60"
-        >
-          {saving ? "Guardando…" : "Guardar cambios"}
-        </button>
-      </div>
     </form>
   );
 }

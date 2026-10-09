@@ -951,6 +951,37 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   (`defaultImageHint`): la ilustración que sugiere `suggest_default_image`, o el logo del negocio si no hay
   coincidencia o el interruptor está apagado, con la aclaración de que subir una foto propia la reemplaza. Con
   imagen propia no muestra nada.
+- **ADMIN-CONFIG-33** Configuración tiene un solo botón "Guardar cambios" (el flotante): guarda a la vez
+  Datos del negocio (nombre y URL) y el resto de la configuración. "Datos del negocio" no tiene botón propio;
+  "Contraseña" conserva el suyo porque es otra acción.
+- **ADMIN-CONFIG-34** Al guardar se valida todo en el navegador antes de enviar nada
+  (`validateBusinessProfile` y `validateSettings`): si algo es inválido no se guarda nada y cada error queda
+  en su campo.
+- **ADMIN-CONFIG-35** `runSave` guarda primero el perfil (si cambió) y solo si sale bien la configuración (si
+  cambió). Si el perfil falla (p. ej. la URL ya la usa otro negocio), no se guarda la configuración, los
+  cambios siguen marcados como sin guardar y el error queda en su campo.
+- **ADMIN-CONFIG-36** Si cambió el nombre y no la URL, al tocar guardar se pregunta si regenerar la URL
+  (`regenerateSuggestion`); según la respuesta se guarda con la URL actual o con la sugerida.
+- **ADMIN-CONFIG-37** El guardado muestra un único aviso "Cambios guardados", y junto al botón aparece
+  "Cambios sin guardar" mientras haya algo pendiente (en el perfil o en la configuración); sin cambios
+  pendientes el botón está desactivado.
+- **ADMIN-CONFIG-38** El índice de secciones se puede ocultar en escritorio con un botón (`aria-expanded`,
+  alcanzable con teclado): oculto, el contenido ocupa todo el ancho y queda un control mínimo para volver a
+  abrirlo. La elección se recuerda en `localStorage` (`useStoredFlag`); si el navegador no deja usarlo la
+  pantalla funciona igual. En celular sigue la barra de chips.
+- **ADMIN-CONFIG-39** La pantalla de Configuración usa menos relleno (contenedor más ancho, separaciones y
+  padding de las secciones más chicos) sin cambiar el resto del panel.
+- **ADMIN-CONFIG-40** En Apariencia, en escritorio, los controles van a la izquierda y una vista previa
+  compacta fija (sticky) a la derecha; en celular, la vista previa compacta queda fija arriba de la sección y
+  se puede colapsar (`aria-expanded`).
+- **ADMIN-CONFIG-41** La vista previa compacta muestra la cabecera con el degradé de los colores o la imagen
+  con su recorte y el nombre, y conserva el arrastre del punto de enfoque, las flechas y "Centrar imagen". Su
+  fila "Botones" es un `iframe` pequeño con el CSS real (`menuPreviewDocument` con `mode: "botones"`): botón
+  principal, "+", carrito, WhatsApp y los chips abierto y cerrado, con la plantilla, el tema y los colores
+  elegidos. Solo usa clases que existen en el CSS de `web/`.
+- **ADMIN-CONFIG-42** "Ampliar" abre la vista previa completa (formatos Celular y Escritorio, plantilla, tema
+  y abierto/cerrado) en un modal que se cierra con Esc, con el botón o tocando afuera, y que sigue reflejando
+  los cambios en vivo; cerrado, esa vista no está en la página.
 
 ## ADMIN-PEDIDOS — Pedidos
 

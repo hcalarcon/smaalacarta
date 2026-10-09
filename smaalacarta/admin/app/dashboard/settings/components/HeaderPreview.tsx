@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { CENTER, dragFocus, nudgeFocus, type Focus, type Size } from "@/lib/settings/header-focus";
+import { useImageProbe } from "./useImageProbe";
+import { CENTER, dragFocus, nudgeFocus, type Focus } from "@/lib/settings/header-focus";
 import {
   MENU_ASSETS_URL,
   menuPreviewDocument,
@@ -58,11 +59,7 @@ export default function HeaderPreview({
   focus: Focus;
   onFocusChange: (focus: Focus) => void;
 }) {
-  const url = imageUrl.trim();
-  const [brokenUrl, setBrokenUrl] = useState<string | null>(null);
-  const [imageSize, setImageSize] = useState<{ url: string; size: Size } | null>(null);
-  const broken = brokenUrl === url;
-  const naturalSize = imageSize && imageSize.url === url ? imageSize.size : null;
+  const { url, broken, naturalSize, probe, hasImage } = useImageProbe(imageUrl);
 
   const [previewTemplate, setPreviewTemplate] = useFollowed(template);
   const [previewTheme, setPreviewTheme] = useFollowed(theme);
@@ -164,7 +161,6 @@ export default function HeaderPreview({
 
   const spec = FORMATS[format];
   const scale = format === "escritorio" && boxWidth > 0 ? Math.min(1, boxWidth / spec.width) : 1;
-  const hasImage = Boolean(url) && !broken;
 
   return (
     <div className="space-y-3">
@@ -222,22 +218,7 @@ export default function HeaderPreview({
         </div>
       </div>
 
-      {/* Sirve para saber si la imagen carga y qué medidas tiene (el arrastre las necesita). */}
-      {url && !broken ? (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={url}
-          alt=""
-          className="hidden"
-          onLoad={(event) =>
-            setImageSize({
-              url,
-              size: { w: event.currentTarget.naturalWidth, h: event.currentTarget.naturalHeight },
-            })
-          }
-          onError={() => setBrokenUrl(url)}
-        />
-      ) : null}
+      {probe}
 
       <div
         tabIndex={0}

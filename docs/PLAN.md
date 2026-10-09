@@ -609,6 +609,9 @@ van en la parte B. Requisitos en `docs/SPEC.md` (ADMIN-OPCIONES-1 a 16). Migraci
       real de `web/` (base de la URL en `MENU_ASSETS_URL`, se pisa con
       `NEXT_PUBLIC_MENU_ASSETS_URL` en desarrollo), en celular y escritorio, con plantilla, tema y
       abierto/cerrado alternables. Migración `20261011000000_posicion_imagen_cabecera.sql`
+- [ ] [herni] Configuración: ajustes de layout (ADMIN-CONFIG-33 a 42): un solo botón de guardar
+      (perfil primero, luego configuración), índice plegable, menos relleno y vista previa compacta
+      sticky en Apariencia con "Ampliar" a la vista completa en un modal
 - [ ] [por asignar] Zoom de la imagen de cabecera (hoy solo se elige el punto de enfoque, no el
       acercamiento)
 

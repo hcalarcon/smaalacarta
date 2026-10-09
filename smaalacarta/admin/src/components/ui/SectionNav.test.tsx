@@ -82,3 +82,34 @@ describe("SectionNav", () => {
     });
   });
 });
+
+describe("SectionNav plegable — ADMIN-CONFIG-38", () => {
+  it("el botón avisa con aria-expanded y pide ocultar o mostrar", () => {
+    const onToggle = vi.fn();
+    const view = render(<SectionNav sections={sections} open onToggle={onToggle} />);
+
+    const hide = screen.getByRole("button", { name: "Ocultar el índice de secciones" });
+    expect(hide).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(hide);
+    expect(onToggle).toHaveBeenCalledOnce();
+
+    view.rerender(<SectionNav sections={sections} open={false} onToggle={onToggle} />);
+    expect(screen.getByRole("button", { name: "Mostrar el índice de secciones" })).toHaveAttribute(
+      "aria-expanded",
+      "false",
+    );
+  });
+
+  it("oculto, los enlaces se esconden en escritorio pero el botón sigue ahí", () => {
+    render(<SectionNav sections={sections} open={false} onToggle={() => {}} />);
+    for (const link of screen.getAllByRole("link", { hidden: true })) {
+      expect(link.className).toContain("lg:hidden");
+    }
+    expect(screen.getByRole("button")).toBeInTheDocument();
+  });
+
+  it("sin onToggle (como antes) no hay botón", () => {
+    render(<SectionNav sections={sections} />);
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+});
