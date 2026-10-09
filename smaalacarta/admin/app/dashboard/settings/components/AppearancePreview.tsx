@@ -3,10 +3,9 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
-import CompactPreview from "./CompactPreview";
 import HeaderPreview from "./HeaderPreview";
 
-type Props = React.ComponentProps<typeof CompactPreview>;
+type Props = Omit<React.ComponentProps<typeof HeaderPreview>, "compact">;
 
 // Vista previa de Apariencia (ADMIN-CONFIG-40 a 42): compacta y siempre a la vista junto a los
 // controles; "Ampliar" abre la vista completa (HeaderPreview) en un modal que sigue los cambios en
@@ -43,7 +42,7 @@ export default function AppearancePreview({ className = "", ...props }: Props & 
       </div>
 
       <div className={`mt-2 ${open ? "" : "max-lg:hidden"}`}>
-        <CompactPreview {...props} />
+        <HeaderPreview compact {...props} />
       </div>
 
       {expanded ? (

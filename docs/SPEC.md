@@ -993,10 +993,8 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   se puede colapsar (`aria-expanded`).
 - **ADMIN-CONFIG-41** La vista previa compacta es la misma vista del modal (un `iframe` con el CSS real del
   menú, en formato celular) achicada al ancho disponible y recortada a la parte de arriba: cabecera con el
-  degradé o la imagen y su recorte, categorías y primer producto. Conserva el arrastre del punto de enfoque,
-  las flechas y "Centrar imagen". Debajo, la fila "Botones" es un `iframe` pequeño con el CSS real
-  (`menuPreviewDocument` con `mode: "botones"`): botón principal, "+", carrito, WhatsApp y los chips abierto y
-  cerrado, con la plantilla, el tema y los colores elegidos. Solo usa clases que existen en el CSS de `web/`.
+  degradé o la imagen y su recorte, categorías y primer producto, con la plantilla, el tema y los colores
+  elegidos. Conserva el arrastre del punto de enfoque, las flechas y "Centrar imagen".
 - **ADMIN-CONFIG-42** "Ampliar" abre la vista previa completa (formatos Celular y Escritorio, plantilla, tema
   y abierto/cerrado) en un modal que se cierra con Esc, con el botón o tocando afuera, y que sigue reflejando
   los cambios en vivo; cerrado, esa vista no está en la página.

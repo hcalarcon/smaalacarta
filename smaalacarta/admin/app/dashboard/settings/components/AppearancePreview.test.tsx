@@ -23,7 +23,6 @@ const show = (props: Props = {}) => (
 
 const header = () => screen.getByRole("group", { name: /Cabecera de la vista previa/ });
 const headerFrame = () => screen.getByTitle("Cabecera del menú") as HTMLIFrameElement;
-const buttonsFrame = () => screen.getByTitle("Botones del menú") as HTMLIFrameElement;
 const sentTo = (frame: HTMLIFrameElement) => vi.spyOn(frame.contentWindow!, "postMessage");
 const lastVars = (post: ReturnType<typeof sentTo>) =>
   (post.mock.calls.at(-1)![0] as { vars: Record<string, string> }).vars;
@@ -46,24 +45,6 @@ describe("AppearancePreview compacta — el menú real, achicado (ADMIN-CONFIG-4
     view.rerender(show({ primaryColor: "#00aa00", businessName: "Lo de Ana" }));
     expect(lastVars(post)["--color-primary"]).toBe("#00aa00");
     expect((post.mock.calls.at(-1)![0] as { name: string }).name).toBe("Lo de Ana");
-  });
-
-  it("la fila de botones es un iframe aparte con el CSS real, la plantilla y el tema elegidos", () => {
-    const view = render(show());
-    expect(buttonsFrame().getAttribute("srcdoc")).toContain("/apps/menu-app/base.css");
-    expect(buttonsFrame().getAttribute("srcdoc")).toContain('data-tema="claro"');
-
-    view.rerender(show({ theme: "oscuro", template: "clasico" }));
-    expect(buttonsFrame().getAttribute("srcdoc")).toContain('data-tema="oscuro"');
-    expect(buttonsFrame().getAttribute("srcdoc")).toContain('data-template="clasico"');
-  });
-
-  it("le manda los colores al iframe de botones cada vez que cambian", () => {
-    const view = render(show());
-    const post = sentTo(buttonsFrame());
-
-    view.rerender(show({ primaryColor: "#00aa00" }));
-    expect(lastVars(post)["--color-primary"]).toBe("#00aa00");
   });
 
   it("no trae la vista previa completa a la página", () => {

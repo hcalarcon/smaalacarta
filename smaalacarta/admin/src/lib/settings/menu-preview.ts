@@ -235,37 +235,6 @@ const PREVIEW_SCRIPT = `
 })();
 `;
 
-// Modo botones (ADMIN-CONFIG-41): una franja con los botones reales del menú, para la vista previa
-// compacta. Solo aplica los colores (y el fondo de la cabecera de los chips) que llegan por mensaje.
-const BUTTONS_SCRIPT = `
-(function () {
-  var root = document.documentElement;
-  var header = document.querySelector(".header");
-  var applied = [];
-
-  window.addEventListener("message", function (event) {
-    var m = event.data;
-    if (!m || m.sma !== "state") return;
-
-    applied.forEach(function (name) { root.style.removeProperty(name); });
-    applied = Object.keys(m.vars || {});
-    applied.forEach(function (name) { root.style.setProperty(name, m.vars[name]); });
-
-    header.style.backgroundImage = m.background || "";
-  });
-
-  parent.postMessage({ sma: "ready" }, "*");
-})();
-`;
-
-type PreviewDocumentInput = {
-  template: string;
-  tema: string;
-  assetsUrl: string;
-  // "completo" (por defecto): cabecera, categorías, producto y botones. "botones": solo la fila de botones.
-  mode?: "completo" | "botones";
-};
-
 function documentHead(template: string, tema: string, assets: string, extraStyle: string): string {
   return `<!doctype html>
 <html lang="es" data-template="${template}" data-tema="${tema}">
@@ -281,44 +250,10 @@ ${extraStyle}</style>
 `;
 }
 
-function buttonsDocument(template: string, tema: string, assets: string): string {
-  return `${documentHead(
-    template,
-    tema,
-    assets,
-    `  html { scroll-behavior: auto; }
-  body { min-height: 0; margin: 0; padding: 8px; }
-  .sma-fila { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-  .sma-fila .btn-cta { padding: 8px 16px; font-size: 0.85rem; }
-  .sma-fila .btn-add { position: static; flex: none; }
-  .sma-fila .btn-carrito { position: static; }
-  .sma-fila .header { display: inline-flex; gap: 6px; padding: 4px 8px; border-radius: 12px; min-height: 0; }
-  .sma-fila .header-top { display: flex; gap: 6px; padding: 0; }
-`,
-  )}<body class="menu-estatico">
-<div class="sma-fila">
-  <a class="btn-cta" href="#">Pedir</a>
-  <button type="button" class="btn-add">+</button>
-  <button type="button" id="btn-carrito" class="btn-carrito visible"><span id="carrito-count">2</span></button>
-  <a class="btn-cta sma-chico" href="#">WhatsApp</a>
-  <header class="header">
-    <div class="header-top">
-      <span class="badge-estado"><span class="dot" style="background:#4ade80"></span>Abierto</span>
-      <span class="badge-estado"><span class="dot" style="background:#ef4444"></span>Cerrado</span>
-    </div>
-  </header>
-</div>
-<script>${BUTTONS_SCRIPT}</script>
-</body>
-</html>`;
-}
-
 export function menuPreviewDocument(input: PreviewDocumentInput): string {
   const template = TEMPLATE_KEYS.includes(input.template) ? input.template : "moderno";
   const tema = TEMA_KEYS.includes(input.tema) ? input.tema : "claro";
   const assets = escapeAttr(input.assetsUrl);
-
-  if (input.mode === "botones") return buttonsDocument(template, tema, assets);
 
   return `${documentHead(
     template,
