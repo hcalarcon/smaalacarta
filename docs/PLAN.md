@@ -663,3 +663,4 @@ van en la parte B. Requisitos en `docs/SPEC.md` (ADMIN-OPCIONES-1 a 16). Migraci
       (curl solo confirmó que las redirecciones arman bien la URL, no un login
       real con cookies de sesión en un navegador)
 - [x] Flujo de alta de negocios y membresías desde el admin: resuelto en la Etapa 4 (superadmin)
+- [ ] [por asignar] Foto de Cristian en `/hola` (cuadrada, menos de 80 KB, `landing/assets/cristian.jpg`); hoy la página va sin foto

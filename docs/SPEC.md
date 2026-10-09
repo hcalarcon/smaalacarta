@@ -599,7 +599,8 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
 - **LANDING-11** Tiene un solo objetivo, escribir por WhatsApp: sin menú de navegación ni
   enlaces a secciones. Los únicos enlaces son WhatsApp, llamada, el menú de ejemplo y uno
   discreto a la landing. Los de contacto usan el mismo número que `index.html` y los de
-  WhatsApp llevan un mensaje escrito que menciona la tarjeta.
+  WhatsApp llevan un mensaje escrito, dirigido a Cristian (quien atiende), que menciona la
+  tarjeta. La página no lleva foto de la persona de contacto.
 - **LANDING-12** En el celular hay un botón fijo de WhatsApp abajo que no tapa el
   contenido; desde 768 px no se muestra.
 - **LANDING-13** El funcionamiento se muestra con una animación solo de CSS, decorativa

@@ -92,6 +92,7 @@ describe("LANDING-11 — un solo objetivo: WhatsApp", () => {
       const texto = new URL(h).searchParams.get("text");
       expect(texto).toMatch(/^Hola/);
       expect(texto).toContain("tarjeta");
+      expect(texto).toMatch(/^Hola Cristian,/);
     }
   });
 });
@@ -144,10 +145,11 @@ describe("LANDING-14 — página liviana", () => {
     }
   });
 
-  it("herni.jpg pesa menos de 80 KB y es cuadrada", () => {
-    expect(statSync(join(DIR, "assets/herni.jpg")).size).toBeLessThan(80 * 1024);
-    const { w, h } = imageSize("assets/herni.jpg");
-    expect(w).toBe(h);
+  it("quien atiende es Cristian y no queda rastro de la foto ni del nombre anterior", () => {
+    expect(HTML).not.toContain("Herni");
+    expect(HTML).toContain("Soy Cristian");
+    expect(HTML).not.toContain("herni.jpg");
+    expect(existsSync(join(DIR, "assets/herni.jpg"))).toBe(false);
   });
 });
 
