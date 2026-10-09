@@ -92,6 +92,7 @@ describe("LANDING-11 — un solo objetivo: WhatsApp", () => {
       const texto = new URL(h).searchParams.get("text");
       expect(texto).toMatch(/^Hola/);
       expect(texto).toContain("tarjeta");
+      expect(texto).toMatch(/^Hola Cristian,/);
     }
   });
 });
@@ -148,6 +149,11 @@ describe("LANDING-14 — página liviana", () => {
     expect(statSync(join(DIR, "assets/herni.jpg")).size).toBeLessThan(80 * 1024);
     const { w, h } = imageSize("assets/herni.jpg");
     expect(w).toBe(h);
+  });
+
+  it("la persona de contacto se presenta como Cristian", () => {
+    expect(HTML).not.toContain("Herni");
+    expect(HTML).toContain("Soy Cristian");
   });
 });
 
