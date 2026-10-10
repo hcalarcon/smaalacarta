@@ -1159,7 +1159,11 @@ panel del local y el del repartidor vienen después. `couriers` y `courier_zones
 - **ENVIO-16** `public_delivery_zones(slug)` devuelve el repartidor y sus barrios con precio solo si el negocio está
   publicado, activo, con plan completo y `courier_delivery`, y el repartidor activo; si no, `null`.
 - **ENVIO-17** `public_order_delivery(code)` devuelve repartidor, barrio, precio de lista, precio, motivo del cambio,
-  estado y nota del envío; nunca teléfono ni dirección.
+  estado y nota del envío; nunca teléfono ni dirección del cliente.
+- **ENVIO-44** El WhatsApp de Repartos al Toque es público: `public_delivery_zones` y `public_order_delivery` lo
+  devuelven en `whatsapp` y, si no hay uno cargado, la clave no va. El menú lo agrega al mensaje de WhatsApp del
+  cliente al local (`Tel. de {repartidor}: +{whatsapp}`, solo con entre 8 y 15 dígitos) y el seguimiento lo muestra
+  con un link "Escribir a {repartidor}" mientras el envío está esperando, consultado o aceptado.
 - **ENVIO-18** El superadmin habilita o deshabilita el envío con Repartos al Toque por negocio desde su ficha
   (`updateCourierDeliveryAction`: exige superadmin y cambia solo `businesses.courier_delivery`).
 - **ENVIO-19** El listado `/superadmin` marca con "Envío con Repartos al Toque" los negocios que lo tienen.

@@ -787,6 +787,39 @@ describe("lo que ve el cliente — ENVIO-16 y 17", () => {
     expect(Object.keys(z.zonas[0]).sort()).toEqual(["id", "nombre", "precio"]);
   });
 
+  it("el WhatsApp del repartidor es público: lo ven los dos, sin sesión (ENVIO-44)", async () => {
+    await db.exec(`update couriers set whatsapp = '5493644277105' where id = '${COURIER}'`);
+
+    const zonas = await call(null, "select public.public_delivery_zones('ana') as z");
+    const z = (zonas.ok ? zonas.rows[0].z : null) as { whatsapp?: string; repartidor: string; zonas: unknown[] };
+    expect(z.whatsapp).toBe("5493644277105");
+    expect(z.repartidor).toBe("Repartos al Toque");
+    expect(z.zonas).toHaveLength(39);
+
+    const o = await courierOrder();
+    const entrega = await call(null, `select public.public_order_delivery('${o.code}') as d`);
+    const d = (entrega.ok ? entrega.rows[0].d : null) as Record<string, unknown>;
+    expect(d.whatsapp).toBe("5493644277105");
+    // El del cliente no sale nunca.
+    expect(JSON.stringify(d)).not.toMatch(/3515551234|Siempre Viva|telefono|direccion/i);
+
+    await db.exec(`update couriers set whatsapp = null where id = '${COURIER}'`);
+  });
+
+  it("sin WhatsApp cargado, la clave no aparece (ENVIO-44)", async () => {
+    await db.exec(`update couriers set whatsapp = null where id = '${COURIER}'`);
+
+    const zonas = await call(null, "select public.public_delivery_zones('ana') as z");
+    const z = (zonas.ok ? zonas.rows[0].z : null) as Record<string, unknown>;
+    expect("whatsapp" in z).toBe(false);
+    expect(Array.isArray(z.zonas)).toBe(true);
+
+    const o = await courierOrder();
+    const entrega = await call(null, `select public.public_order_delivery('${o.code}') as d`);
+    const d = (entrega.ok ? entrega.rows[0].d : null) as Record<string, unknown>;
+    expect("whatsapp" in d).toBe(false);
+  });
+
   it("es null si el negocio no tiene envío, no existe, no está publicado o no está activo", async () => {
     const nulo = async (slug: string) => {
       const r = await call(null, `select public.public_delivery_zones('${slug}') as z`);
