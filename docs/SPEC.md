@@ -1215,6 +1215,27 @@ panel del local y el del repartidor vienen después. `couriers` y `courier_zones
   hechos conservan su precio de lista.
 - **ENVIO-37** `src/lib/courier/zones.ts` valida el barrio: nombre de 1 a 60 caracteres y único (sin mirar
   mayúsculas), precio de 0 en adelante ("4500", "4.500" o "4500,50").
+- **ENVIO-38** En un pedido con envío pagado en efectivo, el repartidor cobra el pedido y el envío: lo del pedido
+  (`orders.total`, sin el envío) lo rinde al local y el envío es suyo. Con otro medio de pago no hay nada que rendir.
+  Solo se rinde un pedido ya entregado.
+- **ENVIO-39** La rendición se marca pedido por pedido en dos pasos: `courier_mark_settled` (solo el repartidor del
+  pedido: exige efectivo, entregado y sin marcar, si no `P0004`) y después `business_confirm_settlement` (solo un
+  miembro del negocio: exige que el repartidor ya la haya marcado y que no esté confirmada, si no `P0004`). Cada marca
+  guarda hora y quién, y deja un evento `delivery` ("Rendido al local: $X" / "Rendición recibida"). Las marcas son
+  fijas: no se repiten ni se deshacen.
+- **ENVIO-40** Las cuatro columnas (`settled_at`, `settled_by`, `settlement_received_at`, `settlement_received_by`) no se
+  cambian por UPDATE directo (un trigger lo bloquea con `42501`): solo las dos funciones. `courier_orders()` las
+  entrega en `rendicion`.
+- **ENVIO-41** El mensaje de consulta al repartidor dice cuánto cobrar: en efectivo, "Cobrar al cliente: $pedido +
+  $envío = $total (rendir $pedido al local)"; con otro medio, "Pagado con {medio}: cobrar solo el envío $envío".
+  El panel del repartidor muestra lo mismo en cada pedido.
+- **ENVIO-42** `src/lib/courier/settlements.ts` calcula el estado de la rendición (`none`, `to_settle`, `settled`,
+  `received`), el botón que corresponde y los totales por local (pendiente de rendir, rendido sin confirmar y
+  recibido) a partir de los pedidos de `courier_orders()`. `/repartidor` suma la pestaña Rendiciones y el botón
+  Rendido (con confirmación) en cada pedido entregado en efectivo.
+- **ENVIO-43** El panel del local muestra el estado de la rendición en la tarjeta y el detalle del pedido y, cuando
+  el repartidor ya la marcó, el botón Recibido (con confirmación). `/dashboard/orders` resume lo pendiente de rendir
+  y lo ya rendido de los pedidos que muestra el historial.
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 

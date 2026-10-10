@@ -630,6 +630,10 @@ export type Database = {
           courier_note: string | null
           courier_requested_at: string | null
           courier_responded_at: string | null
+          settled_at: string | null
+          settled_by: string | null
+          settlement_received_at: string | null
+          settlement_received_by: string | null
           courier_status: string | null
           created_at: string
           customer_name: string | null
@@ -664,6 +668,10 @@ export type Database = {
           courier_note?: string | null
           courier_requested_at?: string | null
           courier_responded_at?: string | null
+          settled_at?: string | null
+          settled_by?: string | null
+          settlement_received_at?: string | null
+          settlement_received_by?: string | null
           courier_status?: string | null
           created_at?: string
           customer_name?: string | null
@@ -698,6 +706,10 @@ export type Database = {
           courier_note?: string | null
           courier_requested_at?: string | null
           courier_responded_at?: string | null
+          settled_at?: string | null
+          settled_by?: string | null
+          settlement_received_at?: string | null
+          settlement_received_by?: string | null
           courier_status?: string | null
           created_at?: string
           customer_name?: string | null
@@ -1036,11 +1048,13 @@ export type Database = {
         }
         Returns: string
       }
+      courier_mark_settled: { Args: { p_order_id: string }; Returns: undefined }
       courier_orders: { Args: { p_since?: string }; Returns: Json }
       courier_set_status: {
         Args: { p_order_id: string; p_status: string }
         Returns: undefined
       }
+      business_confirm_settlement: { Args: { p_order_id: string }; Returns: undefined }
       create_business_with_owner: {
         Args: {
           p_name: string
@@ -1081,6 +1095,19 @@ export type Database = {
         }
         Returns: Json
       }
+      create_public_order_base: {
+        Args: {
+          p_customer_name: string
+          p_delivery: string
+          p_items: Json
+          p_notes: string
+          p_payment: string
+          p_preorder?: boolean
+          p_scheduled_for?: string
+          p_slug: string
+        }
+        Returns: Json
+      }
       default_images_unmatched: {
         Args: never
         Returns: {
@@ -1090,6 +1117,7 @@ export type Database = {
           product_count: number
         }[]
       }
+      is_member_of_courier_business: { Args: never; Returns: boolean }
       is_open_now: {
         Args: { p_at: string; p_schedule: Json }
         Returns: boolean
@@ -1103,7 +1131,6 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_member_of_courier_business: { Args: never; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       is_valid_preorder_cutoffs: { Args: { p_cutoffs: Json }; Returns: boolean }
       is_valid_schedule: { Args: { p_schedule: Json }; Returns: boolean }
@@ -1128,11 +1155,11 @@ export type Database = {
         Args: { p_slug: string; p_via_path?: boolean }
         Returns: Json
       }
+      public_delivery_zones: { Args: { p_slug: string }; Returns: Json }
       public_menu: {
         Args: { p_slug: string; p_static?: boolean; p_via_path?: boolean }
         Returns: Json
       }
-      public_delivery_zones: { Args: { p_slug: string }; Returns: Json }
       public_order_delivery: { Args: { p_code: string }; Returns: Json }
       public_order_tracking: { Args: { p_code: string }; Returns: Json }
       resolve_order_options: {
