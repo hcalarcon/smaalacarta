@@ -1172,6 +1172,19 @@ panel del local y el del repartidor vienen después. `couriers` y `courier_zones
 - **ENVIO-22** El mensaje de WhatsApp al local suma barrio, "Envío: $X (se paga al repartidor)", dirección y
   teléfono, siempre en español (IDIOMA-5); los textos nuevos de la interfaz están en es, en y pt y todo dato del
   negocio o del repartidor se pinta con `textContent`.
+- **ENVIO-23** `src/lib/orders/courier.ts` arma el mensaje de WhatsApp a Repartos al Toque (local, número de pedido,
+  barrio, dirección, nombre y teléfono del cliente, hora de listo, total del pedido, pago, precio final del envío y
+  link de seguimiento) y su link (`api.whatsapp.com`, solo dígitos, 549 a un número argentino de 10 dígitos); sin
+  WhatsApp cargado no hay link. La hora de listo sugerida es la del pedido programado o 20 minutos desde ahora.
+- **ENVIO-24** Con el envío sin aceptar el local puede pedirlo (abre WhatsApp y registra `request`), registrar que el
+  repartidor aceptó (nota opcional y precio final) o que no puede (`setOrderCourierAction`); un precio distinto del
+  actual exige motivo (hasta 200) y la nota admite hasta 120. Aceptado, o pedido terminado: ninguna de las tres.
+- **ENVIO-25** Si pasaron 10 minutos desde `courier_requested_at` sin respuesta, la tarjeta y el detalle lo avisan.
+- **ENVIO-26** La tarjeta y el detalle de un pedido con envío muestran barrio, estado del envío y precio (con el de
+  lista y el motivo si cambió); mientras no esté aceptado, confirmar queda deshabilitado con el motivo visible. Tras
+  Listo, el paso del local es "Entregar al repartidor"; En camino y Entregado se ven pero no son botones del local.
+- **ENVIO-27** En el tablero, `handed_to_courier` y `on_the_way` van en la columna Listos, y pasan al historial al
+  quedar `delivered`.
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 

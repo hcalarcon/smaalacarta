@@ -4,6 +4,15 @@ import type { Order } from "@/lib/db/orders";
 import { timeAgo } from "@/lib/orders/format";
 import PaymentBadge from "./PaymentBadge";
 import { itemOptionLines } from "@/lib/orders/item-options";
+import {
+  confirmBlockReason,
+  courierActions,
+  courierStatusLabel,
+  deliveryContext,
+  feeSummary,
+  hasCourier,
+  noResponseWarning,
+} from "@/lib/orders/courier";
 import { isPaymentPending, PAYMENT_BLOCK_REASON } from "@/lib/orders/payment";
 import { orderBadge } from "@/lib/orders/scheduled";
 import { primaryAction, STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
@@ -24,10 +33,18 @@ export default function OrderCard({
   onAdvance: (status: string) => void;
   onOpen: () => void;
 }) {
-  const action = primaryAction(order.status);
+  const withCourier = hasCourier(order);
+  const action = primaryAction(order.status, deliveryContext(order));
   const extra = order.order_items.length - SHOWN_ITEMS;
   const scheduled = orderBadge(order);
-  const blocked = isPaymentPending(order.payment_status);
+  const paymentBlocked = isPaymentPending(order.payment_status);
+  // Con envío, confirmar espera a que el repartidor acepte (ENVIO-8): la base también lo exige.
+  const courierBlock = confirmBlockReason(order);
+  const blocked = paymentBlocked || Boolean(courierBlock);
+  const blockReason = paymentBlocked ? PAYMENT_BLOCK_REASON : (courierBlock ?? undefined);
+  const courierRequest = courierActions(order).request;
+  const fee = withCourier ? feeSummary(order) : null;
+  const warning = withCourier ? noResponseWarning(order, now) : null;
 
   return (
     <article className="rounded-xl border border-line bg-white p-3 shadow-sm">
@@ -59,6 +76,26 @@ export default function OrderCard({
         </p>
       ) : null}
 
+      {withCourier && fee ? (
+        <div className="mt-2 rounded-lg bg-sky-50 px-2 py-1.5 text-[11px] text-sky-900">
+          <p className="font-semibold">
+            🛵 {order.delivery_zone_name ?? "Envío"} · {fee.price}
+          </p>
+          <p>{courierStatusLabel(order)}</p>
+          {fee.list ? (
+            <p>
+              Antes {fee.list}
+              {fee.reason ? `: ${fee.reason}` : ""}
+            </p>
+          ) : null}
+          {warning ? (
+            <p role="alert" className="mt-1 font-semibold text-red-700">
+              {warning}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+
       <ul className="mt-2 space-y-0.5 text-xs text-stone-600">
         {order.order_items.slice(0, SHOWN_ITEMS).map((item, index) => (
           <li key={index}>
@@ -86,10 +123,20 @@ export default function OrderCard({
             type="button"
             onClick={() => onAdvance(action.status)}
             disabled={busy || blocked}
-            title={blocked ? PAYMENT_BLOCK_REASON : undefined}
+            title={blocked ? blockReason : undefined}
             className="flex-1 rounded-lg bg-brand px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60"
           >
             {busy ? "Guardando…" : action.label}
+          </button>
+        ) : null}
+        {courierRequest ? (
+          // Pedir el envío necesita la hora de listo y abre WhatsApp: se hace desde el detalle.
+          <button
+            type="button"
+            onClick={onOpen}
+            className="rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-semibold text-brand transition hover:bg-brand-soft"
+          >
+            {courierRequest}
           </button>
         ) : null}
         <button
@@ -101,7 +148,7 @@ export default function OrderCard({
         </button>
       </div>
 
-      {blocked ? <p className="mt-1.5 text-[11px] text-stone-500">{PAYMENT_BLOCK_REASON}</p> : null}
+      {blocked ? <p className="mt-1.5 text-[11px] text-stone-500">{blockReason}</p> : null}
     </article>
   );
 }

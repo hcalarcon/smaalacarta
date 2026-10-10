@@ -7,7 +7,7 @@ import type { Order } from "@/lib/db/orders";
 const mocks = vi.hoisted(() => ({ refresh: vi.fn() }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: mocks.refresh }) }));
-vi.mock("../actions", () => ({ setOrderStatusAction: vi.fn() }));
+vi.mock("../actions", () => ({ setOrderStatusAction: vi.fn(), setOrderCourierAction: vi.fn() }));
 vi.mock("./ManualOrderDialog", () => ({ default: () => null }));
 vi.mock("./OrderDetailDialog", () => ({ default: () => null }));
 vi.mock("./OrdersHistory", () => ({ default: () => null }));
@@ -329,5 +329,38 @@ describe("pantalla encendida — ADMIN-PEDIDOS-13", () => {
 
     await act(async () => fireEvent.click(soundButton()));
     expect(screen.getByText("Mantené esta pantalla abierta para recibir avisos")).toBeTruthy();
+  });
+});
+
+describe("estados de envío en el tablero — ENVIO-27", () => {
+  const columnOf = (title: string) =>
+    screen.getByRole("heading", { name: title }).closest("section") as HTMLElement;
+
+  it("Entregado al repartidor y En camino van en Listos", () => {
+    render(
+      board([
+        order("1", "pending"),
+        order("2", "preparing"),
+        order("3", "ready"),
+        order("4", "handed_to_courier"),
+        order("5", "on_the_way"),
+      ]),
+    );
+
+    const listos = columnOf("Listos").textContent ?? "";
+    expect(listos).toContain("pedido 3");
+    expect(listos).toContain("pedido 4");
+    expect(listos).toContain("pedido 5");
+    expect(columnOf("En curso").textContent).not.toContain("pedido 4");
+    expect(columnOf("Nuevos").textContent).not.toContain("pedido 5");
+  });
+
+  it("Entregado sale del tablero (va al historial)", () => {
+    render(board([order("1", "delivered"), order("2", "on_the_way")]));
+
+    for (const title of ["Nuevos", "En curso", "Listos"]) {
+      expect(columnOf(title).textContent).not.toContain("pedido 1");
+    }
+    expect(columnOf("Listos").textContent).toContain("pedido 2");
   });
 });

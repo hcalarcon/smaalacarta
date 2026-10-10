@@ -7,8 +7,9 @@ import ManualOrderDialog from "./ManualOrderDialog";
 import OrderCard from "./OrderCard";
 import OrderDetailDialog from "./OrderDetailDialog";
 import OrdersHistory from "./OrdersHistory";
-import { setOrderStatusAction } from "../actions";
-import type { Order } from "@/lib/db/orders";
+import { setOrderCourierAction, setOrderStatusAction } from "../actions";
+import type { ActiveCourier, Order } from "@/lib/db/orders";
+import type { CourierResponseInput } from "@/lib/orders/courier";
 import { newPendingIds, pendingCount, shouldRemind, tabTitle } from "@/lib/orders/alerts";
 import { playNewOrderSound } from "@/lib/orders/sound";
 import { compareForBoard } from "@/lib/orders/scheduled";
@@ -19,7 +20,7 @@ import { boardColumn, type BoardColumn } from "@/lib/orders/status";
 const COLUMNS: { key: BoardColumn; title: string; hint: string }[] = [
   { key: "nuevos", title: "Nuevos", hint: "Esperando confirmación" },
   { key: "en_curso", title: "En curso", hint: "Confirmados y en preparación" },
-  { key: "listos", title: "Listos", hint: "Para entregar o retirar" },
+  { key: "listos", title: "Listos", hint: "Para entregar, retirar o en camino" },
 ];
 
 const REFRESH_MS = 20_000;
@@ -50,11 +51,16 @@ export default function OrdersClient({
   orders,
   products,
   serverNow,
+  businessName = "",
+  courier = null,
 }: {
   slug: string;
   orders: Order[];
   products: { name: string; price: number }[];
   serverNow: string;
+  // Solo con envío con Repartos al Toque habilitado (ENVIO-2): el repartidor activo.
+  businessName?: string;
+  courier?: ActiveCourier | null;
 }) {
   const router = useRouter();
 
@@ -226,6 +232,26 @@ export default function OrdersClient({
     }
   }
 
+  async function respondCourier(
+    orderId: string,
+    action: "request" | "accept" | "reject",
+    input: CourierResponseInput,
+    currentFee: number,
+  ) {
+    setError(null);
+    setBusyId(orderId);
+
+    try {
+      const result = await setOrderCourierAction(orderId, action, input, currentFee);
+      if (!result.ok) setError(result.error);
+    } catch {
+      setError("No pudimos guardar el cambio. Probá de nuevo.");
+    } finally {
+      setBusyId(null);
+      router.refresh();
+    }
+  }
+
   const selected = orders.find((order) => order.id === selectedId) ?? null;
 
   const byColumn = (key: BoardColumn) => {
@@ -340,6 +366,13 @@ export default function OrdersClient({
         busy={busyId === selected?.id}
         onClose={() => setSelectedId(null)}
         onChangeStatus={(status, note) => selected && changeStatus(selected.id, status, note)}
+        businessName={businessName}
+        courier={courier}
+        now={now}
+        error={error}
+        onCourierAction={(action, input) =>
+          selected && respondCourier(selected.id, action, input, Number(selected.delivery_fee ?? 0))
+        }
       />
 
       <ManualOrderDialog
