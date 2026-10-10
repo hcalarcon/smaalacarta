@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import OrdersClient from "./components/OrdersClient";
-import { listOrders } from "@/lib/db/orders";
+import { getActiveCourier, listOrders } from "@/lib/db/orders";
 import { listProductsForPromotions } from "@/lib/db/promotions";
 import { requireBusiness } from "@/lib/get-current-business";
 import { hasOrders } from "@/lib/plan-access";
@@ -23,10 +23,12 @@ export default async function OrdersPage() {
     redirect("/dashboard");
   }
 
-  const [orders, products] = await Promise.all([
+  const [orders, products, courier] = await Promise.all([
     listOrders(business.id),
     // Para sugerir productos y precios al cargar un pedido a mano.
     listProductsForPromotions(business.id),
+    // Solo los negocios con envío con Repartos al Toque habilitado (ENVIO-2) tienen repartidor.
+    business.courier_delivery ? getActiveCourier() : Promise.resolve(null),
   ]);
 
   return (
@@ -35,6 +37,8 @@ export default async function OrdersPage() {
       orders={orders}
       products={products.map((p) => ({ name: p.name, price: p.price }))}
       serverNow={new Date().toISOString()}
+      businessName={business.name}
+      courier={courier}
     />
   );
 }

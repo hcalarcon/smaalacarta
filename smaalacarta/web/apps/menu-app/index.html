@@ -119,6 +119,15 @@
           <option value="retiro" data-i18n="checkout.pickup">Retiro en el local</option>
         </select>
         <p id="aviso-entrega" class="aviso-entrega" hidden></p>
+        <!-- Envío con Repartos al Toque: solo con entrega "delivery" y barrios disponibles (ENVIO-20). -->
+        <div id="envio-repartidor" class="envio-repartidor" hidden>
+          <select name="barrio" disabled>
+            <option value="" disabled selected data-i18n="checkout.zone">-- Barrio --</option>
+          </select>
+          <input name="direccion" placeholder="Dirección (calle y número)" data-i18n-placeholder="checkout.address" minlength="5" maxlength="200" autocomplete="street-address" disabled />
+          <input name="telefono" type="tel" inputmode="tel" placeholder="Teléfono de contacto" data-i18n-placeholder="checkout.phone" maxlength="25" autocomplete="tel" disabled />
+          <p id="aviso-barrio" class="aviso-entrega" hidden></p>
+        </div>
         <!-- Menú de un JSON: campo de hora libre, como siempre. Con Supabase lo reemplaza #horario-programado (PUBLICO-30). -->
         <div id="horario-libre" class="horario-pedido">
           <label> <input type="checkbox" name="ahora" /> <span data-i18n="checkout.now">Ahora mismo</span> </label>

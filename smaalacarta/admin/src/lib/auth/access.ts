@@ -1,5 +1,6 @@
 const PANEL_PREFIX = "/dashboard";
 const SUPERADMIN_PREFIX = "/superadmin";
+const COURIER_PREFIX = "/repartidor";
 const CHANGE_PASSWORD = "/cambiar-contrasena";
 const GUEST_ONLY = ["/login"];
 
@@ -16,8 +17,8 @@ export function hasTemporaryPassword(
 }
 
 // A dónde redirigir según haya o no sesión, o null si la ruta se sirve tal cual.
-// Que alguien sea superadmin no se decide acá (haría falta una consulta a la base):
-// lo decide `superAdminAccess` en la página.
+// Que alguien sea superadmin o repartidor no se decide acá (haría falta una consulta a la
+// base): lo deciden `superAdminAccess` y `courierAccess` en la página.
 export function redirectForRoute(
   pathname: string,
   hasUser: boolean,
@@ -26,6 +27,7 @@ export function redirectForRoute(
   const needsSession =
     isUnder(pathname, PANEL_PREFIX) ||
     isUnder(pathname, SUPERADMIN_PREFIX) ||
+    isUnder(pathname, COURIER_PREFIX) ||
     pathname === CHANGE_PASSWORD;
 
   if (!hasUser && needsSession) {
@@ -44,16 +46,32 @@ export function redirectForRoute(
   return null;
 }
 
-export type AccessState = "login" | "superadmin" | "sin-negocio" | "ok";
+export type AccessState = "login" | "superadmin" | "repartidor" | "sin-negocio" | "ok";
 
+// Un usuario sin negocio va a /superadmin si es superadmin, a /repartidor si es el usuario
+// repartidor (ENVIO-30) y, si no, a /sin-negocio.
 export function accessState(input: {
   user: { id: string } | null;
   business: { id: string } | null;
   isSuperAdmin?: boolean;
+  isCourier?: boolean;
 }): AccessState {
   if (!input.user) return "login";
   if (input.business) return "ok";
-  return input.isSuperAdmin ? "superadmin" : "sin-negocio";
+  if (input.isSuperAdmin) return "superadmin";
+  return input.isCourier ? "repartidor" : "sin-negocio";
+}
+
+export type CourierAccess = "login" | "panel" | "ok";
+
+// Quién puede ver /repartidor: sin sesión va a /login; cualquiera que no sea el usuario
+// repartidor vuelve a su panel, sin enterarse de qué hay ahí.
+export function courierAccess(input: {
+  user: { id: string } | null;
+  isCourier: boolean;
+}): CourierAccess {
+  if (!input.user) return "login";
+  return input.isCourier ? "ok" : "panel";
 }
 
 export type SuperAdminAccess = "login" | "panel" | "ok";

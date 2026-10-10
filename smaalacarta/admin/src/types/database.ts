@@ -188,6 +188,7 @@ export type Database = {
       businesses: {
         Row: {
           active: boolean
+          courier_delivery: boolean
           created_at: string | null
           id: string
           logo_url: string | null
@@ -200,6 +201,7 @@ export type Database = {
         }
         Insert: {
           active?: boolean
+          courier_delivery?: boolean
           created_at?: string | null
           id?: string
           logo_url?: string | null
@@ -212,6 +214,7 @@ export type Database = {
         }
         Update: {
           active?: boolean
+          courier_delivery?: boolean
           created_at?: string | null
           id?: string
           logo_url?: string | null
@@ -279,6 +282,88 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      courier_users: {
+        Row: {
+          courier_id: string
+          user_id: string
+        }
+        Insert: {
+          courier_id: string
+          user_id: string
+        }
+        Update: {
+          courier_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_users_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      courier_zones: {
+        Row: {
+          active: boolean
+          courier_id: string
+          id: string
+          name: string
+          price: number
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          courier_id: string
+          id?: string
+          name: string
+          price: number
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          courier_id?: string
+          id?: string
+          name?: string
+          price?: number
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_zones_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      couriers: {
+        Row: {
+          active: boolean
+          created_at: string
+          id: string
+          name: string
+          whatsapp: string | null
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name: string
+          whatsapp?: string | null
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          id?: string
+          name?: string
+          whatsapp?: string | null
+        }
+        Relationships: []
       }
       default_images: {
         Row: {
@@ -541,9 +626,27 @@ export type Database = {
           active: boolean
           business_id: string
           code: string
+          courier_id: string | null
+          courier_note: string | null
+          courier_requested_at: string | null
+          courier_responded_at: string | null
+          settled_at: string | null
+          settled_by: string | null
+          settlement_received_at: string | null
+          settlement_received_by: string | null
+          courier_status: string | null
           created_at: string
           customer_name: string | null
+          customer_phone: string | null
           delivery: string | null
+          delivery_address: string | null
+          delivery_fee: number | null
+          delivery_fee_changed_at: string | null
+          delivery_fee_changed_by: string | null
+          delivery_fee_list: number | null
+          delivery_fee_reason: string | null
+          delivery_zone_id: string | null
+          delivery_zone_name: string | null
           id: string
           mp_payment_id: string | null
           notes: string | null
@@ -561,9 +664,27 @@ export type Database = {
           active?: boolean
           business_id: string
           code?: string
+          courier_id?: string | null
+          courier_note?: string | null
+          courier_requested_at?: string | null
+          courier_responded_at?: string | null
+          settled_at?: string | null
+          settled_by?: string | null
+          settlement_received_at?: string | null
+          settlement_received_by?: string | null
+          courier_status?: string | null
           created_at?: string
           customer_name?: string | null
+          customer_phone?: string | null
           delivery?: string | null
+          delivery_address?: string | null
+          delivery_fee?: number | null
+          delivery_fee_changed_at?: string | null
+          delivery_fee_changed_by?: string | null
+          delivery_fee_list?: number | null
+          delivery_fee_reason?: string | null
+          delivery_zone_id?: string | null
+          delivery_zone_name?: string | null
           id?: string
           mp_payment_id?: string | null
           notes?: string | null
@@ -581,9 +702,27 @@ export type Database = {
           active?: boolean
           business_id?: string
           code?: string
+          courier_id?: string | null
+          courier_note?: string | null
+          courier_requested_at?: string | null
+          courier_responded_at?: string | null
+          settled_at?: string | null
+          settled_by?: string | null
+          settlement_received_at?: string | null
+          settlement_received_by?: string | null
+          courier_status?: string | null
           created_at?: string
           customer_name?: string | null
+          customer_phone?: string | null
           delivery?: string | null
+          delivery_address?: string | null
+          delivery_fee?: number | null
+          delivery_fee_changed_at?: string | null
+          delivery_fee_changed_by?: string | null
+          delivery_fee_list?: number | null
+          delivery_fee_reason?: string | null
+          delivery_zone_id?: string | null
+          delivery_zone_name?: string | null
           id?: string
           mp_payment_id?: string | null
           notes?: string | null
@@ -603,6 +742,20 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_delivery_zone_id_fkey"
+            columns: ["delivery_zone_id"]
+            isOneToOne: false
+            referencedRelation: "courier_zones"
             referencedColumns: ["id"]
           },
         ]
@@ -895,6 +1048,13 @@ export type Database = {
         }
         Returns: string
       }
+      courier_mark_settled: { Args: { p_order_id: string }; Returns: undefined }
+      courier_orders: { Args: { p_since?: string }; Returns: Json }
+      courier_set_status: {
+        Args: { p_order_id: string; p_status: string }
+        Returns: undefined
+      }
+      business_confirm_settlement: { Args: { p_order_id: string }; Returns: undefined }
       create_business_with_owner: {
         Args: {
           p_name: string
@@ -922,6 +1082,22 @@ export type Database = {
       create_public_order: {
         Args: {
           p_customer_name: string
+          p_customer_phone?: string
+          p_delivery: string
+          p_delivery_address?: string
+          p_delivery_zone?: string
+          p_items: Json
+          p_notes: string
+          p_payment: string
+          p_preorder?: boolean
+          p_scheduled_for?: string
+          p_slug: string
+        }
+        Returns: Json
+      }
+      create_public_order_base: {
+        Args: {
+          p_customer_name: string
           p_delivery: string
           p_items: Json
           p_notes: string
@@ -941,6 +1117,7 @@ export type Database = {
           product_count: number
         }[]
       }
+      is_member_of_courier_business: { Args: never; Returns: boolean }
       is_open_now: {
         Args: { p_at: string; p_schedule: Json }
         Returns: boolean
@@ -958,6 +1135,7 @@ export type Database = {
       is_valid_preorder_cutoffs: { Args: { p_cutoffs: Json }; Returns: boolean }
       is_valid_schedule: { Args: { p_schedule: Json }; Returns: boolean }
       menu_preview: { Args: { p_business_id: string }; Returns: Json }
+      my_courier_id: { Args: never; Returns: string }
       new_tracking_code: { Args: never; Returns: string }
       next_order_number: { Args: { p_business_id: string }; Returns: number }
       normalize_words: { Args: { p_text: string }; Returns: string[] }
@@ -977,10 +1155,12 @@ export type Database = {
         Args: { p_slug: string; p_via_path?: boolean }
         Returns: Json
       }
+      public_delivery_zones: { Args: { p_slug: string }; Returns: Json }
       public_menu: {
         Args: { p_slug: string; p_static?: boolean; p_via_path?: boolean }
         Returns: Json
       }
+      public_order_delivery: { Args: { p_code: string }; Returns: Json }
       public_order_tracking: { Args: { p_code: string }; Returns: Json }
       resolve_order_options: {
         Args: { p_business_id: string; p_options: Json; p_product_id: string }
@@ -1046,6 +1226,16 @@ export type Database = {
           p_type: string
         }
         Returns: string
+      }
+      set_order_courier: {
+        Args: {
+          p_action: string
+          p_fee?: number
+          p_fee_reason?: string
+          p_note?: string
+          p_order_id: string
+        }
+        Returns: undefined
       }
       set_order_status: {
         Args: { p_note?: string; p_order_id: string; p_status: string }

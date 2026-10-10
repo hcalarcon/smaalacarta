@@ -57,3 +57,17 @@ export const superAdminLinks: NavLink[] = [
     icon: "M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1zM8.5 10a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM21 16l-5-5-8 8",
   },
 ];
+
+// El usuario repartidor (ENVIO-31 y 36): sus pedidos y sus barrios.
+export const courierLinks: NavLink[] = [
+  {
+    href: "/repartidor",
+    label: "Pedidos",
+    icon: "M6 6h15l-1.5 9h-12L6 3H3M9 20a1 1 0 100-2 1 1 0 000 2zm9 0a1 1 0 100-2 1 1 0 000 2z",
+  },
+  {
+    href: "/repartidor/zonas",
+    label: "Barrios y precios",
+    icon: "M12 21s-7-6.2-7-11a7 7 0 1114 0c0 4.8-7 11-7 11zM12 12a2 2 0 100-4 2 2 0 000 4z",
+  },
+];

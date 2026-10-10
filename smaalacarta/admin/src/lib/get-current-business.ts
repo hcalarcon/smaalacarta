@@ -2,6 +2,7 @@ import { cache } from "react";
 import { redirect } from "next/navigation";
 
 import { accessState } from "@/lib/auth/access";
+import { getCourierStatus } from "@/lib/auth/courier";
 import { getSuperAdminStatus } from "@/lib/auth/superadmin";
 import { createClient } from "@/lib/supabase-server";
 
@@ -39,14 +40,19 @@ export const getCurrentBusiness = cache(async () => {
   };
 });
 
-// A dónde va la sesión actual: el negocio, /superadmin, /sin-negocio o /login.
-// Solo consulta si es superadmin cuando no hay negocio, que es cuando importa.
+// A dónde va la sesión actual: el negocio, /superadmin, /repartidor, /sin-negocio o /login.
+// Solo consulta si es superadmin o repartidor cuando no hay negocio, que es cuando importa.
 export const resolveAccess = cache(async () => {
   const current = await getCurrentBusiness();
 
   const isSuperAdmin =
     current?.user && !current.business
       ? (await getSuperAdminStatus()).isSuperAdmin
+      : false;
+
+  const isCourier =
+    current?.user && !current.business && !isSuperAdmin
+      ? (await getCourierStatus()).isCourier
       : false;
 
   return {
@@ -56,6 +62,7 @@ export const resolveAccess = cache(async () => {
       user: current?.user ?? null,
       business: current?.business ?? null,
       isSuperAdmin,
+      isCourier,
     }),
   };
 });
@@ -68,6 +75,7 @@ export async function requireBusiness() {
 
   if (state === "login") redirect("/login");
   if (state === "superadmin") redirect("/superadmin");
+  if (state === "repartidor") redirect("/repartidor");
   if (state === "sin-negocio") redirect("/sin-negocio");
 
   return { ...current!, business: current!.business! };

@@ -1,6 +1,7 @@
 "use client";
 
 import type { Order } from "@/lib/db/orders";
+import { canConfirmReceived, localOrderState, settlementLabel } from "@/lib/courier/settlements";
 import { formatDateTime } from "@/lib/orders/format";
 import { scheduledShort } from "@/lib/orders/scheduled";
 import { STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
@@ -18,9 +19,12 @@ function finishedAt(order: Order): string {
 export default function OrdersHistory({
   orders,
   onOpen,
+  onConfirmSettlement,
 }: {
   orders: Order[];
   onOpen: (orderId: string) => void;
+  // Rendición del efectivo (ENVIO-43): pide confirmar que se recibió.
+  onConfirmSettlement?: (orderId: string) => void;
 }) {
   return (
     <section className="rounded-3xl border border-line bg-white p-4 shadow-sm sm:p-5">
@@ -74,6 +78,20 @@ export default function OrdersHistory({
                     >
                       {STATUS_LABELS[order.status as OrderStatus] ?? order.status}
                     </span>
+                    {localOrderState(order) !== "none" ? (
+                      <span className="mt-1 block text-[11px] text-stone-500">
+                        💵 {settlementLabel(localOrderState(order), Number(order.total))}
+                        {canConfirmReceived(localOrderState(order)) && onConfirmSettlement ? (
+                          <button
+                            type="button"
+                            onClick={() => onConfirmSettlement(order.id)}
+                            className="ml-2 rounded-lg bg-brand px-2 py-0.5 text-[11px] font-semibold text-white transition hover:bg-brand-hover"
+                          >
+                            Recibido
+                          </button>
+                        ) : null}
+                      </span>
+                    ) : null}
                   </td>
                   <td className="py-2.5 pr-3 font-semibold text-brand">
                     {formatMoney(Number(order.total))}

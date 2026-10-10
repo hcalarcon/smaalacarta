@@ -76,6 +76,11 @@ export default async function SuperAdminHomePage() {
                     {!business.plan_pdf && !business.plan_web && !business.plan_completo ? (
                       <span className="text-xs text-stone-400">Sin plan</span>
                     ) : null}
+                    {business.courier_delivery ? (
+                      <span className="rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-semibold text-accent">
+                        Envío con Repartos al Toque
+                      </span>
+                    ) : null}
                   </p>
 
                   <dl className="mt-4 space-y-1 text-sm text-stone-600">

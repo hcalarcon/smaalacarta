@@ -25,6 +25,9 @@ let MERCADOPAGO = null;
 let OPTIONS = null;
 let OPTIONS_SHEET = null;
 let CART_LINES = null;
+// Envío con Repartos al Toque (ENVIO-20): los barrios del negocio, o null si no tiene o falló.
+let DZ = null;
+let COURIER_ZONES = null;
 
 // Idioma de la interfaz (IDIOMA-1 a 4) y el menú tal como vino, sin las secciones armadas.
 let LANG = "es";
@@ -182,6 +185,7 @@ async function init() {
       optionsLib,
       optionsSheetLib,
       cartLinesLib,
+      deliveryZonesLib,
     ] = await Promise.all([
       import("/apps/menu-app/lib/hostname.js"),
       import("/apps/menu-app/lib/html.js"),
@@ -203,7 +207,9 @@ async function init() {
       import("/apps/menu-app/lib/options.js"),
       import("/apps/menu-app/lib/options-sheet.js"),
       import("/apps/menu-app/lib/cart-lines.js"),
+      import("/apps/menu-app/lib/delivery-zones.js"),
     ]);
+    DZ = deliveryZonesLib;
     OPTIONS = optionsLib;
     OPTIONS_SHEET = optionsSheetLib;
     CART_LINES = cartLinesLib;
@@ -272,7 +278,13 @@ async function init() {
     }
 
     window.CONFIG = config;
+    // Barrios del envío con repartidor: solo los negocios de Supabase pueden tenerlo. Si falla,
+    // el checkout queda como siempre.
+    if (MENU_SOURCE) {
+      COURIER_ZONES = await DZ.fetchDeliveryZones({ ...SUPABASE_CFG, slug: MENU_SOURCE.slug });
+    }
     applyCheckoutOptions(config);
+    initCourierFields();
     renderScheduleChoice();
     renderDeliveryNotice();
     renderTransferInfo();
@@ -398,6 +410,7 @@ function applyStaticTexts() {
   syncTema();
   renderDeliveryNotice();
   renderTransferInfo();
+  renderCourierFields();
 }
 
 function setLang(lang) {
@@ -987,6 +1000,23 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
   const form = e.target;
   const f = new FormData(form);
 
+  // Envío con repartidor (ENVIO-21): barrio, dirección y teléfono. Los campos ocultos van
+  // deshabilitados y no entran en el FormData.
+  const courier = DZ
+    ? DZ.courierOrderFields({
+        zones: COURIER_ZONES,
+        delivery: f.get("entrega"),
+        zoneId: f.get("barrio"),
+        phone: f.get("telefono"),
+        address: f.get("direccion"),
+      })
+    : {};
+  const courierZone = courier.deliveryZone ? DZ.findZone(COURIER_ZONES, courier.deliveryZone) : null;
+  if (courierZone && !DZ.isValidPhone(courier.customerPhone)) {
+    alert(tr("error.invalidPhone"));
+    return;
+  }
+
   // Con Mercado Pago el cliente sale a pagar y WhatsApp queda para después, desde el seguimiento
   // (PUBLICO-36): no se abre la ventana.
   const online = Boolean(MERCADOPAGO?.isMercadoPago(f.get("pago")));
@@ -1001,6 +1031,14 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
 
   msg += `👤 Cliente: ${f.get("nombre")}\n`;
   msg += `🚚 Entrega: ${f.get("entrega")}\n`;
+  // El precio del envío es de referencia y se paga al repartidor: no entra en el total (ENVIO-22).
+  if (courierZone) {
+    msg += DZ.courierWhatsappLines(
+      courierZone,
+      { address: courier.deliveryAddress, phone: courier.customerPhone },
+      PRICE.formatPrice,
+    );
+  }
 
   const ahora = f.get("ahora");
   const horario = f.get("horario");
@@ -1064,6 +1102,7 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
       items,
       scheduledFor,
       preorder: Boolean(preorder),
+      ...courier,
     });
 
     if (submit) {
@@ -1099,6 +1138,13 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     } else if (result.reason === "invalid_delivery" || result.reason === "invalid_payment") {
       WA_WINDOW?.discardPlaceholder(placeholder);
       alert(tr("error.optionsChanged"));
+      return;
+    } else if (result.reason === "invalid_zone") {
+      // El barrio se dio de baja o el negocio ya no tiene envío: se piden los barrios de nuevo.
+      WA_WINDOW?.discardPlaceholder(placeholder);
+      alert(tr("error.invalidZone"));
+      COURIER_ZONES = await DZ.fetchDeliveryZones({ ...SUPABASE_CFG, slug: MENU_SOURCE.slug });
+      renderCourierFields();
       return;
     } else if (result.reason === "scheduling_disabled") {
       WA_WINDOW?.discardPlaceholder(placeholder);
@@ -1300,6 +1346,59 @@ function applyCheckoutOptions(config) {
       select.required = true;
     }
   });
+}
+
+// Envío con Repartos al Toque (ENVIO-20): el select de barrio, la dirección y el teléfono se ven
+// (y se exigen) solo con entrega "delivery" y barrios disponibles. Los campos ocultos quedan
+// deshabilitados. Todo con textContent: el nombre del barrio no se interpreta como HTML.
+function renderCourierFields() {
+  const box = document.querySelector("#envio-repartidor");
+  if (!box || !DZ) return;
+
+  const delivery = document.querySelector('#form-pedido select[name="entrega"]');
+  const zone = box.querySelector('select[name="barrio"]');
+  const address = box.querySelector('input[name="direccion"]');
+  const phone = box.querySelector('input[name="telefono"]');
+  if (!zone || !address || !phone) return;
+
+  const show = DZ.needsCourier(COURIER_ZONES, delivery?.value);
+  box.hidden = !show;
+
+  [zone, address, phone].forEach((field) => {
+    field.disabled = !show;
+    field.required = show;
+  });
+
+  if (show) {
+    const previous = zone.value;
+    zone.querySelectorAll("option:not([disabled])").forEach((option) => option.remove());
+    COURIER_ZONES.zones.forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.id;
+      option.textContent = item.name;
+      zone.append(option);
+    });
+    // Si el barrio que había elegido ya no está, vuelve a elegir.
+    zone.value = COURIER_ZONES.zones.some((item) => item.id === previous) ? previous : "";
+  }
+
+  renderZoneNotice();
+}
+
+function renderZoneNotice() {
+  const notice = document.querySelector("#aviso-barrio");
+  const zone = document.querySelector('#form-pedido select[name="barrio"]');
+  if (!notice || !zone || !DZ) return;
+
+  const chosen = zone.disabled ? null : DZ.findZone(COURIER_ZONES, zone.value);
+  notice.hidden = !chosen;
+  notice.textContent = chosen ? tr("checkout.zoneNotice", DZ.zoneNoticeVars(chosen, PRICE.formatPrice)) : "";
+}
+
+function initCourierFields() {
+  document.querySelector('#form-pedido select[name="entrega"]')?.addEventListener("change", renderCourierFields);
+  document.querySelector('#form-pedido select[name="barrio"]')?.addEventListener("change", renderZoneNotice);
+  renderCourierFields();
 }
 
 // Para cuándo es el pedido (PUBLICO-30): con un menú de Supabase que acepta pedidos

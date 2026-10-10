@@ -12,6 +12,7 @@ export default async function NoBusinessPage() {
 
   if (state === "login") redirect("/login");
   if (state === "superadmin") redirect("/superadmin");
+  if (state === "repartidor") redirect("/repartidor");
   if (state === "ok") redirect("/dashboard");
 
   return (

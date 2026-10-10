@@ -2,9 +2,12 @@
 
 import { useEffect, useState } from "react";
 
-import type { Order } from "@/lib/db/orders";
+import CourierSection from "./CourierSection";
+import type { ActiveCourier, Order } from "@/lib/db/orders";
+import { confirmBlockReason, deliveryContext, hasCourier, type CourierResponseInput } from "@/lib/orders/courier";
 import { formatDateTime, trackingUrl } from "@/lib/orders/format";
 import PaymentBadge from "./PaymentBadge";
+import SettlementStatus from "./SettlementStatus";
 import { itemOptionLines } from "@/lib/orders/item-options";
 import { isPaymentPending, PAYMENT_BLOCK_REASON } from "@/lib/orders/payment";
 import { orderBadge } from "@/lib/orders/scheduled";
@@ -19,12 +22,29 @@ export default function OrderDetailDialog({
   busy,
   onClose,
   onChangeStatus,
+  businessName = "",
+  courier = null,
+  now,
+  error = null,
+  onCourierAction,
+  onConfirmSettlement,
 }: {
   order: Order | null;
   slug: string;
   busy: boolean;
   onClose: () => void;
   onChangeStatus: (status: string, note?: string) => void;
+  // Envío con Repartos al Toque (ENVIO-24): el repartidor activo y qué hacer con su respuesta.
+  businessName?: string;
+  courier?: ActiveCourier | null;
+  now?: Date;
+  error?: string | null;
+  onCourierAction?: (
+    action: "request" | "accept" | "reject",
+    input: CourierResponseInput,
+  ) => void;
+  // Rendición del efectivo (ENVIO-43): pide confirmar que se recibió.
+  onConfirmSettlement?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -55,8 +75,9 @@ export default function OrderDetailDialog({
   if (!order) return null;
 
   const link = trackingUrl(slug, order.code);
-  const options = nextStatuses(order.status, order.payment_status);
+  const options = nextStatuses(order.status, order.payment_status, deliveryContext(order));
   const blocked = isPaymentPending(order.payment_status);
+  const courierBlock = confirmBlockReason(order);
 
   async function copy() {
     try {
@@ -141,6 +162,22 @@ export default function OrderDetailDialog({
           ) : null}
         </dl>
 
+        <SettlementStatus order={order} busy={busy} onReceived={onConfirmSettlement} />
+
+        {hasCourier(order) && onCourierAction ? (
+          <CourierSection
+            key={order.id}
+            order={order}
+            now={now ?? new Date()}
+            businessName={businessName}
+            courier={courier}
+            trackingLink={link}
+            busy={busy}
+            error={error}
+            onAction={onCourierAction}
+          />
+        ) : null}
+
         <div className="mt-6">
           <h3 className="text-sm font-semibold text-brand">Línea de tiempo</h3>
           <ol className="mt-2 space-y-1 text-sm text-stone-600">
@@ -174,6 +211,7 @@ export default function OrderDetailDialog({
           <div className="mt-6">
             <h3 className="text-sm font-semibold text-brand">Cambiar estado</h3>
             {blocked ? <p className="mt-1 text-xs text-stone-500">{PAYMENT_BLOCK_REASON}</p> : null}
+            {!blocked && courierBlock ? <p className="mt-1 text-xs text-stone-500">{courierBlock}</p> : null}
 
             {cancelling ? (
               <div className="mt-2 space-y-3 rounded-2xl border border-red-200 bg-red-50 p-4">

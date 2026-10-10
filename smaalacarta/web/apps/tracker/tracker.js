@@ -6,8 +6,10 @@ import { markHandoffSent, pendingHandoff } from "/apps/menu-app/lib/orders.js";
 import { whatsappDigits } from "/apps/menu-app/lib/phone.js";
 import { SUPABASE } from "/apps/menu-app/supabase-config.js";
 import {
+  fetchDelivery,
   fetchTracking,
   brandTheme,
+  deliveryNotice,
   isFinalStatus,
   itemRow,
   langSearch,
@@ -31,7 +33,6 @@ const code = parseTrackingCode(window.location.pathname, window.location.search)
 let lang = resolveLang({ search: window.location.search, navigatorLanguage: navigator.language });
 let money;
 let time;
-let STEP_LABELS;
 
 // Todo lo que depende del idioma se recalcula acá, también al cambiarlo (IDIOMA-14).
 function applyLang() {
@@ -44,7 +45,6 @@ function applyLang() {
     minute: "2-digit",
     timeZone: "America/Argentina/Buenos_Aires",
   });
-  STEP_LABELS = stepLabels(lang);
 }
 
 applyLang();
@@ -181,7 +181,9 @@ function paymentCard(data, pay) {
 
 function render(data, { stale }) {
   current = { kind: "data", data, stale };
-  const view = statusView(data.pedido.estado, lang);
+  // Con envío con Repartos al Toque (ENVIO-9 y 28) el camino tiene siete pasos.
+  const courier = Boolean(data.envio);
+  const view = statusView(data.pedido.estado, lang, { courier });
   const theme = applyTheme(data.negocio);
   const nodes = [];
 
@@ -236,8 +238,8 @@ function render(data, { stale }) {
     status.appendChild(
       el(
         "ol",
-        { className: "steps" },
-        STEP_LABELS.map((label, index) =>
+        { className: `steps ${courier ? "steps-courier" : ""}`.trim() },
+        stepLabels(lang, { courier }).map((label, index) =>
           el("li", {
             className: `step ${index < view.step ? "done" : ""} ${index === view.step ? "current done" : ""}`.trim(),
             text: label,
@@ -252,6 +254,18 @@ function render(data, { stale }) {
     status.insertBefore(el("p", { className: "status-scheduled", text: scheduled }), status.firstChild);
   }
   if (layout.status) nodes.push(status);
+
+  // Envío con Repartos al Toque (ENVIO-29): qué pasa con el repartidor. Un pedido cancelado ya no
+  // lo muestra. Todo con textContent.
+  const notice = data.pedido.estado === "cancelled" ? null : deliveryNotice(data.envio, lang, money);
+  if (notice) {
+    nodes.push(
+      el("section", { className: `card delivery delivery-${notice.tone}` }, [
+        el("h2", { text: t("tracker.delivery.title", lang) }),
+        ...notice.lines.map((line) => el("p", { className: "delivery-line", text: line })),
+      ]),
+    );
+  }
 
   // Detalle.
   if (Array.isArray(data.items) && data.items.length > 0) {
@@ -330,12 +344,19 @@ async function start() {
   }
 
   let last = null;
+  // El envío se pide aparte; si esa consulta falla se sigue mostrando el último que se vio.
+  let lastDelivery = null;
 
   async function refresh() {
-    const result = await fetchTracking({ url: SUPABASE.url, key: SUPABASE.key, code });
+    const [result, delivery] = await Promise.all([
+      fetchTracking({ url: SUPABASE.url, key: SUPABASE.key, code }),
+      fetchDelivery({ url: SUPABASE.url, key: SUPABASE.key, code }),
+    ]);
+
+    if (delivery.ok) lastDelivery = delivery.data;
 
     if (result.ok) {
-      last = result.data;
+      last = { ...result.data, envio: lastDelivery };
       render(last, { stale: false });
       return !isFinalStatus(last.pedido.estado);
     }

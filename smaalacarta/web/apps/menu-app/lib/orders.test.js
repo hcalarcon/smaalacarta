@@ -386,3 +386,38 @@ describe("cierre del pedido — SEGUIMIENTO-10", () => {
     expect(handoffUrl(storage, "ffffffffffffffffffff")).toBeNull();
   });
 });
+
+describe("createOrder con envío — ENVIO-21", () => {
+  const ZONA = "11111111-1111-4111-8111-111111111111";
+  const RESPUESTA = { code: "0123456789abcdef0123", number: 1, total: 1 };
+
+  it("manda barrio, teléfono y dirección solo cuando vienen", async () => {
+    const con = fakeFetch(RESPUESTA);
+    await createOrder({
+      ...base,
+      delivery: "delivery",
+      deliveryZone: ZONA,
+      customerPhone: "3644277105",
+      deliveryAddress: "Av. Siempre Viva 742",
+      fetchImpl: con,
+    });
+    expect(JSON.parse(con.mock.calls[0][1].body)).toMatchObject({
+      p_delivery_zone: ZONA,
+      p_customer_phone: "3644277105",
+      p_delivery_address: "Av. Siempre Viva 742",
+    });
+
+    const sin = fakeFetch(RESPUESTA);
+    await createOrder({ ...base, fetchImpl: sin });
+    const body = JSON.parse(sin.mock.calls[0][1].body);
+    expect(body).not.toHaveProperty("p_delivery_zone");
+    expect(body).not.toHaveProperty("p_customer_phone");
+    expect(body).not.toHaveProperty("p_delivery_address");
+  });
+
+  it.each(["P0015", "P0016"])("%s (envío o barrio inválido) da el motivo invalid_zone", async (code) => {
+    const fetchImpl = vi.fn(async () => ({ ok: false, status: 400, json: async () => ({ code }) }));
+    const r = await createOrder({ ...base, deliveryZone: ZONA, fetchImpl });
+    expect(r).toEqual({ ok: false, reason: "invalid_zone" });
+  });
+});

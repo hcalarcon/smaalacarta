@@ -1116,6 +1116,127 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   extras) y llevan las opciones elegidas en el título; la suma de la preferencia coincide con
   `orders.total`.
 
+## ENVIO — Envío con Repartos al Toque
+
+*Aplicado por `supabase/migrations/*_envio_repartos_al_toque.sql` y `src/lib/orders/status.ts`. Cubierto
+por `src/lib/db/delivery.test.ts` y `status.test.ts`. Esta etapa es solo la base de datos: el menú, el
+panel del local y el del repartidor vienen después. `couriers` y `courier_zones` son tablas globales
+(sin `business_id`): hay un solo repartidor y no hay precios distintos según el local.*
+
+- **ENVIO-1** Hay un solo repartidor activo, Repartos al Toque (`couriers`), con sus 39 barrios y precios
+  (`courier_zones`, por `sort_order`); la base no admite un segundo repartidor activo.
+- **ENVIO-2** Solo un superadmin habilita el envío con el repartidor en un negocio (`businesses.courier_delivery`,
+  falso por defecto); el dueño del negocio no puede cambiarlo.
+- **ENVIO-3** Un usuario repartidor (`courier_users`, cargado a mano) ve su repartidor y hace alta, cambio y baja
+  de sus barrios y precios; no toca los de otro repartidor ni se agrega solo como repartidor.
+- **ENVIO-4** Un miembro de un negocio con `courier_delivery` lee el repartidor activo y sus barrios activos; uno
+  de un negocio sin envío, un visitante y un miembro sin relación no leen nada de eso.
+- **ENVIO-5** `create_public_order` con entrega `delivery` en un negocio con `courier_delivery` exige barrio activo
+  del repartidor activo (`P0016`), teléfono de 8 a 15 dígitos y dirección de 5 a 200 caracteres (`22023`).
+- **ENVIO-6** El pedido guarda repartidor, barrio (id y nombre), el precio de lista y el precio final (iguales al
+  crearse), teléfono (solo dígitos), dirección y `courier_status = 'waiting'`; el navegador no manda el precio. Si
+  algo falla no queda ningún pedido.
+- **ENVIO-7** Un barrio en un negocio sin `courier_delivery`, o con una entrega que no es `delivery`, se rechaza
+  (`P0016`). Un pedido sin envío queda sin repartidor y sigue su camino de siempre.
+- **ENVIO-8** Un pedido con envío no sale de Pendiente (salvo para cancelarse) hasta que el envío está aceptado
+  (`P0015`), tanto por `set_order_status` como por un UPDATE directo de un miembro.
+- **ENVIO-9** Un pedido con envío pasa por Pendiente, Confirmado, En preparación, Listo y Entregado al repartidor
+  (`handed_to_courier`), y de ahí el repartidor lo lleva a En camino (`on_the_way`) y Entregado. El local no puede
+  pasarlo a `on_the_way` ni a `delivered` (`P0004`); `canTransition` y `nextStatuses` reflejan las mismas reglas.
+- **ENVIO-10** Un pedido sin envío no admite `handed_to_courier` ni `on_the_way` (`P0004`). Cancelar se puede
+  siempre, salvo un pedido terminado.
+- **ENVIO-11** `set_order_courier` registra que el local consultó al repartidor (`request`) y su respuesta
+  (`accept` o `reject`, con nota y hora). La llama un miembro del negocio del pedido o el repartidor del pedido;
+  `request` solo el miembro; un pedido terminado da `P0004`.
+- **ENVIO-12** Cambiar el precio final del envío exige un motivo y guarda quién y cuándo; el precio de lista no
+  cambia.
+- **ENVIO-13** Cada cambio del envío deja un evento `kind = 'delivery'` con una nota legible; esos eventos no
+  aparecen en la línea de tiempo pública (`public_order_tracking`).
+- **ENVIO-14** `courier_set_status` solo la llama el repartidor del pedido y solo hace
+  `handed_to_courier → on_the_way → delivered`, con su evento de estado y quién lo hizo.
+- **ENVIO-15** `courier_orders` solo la llama el usuario repartidor y devuelve sus pedidos, los más nuevos
+  primero, con negocio, cliente (nombre, teléfono, dirección), total del local, ítems y datos del envío.
+- **ENVIO-16** `public_delivery_zones(slug)` devuelve el repartidor y sus barrios con precio solo si el negocio está
+  publicado, activo, con plan completo y `courier_delivery`, y el repartidor activo; si no, `null`.
+- **ENVIO-17** `public_order_delivery(code)` devuelve repartidor, barrio, precio de lista, precio, motivo del cambio,
+  estado y nota del envío; nunca teléfono ni dirección.
+- **ENVIO-18** El superadmin habilita o deshabilita el envío con Repartos al Toque por negocio desde su ficha
+  (`updateCourierDeliveryAction`: exige superadmin y cambia solo `businesses.courier_delivery`).
+- **ENVIO-19** El listado `/superadmin` marca con "Envío con Repartos al Toque" los negocios que lo tienen.
+- **ENVIO-20** El checkout del menú interactivo pide barrio, dirección y teléfono (obligatorios) solo con entrega
+  `delivery` y barrios disponibles (`lib/delivery-zones.js`, `public_delivery_zones`); debajo muestra el aviso con
+  el precio del barrio elegido ("Envío a {barrio}: $…, lo hace Repartos al Toque, se paga al repartidor, no está
+  incluido en el total"). Si los barrios fallan o vienen `null`, el checkout queda como antes.
+- **ENVIO-21** `createOrder` manda `p_delivery_zone`, `p_customer_phone` y `p_delivery_address` solo cuando vienen
+  (nunca un precio) y traduce `P0015` y `P0016` al motivo `invalid_zone`, que vuelve a pedir los barrios.
+- **ENVIO-22** El mensaje de WhatsApp al local suma barrio, "Envío: $X (se paga al repartidor)", dirección y
+  teléfono, siempre en español (IDIOMA-5); los textos nuevos de la interfaz están en es, en y pt y todo dato del
+  negocio o del repartidor se pinta con `textContent`.
+- **ENVIO-23** `src/lib/orders/courier.ts` arma el mensaje de WhatsApp a Repartos al Toque (local, número de pedido,
+  barrio, dirección, nombre y teléfono del cliente, hora de listo, total del pedido, pago, precio final del envío y
+  link de seguimiento) y su link (`api.whatsapp.com`, solo dígitos, 549 a un número argentino de 10 dígitos); sin
+  WhatsApp cargado no hay link. La hora de listo sugerida es la del pedido programado o 20 minutos desde ahora.
+- **ENVIO-24** Con el envío sin aceptar el local puede pedirlo (abre WhatsApp y registra `request`), registrar que el
+  repartidor aceptó (nota opcional y precio final) o que no puede (`setOrderCourierAction`); un precio distinto del
+  actual exige motivo (hasta 200) y la nota admite hasta 120. Aceptado, o pedido terminado: ninguna de las tres.
+- **ENVIO-25** Si pasaron 10 minutos desde `courier_requested_at` sin respuesta, la tarjeta y el detalle lo avisan.
+- **ENVIO-26** La tarjeta y el detalle de un pedido con envío muestran barrio, estado del envío y precio (con el de
+  lista y el motivo si cambió); mientras no esté aceptado, confirmar queda deshabilitado con el motivo visible. Tras
+  Listo, el paso del local es "Entregar al repartidor"; En camino y Entregado se ven pero no son botones del local.
+- **ENVIO-27** En el tablero, `handed_to_courier` y `on_the_way` van en la columna Listos, y pasan al historial al
+  quedar `delivered`.
+- **ENVIO-28** El seguimiento muestra los estados `handed_to_courier` ("Entregado al repartidor") y `on_the_way`
+  ("En camino") en la línea de tiempo y, en un pedido con envío, un camino de siete pasos; "Listo" con envío no dice
+  que pase a buscarlo. Los textos nuevos están en es, en y pt.
+- **ENVIO-29** El seguimiento pide además `public_order_delivery` y muestra un bloque de envío según `estado`:
+  waiting o requested, "Buscando repartidor"; accepted, "Envío confirmado con {repartidor} · {nota} · {precio} al
+  repartidor" y, si el precio cambió, "Antes {precio_lista}: {motivo}"; rejected, que el repartidor no puede y el
+  local se va a comunicar. Un error de esa consulta no borra el último envío visto; un pedido cancelado no lo
+  muestra; todo con `textContent`, sin teléfono ni dirección.
+- **ENVIO-30** `/repartidor` exige sesión como `/dashboard` y `/superadmin`; un usuario sin negocio que es el usuario
+  repartidor (`my_courier_id()`) va a `/repartidor` en lugar de `/sin-negocio`, y quien no lo es vuelve a su panel
+  (`courierAccess`). La contraseña temporal y `/cambiar-contrasena` funcionan igual que en cualquier cuenta.
+- **ENVIO-31** `/repartidor` muestra los pedidos de `courier_orders()` en tres grupos (`src/lib/courier/panel.ts`): Por
+  responder (envío waiting o requested), Aceptados en curso (accepted y no terminados) e Historial (entregados,
+  cancelados o rechazados). Cada pedido lleva el local (nombre, dirección y WhatsApp), número y hora (y hora
+  programada), cliente (nombre, teléfono con `tel:` y WhatsApp, dirección), barrio, precio de lista y final con el
+  motivo, total del local y pago, productos con opciones y la nota del envío.
+- **ENVIO-32** Por responder se puede Aceptar (nota opcional y precio final; si cambia, motivo obligatorio) o "No
+  puedo" (`set_order_courier`); en `handed_to_courier` solo En camino y en `on_the_way` solo Entregado
+  (`courier_set_status`). Aceptado antes de la entrega del local, terminado o rechazado: ninguna acción.
+- **ENVIO-33** El panel se refresca solo (`router.refresh()` cada 15 s) y avisa con sonido, y en el título de la
+  pestaña, los pedidos nuevos por responder, con el mismo `alerts.ts` y `sound.ts` del tablero del local (el criterio
+  de "pendiente" es un parámetro).
+- **ENVIO-34** Las acciones de `/repartidor` empiezan por `requireCourier()` y nunca reciben un id de repartidor del
+  navegador: lo toman de la sesión; la base comprueba de quién es cada pedido y cada barrio.
+- **ENVIO-35** El menú del repartidor tiene Pedidos y Barrios y precios, y "Salir"; el panel usa la paleta del admin.
+- **ENVIO-36** `/repartidor/zonas` permite alta, edición de nombre y precio, activar o desactivar, borrar con
+  confirmación y ordenar arrastrando los barrios de su repartidor. Un precio nuevo vale para los pedidos nuevos: los
+  hechos conservan su precio de lista.
+- **ENVIO-37** `src/lib/courier/zones.ts` valida el barrio: nombre de 1 a 60 caracteres y único (sin mirar
+  mayúsculas), precio de 0 en adelante ("4500", "4.500" o "4500,50").
+- **ENVIO-38** En un pedido con envío pagado en efectivo, el repartidor cobra el pedido y el envío: lo del pedido
+  (`orders.total`, sin el envío) lo rinde al local y el envío es suyo. Con otro medio de pago no hay nada que rendir.
+  Solo se rinde un pedido ya entregado.
+- **ENVIO-39** La rendición se marca pedido por pedido en dos pasos: `courier_mark_settled` (solo el repartidor del
+  pedido: exige efectivo, entregado y sin marcar, si no `P0004`) y después `business_confirm_settlement` (solo un
+  miembro del negocio: exige que el repartidor ya la haya marcado y que no esté confirmada, si no `P0004`). Cada marca
+  guarda hora y quién, y deja un evento `delivery` ("Rendido al local: $X" / "Rendición recibida"). Las marcas son
+  fijas: no se repiten ni se deshacen.
+- **ENVIO-40** Las cuatro columnas (`settled_at`, `settled_by`, `settlement_received_at`, `settlement_received_by`) no se
+  cambian por UPDATE directo (un trigger lo bloquea con `42501`): solo las dos funciones. `courier_orders()` las
+  entrega en `rendicion`.
+- **ENVIO-41** El mensaje de consulta al repartidor dice cuánto cobrar: en efectivo, "Cobrar al cliente: $pedido +
+  $envío = $total (rendir $pedido al local)"; con otro medio, "Pagado con {medio}: cobrar solo el envío $envío".
+  El panel del repartidor muestra lo mismo en cada pedido.
+- **ENVIO-42** `src/lib/courier/settlements.ts` calcula el estado de la rendición (`none`, `to_settle`, `settled`,
+  `received`), el botón que corresponde y los totales por local (pendiente de rendir, rendido sin confirmar y
+  recibido) a partir de los pedidos de `courier_orders()`. `/repartidor` suma la pestaña Rendiciones y el botón
+  Rendido (con confirmación) en cada pedido entregado en efectivo.
+- **ENVIO-43** El panel del local muestra el estado de la rendición en la tarjeta y el detalle del pedido y, cuando
+  el repartidor ya la marcó, el botón Recibido (con confirmación). `/dashboard/orders` resume lo pendiente de rendir
+  y lo ya rendido de los pedidos que muestra el historial.
+
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 
 *Aplicado por `app/dashboard/page.tsx`, `src/lib/db/summary.ts`, `src/lib/dates.ts`,

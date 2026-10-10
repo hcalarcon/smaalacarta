@@ -45,6 +45,8 @@ const REASONS = {
   P0012: "invalid_schedule", // la hora elegida no es válida (ya pasó, falta anticipación o está cerrado)
   P0014: "invalid_options", // las opciones elegidas no son válidas (cambiaron, no corresponden o no cumplen las reglas)
   P0013: "preorder_closed", // ya no se toman pedidos anticipados (pasó el corte, no los acepta o está abierto)
+  P0015: "invalid_zone", // el envío todavía no está aceptado (no debería llegar desde el menú)
+  P0016: "invalid_zone", // barrio inexistente, dado de baja o sin envío con repartidor
   P0001: "unavailable", // un producto ya no está disponible
   P0002: "unavailable", // el negocio no existe o no está publicado
   22023: "invalid", // datos inválidos
@@ -63,6 +65,9 @@ export async function createOrder({
   items,
   scheduledFor,
   preorder,
+  deliveryZone,
+  customerPhone,
+  deliveryAddress,
   fetchImpl = globalThis.fetch,
 }) {
   if (!isSupabaseConfigured({ url, key }) || !slug || !Array.isArray(items) || items.length === 0) {
@@ -89,6 +94,10 @@ export async function createOrder({
         ...(scheduledFor ? { p_scheduled_for: scheduledFor } : {}),
         // Pedido anticipado (negocio cerrado): la base lo fecha con la próxima apertura.
         ...(preorder ? { p_preorder: true } : {}),
+        // Envío con repartidor (ENVIO-21): solo el id del barrio; el precio lo pone la base.
+        ...(deliveryZone ? { p_delivery_zone: deliveryZone } : {}),
+        ...(customerPhone ? { p_customer_phone: customerPhone } : {}),
+        ...(deliveryAddress ? { p_delivery_address: deliveryAddress } : {}),
       }),
       signal:
         typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(10000) : undefined,
