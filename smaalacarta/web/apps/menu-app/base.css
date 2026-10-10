@@ -332,6 +332,15 @@ html[data-template] .checkout .checkout-header {
   display: none;
 }
 
+/* Barrio, dirección y teléfono del envío con repartidor (ENVIO-20): no cambian el espaciado del formulario. */
+.envio-repartidor {
+  display: contents;
+}
+
+.envio-repartidor[hidden] {
+  display: none;
+}
+
 /* Datos para transferir (alias y CBU/CVU), cada uno con su botón "Copiar". Heredan el color de
    texto de la plantilla, como el resto del panel. */
 :is(.gracias-pedido, .datos-transferencia) .gracias-transferencia {

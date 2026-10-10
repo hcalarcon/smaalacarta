@@ -1163,6 +1163,15 @@ panel del local y el del repartidor vienen después. `couriers` y `courier_zones
 - **ENVIO-18** El superadmin habilita o deshabilita el envío con Repartos al Toque por negocio desde su ficha
   (`updateCourierDeliveryAction`: exige superadmin y cambia solo `businesses.courier_delivery`).
 - **ENVIO-19** El listado `/superadmin` marca con "Envío con Repartos al Toque" los negocios que lo tienen.
+- **ENVIO-20** El checkout del menú interactivo pide barrio, dirección y teléfono (obligatorios) solo con entrega
+  `delivery` y barrios disponibles (`lib/delivery-zones.js`, `public_delivery_zones`); debajo muestra el aviso con
+  el precio del barrio elegido ("Envío a {barrio}: $…, lo hace Repartos al Toque, se paga al repartidor, no está
+  incluido en el total"). Si los barrios fallan o vienen `null`, el checkout queda como antes.
+- **ENVIO-21** `createOrder` manda `p_delivery_zone`, `p_customer_phone` y `p_delivery_address` solo cuando vienen
+  (nunca un precio) y traduce `P0015` y `P0016` al motivo `invalid_zone`, que vuelve a pedir los barrios.
+- **ENVIO-22** El mensaje de WhatsApp al local suma barrio, "Envío: $X (se paga al repartidor)", dirección y
+  teléfono, siempre en español (IDIOMA-5); los textos nuevos de la interfaz están en es, en y pt y todo dato del
+  negocio o del repartidor se pinta con `textContent`.
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 
