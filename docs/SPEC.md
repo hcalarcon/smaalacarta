@@ -1116,6 +1116,51 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   extras) y llevan las opciones elegidas en el título; la suma de la preferencia coincide con
   `orders.total`.
 
+## ENVIO — Envío con Repartos al Toque
+
+*Aplicado por `supabase/migrations/*_envio_repartos_al_toque.sql` y `src/lib/orders/status.ts`. Cubierto
+por `src/lib/db/delivery.test.ts` y `status.test.ts`. Esta etapa es solo la base de datos: el menú, el
+panel del local y el del repartidor vienen después. `couriers` y `courier_zones` son tablas globales
+(sin `business_id`): hay un solo repartidor y no hay precios distintos según el local.*
+
+- **ENVIO-1** Hay un solo repartidor activo, Repartos al Toque (`couriers`), con sus 39 barrios y precios
+  (`courier_zones`, por `sort_order`); la base no admite un segundo repartidor activo.
+- **ENVIO-2** Solo un superadmin habilita el envío con el repartidor en un negocio (`businesses.courier_delivery`,
+  falso por defecto); el dueño del negocio no puede cambiarlo.
+- **ENVIO-3** Un usuario repartidor (`courier_users`, cargado a mano) ve su repartidor y hace alta, cambio y baja
+  de sus barrios y precios; no toca los de otro repartidor ni se agrega solo como repartidor.
+- **ENVIO-4** Un miembro de un negocio con `courier_delivery` lee el repartidor activo y sus barrios activos; uno
+  de un negocio sin envío, un visitante y un miembro sin relación no leen nada de eso.
+- **ENVIO-5** `create_public_order` con entrega `delivery` en un negocio con `courier_delivery` exige barrio activo
+  del repartidor activo (`P0016`), teléfono de 8 a 15 dígitos y dirección de 5 a 200 caracteres (`22023`).
+- **ENVIO-6** El pedido guarda repartidor, barrio (id y nombre), el precio de lista y el precio final (iguales al
+  crearse), teléfono (solo dígitos), dirección y `courier_status = 'waiting'`; el navegador no manda el precio. Si
+  algo falla no queda ningún pedido.
+- **ENVIO-7** Un barrio en un negocio sin `courier_delivery`, o con una entrega que no es `delivery`, se rechaza
+  (`P0016`). Un pedido sin envío queda sin repartidor y sigue su camino de siempre.
+- **ENVIO-8** Un pedido con envío no sale de Pendiente (salvo para cancelarse) hasta que el envío está aceptado
+  (`P0015`), tanto por `set_order_status` como por un UPDATE directo de un miembro.
+- **ENVIO-9** Un pedido con envío pasa por Pendiente, Confirmado, En preparación, Listo y Entregado al repartidor
+  (`handed_to_courier`), y de ahí el repartidor lo lleva a En camino (`on_the_way`) y Entregado. El local no puede
+  pasarlo a `on_the_way` ni a `delivered` (`P0004`); `canTransition` y `nextStatuses` reflejan las mismas reglas.
+- **ENVIO-10** Un pedido sin envío no admite `handed_to_courier` ni `on_the_way` (`P0004`). Cancelar se puede
+  siempre, salvo un pedido terminado.
+- **ENVIO-11** `set_order_courier` registra que el local consultó al repartidor (`request`) y su respuesta
+  (`accept` o `reject`, con nota y hora). La llama un miembro del negocio del pedido o el repartidor del pedido;
+  `request` solo el miembro; un pedido terminado da `P0004`.
+- **ENVIO-12** Cambiar el precio final del envío exige un motivo y guarda quién y cuándo; el precio de lista no
+  cambia.
+- **ENVIO-13** Cada cambio del envío deja un evento `kind = 'delivery'` con una nota legible; esos eventos no
+  aparecen en la línea de tiempo pública (`public_order_tracking`).
+- **ENVIO-14** `courier_set_status` solo la llama el repartidor del pedido y solo hace
+  `handed_to_courier → on_the_way → delivered`, con su evento de estado y quién lo hizo.
+- **ENVIO-15** `courier_orders` solo la llama el usuario repartidor y devuelve sus pedidos, los más nuevos
+  primero, con negocio, cliente (nombre, teléfono, dirección), total del local, ítems y datos del envío.
+- **ENVIO-16** `public_delivery_zones(slug)` devuelve el repartidor y sus barrios con precio solo si el negocio está
+  publicado, activo, con plan completo y `courier_delivery`, y el repartidor activo; si no, `null`.
+- **ENVIO-17** `public_order_delivery(code)` devuelve repartidor, barrio, precio de lista, precio, motivo del cambio,
+  estado y nota del envío; nunca teléfono ni dirección.
+
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 
 *Aplicado por `app/dashboard/page.tsx`, `src/lib/db/summary.ts`, `src/lib/dates.ts`,
