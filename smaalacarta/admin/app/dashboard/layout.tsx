@@ -18,6 +18,7 @@ export default async function DashboardLayout({
 
   if (state === "login") redirect("/login");
   if (state === "superadmin") redirect("/superadmin");
+  if (state === "repartidor") redirect("/repartidor");
   if (state === "sin-negocio") redirect("/sin-negocio");
 
   // Un superadmin que además tiene negocio puede pasar a /superadmin.

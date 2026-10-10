@@ -1193,6 +1193,9 @@ panel del local y el del repartidor vienen después. `couriers` y `courier_zones
   repartidor" y, si el precio cambió, "Antes {precio_lista}: {motivo}"; rejected, que el repartidor no puede y el
   local se va a comunicar. Un error de esa consulta no borra el último envío visto; un pedido cancelado no lo
   muestra; todo con `textContent`, sin teléfono ni dirección.
+- **ENVIO-30** `/repartidor` exige sesión como `/dashboard` y `/superadmin`; un usuario sin negocio que es el usuario
+  repartidor (`my_courier_id()`) va a `/repartidor` en lugar de `/sin-negocio`, y quien no lo es vuelve a su panel
+  (`courierAccess`). La contraseña temporal y `/cambiar-contrasena` funcionan igual que en cualquier cuenta.
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 

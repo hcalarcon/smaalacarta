@@ -23,7 +23,7 @@ export default function DashboardNav({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
-  const roots = ["/dashboard", "/superadmin"];
+  const roots = ["/dashboard", "/superadmin", "/repartidor"];
 
   return (
     <nav aria-label="Principal" className="flex flex-col gap-1">
