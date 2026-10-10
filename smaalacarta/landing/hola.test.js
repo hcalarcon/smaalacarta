@@ -5,7 +5,8 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 const DIR = dirname(fileURLToPath(import.meta.url));
-const read = (file) => readFileSync(join(DIR, file), "utf8");
+// Sin depender de cómo git sacó el archivo (CRLF en Windows): los regex buscan "\n".
+const read = (file) => readFileSync(join(DIR, file), "utf8").replace(/\r\n/g, "\n");
 const HTML = read("hola.html");
 const CSS = read("hola.css");
 const INDEX = read("index.html");
