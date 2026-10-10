@@ -1196,6 +1196,25 @@ panel del local y el del repartidor vienen después. `couriers` y `courier_zones
 - **ENVIO-30** `/repartidor` exige sesión como `/dashboard` y `/superadmin`; un usuario sin negocio que es el usuario
   repartidor (`my_courier_id()`) va a `/repartidor` en lugar de `/sin-negocio`, y quien no lo es vuelve a su panel
   (`courierAccess`). La contraseña temporal y `/cambiar-contrasena` funcionan igual que en cualquier cuenta.
+- **ENVIO-31** `/repartidor` muestra los pedidos de `courier_orders()` en tres grupos (`src/lib/courier/panel.ts`): Por
+  responder (envío waiting o requested), Aceptados en curso (accepted y no terminados) e Historial (entregados,
+  cancelados o rechazados). Cada pedido lleva el local (nombre, dirección y WhatsApp), número y hora (y hora
+  programada), cliente (nombre, teléfono con `tel:` y WhatsApp, dirección), barrio, precio de lista y final con el
+  motivo, total del local y pago, productos con opciones y la nota del envío.
+- **ENVIO-32** Por responder se puede Aceptar (nota opcional y precio final; si cambia, motivo obligatorio) o "No
+  puedo" (`set_order_courier`); en `handed_to_courier` solo En camino y en `on_the_way` solo Entregado
+  (`courier_set_status`). Aceptado antes de la entrega del local, terminado o rechazado: ninguna acción.
+- **ENVIO-33** El panel se refresca solo (`router.refresh()` cada 15 s) y avisa con sonido, y en el título de la
+  pestaña, los pedidos nuevos por responder, con el mismo `alerts.ts` y `sound.ts` del tablero del local (el criterio
+  de "pendiente" es un parámetro).
+- **ENVIO-34** Las acciones de `/repartidor` empiezan por `requireCourier()` y nunca reciben un id de repartidor del
+  navegador: lo toman de la sesión; la base comprueba de quién es cada pedido y cada barrio.
+- **ENVIO-35** El menú del repartidor tiene Pedidos y Barrios y precios, y "Salir"; el panel usa la paleta del admin.
+- **ENVIO-36** `/repartidor/zonas` permite alta, edición de nombre y precio, activar o desactivar, borrar con
+  confirmación y ordenar arrastrando los barrios de su repartidor. Un precio nuevo vale para los pedidos nuevos: los
+  hechos conservan su precio de lista.
+- **ENVIO-37** `src/lib/courier/zones.ts` valida el barrio: nombre de 1 a 60 caracteres y único (sin mirar
+  mayúsculas), precio de 0 en adelante ("4500", "4.500" o "4500,50").
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 

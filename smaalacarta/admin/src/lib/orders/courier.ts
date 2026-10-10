@@ -196,13 +196,18 @@ export function courierRequestMessage({
 }
 
 // Número listo para WhatsApp: solo dígitos y, si es argentino de 10 dígitos (con o sin 0 delante),
-// con 549 adelante. Igual que en el menú público.
-export function courierWhatsappLink(whatsapp: string | null | undefined, message: string) {
-  const digits = String(whatsapp ?? "").replace(/\D/g, "");
-  if (!digits) return null;
+// con 549 adelante. Igual que en el menú público. Vacío si no hay dígitos.
+export function whatsappDigits(value: string | null | undefined) {
+  const digits = String(value ?? "").replace(/\D/g, "");
+  if (!digits) return "";
 
   const local = digits.replace(/^0/, "");
-  const phone = local.length === 10 ? `549${local}` : digits;
+  return local.length === 10 ? `549${local}` : digits;
+}
+
+export function courierWhatsappLink(whatsapp: string | null | undefined, message: string) {
+  const phone = whatsappDigits(whatsapp);
+  if (!phone) return null;
 
   return `https://api.whatsapp.com/send?phone=${phone}&text=${encodeURIComponent(message)}`;
 }
