@@ -5,9 +5,11 @@ import { useEffect, useState } from "react";
 
 import CourierOrderCard from "./CourierOrderCard";
 import { useNewOrderAlert } from "./useNewOrderAlert";
-import { advanceOrderAction, respondOrderAction } from "../actions";
+import { advanceOrderAction, markSettledAction, respondOrderAction } from "../actions";
 import { GROUP_TITLES, isToRespond, splitOrders, type CourierPanelOrder, type PanelGroup } from "@/lib/courier/panel";
+import { courierOrderState, grandTotals, totalsByBusiness } from "@/lib/courier/settlements";
 import type { CourierResponseInput } from "@/lib/orders/courier";
+import { formatMoney } from "@/lib/promotions/pricing";
 
 const REFRESH_MS = 15_000;
 const HISTORY_SHOWN = 20;
@@ -38,6 +40,7 @@ export default function CourierOrdersClient({
   // La hora arranca con la del servidor para que el primer render coincida en los dos lados.
   const [now, setNow] = useState(() => new Date(serverNow));
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [tab, setTab] = useState<"pedidos" | "rendiciones">("pedidos");
   const [error, setError] = useState<{ id: string; message: string } | null>(null);
 
   const { soundOn, audioReady, toggleSound, soundOnRef } = useNewOrderAlert({
@@ -75,6 +78,9 @@ export default function CourierOrdersClient({
   }
 
   const groups = splitOrders(orders);
+  const settlements = totalsByBusiness(orders);
+  const settlementTotals = grandTotals(settlements);
+  const toSettleCount = orders.filter((item) => courierOrderState(item) === "to_settle").length;
   const order: PanelGroup[] = ["por_responder", "en_curso", "historial"];
 
   return (
@@ -103,8 +109,87 @@ export default function CourierOrdersClient({
         </div>
       </section>
 
-      {order.map((group) => {
-        const list = group === "historial" ? groups[group].slice(0, HISTORY_SHOWN) : groups[group];
+      <div role="tablist" aria-label="Secciones" className="flex gap-2">
+        {(
+          [
+            ["pedidos", "Pedidos"],
+            ["rendiciones", toSettleCount > 0 ? `Rendiciones (${toSettleCount})` : "Rendiciones"],
+          ] as const
+        ).map(([key, label]) => (
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={tab === key}
+            onClick={() => setTab(key)}
+            className={`min-h-11 rounded-xl px-5 py-2 text-sm font-semibold transition ${
+              tab === key
+                ? "bg-brand text-white"
+                : "border border-line-strong bg-white text-brand hover:bg-cream"
+            }`}
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "rendiciones" ? (
+        <section aria-label="Rendiciones" className="space-y-3">
+          <header>
+            <h2 className="text-xl font-semibold text-brand">Rendiciones al local</h2>
+            <p className="text-xs text-stone-500">
+              Efectivo que cobraste en pedidos entregados y le rendís al local (sin el envío, que es
+              tuyo). Marcá cada pedido como Rendido desde Pedidos.
+            </p>
+          </header>
+
+          {settlements.length === 0 ? (
+            <p className="rounded-2xl border border-dashed border-line-strong bg-white p-4 text-center text-sm text-stone-400">
+              No hay efectivo para rendir.
+            </p>
+          ) : (
+            <div className="overflow-x-auto rounded-2xl border border-line bg-white">
+              <table className="w-full min-w-[520px] text-left text-sm">
+                <thead>
+                  <tr className="border-b border-line text-xs uppercase tracking-wide text-stone-400">
+                    <th className="px-4 py-2 font-medium">Local</th>
+                    <th className="px-4 py-2 text-right font-medium">Pendiente de rendir</th>
+                    <th className="px-4 py-2 text-right font-medium">Rendido sin confirmar</th>
+                    <th className="px-4 py-2 text-right font-medium">Recibido</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-line">
+                  {settlements.map((row) => (
+                    <tr key={row.business} className="text-stone-700">
+                      <td className="px-4 py-2.5 font-medium text-brand">{row.business}</td>
+                      <td className="px-4 py-2.5 text-right font-semibold">{formatMoney(row.pending)}</td>
+                      <td className="px-4 py-2.5 text-right">{formatMoney(row.settled)}</td>
+                      <td className="px-4 py-2.5 text-right">{formatMoney(row.received)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="border-t border-line font-semibold text-stone-900">
+                    <td className="px-4 py-2.5">Total</td>
+                    <td className="px-4 py-2.5 text-right">{formatMoney(settlementTotals.pending)}</td>
+                    <td className="px-4 py-2.5 text-right">{formatMoney(settlementTotals.settled)}</td>
+                    <td className="px-4 py-2.5 text-right">{formatMoney(settlementTotals.received)}</td>
+                  </tr>
+                </tfoot>
+              </table>
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      {tab === "pedidos" ? order.map((group) => {
+        // Del historial se ven los últimos, pero nunca queda afuera un pedido sin rendir.
+        const list =
+          group === "historial"
+            ? groups[group].filter(
+                (item, index) => index < HISTORY_SHOWN || courierOrderState(item) === "to_settle",
+              )
+            : groups[group];
 
         return (
           <section key={group} aria-label={GROUP_TITLES[group]} className="space-y-3">
@@ -137,13 +222,14 @@ export default function CourierOrdersClient({
                       )
                     }
                     onAdvance={(status) => run(item.id, () => advanceOrderAction(item.id, status))}
+                    onSettle={() => run(item.id, () => markSettledAction(item.id))}
                   />
                 ))}
               </div>
             )}
           </section>
         );
-      })}
+      }) : null}
     </div>
   );
 }

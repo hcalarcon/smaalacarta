@@ -32,6 +32,8 @@ export type CourierPanelOrder = {
     consultado_el: string | null;
     respondido_el: string | null;
   };
+  // Rendición del efectivo (ENVIO-40): cuándo la marcó el repartidor y cuándo la confirmó el local.
+  rendicion: { rendido_el: string | null; recibido_el: string | null };
 };
 
 export type PanelGroup = "por_responder" | "en_curso" | "historial";

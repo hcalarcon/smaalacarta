@@ -41,6 +41,7 @@ const order = (
     consultado_el: null,
     respondido_el: null,
   },
+  rendicion: { rendido_el: null, recibido_el: null },
   ...extra,
 });
 

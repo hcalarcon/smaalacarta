@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   confirmBlockReason,
+  collectionInfo,
   courierActions,
   courierRequestMessage,
   courierStatusLabel,
@@ -102,6 +103,43 @@ describe("mensaje de WhatsApp al repartidor — ENVIO-23", () => {
   it("sin WhatsApp cargado no hay link", () => {
     expect(courierWhatsappLink(null, "x")).toBeNull();
     expect(courierWhatsappLink("", "x")).toBeNull();
+  });
+});
+
+describe("cuánto cobrar — ENVIO-41", () => {
+  // Sin espacios no cortantes ni centavos en cero: el formato de moneda no es lo que se prueba.
+  const plain = (text: string) => text.replace(/\s/g, " ").replace(/,00/g, "");
+  const link = "https://ana.smaalacarta.com.ar/pedido/0123456789abcdef0123";
+  const message = (extra: Partial<CourierOrder> = {}) =>
+    courierRequestMessage({ businessName: "Ana Resto", order: order(extra), readyAt: "21:30", trackingLink: link });
+
+  it("en efectivo cobra pedido más envío y avisa cuánto rendir", () => {
+    const text = message();
+    expect(plain(text)).toContain("Cobrar al cliente: $ 8.200 + $ 5.000 = $ 13.200 (rendir $ 8.200 al local)");
+  });
+
+  it("usa el precio final del envío", () => {
+    expect(plain(message({ delivery_fee: 6500 }))).toContain("= $ 14.700 (rendir $ 8.200 al local)");
+  });
+
+  it("con otro medio de pago cobra solo el envío", () => {
+    const text = message({ payment: "transferencia" });
+    expect(plain(text)).toContain("Pagado con Transferencia: cobrar solo el envío $ 5.000");
+    expect(text).not.toContain("rendir");
+  });
+
+  it("collectionInfo separa lo que se cobra de lo que se rinde", () => {
+    expect(collectionInfo({ payment: "efectivo", total: 8200, fee: 5000 })).toMatchObject({
+      cash: true,
+      toCollect: 13200,
+      toSettle: 8200,
+    });
+    expect(collectionInfo({ payment: "mercadopago", total: 8200, fee: 5000 })).toMatchObject({
+      cash: false,
+      toCollect: 5000,
+      toSettle: 0,
+    });
+    expect(collectionInfo({ payment: null, total: 100, fee: null })).toMatchObject({ cash: false, toCollect: 0 });
   });
 });
 

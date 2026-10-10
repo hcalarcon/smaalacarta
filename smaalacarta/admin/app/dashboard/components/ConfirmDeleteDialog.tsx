@@ -7,6 +7,9 @@ type ConfirmDeleteDialogProps = {
   onConfirm: () => void | Promise<void>;
   onClose: () => void;
   loading?: boolean;
+  // Para confirmar algo que no es borrar (p. ej. una rendición): el botón y su espera.
+  confirmLabel?: string;
+  loadingLabel?: string;
 };
 
 export default function ConfirmDeleteDialog({
@@ -16,6 +19,8 @@ export default function ConfirmDeleteDialog({
   onConfirm,
   onClose,
   loading = false,
+  confirmLabel = "Eliminar",
+  loadingLabel = "Eliminando...",
 }: ConfirmDeleteDialogProps) {
   if (!open) return null;
 
@@ -41,7 +46,7 @@ export default function ConfirmDeleteDialog({
             onClick={onConfirm}
             className="rounded-2xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
           >
-            {loading ? "Eliminando..." : "Eliminar"}
+            {loading ? loadingLabel : confirmLabel}
           </button>
         </div>
       </div>

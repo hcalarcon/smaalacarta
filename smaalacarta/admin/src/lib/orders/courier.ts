@@ -1,4 +1,5 @@
 import { formatMoney } from "@/lib/promotions/pricing";
+import { PAYMENT_OPTIONS } from "@/lib/settings/payment";
 import { isFinal, type DeliveryContext } from "./status";
 
 // Envío con Repartos al Toque en el panel del local (ENVIO-23 a 26). Reglas puras: el panel las
@@ -162,6 +163,36 @@ export function readyTimeDefault(order: Pick<CourierOrder, "scheduled_for">, now
   return timeFormatter.format(new Date(Math.ceil(target / FIVE) * FIVE));
 }
 
+// Qué cobra el repartidor en la puerta (ENVIO-38 y 41). En efectivo cobra el pedido y el envío: lo del
+// pedido lo rinde al local y el envío es suyo. Con otro medio de pago solo cobra el envío.
+export function collectionInfo({
+  payment,
+  total,
+  fee,
+}: {
+  payment: string | null;
+  total: number;
+  fee: number | null;
+}) {
+  const order = Number(total) || 0;
+  const delivery = Number(fee ?? 0) || 0;
+  const cash = payment === "efectivo";
+
+  const label = PAYMENT_OPTIONS.find((option) => option.key === payment)?.label ?? payment ?? "otro medio";
+
+  const text = cash
+    ? `Cobrar al cliente: ${formatMoney(order)} + ${formatMoney(delivery)} = ${formatMoney(order + delivery)} (rendir ${formatMoney(order)} al local)`
+    : `Pagado con ${label}: cobrar solo el envío ${formatMoney(delivery)}`;
+
+  return {
+    cash,
+    // Lo que el cliente le paga al repartidor y lo que de eso se rinde al local.
+    toCollect: cash ? order + delivery : delivery,
+    toSettle: cash ? order : 0,
+    text,
+  };
+}
+
 // Mensaje de WhatsApp a Repartos al Toque con todo lo que necesita para salir (ENVIO-23).
 // Siempre en español.
 export function courierRequestMessage({
@@ -188,6 +219,7 @@ export function courierRequestMessage({
     `💰 Total del pedido: ${formatMoney(Number(order.total))}`,
     `💳 Pago: ${order.payment || "-"}`,
     `🛵 Envío: ${formatMoney(Number(order.delivery_fee ?? 0))}`,
+    `💵 ${collectionInfo({ payment: order.payment, total: order.total, fee: order.delivery_fee }).text}`,
     "",
     `🔎 Seguimiento: ${trackingLink}`,
   ];

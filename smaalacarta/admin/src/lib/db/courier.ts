@@ -35,6 +35,16 @@ export async function courierSetStatus(
   return error ? { error: { code: error.code, message: error.message } } : { ok: true };
 }
 
+// El repartidor marca que ya rindió al local lo cobrado del pedido (ENVIO-39). La base exige que
+// sea suyo, en efectivo, entregado y sin marcar.
+export async function courierMarkSettled(orderId: string): Promise<{ ok: true } | DbFailure> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("courier_mark_settled", { p_order_id: orderId });
+
+  return error ? { error: { code: error.code, message: error.message } } : { ok: true };
+}
+
 export type CourierZone = {
   id: string;
   name: string;

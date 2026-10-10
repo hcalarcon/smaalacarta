@@ -8,12 +8,18 @@ import {
   telLink,
   type CourierPanelOrder,
 } from "@/lib/courier/panel";
-import { validateCourierResponse, type CourierResponseInput } from "@/lib/orders/courier";
+import { canMarkSettled, courierOrderState, settlementLabel } from "@/lib/courier/settlements";
+import {
+  collectionInfo,
+  validateCourierResponse,
+  type CourierResponseInput,
+} from "@/lib/orders/courier";
 import { formatDateTime, timeAgo } from "@/lib/orders/format";
 import { itemOptionLines } from "@/lib/orders/item-options";
 import { preorderLabel, scheduledLabel } from "@/lib/orders/scheduled";
 import { STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
+import ConfirmDeleteDialog from "../../dashboard/components/ConfirmDeleteDialog";
 
 type Errors = Partial<Record<"note" | "fee" | "reason", string>>;
 
@@ -33,6 +39,7 @@ export default function CourierOrderCard({
   error,
   onRespond,
   onAdvance,
+  onSettle,
 }: {
   order: CourierPanelOrder;
   now: Date;
@@ -40,14 +47,19 @@ export default function CourierOrderCard({
   error: string | null;
   onRespond: (action: "accept" | "reject", input: CourierResponseInput) => void;
   onAdvance: (status: "on_the_way" | "delivered") => void;
+  // Marca que ya rindió al local lo cobrado del pedido (ENVIO-42): no se deshace.
+  onSettle: () => void;
 }) {
   const [form, setForm] = useState<"accept" | "reject" | null>(null);
   const [note, setNote] = useState("");
   const [fee, setFee] = useState(() => String(order.envio.precio ?? ""));
   const [reason, setReason] = useState("");
   const [errors, setErrors] = useState<Errors>({});
+  const [settling, setSettling] = useState(false);
 
   const actions = availableActions(order);
+  const collection = collectionInfo({ payment: order.pago, total: order.total, fee: order.envio.precio });
+  const settlement = courierOrderState(order);
   const currentFee = Number(order.envio.precio ?? 0);
   const listFee = order.envio.precio_lista;
   const changed = listFee !== null && order.envio.precio !== null && Number(listFee) !== currentFee;
@@ -153,6 +165,16 @@ export default function CourierOrderCard({
           </div>
         </section>
       </div>
+
+      {order.envio.estado !== "rejected" && order.estado !== "cancelled" ? (
+        <p
+          className={`mt-3 rounded-xl px-3 py-2 text-sm font-semibold ${
+            collection.cash ? "bg-amber-100 text-amber-900" : "bg-sky-50 text-sky-900"
+          }`}
+        >
+          💵 {collection.text}
+        </p>
+      ) : null}
 
       <dl className="mt-3 space-y-1 rounded-xl bg-cream p-3 text-sm text-stone-700">
         <div className="flex gap-2">
@@ -308,6 +330,24 @@ export default function CourierOrderCard({
         )
       ) : null}
 
+      {settlement !== "none" ? (
+        <div className="mt-3 rounded-xl border border-line p-3">
+          <p className="text-sm font-semibold text-stone-800">
+            💵 {settlementLabel(settlement, Number(order.total))}
+          </p>
+          {canMarkSettled(settlement) ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setSettling(true)}
+              className="mt-2 min-h-11 rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60"
+            >
+              Rendido
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
       {actions.onTheWay || actions.delivered ? (
         <div className="mt-3">
           <button
@@ -326,6 +366,19 @@ export default function CourierOrderCard({
           Cuando el local te lo entregue vas a poder marcarlo En camino.
         </p>
       ) : null}
+      <ConfirmDeleteDialog
+        open={settling}
+        title="Marcar como rendido"
+        description={`¿Le rendiste a ${order.negocio.nombre} ${formatMoney(Number(order.total))} del pedido #${order.numero}? La marca no se puede deshacer.`}
+        confirmLabel="Sí, rendido"
+        loadingLabel="Guardando..."
+        loading={busy}
+        onConfirm={() => {
+          setSettling(false);
+          onSettle();
+        }}
+        onClose={() => setSettling(false)}
+      />
     </article>
   );
 }

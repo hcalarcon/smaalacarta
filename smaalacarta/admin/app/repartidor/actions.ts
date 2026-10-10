@@ -3,9 +3,9 @@
 import { revalidatePath } from "next/cache";
 
 import { requireCourier } from "@/lib/auth/courier";
-import { createZone, courierSetStatus, deleteZone, listZones, saveZoneOrder, updateZone } from "@/lib/db/courier";
+import { courierMarkSettled, createZone, courierSetStatus, deleteZone, listZones, saveZoneOrder, updateZone } from "@/lib/db/courier";
 import { setOrderCourier } from "@/lib/db/orders";
-import { orderErrorMessage } from "@/lib/orders/messages";
+import { orderErrorMessage, settlementErrorMessage } from "@/lib/orders/messages";
 import { validateCourierResponse, type CourierResponseInput } from "@/lib/orders/courier";
 import { validateZone } from "@/lib/courier/zones";
 
@@ -147,5 +147,18 @@ export async function reorderZonesAction(orderedIds: string[]): Promise<CourierA
   if ("error" in result) return zoneError(result.error);
 
   revalidatePath("/repartidor/zonas");
+  return { ok: true };
+}
+
+// El repartidor marca que rindió al local lo cobrado del pedido (ENVIO-39). La marca no se deshace.
+export async function markSettledAction(orderId: string): Promise<CourierActionResult> {
+  await requireCourier();
+
+  const result = await courierMarkSettled(orderId);
+  if ("error" in result) {
+    return { ok: false, error: settlementErrorMessage(result.error) };
+  }
+
+  revalidatePath("/repartidor");
   return { ok: true };
 }
