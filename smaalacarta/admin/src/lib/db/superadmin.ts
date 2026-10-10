@@ -16,11 +16,12 @@ export type BusinessWithMembers = {
   plan_web: boolean;
   plan_completo: boolean;
   active: boolean;
+  courier_delivery: boolean;
   business_users: Member[];
 };
 
 const SELECT =
-  "id, name, slug, whatsapp, created_at, plan_pdf, plan_web, plan_completo, active, business_users(user_id, role, profiles(email, full_name))";
+  "id, name, slug, whatsapp, created_at, plan_pdf, plan_web, plan_completo, active, courier_delivery, business_users(user_id, role, profiles(email, full_name))";
 
 // Estas consultas corren con la sesión del superadmin: es el RLS de la base
 // (políticas *_super_admin) el que le deja ver todos los negocios, no la app.
@@ -79,6 +80,26 @@ export async function updateBusinessPlan(
       plan_completo: plan.planCompleto,
       active: plan.active,
     })
+    .eq("id", businessId);
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  return { ok: true };
+}
+
+// El envío con Repartos al Toque de un negocio (ENVIO-2 y 18). Igual que el plan: el trigger
+// `businesses_guard_admin_columns` es quien exige superadmin.
+export async function updateCourierDelivery(
+  businessId: string,
+  courierDelivery: boolean,
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const supabase = await createClient();
+
+  const { error } = await supabase
+    .from("businesses")
+    .update({ courier_delivery: courierDelivery })
     .eq("id", businessId);
 
   if (error) {

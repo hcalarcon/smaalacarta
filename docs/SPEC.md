@@ -1160,6 +1160,9 @@ panel del local y el del repartidor vienen después. `couriers` y `courier_zones
   publicado, activo, con plan completo y `courier_delivery`, y el repartidor activo; si no, `null`.
 - **ENVIO-17** `public_order_delivery(code)` devuelve repartidor, barrio, precio de lista, precio, motivo del cambio,
   estado y nota del envío; nunca teléfono ni dirección.
+- **ENVIO-18** El superadmin habilita o deshabilita el envío con Repartos al Toque por negocio desde su ficha
+  (`updateCourierDeliveryAction`: exige superadmin y cambia solo `businesses.courier_delivery`).
+- **ENVIO-19** El listado `/superadmin` marca con "Envío con Repartos al Toque" los negocios que lo tienen.
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 

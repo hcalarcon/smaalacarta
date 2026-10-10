@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { requireSuperAdmin } from "@/lib/auth/superadmin";
-import { removeMember, updateBusinessPlan } from "@/lib/db/superadmin";
+import { removeMember, updateBusinessPlan, updateCourierDelivery } from "@/lib/db/superadmin";
 import {
   addMemberByEmail,
   createBusinessWithOwner,
@@ -92,6 +92,32 @@ export async function updatePlanAction(
   revalidatePath(`/superadmin/negocios/${businessId}`);
 
   return { message: "Plan y estado actualizados." };
+}
+
+export async function updateCourierDeliveryAction(
+  _prev: SuperAdminFormState,
+  formData: FormData,
+): Promise<SuperAdminFormState> {
+  // El trigger de la base también lo exige (ENVIO-2); acá se comprueba primero.
+  await requireSuperAdmin();
+
+  const businessId = text(formData, "businessId");
+  const enabled = checkbox(formData, "courierDelivery");
+
+  const result = await updateCourierDelivery(businessId, enabled);
+
+  if (!result.ok) {
+    return { error: result.error };
+  }
+
+  revalidatePath(`/superadmin/negocios/${businessId}`);
+  revalidatePath("/superadmin");
+
+  return {
+    message: enabled
+      ? "Envío con Repartos al Toque habilitado."
+      : "Envío con Repartos al Toque deshabilitado.",
+  };
 }
 
 export async function addMemberAction(

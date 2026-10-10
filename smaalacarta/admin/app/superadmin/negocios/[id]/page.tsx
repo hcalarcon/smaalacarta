@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import AddMemberForm from "../../components/AddMemberForm";
+import CourierDeliveryForm from "../../components/CourierDeliveryForm";
 import PlanForm from "../../components/PlanForm";
 import RemoveMemberButton from "../../components/RemoveMemberButton";
 import ResetPasswordButton from "../../components/ResetPasswordButton";
@@ -56,6 +57,16 @@ export default async function BusinessDetailPage({
             planWeb={business.plan_web}
             planCompleto={business.plan_completo}
             active={business.active}
+          />
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-line bg-white p-6 shadow-sm">
+        <h2 className="text-xl font-semibold text-brand">Envío</h2>
+        <div className="mt-4">
+          <CourierDeliveryForm
+            businessId={business.id}
+            courierDelivery={business.courier_delivery}
           />
         </div>
       </section>
