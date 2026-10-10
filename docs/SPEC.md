@@ -1185,6 +1185,14 @@ panel del local y el del repartidor vienen después. `couriers` y `courier_zones
   Listo, el paso del local es "Entregar al repartidor"; En camino y Entregado se ven pero no son botones del local.
 - **ENVIO-27** En el tablero, `handed_to_courier` y `on_the_way` van en la columna Listos, y pasan al historial al
   quedar `delivered`.
+- **ENVIO-28** El seguimiento muestra los estados `handed_to_courier` ("Entregado al repartidor") y `on_the_way`
+  ("En camino") en la línea de tiempo y, en un pedido con envío, un camino de siete pasos; "Listo" con envío no dice
+  que pase a buscarlo. Los textos nuevos están en es, en y pt.
+- **ENVIO-29** El seguimiento pide además `public_order_delivery` y muestra un bloque de envío según `estado`:
+  waiting o requested, "Buscando repartidor"; accepted, "Envío confirmado con {repartidor} · {nota} · {precio} al
+  repartidor" y, si el precio cambió, "Antes {precio_lista}: {motivo}"; rejected, que el repartidor no puede y el
+  local se va a comunicar. Un error de esa consulta no borra el último envío visto; un pedido cancelado no lo
+  muestra; todo con `textContent`, sin teléfono ni dirección.
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 

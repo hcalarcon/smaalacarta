@@ -18,11 +18,26 @@ export function parseTrackingCode(pathname, search = "") {
 
 const STEPS = ["pending", "confirmed", "preparing", "ready", "delivered"];
 
-const KNOWN_STATUS = [...STEPS, "cancelled"];
+// El camino de un pedido con envío con Repartos al Toque (ENVIO-9): el local lo entrega al
+// repartidor y de ahí lo lleva él.
+const COURIER_STEPS = [
+  "pending",
+  "confirmed",
+  "preparing",
+  "ready",
+  "handed_to_courier",
+  "on_the_way",
+  "delivered",
+];
 
-// Los cinco pasos del camino, en el idioma pedido.
-export function stepLabels(lang) {
-  return STEPS.map((step) => t(`step.${step}`, lang));
+// Estados que solo existen en un pedido con envío: si llegan, el camino es el del envío.
+const COURIER_ONLY = ["handed_to_courier", "on_the_way"];
+
+const KNOWN_STATUS = [...COURIER_STEPS, "cancelled"];
+
+// Los pasos del camino (cinco; siete con envío), en el idioma pedido.
+export function stepLabels(lang, { courier = false } = {}) {
+  return (courier ? COURIER_STEPS : STEPS).map((step) => t(`step.${step}`, lang));
 }
 
 export function isFinalStatus(status) {
@@ -31,15 +46,19 @@ export function isFinalStatus(status) {
 
 // Qué mostrar para cada estado: título, texto, y en qué paso del camino está (-1 si
 // se desconoce o está cancelado).
-export function statusView(status, lang) {
+export function statusView(status, lang, { courier = false } = {}) {
   if (!KNOWN_STATUS.includes(status)) {
     return { title: t("status.unknown.title", lang), text: "", step: -1, cancelled: false, final: false };
   }
 
+  const withCourier = courier || COURIER_ONLY.includes(status);
+  const steps = withCourier ? COURIER_STEPS : STEPS;
+
   return {
     title: t(`status.${status}.title`, lang),
-    text: t(`status.${status}.text`, lang),
-    step: STEPS.indexOf(status),
+    // Con envío, "Listo" no dice que pase a buscarlo: lo retira el repartidor.
+    text: t(status === "ready" && withCourier ? "status.ready.courierText" : `status.${status}.text`, lang),
+    step: steps.indexOf(status),
     cancelled: status === "cancelled",
     final: isFinalStatus(status),
   };
@@ -209,4 +228,85 @@ export function itemRow(doc, item, money) {
   }
 
   return li;
+}
+
+const DELIVERY_STATES = ["waiting", "requested", "accepted", "rejected"];
+
+// Valida la respuesta de `public_order_delivery`; null si no es un envío reconocible. Nunca trae
+// teléfono ni dirección (ENVIO-17): esta página tampoco los muestra.
+function normalizeDelivery(data) {
+  if (!data || typeof data !== "object") return null;
+  if (!DELIVERY_STATES.includes(data.estado)) return null;
+
+  const price = Number(data.precio);
+  const list = Number(data.precio_lista);
+  if (!Number.isFinite(price) || !Number.isFinite(list)) return null;
+
+  return {
+    courier: typeof data.repartidor === "string" ? data.repartidor : "",
+    zone: typeof data.zona === "string" ? data.zona : "",
+    listPrice: list,
+    price,
+    reason: typeof data.motivo_cambio === "string" && data.motivo_cambio ? data.motivo_cambio : null,
+    state: data.estado,
+    note: typeof data.nota === "string" && data.nota ? data.nota : null,
+  };
+}
+
+// El envío del pedido (ENVIO-17 y 29). `{ ok: true, data: null }` es un pedido sin envío; un error
+// de red no es lo mismo y no borra lo que ya se estaba mostrando.
+export async function fetchDelivery({ url, key, code, fetchImpl = globalThis.fetch }) {
+  if (!url || !url.trim() || !key || !key.trim() || !CODE.test(String(code ?? ""))) {
+    return { ok: false };
+  }
+
+  const headers = { apikey: key, "Content-Type": "application/json" };
+  if (key.startsWith("eyJ")) headers.Authorization = `Bearer ${key}`;
+
+  try {
+    const res = await fetchImpl(`${url.trim().replace(/\/+$/, "")}/rest/v1/rpc/public_order_delivery`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ p_code: code }),
+      signal:
+        typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined,
+    });
+
+    if (!res.ok) return { ok: false };
+
+    return { ok: true, data: normalizeDelivery(await res.json()) };
+  } catch {
+    return { ok: false };
+  }
+}
+
+// El bloque de envío de la página (ENVIO-29): qué pasa con el repartidor, según `state`.
+// `money` formatea los precios en el idioma del cliente. Devuelve `{ tone, lines }`.
+export function deliveryNotice(delivery, lang, money) {
+  if (!delivery) return null;
+
+  if (delivery.state === "rejected") {
+    return { tone: "rejected", lines: [t("tracker.delivery.rejected", lang)] };
+  }
+
+  if (delivery.state !== "accepted") {
+    return { tone: "searching", lines: [t("tracker.delivery.searching", lang)] };
+  }
+
+  const parts = [t("tracker.delivery.accepted", lang, { repartidor: delivery.courier || "Repartos al Toque" })];
+  if (delivery.note) parts.push(delivery.note);
+  parts.push(t("tracker.delivery.pay", lang, { precio: money.format(delivery.price) }));
+
+  const lines = [parts.join(" · ")];
+
+  if (delivery.price !== delivery.listPrice) {
+    const precio = money.format(delivery.listPrice);
+    lines.push(
+      delivery.reason
+        ? t("tracker.delivery.was", lang, { precio, motivo: delivery.reason })
+        : t("tracker.delivery.wasNoReason", lang, { precio }),
+    );
+  }
+
+  return { tone: "accepted", lines };
 }
