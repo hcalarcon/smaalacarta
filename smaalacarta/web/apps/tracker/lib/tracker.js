@@ -232,8 +232,12 @@ export function itemRow(doc, item, money) {
 
 const DELIVERY_STATES = ["waiting", "requested", "accepted", "rejected"];
 
+// El WhatsApp del repartidor es público (ENVIO-44): igual que el `CHECK` de `couriers`, de 8 a 15
+// dígitos; si no, no se usa (y nunca llega a un link).
+const COURIER_WHATSAPP = /^[0-9]{8,15}$/;
+
 // Valida la respuesta de `public_order_delivery`; null si no es un envío reconocible. Nunca trae
-// teléfono ni dirección (ENVIO-17): esta página tampoco los muestra.
+// teléfono ni dirección del cliente (ENVIO-17): esta página tampoco los muestra.
 function normalizeDelivery(data) {
   if (!data || typeof data !== "object") return null;
   if (!DELIVERY_STATES.includes(data.estado)) return null;
@@ -244,6 +248,8 @@ function normalizeDelivery(data) {
 
   return {
     courier: typeof data.repartidor === "string" ? data.repartidor : "",
+    whatsapp:
+      typeof data.whatsapp === "string" && COURIER_WHATSAPP.test(data.whatsapp) ? data.whatsapp : null,
     zone: typeof data.zona === "string" ? data.zona : "",
     listPrice: list,
     price,
@@ -280,17 +286,38 @@ export async function fetchDelivery({ url, key, code, fetchImpl = globalThis.fet
   }
 }
 
-// El bloque de envío de la página (ENVIO-29): qué pasa con el repartidor, según `state`.
-// `money` formatea los precios en el idioma del cliente. Devuelve `{ tone, lines }`.
+// El teléfono del repartidor y el link para escribirle (ENVIO-44): solo mientras el envío espera,
+// fue consultado o está aceptado, y si hay un WhatsApp válido.
+function courierContact(delivery, lang) {
+  if (!delivery.whatsapp) return null;
+
+  const repartidor = delivery.courier || "Repartos al Toque";
+  return {
+    line: t("tracker.delivery.contact", lang, { repartidor, whatsapp: delivery.whatsapp }),
+    link: {
+      text: t("tracker.delivery.write", lang, { repartidor }),
+      href: `https://wa.me/${delivery.whatsapp}`,
+    },
+  };
+}
+
+// El bloque de envío de la página (ENVIO-29 y 44): qué pasa con el repartidor, según `state`.
+// `money` formatea los precios en el idioma del cliente. Devuelve `{ tone, lines, link? }`.
 export function deliveryNotice(delivery, lang, money) {
   if (!delivery) return null;
 
+  // Rechazado: el que se comunica es el local, no el repartidor.
   if (delivery.state === "rejected") {
     return { tone: "rejected", lines: [t("tracker.delivery.rejected", lang)] };
   }
 
+  const contact = courierContact(delivery, lang);
+
   if (delivery.state !== "accepted") {
-    return { tone: "searching", lines: [t("tracker.delivery.searching", lang)] };
+    const lines = [t("tracker.delivery.searching", lang)];
+    if (contact) lines.push(contact.line);
+
+    return { tone: "searching", lines, ...(contact ? { link: contact.link } : {}) };
   }
 
   const parts = [t("tracker.delivery.accepted", lang, { repartidor: delivery.courier || "Repartos al Toque" })];
@@ -308,5 +335,7 @@ export function deliveryNotice(delivery, lang, money) {
     );
   }
 
-  return { tone: "accepted", lines };
+  if (contact) lines.push(contact.line);
+
+  return { tone: "accepted", lines, ...(contact ? { link: contact.link } : {}) };
 }

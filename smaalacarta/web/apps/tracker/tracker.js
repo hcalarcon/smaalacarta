@@ -263,6 +263,21 @@ function render(data, { stale }) {
       el("section", { className: `card delivery delivery-${notice.tone}` }, [
         el("h2", { text: t("tracker.delivery.title", lang) }),
         ...notice.lines.map((line) => el("p", { className: "delivery-line", text: line })),
+        // El `href` sale de dígitos ya validados (ENVIO-44); el texto, con textContent.
+        ...(notice.link
+          ? [
+              el(
+                "a",
+                {
+                  className: "delivery-link",
+                  text: notice.link.text,
+                  href: notice.link.href,
+                  attrs: { target: "_blank", rel: "noopener" },
+                },
+                [],
+              ),
+            ]
+          : []),
       ]),
     );
   }

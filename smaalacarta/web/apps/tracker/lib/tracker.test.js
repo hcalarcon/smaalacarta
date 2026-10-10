@@ -408,6 +408,7 @@ describe("fetchDelivery — ENVIO-29", () => {
       ok: true,
       data: {
         courier: "Repartos al Toque",
+        whatsapp: null,
         zone: "Cantera",
         listPrice: 5000,
         price: 6500,
@@ -440,6 +441,83 @@ describe("fetchDelivery — ENVIO-29", () => {
       ok: false,
     });
     expect(await fetchDelivery({ ...cfg, code: "corto", fetchImpl: fakeFetch(envio) })).toEqual({ ok: false });
+  });
+});
+
+describe("teléfono del repartidor en el seguimiento — ENVIO-44", () => {
+  const money = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
+  const base = {
+    courier: "Repartos al Toque",
+    whatsapp: "5493644277105",
+    zone: "Cantera",
+    listPrice: 5000,
+    price: 5000,
+    reason: null,
+    state: "waiting",
+    note: null,
+  };
+  const link = { text: "Escribir a Repartos al Toque", href: "https://wa.me/5493644277105" };
+
+  it.each(["waiting", "requested"])("con el envío %s muestra la línea y el link", (state) => {
+    expect(deliveryNotice({ ...base, state }, "es", money)).toEqual({
+      tone: "searching",
+      lines: ["Buscando repartidor", "Repartos al Toque: +5493644277105"],
+      link,
+    });
+  });
+
+  it("aceptado: la línea va al final y el link está", () => {
+    const notice = deliveryNotice({ ...base, state: "accepted", price: 6500, reason: "Lluvia" }, "es", money);
+
+    expect(notice.tone).toBe("accepted");
+    expect(notice.lines.at(-1)).toBe("Repartos al Toque: +5493644277105");
+    expect(notice.lines).toHaveLength(3);
+    expect(notice.link).toEqual(link);
+  });
+
+  it("rechazado: no aparece, el que se comunica es el local", () => {
+    const notice = deliveryNotice({ ...base, state: "rejected" }, "es", money);
+
+    expect(notice.link).toBeUndefined();
+    expect(JSON.stringify(notice)).not.toContain("5493644277105");
+  });
+
+  it.each(["waiting", "requested", "accepted"])("sin WhatsApp no aparece (%s)", (state) => {
+    const notice = deliveryNotice({ ...base, state, whatsapp: null }, "es", money);
+
+    expect(notice.link).toBeUndefined();
+    expect(notice.lines.join(" ")).not.toContain("+");
+  });
+
+  it("se traduce el link", () => {
+    expect(deliveryNotice(base, "en", money).link.text).toBe("Message Repartos al Toque");
+    expect(deliveryNotice(base, "pt", money).link.text).toBe("Escrever para Repartos al Toque");
+  });
+});
+
+describe("fetchDelivery con WhatsApp — ENVIO-44", () => {
+  const cfg = { url: "https://x.supabase.co", key: "sb_publishable_abc", code: CODE };
+  const answer = (extra) =>
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ repartidor: "Repartos al Toque", zona: "Cantera", precio_lista: 5000, precio: 5000, estado: "waiting", ...extra }),
+    });
+
+  it("lo deja con 8 a 15 dígitos", async () => {
+    const r = await fetchDelivery({ ...cfg, fetchImpl: answer({ whatsapp: "5493644277105" }) });
+    expect(r.data.whatsapp).toBe("5493644277105");
+  });
+
+  it.each([
+    ["sin la clave", undefined],
+    ["con letras", "549abc"],
+    ["con una barra", "5493644/1"],
+    ["muy corto", "1234567"],
+    ["muy largo", "1234567890123456"],
+    ["una URL", "javascript:alert(1)"],
+  ])("lo descarta %s", async (_nombre, whatsapp) => {
+    const r = await fetchDelivery({ ...cfg, fetchImpl: answer({ whatsapp }) });
+    expect(r.data.whatsapp).toBeNull();
   });
 });
 
