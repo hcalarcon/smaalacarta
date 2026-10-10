@@ -27,6 +27,7 @@ describe("normalizeZones — ENVIO-20", () => {
   it("deja el repartidor y los barrios en el orden recibido", () => {
     expect(normalizeZones(RESPUESTA)).toEqual({
       courier: "Repartos al Toque",
+      whatsapp: null,
       zones: [
         { id: ID_A, name: "Centro (hasta Av. Koessler)", price: 4500 },
         { id: ID_B, name: "Cantera", price: 5000 },
@@ -60,6 +61,25 @@ describe("normalizeZones — ENVIO-20", () => {
 
     expect(normalizeZones(sucio)?.zones).toEqual([{ id: ID_B, name: "Válido", price: 10 }]);
     expect(normalizeZones({ repartidor: "X", zonas: malos })).toBeNull();
+  });
+});
+
+describe("WhatsApp del repartidor — ENVIO-44", () => {
+  it("lo deja con 8 a 15 dígitos", () => {
+    expect(normalizeZones({ ...RESPUESTA, whatsapp: "5493644277105" })?.whatsapp).toBe("5493644277105");
+  });
+
+  it.each([
+    ["sin la clave", undefined],
+    ["null", null],
+    ["con letras", "54936442+7105"],
+    ["con espacios", "549 3644 277105"],
+    ["muy corto", "1234567"],
+    ["muy largo", "1234567890123456"],
+    ["un número", 5493644277105],
+  ])("lo descarta %s", (_nombre, whatsapp) => {
+    const data = whatsapp === undefined ? RESPUESTA : { ...RESPUESTA, whatsapp };
+    expect(normalizeZones(data)?.whatsapp).toBeNull();
   });
 });
 
@@ -150,18 +170,57 @@ describe("courierOrderFields — ENVIO-21", () => {
   });
 });
 
+describe("courierWhatsappLines con el repartidor — ENVIO-44", () => {
+  const zone = { id: ID_B, name: "Cantera", price: 5000 };
+  const customer = { address: "Av. Siempre Viva 742", phone: "3644277105" };
+
+  it("dice el repartidor y su teléfono", () => {
+    const text = courierWhatsappLines(zone, customer, formatPrice, {
+      courier: "Repartos al Toque",
+      whatsapp: "5493644277105",
+    });
+
+    expect(text).toBe(
+      [
+        "📍 Barrio: Cantera",
+        "🛵 Envío con Repartos al Toque: $5.000, se paga al repartidor",
+        "📲 Tel. de Repartos al Toque: +5493644277105",
+        "🏠 Dirección: Av. Siempre Viva 742",
+        "📞 Teléfono: 3644277105",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  it("sin WhatsApp no pone la línea del teléfono", () => {
+    const text = courierWhatsappLines(zone, customer, formatPrice, { courier: "Repartos al Toque", whatsapp: null });
+
+    expect(text).not.toContain("Tel. de");
+    expect(text).toContain("🛵 Envío con Repartos al Toque: $5.000, se paga al repartidor");
+  });
+
+  it("el nombre sale del dato, no está escrito a mano", () => {
+    const text = courierWhatsappLines(zone, customer, formatPrice, { courier: "Otro Reparto", whatsapp: "5493510000000" });
+
+    expect(text).toContain("Envío con Otro Reparto");
+    expect(text).toContain("Tel. de Otro Reparto: +5493510000000");
+    expect(text).not.toContain("Repartos al Toque");
+  });
+});
+
 describe("courierWhatsappLines — ENVIO-22", () => {
   it("dice barrio, envío (se paga al repartidor), dirección y teléfono, en español", () => {
     const text = courierWhatsappLines(
       { id: ID_B, name: "Cantera", price: 5000 },
       { address: "Av. Siempre Viva 742", phone: "3644277105" },
       formatPrice,
+      { courier: "Repartos al Toque", whatsapp: null },
     );
 
     expect(text).toBe(
       [
         "📍 Barrio: Cantera",
-        "🛵 Envío: $5.000 (se paga al repartidor)",
+        "🛵 Envío con Repartos al Toque: $5.000, se paga al repartidor",
         "🏠 Dirección: Av. Siempre Viva 742",
         "📞 Teléfono: 3644277105",
         "",

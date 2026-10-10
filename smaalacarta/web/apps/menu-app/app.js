@@ -1037,6 +1037,7 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
       courierZone,
       { address: courier.deliveryAddress, phone: courier.customerPhone },
       PRICE.formatPrice,
+      COURIER_ZONES,
     );
   }
 

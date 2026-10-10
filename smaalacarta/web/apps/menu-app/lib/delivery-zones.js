@@ -6,6 +6,14 @@ import { isSupabaseConfigured } from "./public-menu.js";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// El WhatsApp del repartidor es público (ENVIO-44). Igual que el `CHECK` de `couriers`: de 8 a 15
+// dígitos; si no, no se usa.
+const WHATSAPP = /^[0-9]{8,15}$/;
+
+function normalizeWhatsapp(value) {
+  return typeof value === "string" && WHATSAPP.test(value) ? value : null;
+}
+
 // Valida la forma de la respuesta y la pasa a nombres propios. Un barrio mal formado se descarta;
 // sin repartidor o sin ningún barrio válido no hay envío (null).
 export function normalizeZones(data) {
@@ -25,7 +33,7 @@ export function normalizeZones(data) {
     zones.push({ id: zona.id, name: zona.nombre, price });
   }
 
-  return zones.length > 0 ? { courier: data.repartidor, zones } : null;
+  return zones.length > 0 ? { courier: data.repartidor, whatsapp: normalizeWhatsapp(data.whatsapp), zones } : null;
 }
 
 export async function fetchDeliveryZones({ url, key, slug, fetchImpl = globalThis.fetch }) {
@@ -85,11 +93,14 @@ export function courierOrderFields({ zones, delivery, zoneId, phone, address }) 
 }
 
 // Las líneas del mensaje de WhatsApp al local. Siempre en español (IDIOMA-5). El precio es de
-// referencia y se le paga al repartidor: no entra en el total del pedido.
-export function courierWhatsappLines(zone, { address, phone }, formatPrice) {
+// referencia y se le paga al repartidor: no entra en el total del pedido. `courier` es
+// `{ courier, whatsapp }` (lo que entrega `normalizeZones`): el cliente ve quién hace el envío y
+// su teléfono (ENVIO-44).
+export function courierWhatsappLines(zone, { address, phone }, formatPrice, { courier, whatsapp = null }) {
   return [
     `📍 Barrio: ${zone.name}`,
-    `🛵 Envío: $${formatPrice(zone.price)} (se paga al repartidor)`,
+    `🛵 Envío con ${courier}: $${formatPrice(zone.price)}, se paga al repartidor`,
+    ...(whatsapp ? [`📲 Tel. de ${courier}: +${whatsapp}`] : []),
     `🏠 Dirección: ${address}`,
     `📞 Teléfono: ${phone}`,
     "",
