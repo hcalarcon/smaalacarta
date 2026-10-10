@@ -3,6 +3,7 @@
 import type { Order } from "@/lib/db/orders";
 import { timeAgo } from "@/lib/orders/format";
 import PaymentBadge from "./PaymentBadge";
+import SettlementStatus from "./SettlementStatus";
 import { itemOptionLines } from "@/lib/orders/item-options";
 import {
   confirmBlockReason,
@@ -26,12 +27,14 @@ export default function OrderCard({
   busy,
   onAdvance,
   onOpen,
+  onConfirmSettlement,
 }: {
   order: Order;
   now: Date;
   busy: boolean;
   onAdvance: (status: string) => void;
   onOpen: () => void;
+  onConfirmSettlement?: () => void;
 }) {
   const withCourier = hasCourier(order);
   const action = primaryAction(order.status, deliveryContext(order));
@@ -95,6 +98,8 @@ export default function OrderCard({
           ) : null}
         </div>
       ) : null}
+
+      <SettlementStatus order={order} busy={busy} onReceived={onConfirmSettlement} />
 
       <ul className="mt-2 space-y-0.5 text-xs text-stone-600">
         {order.order_items.slice(0, SHOWN_ITEMS).map((item, index) => (

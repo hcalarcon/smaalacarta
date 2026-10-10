@@ -7,6 +7,7 @@ import type { ActiveCourier, Order } from "@/lib/db/orders";
 import { confirmBlockReason, deliveryContext, hasCourier, type CourierResponseInput } from "@/lib/orders/courier";
 import { formatDateTime, trackingUrl } from "@/lib/orders/format";
 import PaymentBadge from "./PaymentBadge";
+import SettlementStatus from "./SettlementStatus";
 import { itemOptionLines } from "@/lib/orders/item-options";
 import { isPaymentPending, PAYMENT_BLOCK_REASON } from "@/lib/orders/payment";
 import { orderBadge } from "@/lib/orders/scheduled";
@@ -26,6 +27,7 @@ export default function OrderDetailDialog({
   now,
   error = null,
   onCourierAction,
+  onConfirmSettlement,
 }: {
   order: Order | null;
   slug: string;
@@ -41,6 +43,8 @@ export default function OrderDetailDialog({
     action: "request" | "accept" | "reject",
     input: CourierResponseInput,
   ) => void;
+  // Rendición del efectivo (ENVIO-43): pide confirmar que se recibió.
+  onConfirmSettlement?: () => void;
 }) {
   const [copied, setCopied] = useState(false);
   const [cancelling, setCancelling] = useState(false);
@@ -157,6 +161,8 @@ export default function OrderDetailDialog({
             <div className="flex gap-2"><dt className="text-stone-400">Notas:</dt><dd className="whitespace-pre-wrap">{order.notes}</dd></div>
           ) : null}
         </dl>
+
+        <SettlementStatus order={order} busy={busy} onReceived={onConfirmSettlement} />
 
         {hasCourier(order) && onCourierAction ? (
           <CourierSection

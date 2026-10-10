@@ -2,11 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 
-import { createManualOrder, setOrderCourier, setOrderStatus } from "@/lib/db/orders";
+import { confirmSettlement, createManualOrder, setOrderCourier, setOrderStatus } from "@/lib/db/orders";
 import { requireBusiness } from "@/lib/get-current-business";
 import { validateCourierResponse, type CourierResponseInput } from "@/lib/orders/courier";
 import { validateManualOrder, type ManualOrderInput } from "@/lib/orders/manual-order";
-import { orderErrorMessage } from "@/lib/orders/messages";
+import { orderErrorMessage, settlementErrorMessage } from "@/lib/orders/messages";
 import { STATUSES } from "@/lib/orders/status";
 
 export type OrderActionResult =
@@ -81,6 +81,19 @@ export async function setOrderCourierAction(
   });
   if ("error" in result) {
     return { ok: false, error: orderErrorMessage(result.error) };
+  }
+
+  revalidatePath("/dashboard/orders");
+  return { ok: true };
+}
+
+// El local confirma que recibió lo que el repartidor rindió (ENVIO-39). La marca no se deshace.
+export async function confirmSettlementAction(orderId: string): Promise<OrderActionResult> {
+  await requireBusiness();
+
+  const result = await confirmSettlement(orderId);
+  if ("error" in result) {
+    return { ok: false, error: settlementErrorMessage(result.error) };
   }
 
   revalidatePath("/dashboard/orders");

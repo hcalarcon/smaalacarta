@@ -7,13 +7,16 @@ import ManualOrderDialog from "./ManualOrderDialog";
 import OrderCard from "./OrderCard";
 import OrderDetailDialog from "./OrderDetailDialog";
 import OrdersHistory from "./OrdersHistory";
-import { setOrderCourierAction, setOrderStatusAction } from "../actions";
+import SettlementSummary from "./SettlementSummary";
+import ConfirmDeleteDialog from "../../components/ConfirmDeleteDialog";
+import { confirmSettlementAction, setOrderCourierAction, setOrderStatusAction } from "../actions";
 import type { ActiveCourier, Order } from "@/lib/db/orders";
 import type { CourierResponseInput } from "@/lib/orders/courier";
 import { newPendingIds, pendingCount, shouldRemind, tabTitle } from "@/lib/orders/alerts";
 import { playNewOrderSound } from "@/lib/orders/sound";
 import { compareForBoard } from "@/lib/orders/scheduled";
 import { boardColumn, type BoardColumn } from "@/lib/orders/status";
+import { formatMoney } from "@/lib/promotions/pricing";
 
 // "Terminados" (entregados o cancelados) no es una columna más del tablero:
 // va aparte, en el historial de abajo.
@@ -71,6 +74,8 @@ export default function OrdersClient({
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
+  // Pedido cuya rendición se está por confirmar como recibida (ENVIO-43).
+  const [receivingId, setReceivingId] = useState<string | null>(null);
 
   // Sonido: la preferencia se lee en el navegador (no en el servidor) para que el primer
   // render coincida. `audioReady` dice si el navegador ya dejó sonar: tras recargar hay
@@ -252,7 +257,26 @@ export default function OrdersClient({
     }
   }
 
+  async function confirmReceived() {
+    if (!receivingId) return;
+
+    setError(null);
+    setBusyId(receivingId);
+
+    try {
+      const result = await confirmSettlementAction(receivingId);
+      if (!result.ok) setError(result.error);
+    } catch {
+      setError("No pudimos guardar el cambio. Probá de nuevo.");
+    } finally {
+      setBusyId(null);
+      setReceivingId(null);
+      router.refresh();
+    }
+  }
+
   const selected = orders.find((order) => order.id === selectedId) ?? null;
+  const receiving = orders.find((order) => order.id === receivingId) ?? null;
 
   const byColumn = (key: BoardColumn) => {
     const list = orders.filter((order) => boardColumn(order.status) === key);
@@ -344,6 +368,7 @@ export default function OrdersClient({
                           busy={busyId === order.id}
                           onAdvance={(status) => changeStatus(order.id, status)}
                           onOpen={() => setSelectedId(order.id)}
+                          onConfirmSettlement={() => setReceivingId(order.id)}
                         />
                       ))
                     )}
@@ -353,9 +378,12 @@ export default function OrdersClient({
             })}
           </div>
 
+          <SettlementSummary orders={orders} />
+
           <OrdersHistory
             orders={byColumn("cerrados")}
             onOpen={(orderId) => setSelectedId(orderId)}
+            onConfirmSettlement={(orderId) => setReceivingId(orderId)}
           />
         </div>
       )}
@@ -373,6 +401,22 @@ export default function OrdersClient({
         onCourierAction={(action, input) =>
           selected && respondCourier(selected.id, action, input, Number(selected.delivery_fee ?? 0))
         }
+        onConfirmSettlement={() => selected && setReceivingId(selected.id)}
+      />
+
+      <ConfirmDeleteDialog
+        open={receiving !== null}
+        title="Confirmar que recibiste la rendición"
+        description={
+          receiving
+            ? `¿Recibiste de Repartos al Toque lo del pedido #${receiving.order_number} (${formatMoney(Number(receiving.total))})? La confirmación no se puede deshacer.`
+            : undefined
+        }
+        confirmLabel="Sí, lo recibí"
+        loadingLabel="Guardando..."
+        onConfirm={confirmReceived}
+        onClose={() => setReceivingId(null)}
+        loading={busyId === receivingId && receivingId !== null}
       />
 
       <ManualOrderDialog

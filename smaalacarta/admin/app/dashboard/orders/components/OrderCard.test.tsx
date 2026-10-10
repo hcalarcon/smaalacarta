@@ -3,6 +3,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import OrderCard from "./OrderCard";
 import OrderDetailDialog from "./OrderDetailDialog";
+import SettlementStatus from "./SettlementStatus";
+import SettlementSummary from "./SettlementSummary";
 import type { Order } from "@/lib/db/orders";
 
 afterEach(cleanup);
@@ -30,6 +32,106 @@ const now = new Date("2026-10-08T10:05:00Z");
 const card = (o: Order) => render(<OrderCard order={o} now={now} busy={false} onAdvance={vi.fn()} onOpen={vi.fn()} />);
 const detail = (o: Order) =>
   render(<OrderDetailDialog order={o} slug="ana" busy={false} onClose={vi.fn()} onChangeStatus={vi.fn()} />);
+
+describe("rendición del efectivo — ENVIO-43", () => {
+  const delivered = (extra: Partial<Order> = {}) =>
+    order({
+      status: "delivered",
+      payment: "efectivo",
+      payment_status: "not_required",
+      courier_id: "7a0c0e00-0000-4000-8000-000000000001",
+      settled_at: null,
+      settlement_received_at: null,
+      ...extra,
+    });
+
+  it("entregado en efectivo y sin rendir: A rendir, sin botón", () => {
+    const onReceived = vi.fn();
+    render(<SettlementStatus order={delivered()} onReceived={onReceived} />);
+
+    expect(screen.getByText(/A rendir/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Recibido" })).toBeNull();
+  });
+
+  it("cuando el repartidor ya lo marcó, ofrece Recibido", () => {
+    const onReceived = vi.fn();
+    render(
+      <SettlementStatus order={delivered({ settled_at: "2026-10-08T12:00:00Z" })} onReceived={onReceived} />,
+    );
+
+    expect(screen.getByText(/Rendido, esperando confirmación/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Recibido" }));
+    expect(onReceived).toHaveBeenCalledTimes(1);
+  });
+
+  it("recibido: queda fijo, sin botón", () => {
+    render(
+      <SettlementStatus
+        order={delivered({ settled_at: "2026-10-08T12:00:00Z", settlement_received_at: "2026-10-08T13:00:00Z" })}
+        onReceived={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/Recibido por el local/)).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Recibido" })).toBeNull();
+  });
+
+  it("con transferencia, o sin repartidor, no aparece nada", () => {
+    const { container, rerender } = render(
+      <SettlementStatus order={delivered({ payment: "transferencia" })} onReceived={vi.fn()} />,
+    );
+    expect(container.textContent).toBe("");
+
+    rerender(<SettlementStatus order={delivered({ courier_id: null })} onReceived={vi.fn()} />);
+    expect(container.textContent).toBe("");
+  });
+
+  it("el detalle del pedido muestra el estado y el botón Recibido", () => {
+    const onConfirmSettlement = vi.fn();
+    render(
+      <OrderDetailDialog
+        order={delivered({ settled_at: "2026-10-08T12:00:00Z" })}
+        slug="ana"
+        busy={false}
+        onClose={vi.fn()}
+        onChangeStatus={vi.fn()}
+        onConfirmSettlement={onConfirmSettlement}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Recibido" }));
+    expect(onConfirmSettlement).toHaveBeenCalled();
+  });
+
+  it("el resumen suma pendiente, rendido sin confirmar y recibido", () => {
+    render(
+      <SettlementSummary
+        orders={[
+          delivered({ id: "1", total: 8000 }),
+          delivered({ id: "2", total: 2000, settled_at: "2026-10-08T12:00:00Z" }),
+          delivered({
+            id: "3",
+            total: 1000,
+            settled_at: "2026-10-08T12:00:00Z",
+            settlement_received_at: "2026-10-08T13:00:00Z",
+          }),
+          delivered({ id: "4", total: 9999, payment: "transferencia" }),
+        ]}
+      />,
+    );
+
+    const text = screen.getByRole("region", { name: /Rendiciones/ }).textContent!.replace(/\s/g, " ");
+    expect(text).toMatch(/Pendiente de rendir\$ 8\.000/);
+    expect(text).toMatch(/Rendido, por confirmar\$ 2\.000/);
+    expect(text).toMatch(/Recibido\$ 1\.000/);
+    expect(text).not.toContain("9.999");
+  });
+
+  it("el resumen no aparece si no hay efectivo con envío", () => {
+    const { container } = render(<SettlementSummary orders={[delivered({ payment: "transferencia" })]} />);
+    expect(container.textContent).toBe("");
+  });
+});
 
 describe("tarjeta con Mercado Pago — ADMIN-PEDIDOS-17 y 18", () => {
   it.each([
