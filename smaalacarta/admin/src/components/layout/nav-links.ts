@@ -5,6 +5,8 @@ export type NavLink = {
   icon: string;
   // Contador junto al nombre (por ejemplo, pedidos nuevos).
   badge?: number;
+  // Otras rutas que también dejan este link activo (por ejemplo, el detalle).
+  alsoActiveOn?: string[];
 };
 
 export const dashboardLinks: NavLink[] = [
@@ -44,12 +46,23 @@ export const superAdminLinks: NavLink[] = [
   {
     href: "/superadmin",
     label: "Negocios",
+    alsoActiveOn: ["/superadmin/negocios"],
     icon: "M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6",
   },
   {
     href: "/superadmin/negocios/nuevo",
     label: "Nuevo negocio",
     icon: "M12 5v14M5 12h14",
+  },
+  {
+    href: "/superadmin/repartidores",
+    label: "Repartidores",
+    icon: "M12 11a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0",
+  },
+  {
+    href: "/superadmin/zonas",
+    label: "Zonas",
+    icon: "M12 21s-7-6.2-7-11a7 7 0 1114 0c0 4.8-7 11-7 11zM12 12a2 2 0 100-4 2 2 0 000 4z",
   },
   {
     href: "/superadmin/imagenes",

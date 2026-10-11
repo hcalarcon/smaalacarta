@@ -1400,6 +1400,11 @@ lleva él. Errores nuevos: `P0018` (teléfono del cliente) y `P0019` (ya lo tom�
   precio y, si cambió, "Antes {precio_lista}: {motivo}"; `self`, "Lo lleva el local".
 - **ENVIO-92** Los estados viejos (`requested`, `rejected`) o desconocidos no rompen la página: se muestran como
   "Buscando repartidor" o no muestran el bloque, sin error.
+- **ENVIO-93** El menú lateral del superadmin lista, después de "Nuevo negocio" y antes de "Imágenes",
+  **Repartidores** (`/superadmin/repartidores`) y **Zonas** (`/superadmin/zonas`).
+- **ENVIO-94** El link activo es el de la ruta más específica: `/superadmin/repartidores/nuevo` y
+  `/superadmin/repartidores/<id>` marcan Repartidores; `/superadmin` y `/superadmin/negocios/<id>` marcan Negocios;
+  `/superadmin/negocios/nuevo` marca Nuevo negocio. Cubierto por `src/lib/layout/nav-active.test.ts`.
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 
