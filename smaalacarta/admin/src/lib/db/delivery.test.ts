@@ -2,8 +2,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { asUser, createTestDb, createUser, type TestDb } from "@/test/db";
+import { take as takeOffer } from "@/test/offers";
 
-// ENVIO-1 a 17 contra Postgres real (el circuito de búsqueda de repartidor está en `offers.test.ts`).
+// ENVIO-1 a 17 contra Postgres real (el circuito de búsqueda y de ofertas está en `offers.test.ts` y `courier-offers.test.ts`).
 const ANA = "aaaaaaaa-0000-0000-0000-000000000001"; // dueña de un negocio con envío
 const BETO = "bbbbbbbb-0000-0000-0000-000000000002"; // dueño de un negocio sin envío
 const REPA = "cccccccc-0000-0000-0000-000000000003"; // usuario repartidor
@@ -86,9 +87,9 @@ const status = async (id: string) =>
 const call = (user: string | null, sql: string) => asUser(db, user, sql);
 const setStatus = (user: string | null, id: string, to: string) =>
   call(user, `select public.set_order_status('${id}', '${to}')`);
-const take = (user: string | null, id: string, note = "Juan") =>
-  call(user, `select public.courier_take_order('${id}', null, null, ${sqlText(note)})`);
-// El local confirma (abre la búsqueda) y el repartidor lo toma.
+// El repartidor oferta con el precio de lista y el cliente lo elige (ENVIO-98 y 103).
+const take = (user: string | null, id: string) => takeOffer(db, user!, id);
+// El local confirma y el repartidor, elegido por el cliente, se queda con el envío.
 async function confirmAndTake(id: string) {
   const c = await setStatus(ANA, id, "confirmed");
   if (!c.ok) throw new Error(c.error);
@@ -301,7 +302,7 @@ describe("crear un pedido con envío — ENVIO-5, 6 y 7", () => {
       delivery_fee: "5000.00",
       customer_phone: "3515551234",
       delivery_address: "Av. Siempre Viva 742",
-      courier_status: "waiting",
+      courier_status: "searching",
       status: "pending",
     });
   });
@@ -403,7 +404,7 @@ describe("crear un pedido con envío — ENVIO-5, 6 y 7", () => {
 });
 
 describe("la confirmación no espera al repartidor — ENVIO-8", () => {
-  it("el local confirma un pedido con envío sin repartidor: abre la búsqueda", async () => {
+  it("el local confirma un pedido con envío sin repartidor: la búsqueda ya estaba abierta", async () => {
     const o = await courierOrder();
     const r = await setStatus(ANA, o.id, "confirmed");
     expect(r.ok).toBe(true);
@@ -420,7 +421,7 @@ describe("la confirmación no espera al repartidor — ENVIO-8", () => {
     expect(row.offered_at).not.toBeNull();
   });
 
-  it("un UPDATE directo de un miembro también abre la búsqueda", async () => {
+  it("un UPDATE directo de un miembro tampoco cambia la búsqueda", async () => {
     const o = await courierOrder();
     const r = await call(ANA, `update orders set status = 'confirmed' where id = '${o.id}'`);
     expect(r.ok).toBe(true);
@@ -460,7 +461,7 @@ describe("la confirmación no espera al repartidor — ENVIO-8", () => {
     for (const set of [
       `courier_id = '${COURIER}'`,
       "courier_status = 'accepted'",
-      "offer_favorite_until = now() + interval '1 hour'",
+      "offered_at = now() + interval '1 hour'",
     ]) {
       const r = await call(ANA, `update orders set ${set} where id = '${o.id}'`);
       expect(!r.ok && r.code, set).toBe("42501");
@@ -732,10 +733,12 @@ describe("lo que ve el cliente — ENVIO-16 y 17", () => {
   it("public_order_delivery muestra el envío sin teléfono ni dirección, con el precio cambiado", async () => {
     const o = await courierOrder();
     await setStatus(ANA, o.id, "confirmed");
-    await call(
-      REPA,
-      `select public.courier_take_order('${o.id}', 6000, 'Lluvia', 'Juan')`,
-    );
+    const made = await call(REPA, `select public.courier_make_offer('${o.id}', 6000, 'Lluvia')`);
+    expect(made.ok).toBe(true);
+    const offerId = (await db.query<{ id: string }>("select id from courier_offers where order_id = $1", [o.id]))
+      .rows[0].id;
+    const chosen = await call(null, `select public.public_choose_courier('${o.code}', '${offerId}')`);
+    expect(chosen.ok).toBe(true);
 
     const r = await call(null, `select public.public_order_delivery('${o.code}') as d`);
     expect(r.ok).toBe(true);
@@ -747,19 +750,25 @@ describe("lo que ve el cliente — ENVIO-16 y 17", () => {
       precio: 6000,
       motivo_cambio: "Lluvia",
       estado: "accepted",
-      nota: "Juan",
     });
     expect(JSON.stringify(d)).not.toMatch(/3515551234|Siempre Viva|telefono|direccion/i);
   });
 
-  it("public_order_delivery sigue cada paso: waiting, searching, accepted y self", async () => {
+  it("public_order_delivery sigue cada paso: searching y self (y accepted, en el otro test)", async () => {
     const estado = async (code: string) => {
       const r = await call(null, `select public.public_order_delivery('${code}') as d`);
       return (r.ok ? (r.rows[0].d as { estado: string; repartidor?: string }) : null)!;
     };
 
     const a = await courierOrder();
-    expect(await estado(a.code)).toEqual({ zona: "Cantera", precio_lista: 5000, precio: 5000, estado: "waiting" });
+    // Desde que se crea ya busca (ENVIO-95), sin ofertas todavía.
+    expect(await estado(a.code)).toEqual({
+      zona: "Cantera",
+      precio_lista: 5000,
+      precio: 5000,
+      estado: "searching",
+      ofertas: [],
+    });
 
     await setStatus(ANA, a.id, "confirmed");
     expect((await estado(a.code)).estado).toBe("searching");

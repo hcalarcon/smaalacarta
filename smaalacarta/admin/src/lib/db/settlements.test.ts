@@ -2,6 +2,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { asUser, createTestDb, createUser, type TestDb } from "@/test/db";
+import { take } from "@/test/offers";
 
 // ENVIO-38 a 40 contra Postgres real.
 const ANA = "aaaaaaaa-0000-0000-0000-000000000001"; // dueña de un negocio con envío
@@ -43,7 +44,7 @@ async function deliveredOrder(payment = "efectivo") {
 
   // El local confirma (abre la búsqueda), el repartidor lo toma y el local lo entrega.
   await call(ANA, `select public.set_order_status('${id}', 'confirmed')`);
-  await call(REPA, `select public.courier_take_order('${id}', null, null, 'Juan')`);
+  await take(db, REPA, id);
   for (const s of ["preparing", "ready", "handed_to_courier"]) {
     await call(ANA, `select public.set_order_status('${id}', '${s}')`);
   }

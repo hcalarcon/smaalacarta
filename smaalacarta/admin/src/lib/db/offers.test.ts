@@ -2,8 +2,10 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { applyMigration, asUser, createTestDb, createUser, type TestDb } from "@/test/db";
+import { take as takeOffer } from "@/test/offers";
 
-// ENVIO-59 a 75 contra Postgres real: la búsqueda de repartidor (varios repartidores, etapa 2).
+// ENVIO-59 a 75 contra Postgres real: la búsqueda de repartidor (varios repartidores, etapa 2). Desde la
+// etapa 2b el repartidor oferta y el cliente elige (ENVIO-95 a 112): ver `courier-offers.test.ts`.
 const ANA = "aaaaaaaa-0000-0000-0000-000000000001"; // dueña de un negocio con envío
 const BETO = "bbbbbbbb-0000-0000-0000-000000000002"; // dueño de otro negocio con envío
 const TOQUE_USER = "cccccccc-0000-0000-0000-000000000003"; // repartidor 1 (Repartos al Toque)
@@ -67,11 +69,9 @@ async function searching(zone = "Cantera") {
   return o;
 }
 
-const take = (user: string | null, id: string, price: number | null = null, reason: string | null = null, note: string | null = null) =>
-  call(
-    user,
-    `select public.courier_take_order('${id}', ${price === null ? "null" : price}, ${sqlText(reason)}, ${sqlText(note)})`,
-  );
+// El repartidor oferta y el cliente lo elige: queda con el pedido.
+const take = (user: string | null, id: string, price: number | null = null, reason: string | null = null) =>
+  takeOffer(db, user!, id, price, reason);
 
 async function available(user: string) {
   const r = await call(user, "select public.courier_available_orders() as l");
@@ -83,7 +83,7 @@ const sees = async (user: string, id: string) => (await available(user)).some((o
 async function row(id: string) {
   return (
     await db.query<Record<string, unknown>>(
-      `select courier_id, courier_status, offered_at, offer_favorite_id, offer_favorite_until, courier_note,
+      `select courier_id, courier_status, offered_at, courier_note,
               delivery_fee_list, delivery_fee, delivery_fee_reason, status
        from orders where id = $1`,
       [id],
@@ -91,12 +91,9 @@ async function row(id: string) {
   ).rows[0];
 }
 
-const setFavorite = (courier: string | null, minutes = 5) =>
-  db.exec(`update business_settings set favorite_courier_id = ${courier ? `'${courier}'` : "null"},
-             favorite_minutes = ${minutes} where business_id = '${NEG_ANA}'`);
-
-const closeWindow = (id: string) =>
-  db.exec(`update orders set offer_favorite_until = now() - interval '1 second' where id = '${id}'`);
+const setFavorite = (courier: string | null) =>
+  db.exec(`update business_settings set favorite_courier_id = ${courier ? `'${courier}'` : "null"}
+             where business_id = '${NEG_ANA}'`);
 
 beforeAll(async () => {
   db = await createTestDb();
@@ -153,24 +150,23 @@ afterAll(async () => {
   await db.close();
 });
 
-describe("abrir la búsqueda — ENVIO-59 y 60", () => {
-  it("el pedido con envío nace sin repartidor y en 'waiting'", async () => {
+describe("la búsqueda está abierta desde que se crea — ENVIO-59 y 95", () => {
+  it("el pedido con envío nace sin repartidor y buscando, y ya lo ven los repartidores", async () => {
     const o = await envio();
     const r = await row(o.id);
-    expect(r).toMatchObject({ courier_id: null, courier_status: "waiting", offered_at: null, status: "pending" });
-    expect(await sees(TOQUE_USER, o.id)).toBe(false);
-  });
-
-  it("al confirmar se abre la búsqueda; el pedido pendiente no aparece antes", async () => {
-    const o = await envio();
-    const antes = await available(TOQUE_USER);
-    expect(antes.map((x) => x.id)).not.toContain(o.id);
-
-    expect((await confirm(o.id)).ok).toBe(true);
-    const r = await row(o.id);
-    expect(r.courier_status).toBe("searching");
+    expect(r).toMatchObject({ courier_id: null, courier_status: "searching", status: "pending" });
     expect(r.offered_at).not.toBeNull();
     expect(await sees(TOQUE_USER, o.id)).toBe(true);
+  });
+
+  it("confirmarlo no cambia la búsqueda: offered_at queda", async () => {
+    const o = await envio();
+    const antes = await row(o.id);
+    expect((await confirm(o.id)).ok).toBe(true);
+    await setStatus(ANA, o.id, "preparing");
+    const despues = await row(o.id);
+    expect(despues.courier_status).toBe("searching");
+    expect(despues.offered_at).toEqual(antes.offered_at);
   });
 
   it("un pedido sin envío (retiro) no abre ninguna búsqueda", async () => {
@@ -182,24 +178,9 @@ describe("abrir la búsqueda — ENVIO-59 y 60", () => {
     expect(r).toMatchObject({ courier_id: null, courier_status: null, offered_at: null });
   });
 
-  it("también abre la búsqueda si salta de Pendiente directo a otro estado", async () => {
-    const o = await envio();
-    expect((await setStatus(ANA, o.id, "preparing")).ok).toBe(true);
-    expect((await row(o.id)).courier_status).toBe("searching");
-  });
-
-  it("confirmar no abre la búsqueda dos veces: offered_at queda", async () => {
-    const o = await searching();
-    const antes = await row(o.id);
-    await setStatus(ANA, o.id, "preparing");
-    const despues = await row(o.id);
-    expect(despues.offered_at).toEqual(antes.offered_at);
-  });
-
-  it("el pedido programado se ofrece apenas se confirma, con su hora", async () => {
+  it("el pedido programado se ofrece apenas se crea, con su hora", async () => {
     const o = await envio();
     await db.exec(`update orders set scheduled_for = now() + interval '1 day' where id = '${o.id}'`);
-    await confirm(o.id);
 
     const lista = await available(TOQUE_USER);
     const found = lista.find((x) => x.id === o.id);
@@ -208,72 +189,7 @@ describe("abrir la búsqueda — ENVIO-59 y 60", () => {
   });
 });
 
-describe("la ventana del favorito — ENVIO-61", () => {
-  it("antes de que venza lo ve solo el favorito; después, todos los que cubren la zona", async () => {
-    await setFavorite(MOTO, 5);
-    const o = await searching();
-
-    const r = await row(o.id);
-    expect(r.offer_favorite_id).toBe(MOTO);
-    const until = new Date(r.offer_favorite_until as string).getTime();
-    expect(until - Date.now()).toBeGreaterThan(4 * 60_000);
-    expect(until - Date.now()).toBeLessThanOrEqual(5 * 60_000 + 5_000);
-
-    expect(await sees(MOTO_USER, o.id)).toBe(true);
-    expect(await sees(TOQUE_USER, o.id)).toBe(false);
-
-    await closeWindow(o.id);
-    expect(await sees(MOTO_USER, o.id)).toBe(true);
-    expect(await sees(TOQUE_USER, o.id)).toBe(true);
-  });
-
-  it("sin favorito lo ven todos desde el principio y no hay ventana", async () => {
-    const o = await searching();
-    const r = await row(o.id);
-    expect(r.offer_favorite_id).toBeNull();
-    expect(r.offer_favorite_until).toBeNull();
-    expect(await sees(MOTO_USER, o.id)).toBe(true);
-    expect(await sees(TOQUE_USER, o.id)).toBe(true);
-  });
-
-  it("si el favorito no cubre la zona del pedido, no hay ventana", async () => {
-    // Moto Express cubre Cantera y Centro, pero no Oasis.
-    await setFavorite(MOTO, 5);
-    const o = await searching("Oasis");
-    const r = await row(o.id);
-    expect(r.offer_favorite_id).toBeNull();
-    expect(r.offer_favorite_until).toBeNull();
-    expect(await sees(TOQUE_USER, o.id)).toBe(true);
-  });
-
-  it("los minutos salen de la configuración del local", async () => {
-    await setFavorite(MOTO, 20);
-    const o = await searching();
-    const r = await row(o.id);
-    const left = new Date(r.offer_favorite_until as string).getTime() - Date.now();
-    expect(left).toBeGreaterThan(19 * 60_000);
-  });
-
-  it("el favorito copiado al pedido no cambia si el local cambia de favorito después", async () => {
-    await setFavorite(MOTO, 5);
-    const o = await searching();
-    await setFavorite(TOQUE, 5);
-    expect((await row(o.id)).offer_favorite_id).toBe(MOTO);
-  });
-
-  it("el que no es favorito no puede tomarlo durante la ventana (P0019)", async () => {
-    await setFavorite(MOTO, 5);
-    const o = await searching();
-
-    const r = await take(TOQUE_USER, o.id);
-    expect(!r.ok && r.code).toBe("P0019");
-    expect((await row(o.id)).courier_status).toBe("searching");
-
-    expect((await take(MOTO_USER, o.id)).ok).toBe(true);
-  });
-});
-
-describe("cobertura de zonas — ENVIO-62", () => {
+describe("cobertura de zonas — ENVIO-62 y 99", () => {
   it("cada repartidor ve solo los pedidos de las zonas que cubre", async () => {
     const cantera = await searching("Cantera");
     const oasis = await searching("Oasis");
@@ -286,20 +202,20 @@ describe("cobertura de zonas — ENVIO-62", () => {
     expect(await sees(LEJOS_USER, oasis.id)).toBe(true);
   });
 
-  it("quien no cubre la zona no puede tomarlo ni rechazarlo (P0019)", async () => {
+  it("quien no cubre la zona no puede ofertar ni rechazar (P0019)", async () => {
     const o = await searching("Cantera");
     const t = await take(LEJOS_USER, o.id);
-    expect(!t.ok && t.code).toBe("P0019");
+    expect(!t.ok && t.code).toBe("P0020");
     const d = await call(LEJOS_USER, `select public.courier_decline_order('${o.id}')`);
-    expect(!d.ok && d.code).toBe("P0019");
+    expect(!d.ok && d.code).toBe("P0020");
   });
 
-  it("un repartidor dado de baja no ve ni toma nada", async () => {
+  it("un repartidor dado de baja no ve ni oferta nada", async () => {
     const o = await searching();
     await db.exec(`update couriers set active = false where id = '${MOTO}'`);
     expect(await sees(MOTO_USER, o.id)).toBe(false);
     const t = await take(MOTO_USER, o.id);
-    expect(!t.ok && t.code).toBe("P0019");
+    expect(!t.ok && t.code).toBe("P0020");
     await db.exec(`update couriers set active = true where id = '${MOTO}'`);
   });
 
@@ -313,105 +229,6 @@ describe("cobertura de zonas — ENVIO-62", () => {
   });
 });
 
-describe("tomar el pedido — ENVIO-63 y 64", () => {
-  it("el primero que toca Tomar se lo queda y al segundo se le cierra (P0019)", async () => {
-    const o = await searching();
-
-    const primero = await take(MOTO_USER, o.id, null, null, "Salgo ya");
-    expect(primero.ok).toBe(true);
-
-    const segundo = await take(TOQUE_USER, o.id);
-    expect(!segundo.ok && segundo.code).toBe("P0019");
-
-    const r = await row(o.id);
-    expect(r).toMatchObject({ courier_id: MOTO, courier_status: "accepted", courier_note: "Salgo ya" });
-
-    // Al otro se le cierra: ya no lo ve.
-    expect(await sees(TOQUE_USER, o.id)).toBe(false);
-    // Y el que lo tomó tampoco lo ve entre los disponibles.
-    expect(await sees(MOTO_USER, o.id)).toBe(false);
-  });
-
-  it("tomar un pedido que no está buscando da P0019 y no lo cambia", async () => {
-    const o = await envio(); // todavía waiting
-    const r = await take(TOQUE_USER, o.id);
-    expect(!r.ok && r.code).toBe("P0019");
-    expect((await row(o.id)).courier_id).toBeNull();
-
-    const inexistente = await take(TOQUE_USER, "99999999-0000-0000-0000-000000000009");
-    expect(!inexistente.ok && inexistente.code).toBe("P0019");
-  });
-
-  it("cambiar el precio exige motivo y guarda quién y cuándo; el de lista no cambia", async () => {
-    const o = await searching();
-
-    const sinMotivo = await take(TOQUE_USER, o.id, 6500);
-    expect(!sinMotivo.ok && sinMotivo.code).toBe("22023");
-    expect((await row(o.id)).courier_status).toBe("searching");
-
-    const ok = await take(TOQUE_USER, o.id, 6500, "Fuera de zona", "Juan");
-    expect(ok.ok).toBe(true);
-
-    const r = await row(o.id);
-    expect(r).toMatchObject({
-      delivery_fee_list: "5000.00",
-      delivery_fee: "6500.00",
-      delivery_fee_reason: "Fuera de zona",
-      courier_note: "Juan",
-    });
-    const changed = await db.query<{ delivery_fee_changed_by: string; delivery_fee_changed_at: Date }>(
-      "select delivery_fee_changed_by, delivery_fee_changed_at from orders where id = $1",
-      [o.id],
-    );
-    expect(changed.rows[0].delivery_fee_changed_by).toBe(TOQUE_USER);
-    expect(changed.rows[0].delivery_fee_changed_at).not.toBeNull();
-  });
-
-  it("el mismo precio no pide motivo ni deja marca de cambio; precios inválidos se rechazan", async () => {
-    const o = await searching();
-    const malo = await take(TOQUE_USER, o.id, -1, "motivo");
-    expect(!malo.ok && malo.code).toBe("22023");
-
-    const larga = await take(TOQUE_USER, o.id, null, null, "x".repeat(121));
-    expect(!larga.ok && larga.code).toBe("22023");
-
-    expect((await take(TOQUE_USER, o.id, 5000)).ok).toBe(true);
-    const changed = await db.query<{ delivery_fee_changed_by: string | null }>(
-      "select delivery_fee_changed_by from orders where id = $1",
-      [o.id],
-    );
-    expect(changed.rows[0].delivery_fee_changed_by).toBeNull();
-  });
-
-  it("deja eventos 'delivery' legibles que el seguimiento público no muestra", async () => {
-    const o = await searching();
-    await take(TOQUE_USER, o.id, 26000, "fuera de zona", "Juan");
-
-    const ev = await db.query<{ note: string; status: string; changed_by: string }>(
-      "select note, status, changed_by from order_events where order_id = $1 and kind = 'delivery' order by note",
-      [o.id],
-    );
-    const notes = ev.rows.map((e) => e.note);
-    expect(notes).toHaveLength(2);
-    expect(notes.some((n) => /^Envío tomado por Repartos al Toque: Juan, \d\d:\d\d$/.test(n))).toBe(true);
-    expect(notes).toContain("Precio del envío: $5.000 → $26.000 (fuera de zona)");
-    expect(ev.rows.every((e) => e.changed_by === TOQUE_USER)).toBe(true);
-
-    const code = (await db.query<{ code: string }>("select code from orders where id = $1", [o.id])).rows[0].code;
-    const track = await call(null, `select public.public_order_tracking('${code}') as t`);
-    expect(JSON.stringify(track.ok ? track.rows[0].t : null)).not.toMatch(/Envío tomado|Precio del envío/);
-  });
-
-  it("un pedido cancelado mientras se buscaba ya no se puede tomar", async () => {
-    const o = await searching();
-    await setStatus(ANA, o.id, "cancelled");
-    const r = await take(TOQUE_USER, o.id);
-    expect(!r.ok && r.code).toBe("P0019");
-    expect((await row(o.id)).courier_status).toBe("waiting");
-    expect((await row(o.id)).offered_at).toBeNull();
-  });
-});
-
 describe("rechazar y devolver — ENVIO-65 y 66", () => {
   it("rechazar: ese pedido deja de verse para ese repartidor y sigue para los demás", async () => {
     const o = await searching();
@@ -421,9 +238,9 @@ describe("rechazar y devolver — ENVIO-65 y 66", () => {
     expect(await sees(TOQUE_USER, o.id)).toBe(false);
     expect(await sees(MOTO_USER, o.id)).toBe(true);
 
-    // Ya no puede tomarlo.
+    // Ya no puede ofertar.
     const t = await take(TOQUE_USER, o.id);
-    expect(!t.ok && t.code).toBe("P0019");
+    expect(!t.ok && t.code).toBe("P0020");
 
     const d = await db.query<{ kind: string; courier_id: string }>(
       "select kind, courier_id from courier_order_declines where order_id = $1",
@@ -435,10 +252,9 @@ describe("rechazar y devolver — ENVIO-65 y 66", () => {
     expect((await row(o.id)).courier_status).toBe("searching");
   });
 
-  it("devolver: motivo obligatorio, vuelve a todos sin ventana, menos a quien lo devolvió", async () => {
-    await setFavorite(MOTO, 5);
+  it("devolver: motivo obligatorio, vuelve a ofertas, menos para quien lo devolvió", async () => {
     const o = await searching();
-    await take(MOTO_USER, o.id, 7000, "Lluvia", "Ya voy");
+    await take(MOTO_USER, o.id, 7000, "Lluvia");
 
     const sinMotivo = await call(MOTO_USER, `select public.courier_return_order('${o.id}', '  ')`);
     expect(!sinMotivo.ok && sinMotivo.code).toBe("22023");
@@ -452,19 +268,17 @@ describe("rechazar y devolver — ENVIO-65 y 66", () => {
     expect(r).toMatchObject({
       courier_id: null,
       courier_status: "searching",
-      offer_favorite_id: null,
-      offer_favorite_until: null,
       courier_note: null,
       delivery_fee: "5000.00",
       delivery_fee_reason: null,
     });
     expect(new Date(r.offered_at as string).getTime()).toBeGreaterThanOrEqual(antes);
 
-    // Sin ventana: lo ven todos menos el que lo devolvió.
+    // Lo ven todos menos el que lo devolvió, que ya no puede ofertar.
     expect(await sees(TOQUE_USER, o.id)).toBe(true);
     expect(await sees(MOTO_USER, o.id)).toBe(false);
     const t = await take(MOTO_USER, o.id);
-    expect(!t.ok && t.code).toBe("P0019");
+    expect(!t.ok && t.code).toBe("P0020");
 
     const d = await db.query<{ kind: string; reason: string }>(
       "select kind, reason from courier_order_declines where order_id = $1 and courier_id = $2",
@@ -478,7 +292,7 @@ describe("rechazar y devolver — ENVIO-65 y 66", () => {
     );
     expect(ev.rows[0].note).toMatch(/^Envío devuelto por Moto Express: Se me pinchó la moto, \d\d:\d\d$/);
 
-    // Otro lo toma.
+    // Otro lo ofrece y el cliente lo elige.
     expect((await take(TOQUE_USER, o.id)).ok).toBe(true);
     expect((await row(o.id)).courier_id).toBe(TOQUE);
   });
@@ -536,13 +350,6 @@ describe("el local resuelve — ENVIO-67 y 68", () => {
     }
   });
 
-  it("asignar a mano funciona también durante la ventana del favorito", async () => {
-    await setFavorite(MOTO, 5);
-    const o = await searching();
-    expect((await call(ANA, `select public.business_assign_courier('${o.id}', '${TOQUE}')`)).ok).toBe(true);
-    expect((await row(o.id)).courier_id).toBe(TOQUE);
-  });
-
   it("el repartidor tiene que estar activo y cubrir la zona (22023)", async () => {
     const o = await searching("Cantera");
     const lejos = await call(ANA, `select public.business_assign_courier('${o.id}', '${LEJOS}')`);
@@ -561,9 +368,10 @@ describe("el local resuelve — ENVIO-67 y 68", () => {
     expect((await row(o.id)).courier_id).toBeNull();
   });
 
-  it("solo con la búsqueda abierta (P0004): ni sin confirmar ni ya tomado", async () => {
-    const sinConfirmar = await envio();
-    const a = await call(ANA, `select public.business_assign_courier('${sinConfirmar.id}', '${MOTO}')`);
+  it("solo con la búsqueda abierta (P0004): ni cancelado ni ya elegido", async () => {
+    const cancelado = await searching();
+    await setStatus(ANA, cancelado.id, "cancelled");
+    const a = await call(ANA, `select public.business_assign_courier('${cancelado.id}', '${MOTO}')`);
     expect(!a.ok && a.code).toBe("P0004");
 
     const tomado = await searching();
@@ -668,8 +476,8 @@ describe("el teléfono del cliente — ENVIO-70", () => {
   });
 });
 
-describe("quién ve qué — ENVIO-71 a 73", () => {
-  it("antes de tomarlo el repartidor no ve nombre, teléfono ni dirección del cliente", async () => {
+describe("quién ve qué — ENVIO-71 a 73 y 101", () => {
+  it("antes de que lo elijan el repartidor no ve nombre, teléfono ni dirección del cliente", async () => {
     const o = await searching();
     const r = await call(TOQUE_USER, "select public.courier_available_orders() as l");
     const lista = (r.ok ? r.rows[0].l : []) as Record<string, unknown>[];
@@ -680,7 +488,9 @@ describe("quién ve qué — ENVIO-71 a 73", () => {
       numero: expect.any(String),
       total: 2000,
       pago: "efectivo",
-      envio: { zona: "Cantera", precio_lista: 5000, precio: 5000 },
+      envio: { zona: "Cantera", precio_lista: 5000 },
+      ofertas: 0,
+      mi_oferta: null,
     });
     expect(found).toHaveProperty("programado");
     expect(found).not.toHaveProperty("cliente");
@@ -689,7 +499,7 @@ describe("quién ve qué — ENVIO-71 a 73", () => {
     expect(JSON.stringify(found)).not.toMatch(/Cliente Prueba|3515551234|Siempre Viva|Timbre roto/);
   });
 
-  it("recién cuando lo toma ve los datos del cliente (courier_orders)", async () => {
+  it("recién cuando lo eligen ve los datos del cliente (courier_orders)", async () => {
     const o = await searching();
     await take(TOQUE_USER, o.id);
 

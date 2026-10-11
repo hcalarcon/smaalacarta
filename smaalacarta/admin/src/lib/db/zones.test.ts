@@ -39,15 +39,15 @@ function order(slug: string, zone: string | null) {
   );
 }
 
-const prefs = (user: string, favorite: string | null, minutes = 5) =>
-  call(user, `select public.set_courier_preferences(${favorite ? `'${favorite}'` : "null"}, ${minutes})`);
+const prefs = (user: string, favorite: string | null) =>
+  call(user, `select public.set_courier_preferences(${favorite ? `'${favorite}'` : "null"})`);
 
 async function resetAna() {
   await db.exec(`
     delete from business_delivery_zones where business_id = '${NEG_ANA}';
     insert into business_delivery_zones (business_id, zone_id)
       select '${NEG_ANA}', id from delivery_zones where name in ('Centro (hasta Av. Koessler)', 'Cantera');
-    update business_settings set favorite_courier_id = null, favorite_minutes = 5
+    update business_settings set favorite_courier_id = null
       where business_id = '${NEG_ANA}';
   `);
 }
@@ -440,22 +440,22 @@ describe("public_delivery_zones — ENVIO-51", () => {
 });
 
 describe("set_courier_preferences — ENVIO-52", () => {
-  it("guarda el favorito y los minutos (5 por defecto)", async () => {
-    const def = await db.query<{ favorite_courier_id: string | null; favorite_minutes: number }>(
-      `select favorite_courier_id, favorite_minutes from business_settings where business_id = '${NEG_ANA}'`,
+  it("guarda el favorito (sin minutos: ya no hay ventana exclusiva, ENVIO-112)", async () => {
+    const def = await db.query<{ favorite_courier_id: string | null }>(
+      `select favorite_courier_id from business_settings where business_id = '${NEG_ANA}'`,
     );
-    expect(def.rows[0]).toEqual({ favorite_courier_id: null, favorite_minutes: 5 });
+    expect(def.rows[0]).toEqual({ favorite_courier_id: null });
 
-    const r = await prefs(ANA, DOS, 12);
+    const r = await prefs(ANA, DOS);
     expect(r.ok).toBe(true);
 
-    const after = await db.query<{ favorite_courier_id: string; favorite_minutes: number }>(
-      `select favorite_courier_id, favorite_minutes from business_settings where business_id = '${NEG_ANA}'`,
+    const after = await db.query<{ favorite_courier_id: string }>(
+      `select favorite_courier_id from business_settings where business_id = '${NEG_ANA}'`,
     );
-    expect(after.rows[0]).toEqual({ favorite_courier_id: DOS, favorite_minutes: 12 });
+    expect(after.rows[0]).toEqual({ favorite_courier_id: DOS });
 
-    // Sin favorito: el pedido va a todos.
-    const none = await prefs(ANA, null, 5);
+    // Sin favorito: la oferta de nadie va primero.
+    const none = await prefs(ANA, null);
     expect(none.ok).toBe(true);
     await resetAna();
   });
@@ -481,14 +481,10 @@ describe("set_courier_preferences — ENVIO-52", () => {
     await resetAna();
   });
 
-  it("minutos de 1 a 60", async () => {
-    for (const minutes of [0, 61, -3]) {
-      const r = await prefs(ANA, null, minutes);
-      expect(!r.ok && r.code, `minutos ${minutes}`).toBe("22023");
-    }
-    for (const minutes of [1, 60]) {
-      expect((await prefs(ANA, null, minutes)).ok).toBe(true);
-    }
+  it("ya no recibe minutos para el favorito (ENVIO-112)", async () => {
+    const r = await call(ANA, "select public.set_courier_preferences(null, 5)");
+    expect(r.ok).toBe(false);
+    expect((await prefs(ANA, null)).ok).toBe(true);
     await resetAna();
   });
 
@@ -514,12 +510,12 @@ describe("save_delivery_preferences — ENVIO-53", () => {
     const centro = await zoneId("Centro (hasta Av. Koessler)");
 
     // Moto Express no cubre Lolog: con solo Lolog, falla.
-    const fail = await call(ANA, `select public.save_delivery_preferences(array['${lolog}']::uuid[], '${DOS}', 5)`);
+    const fail = await call(ANA, `select public.save_delivery_preferences(array['${lolog}']::uuid[], '${DOS}')`);
     expect(!fail.ok && fail.code).toBe("P0017");
     // Y no quedó nada a medias.
     expect(await count(`select count(*) n from business_delivery_zones where business_id = '${NEG_ANA}'`)).toBe(2);
 
-    const ok = await call(ANA, `select public.save_delivery_preferences(array['${centro}']::uuid[], '${DOS}', 10)`);
+    const ok = await call(ANA, `select public.save_delivery_preferences(array['${centro}']::uuid[], '${DOS}')`);
     expect(ok.ok).toBe(true);
 
     const zones = await db.query<{ name: string }>(
@@ -528,10 +524,10 @@ describe("save_delivery_preferences — ENVIO-53", () => {
     );
     expect(zones.rows).toEqual([{ name: "Centro (hasta Av. Koessler)" }]);
 
-    const s = await db.query<{ favorite_courier_id: string; favorite_minutes: number }>(
-      `select favorite_courier_id, favorite_minutes from business_settings where business_id = '${NEG_ANA}'`,
+    const s = await db.query<{ favorite_courier_id: string }>(
+      `select favorite_courier_id from business_settings where business_id = '${NEG_ANA}'`,
     );
-    expect(s.rows[0]).toEqual({ favorite_courier_id: DOS, favorite_minutes: 10 });
+    expect(s.rows[0]).toEqual({ favorite_courier_id: DOS });
 
     await resetAna();
   });
@@ -539,14 +535,14 @@ describe("save_delivery_preferences — ENVIO-53", () => {
   it("rechaza una zona que no existe o está de baja, y deja el local como estaba", async () => {
     const r = await call(
       ANA,
-      "select public.save_delivery_preferences(array['99999999-0000-0000-0000-000000000009']::uuid[], null, 5)",
+      "select public.save_delivery_preferences(array['99999999-0000-0000-0000-000000000009']::uuid[], null)",
     );
     expect(!r.ok && r.code).toBe("22023");
     expect(await count(`select count(*) n from business_delivery_zones where business_id = '${NEG_ANA}'`)).toBe(2);
   });
 
   it("una lista vacía deja al local sin zonas", async () => {
-    const r = await call(ANA, "select public.save_delivery_preferences(array[]::uuid[], null, 5)");
+    const r = await call(ANA, "select public.save_delivery_preferences(array[]::uuid[], null)");
     expect(r.ok).toBe(true);
     expect(await count(`select count(*) n from business_delivery_zones where business_id = '${NEG_ANA}'`)).toBe(0);
     await resetAna();
@@ -559,7 +555,6 @@ describe("save_delivery_preferences — ENVIO-53", () => {
           zones: { name: string; selected: boolean; covered: boolean }[];
           couriers: { id: string; zone_ids: string[] }[];
           favorite_id: string | null;
-          favorite_minutes: number;
         })
       : null;
 
@@ -571,7 +566,8 @@ describe("save_delivery_preferences — ENVIO-53", () => {
     expect(o?.zones.every((z) => z.covered)).toBe(true);
     expect(o?.couriers.map((c) => c.id).sort()).toEqual([TOQUE, DOS].sort());
     expect(o?.couriers.find((c) => c.id === DOS)?.zone_ids).toHaveLength(2);
-    expect(o).toMatchObject({ favorite_id: null, favorite_minutes: 5 });
+    expect(o).toMatchObject({ favorite_id: null });
+    expect(o).not.toHaveProperty("favorite_minutes");
 
     const sinEnvio = await call(CELIA, "select public.business_delivery_options() as o");
     expect(sinEnvio.ok && sinEnvio.rows[0].o).toBeNull();
@@ -601,9 +597,9 @@ describe("create_public_order con las zonas del local — ENVIO-54", () => {
       "select courier_id, delivery_fee_list, courier_status from orders where code = $1",
       [sinCode],
     );
-    expect(o.rows[0]).toEqual({ courier_id: null, delivery_fee_list: "5000.00", courier_status: "waiting" });
+    expect(o.rows[0]).toEqual({ courier_id: null, delivery_fee_list: "5000.00", courier_status: "searching" });
 
-    expect((await prefs(ANA, DOS, 5)).ok).toBe(true);
+    expect((await prefs(ANA, DOS)).ok).toBe(true);
     const fav = await order("ana", await zoneId("Cantera"));
     const favCode = (fav.ok ? (fav.rows[0].result as { code: string }).code : "") as string;
     const favOrder = await db.query<{ courier_id: string | null }>(
