@@ -51,7 +51,7 @@ type Created = { code: string; number: number; total: number; delivery_fee?: num
 const created = (r: Awaited<ReturnType<typeof order>>) => (r.ok ? (r.rows[0].result as Created) : null);
 
 async function zoneId(name: string) {
-  const r = await db.query<{ id: string }>("select id from courier_zones where name = $1", [name]);
+  const r = await db.query<{ id: string }>("select id from delivery_zones where name = $1", [name]);
   return r.rows[0].id;
 }
 
@@ -121,10 +121,15 @@ beforeAll(async () => {
       ('${FERNET}', '${NEG_BETO}', 'c2000000-0000-0000-0000-000000000001', 'Fernet', 2500, true);
 
     insert into courier_users (courier_id, user_id) values ('${COURIER}', '${REPA}');
-    -- Un repartidor inactivo (no puede haber dos activos) para probar el aislamiento.
+    -- Un repartidor inactivo con una zona que solo él cubre.
     insert into couriers (id, name, active) values ('${OTRO_COURIER}', 'Otro', false);
-    insert into courier_zones (courier_id, name, price, sort_order)
-      values ('${OTRO_COURIER}', 'Zona ajena', 100, 1);
+    insert into delivery_zones (name, price, sort_order) values ('Zona ajena', 100, 99);
+    insert into courier_zone_coverage (courier_id, zone_id)
+      select '${OTRO_COURIER}', id from delivery_zones where name = 'Zona ajena';
+
+    -- Ana envía a todas las zonas (el negocio se creó después de la migración, que ya no lo ve).
+    insert into business_delivery_zones (business_id, zone_id)
+      select '${NEG_ANA}', id from delivery_zones;
   `);
 }, 60_000);
 
@@ -148,66 +153,48 @@ describe("repartidor y barrios cargados — ENVIO-1", () => {
     expect(c.rows[0]).toEqual({ name: "Repartos al Toque", active: true, whatsapp: null });
 
     const z = await db.query<{ name: string; price: string }>(
-      "select name, price from courier_zones where courier_id = $1 order by sort_order",
-      [COURIER],
+      "select name, price from delivery_zones where name <> 'Zona ajena' order by sort_order",
     );
     expect(z.rows).toHaveLength(39);
     expect(z.rows[0]).toEqual({ name: "Centro (hasta Av. Koessler)", price: "4500.00" });
     expect(z.rows[38]).toEqual({ name: "Las Marias del Valle / Aeropuerto", price: "28000.00" });
   });
 
-  it("la base no admite un segundo repartidor activo", async () => {
+  it("un barrio no se repite", async () => {
     await expect(
-      db.exec("insert into couriers (name, active) values ('Segundo', true)"),
-    ).rejects.toThrow(/couriers_one_active_idx|duplicate/i);
-  });
-
-  it("un barrio no se repite dentro del repartidor", async () => {
-    await expect(
-      db.exec(`insert into courier_zones (courier_id, name, price) values ('${COURIER}', 'Cantera', 1)`),
+      db.exec("insert into delivery_zones (name, price) values ('Cantera', 1)"),
     ).rejects.toThrow(/duplicate|unique/i);
   });
 });
 
 describe("quién ve y toca qué — ENVIO-3 y ENVIO-4", () => {
   it("un visitante sin sesión no ve repartidores, barrios ni usuarios", async () => {
-    for (const t of ["couriers", "courier_zones", "courier_users"]) {
+    for (const t of ["couriers", "delivery_zones", "courier_users"]) {
       const r = await call(null, `select * from ${t}`);
       expect(r.ok && r.rows.length).toBe(0);
     }
   });
 
-  it("el miembro de un negocio con envío ve el repartidor y sus barrios activos", async () => {
+  it("el miembro de un negocio con envío ve a los repartidores activos que cubren sus zonas", async () => {
     const c = await call(ANA, "select id from couriers");
-    expect(c.ok && c.rows.length).toBe(1);
-
-    const z = await call(ANA, "select id from courier_zones");
-    expect(z.ok && z.rows.length).toBe(39);
-
-    await db.exec(`update courier_zones set active = false where name = 'Lolog'`);
-    const z2 = await call(ANA, "select id from courier_zones");
-    expect(z2.ok && z2.rows.length).toBe(38);
-    await db.exec(`update courier_zones set active = true where name = 'Lolog'`);
+    expect(c.ok && c.rows.map((r) => r.id)).toEqual([COURIER]);
   });
 
-  it("el miembro de un negocio sin envío no ve nada", async () => {
-    for (const t of ["couriers", "courier_zones", "courier_users"]) {
+  it("el miembro de un negocio sin envío no ve repartidores ni usuarios", async () => {
+    for (const t of ["couriers", "courier_users"]) {
       const r = await call(BETO, `select * from ${t}`);
       expect(r.ok && r.rows.length).toBe(0);
     }
   });
 
   it("un miembro no escribe barrios, repartidores ni usuarios repartidor", async () => {
-    const insert = await call(
-      ANA,
-      `insert into courier_zones (courier_id, name, price) values ('${COURIER}', 'Mío', 1)`,
-    );
+    const insert = await call(ANA, "insert into delivery_zones (name, price) values ('Mío', 1)");
     expect(insert.ok).toBe(false);
 
-    const update = await call(ANA, "update courier_zones set price = 1");
+    const update = await call(ANA, "update delivery_zones set price = 1");
     expect(update.ok && update.affected).toBe(0);
 
-    const del = await call(ANA, "delete from courier_zones");
+    const del = await call(ANA, "delete from delivery_zones");
     expect(del.ok && del.affected).toBe(0);
 
     const courier = await call(ANA, "update couriers set name = 'Hackeado'");
@@ -231,32 +218,12 @@ describe("quién ve y toca qué — ENVIO-3 y ENVIO-4", () => {
     expect(nobody.ok && nobody.rows[0].id).toBeNull();
   });
 
-  it("el repartidor hace alta, cambio y baja de sus barrios", async () => {
-    const insert = await call(
-      REPA,
-      `insert into courier_zones (courier_id, name, price, sort_order) values ('${COURIER}', 'Barrio Nuevo', 9000, 40)`,
-    );
-    expect(insert.ok).toBe(true);
-
-    const update = await call(REPA, "update courier_zones set price = 9500 where name = 'Barrio Nuevo'");
-    expect(update.ok && update.affected).toBe(1);
-
-    const del = await call(REPA, "delete from courier_zones where name = 'Barrio Nuevo'");
-    expect(del.ok && del.affected).toBe(1);
-  });
-
-  it("el repartidor no toca los barrios de otro ni cambia de repartidor", async () => {
-    const insert = await call(
-      REPA,
-      `insert into courier_zones (courier_id, name, price) values ('${OTRO_COURIER}', 'Colada', 1)`,
-    );
+  it("el repartidor ya no edita barrios ni precios", async () => {
+    const insert = await call(REPA, "insert into delivery_zones (name, price) values ('Barrio Nuevo', 9000)");
     expect(insert.ok).toBe(false);
 
-    const update = await call(REPA, "update courier_zones set price = 1 where name = 'Zona ajena'");
+    const update = await call(REPA, "update delivery_zones set price = 9500 where name = 'Cantera'");
     expect(update.ok && update.affected).toBe(0);
-
-    const move = await call(REPA, `update courier_zones set courier_id = '${OTRO_COURIER}' where name = 'Cantera'`);
-    expect(move.ok).toBe(false);
 
     const self = await call(REPA, `insert into courier_users (courier_id, user_id) values ('${OTRO_COURIER}', '${REPA}')`);
     expect(self.ok).toBe(false);
@@ -266,15 +233,15 @@ describe("quién ve y toca qué — ENVIO-3 y ENVIO-4", () => {
     const all = await call(SUPER, "select id from couriers");
     expect(all.ok && all.rows.length).toBe(2);
 
-    const zones = await call(SUPER, "select id from courier_zones");
+    const zones = await call(SUPER, "select id from delivery_zones");
     expect(zones.ok && zones.rows.length).toBe(40);
 
     const users = await call(SUPER, "select user_id from courier_users");
     expect(users.ok && users.rows.length).toBe(1);
 
-    const update = await call(SUPER, "update courier_zones set price = 4600 where name = 'Centro (hasta Av. Koessler)'");
+    const update = await call(SUPER, "update delivery_zones set price = 4600 where name = 'Centro (hasta Av. Koessler)'");
     expect(update.ok && update.affected).toBe(1);
-    await db.exec("update courier_zones set price = 4500 where name = 'Centro (hasta Av. Koessler)'");
+    await db.exec("update delivery_zones set price = 4500 where name = 'Centro (hasta Av. Koessler)'");
 
     const write = await call(SUPER, `insert into courier_users (courier_id, user_id) values ('${COURIER}', '${SUPER}')`);
     expect(write.ok).toBe(false);
@@ -343,7 +310,7 @@ describe("crear un pedido con envío — ENVIO-5, 6 y 7", () => {
     expect(await count("select count(*) n from orders")).toBe(before + 1);
   });
 
-  it("sin barrio, o con un barrio que no existe, inactivo o de otro repartidor, da P0016", async () => {
+  it("sin barrio, o con un barrio que no existe, inactivo o sin repartidor activo, da P0016", async () => {
     const base = { delivery: "delivery", phone: "3515551234", address: "Calle 12345" };
 
     const sin = await order("ana", CAFE, { ...base, zone: null });
@@ -355,10 +322,10 @@ describe("crear un pedido con envío — ENVIO-5, 6 y 7", () => {
     const ajena = await order("ana", CAFE, { ...base, zone: await zoneId("Zona ajena") });
     expect(!ajena.ok && ajena.code).toBe("P0016");
 
-    await db.exec("update courier_zones set active = false where name = 'Cantera'");
+    await db.exec("update delivery_zones set active = false where name = 'Cantera'");
     const inactiva = await order("ana", CAFE, { ...base, zone: await zoneId("Cantera") });
     expect(!inactiva.ok && inactiva.code).toBe("P0016");
-    await db.exec("update courier_zones set active = true where name = 'Cantera'");
+    await db.exec("update delivery_zones set active = true where name = 'Cantera'");
   });
 
   it("teléfono de 8 a 15 dígitos y dirección de 5 a 200 caracteres: si no, 22023", async () => {
@@ -849,12 +816,12 @@ describe("lo que ve el cliente — ENVIO-16 y 17", () => {
   });
 
   it("no muestra los barrios dados de baja", async () => {
-    await db.exec("update courier_zones set active = false where name = 'Chacra 30'");
+    await db.exec("update delivery_zones set active = false where name = 'Chacra 30'");
     const r = await call(null, "select public.public_delivery_zones('ana') as z");
     const z = (r.ok ? r.rows[0].z : null) as { zonas: { nombre: string }[] };
     expect(z.zonas).toHaveLength(38);
     expect(z.zonas.map((x) => x.nombre)).not.toContain("Chacra 30");
-    await db.exec("update courier_zones set active = true where name = 'Chacra 30'");
+    await db.exec("update delivery_zones set active = true where name = 'Chacra 30'");
   });
 
   it("public_order_delivery muestra el envío sin teléfono ni dirección", async () => {

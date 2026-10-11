@@ -1123,16 +1123,17 @@ por `src/lib/db/delivery.test.ts` y `status.test.ts`. Esta etapa es solo la base
 panel del local y el del repartidor vienen después. `couriers` y `courier_zones` son tablas globales
 (sin `business_id`): hay un solo repartidor y no hay precios distintos según el local.*
 
-- **ENVIO-1** Hay un solo repartidor activo, Repartos al Toque (`couriers`), con sus 39 barrios y precios
-  (`courier_zones`, por `sort_order`); la base no admite un segundo repartidor activo.
+- **ENVIO-1** Repartos al Toque (`couriers`) arranca con sus 39 barrios y precios, que pasaron a ser zonas de la
+  plataforma (`delivery_zones`, por `sort_order`, ENVIO-46). *Reemplazado en parte por ENVIO-45: ya puede haber
+  varios repartidores activos.*
 - **ENVIO-2** Solo un superadmin habilita el envío con el repartidor en un negocio (`businesses.courier_delivery`,
   falso por defecto); el dueño del negocio no puede cambiarlo.
-- **ENVIO-3** Un usuario repartidor (`courier_users`, cargado a mano) ve su repartidor y hace alta, cambio y baja
-  de sus barrios y precios; no toca los de otro repartidor ni se agrega solo como repartidor.
-- **ENVIO-4** Un miembro de un negocio con `courier_delivery` lee el repartidor activo y sus barrios activos; uno
-  de un negocio sin envío, un visitante y un miembro sin relación no leen nada de eso.
-- **ENVIO-5** `create_public_order` con entrega `delivery` en un negocio con `courier_delivery` exige barrio activo
-  del repartidor activo (`P0016`), teléfono de 8 a 15 dígitos y dirección de 5 a 200 caracteres (`22023`).
+- **ENVIO-3** Un usuario repartidor (`courier_users`) ve su repartidor y su fila; ya no edita barrios ni precios
+  (ENVIO-46) y no se agrega solo como repartidor.
+- **ENVIO-4** Un miembro de un negocio con `courier_delivery` lee los repartidores activos que cubren alguna de
+  sus zonas (ENVIO-49); uno de un negocio sin envío y un visitante no leen nada de eso.
+- **ENVIO-5** `create_public_order` con entrega `delivery` en un negocio con `courier_delivery` exige barrio activo,
+  marcado por el local y cubierto por un repartidor activo (`P0016`, ENVIO-54), teléfono de 8 a 15 dígitos y dirección de 5 a 200 caracteres (`22023`).
 - **ENVIO-6** El pedido guarda repartidor, barrio (id y nombre), el precio de lista y el precio final (iguales al
   crearse), teléfono (solo dígitos), dirección y `courier_status = 'waiting'`; el navegador no manda el precio. Si
   algo falla no queda ningún pedido.
@@ -1156,8 +1157,9 @@ panel del local y el del repartidor vienen después. `couriers` y `courier_zones
   `handed_to_courier → on_the_way → delivered`, con su evento de estado y quién lo hizo.
 - **ENVIO-15** `courier_orders` solo la llama el usuario repartidor y devuelve sus pedidos, los más nuevos
   primero, con negocio, cliente (nombre, teléfono, dirección), total del local, ítems y datos del envío.
-- **ENVIO-16** `public_delivery_zones(slug)` devuelve el repartidor y sus barrios con precio solo si el negocio está
-  publicado, activo, con plan completo y `courier_delivery`, y el repartidor activo; si no, `null`.
+- **ENVIO-16** `public_delivery_zones(slug)` devuelve el repartidor y los barrios con precio solo si el negocio está
+  publicado, activo, con plan completo y `courier_delivery`, y hay repartidor disponible; si no, `null`. Qué
+  barrios y qué repartidor, en ENVIO-51.
 - **ENVIO-17** `public_order_delivery(code)` devuelve repartidor, barrio, precio de lista, precio, motivo del cambio,
   estado y nota del envío; nunca teléfono ni dirección del cliente.
 - **ENVIO-44** El WhatsApp de Repartos al Toque es público: `public_delivery_zones` y `public_order_delivery` lo
@@ -1240,6 +1242,60 @@ panel del local y el del repartidor vienen después. `couriers` y `courier_zones
 - **ENVIO-43** El panel del local muestra el estado de la rendición en la tarjeta y el detalle del pedido y, cuando
   el repartidor ya la marcó, el botón Recibido (con confirmación). `/dashboard/orders` resume lo pendiente de rendir
   y lo ya rendido de los pedidos que muestra el historial.
+
+### Varios repartidores, etapa 1: repartidores y zonas (ENVIO-45 a 58)
+
+*Aplicado por `supabase/migrations/20261021000000_varios_repartidores_zonas.sql`. Cubierto por
+`src/lib/db/zones.test.ts` (base) y los tests de `src/lib/courier/`, `src/lib/settings/` y
+`app/superadmin/`. Esta etapa prepara datos y pantallas: el circuito del pedido no cambia, y el pedido
+sigue naciendo con un repartidor asignado (la TRANSICIÓN de ENVIO-54; la etapa 2 la reemplaza).*
+
+- **ENVIO-45** Puede haber varios repartidores activos (se retira `couriers_one_active_idx`). La migración copia
+  `courier_zones` a `delivery_zones` con los mismos `id` (los pedidos siguen apuntando a su zona), da a cada
+  repartidor la cobertura de las zonas activas que ya tenía, marca todas las zonas activas en los negocios con
+  `courier_delivery` y borra `courier_zones`.
+- **ENVIO-46** `delivery_zones` es global: `name` de 1 a 60 y único, `price` desde 0, `sort_order`, `active`. La lee
+  cualquier usuario con sesión (no un visitante); alta, cambio y baja, solo el superadmin. El repartidor ya no edita
+  precios: los ajusta al aceptar un pedido (ENVIO-12).
+- **ENVIO-47** `courier_zone_coverage` (repartidor, zona) dice qué zonas cubre cada repartidor. Es global, como
+  `couriers`: cada repartidor ve, agrega y borra solo las suyas (`my_courier_id()`) y el superadmin todas; un local y
+  un visitante no la leen.
+- **ENVIO-48** `business_delivery_zones` (negocio, zona) dice a qué zonas envía cada local. Sus miembros ven, agregan
+  y borran las de su negocio; el superadmin todas; otro negocio, un repartidor y un visitante, ninguna.
+- **ENVIO-49** `couriers` solo lo escribe el superadmin. Un repartidor ve su fila; un miembro de un negocio con
+  `courier_delivery` ve nombre y WhatsApp de los repartidores **activos** que cubren alguna de sus zonas
+  (`courier_covers_my_zones`).
+- **ENVIO-50** `create_courier_with_user(nombre, whatsapp, usuario)` crea el repartidor y su `courier_users` en una
+  sola transacción y solo la llama un superadmin (`42501` si no). `courier_users` sigue sin políticas de escritura.
+- **ENVIO-51** `public_delivery_zones(slug)` mantiene su forma (`repartidor`, `whatsapp`, `zonas`). `zonas` son las
+  activas que el local marcó y que cubre al menos un repartidor activo, con el precio de referencia; `repartidor` y
+  `whatsapp` son los del repartidor de la transición (ENVIO-54). Si no hay repartidor disponible, `null`.
+- **ENVIO-52** `business_settings` gana `favorite_courier_id` (nulo = sin favorito; en la etapa 2 el pedido va a
+  todos) y `favorite_minutes` (de 1 a 60, 5 por defecto). `set_courier_preferences(favorito, minutos)` los guarda
+  con los permisos de quien llama: el favorito tiene que estar activo y cubrir al menos una zona del local
+  (`P0017`), los minutos van de 1 a 60 (`22023`) y el negocio tiene que tener `courier_delivery` (`42501`). Un
+  UPDATE directo de un miembro tampoco salta la validación del favorito.
+- **ENVIO-53** `save_delivery_preferences(zonas, favorito, minutos)` guarda las zonas del local y el favorito en una
+  sola transacción (el favorito se valida contra las zonas nuevas; si algo falla no queda nada a medias; una zona
+  inexistente o de baja da `22023`). `business_delivery_options()` entrega a la pantalla las zonas activas (con
+  `selected` y `covered`), los repartidores activos con las zonas que cubren, el favorito y los minutos.
+- **ENVIO-54** TRANSICIÓN (la etapa 2 la reemplaza): `create_public_order` solo acepta una zona activa, marcada por
+  el local y cubierta por un repartidor activo (`P0016`), y deja el pedido con el favorito del local si está activo
+  o, si no, con Repartos al Toque. `my_delivery_courier()` dice cuál es, para el mensaje de "Pedir envío".
+- **ENVIO-55** `/superadmin/repartidores` lista los repartidores (nombre, WhatsApp, activo, cuántas zonas cubre) y da
+  de alta una cuenta con nombre, WhatsApp y email: crea el usuario con contraseña temporal, el repartidor y su
+  usuario, y muestra las credenciales una sola vez. El email no puede ser de una cuenta que ya existe. La ficha
+  edita nombre, WhatsApp y activo, y restablece la contraseña. Todo exige superadmin antes de usar la clave de
+  servicio (`createCourierWithAccount`, con dependencias inyectadas).
+- **ENVIO-56** `/superadmin/zonas` es el ABM de `delivery_zones`: alta, nombre y precio, activar o desactivar, borrar
+  con confirmación y ordenar arrastrando. Una zona que ya usan pedidos no se borra: se desactiva y la pantalla lo
+  avisa. Las validaciones son las de `src/lib/courier/zones.ts`.
+- **ENVIO-57** `/repartidor/zonas` ("Mis zonas") lista las zonas activas con su precio de referencia y una casilla
+  "La llevo" que guarda al tocar sobre `courier_zone_coverage`. No se editan nombres ni precios.
+- **ENVIO-58** Configuración → Envíos (solo con `courier_delivery`): casillas de las zonas a las que envía el local
+  (una zona sin repartidor muestra "Sin repartidor por ahora"), repartidor favorito (solo entre los que cubren alguna
+  zona marcada, o "Sin favorito") y minutos para el favorito (5 por defecto, visibles solo con favorito). Se guarda
+  con "Guardar cambios", junto al resto, con `save_delivery_preferences`.
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 
