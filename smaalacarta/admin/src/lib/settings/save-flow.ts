@@ -37,32 +37,50 @@ export function regenerateSuggestion(saved: Profile, current: Profile): string |
 
 type StepResult = { ok: true } | { ok: false };
 
-export type RunSaveResult<P extends StepResult, S extends StepResult> = {
+export type RunSaveResult<P extends StepResult, S extends StepResult, D extends StepResult = StepResult> = {
   ok: boolean;
   profile: P | null;
   settings: S | null;
+  // Solo está si se pasó el paso de envíos (ENVIO-58).
+  delivery?: D | null;
 };
 
-// El perfil va primero porque puede fallar por una URL en uso; si falla, la configuración ni se
-// intenta y todo queda como sin guardar.
-export async function runSave<P extends StepResult, S extends StepResult>(steps: {
+// El perfil va primero porque puede fallar por una URL en uso; si falla, lo que sigue ni se intenta y
+// todo queda como sin guardar. Después van la configuración y, solo si lo hay, los envíos del local
+// (ENVIO-58): zonas y favorito se guardan juntos en una sola transacción de la base.
+export async function runSave<P extends StepResult, S extends StepResult, D extends StepResult = StepResult>(steps: {
   profileChanged: boolean;
   settingsChanged: boolean;
   saveProfile: () => Promise<P>;
   saveSettings: () => Promise<S>;
-}): Promise<RunSaveResult<P, S>> {
+  deliveryChanged?: boolean;
+  saveDelivery?: () => Promise<D>;
+}): Promise<RunSaveResult<P, S, D>> {
   let profile: P | null = null;
   let settings: S | null = null;
+  let delivery: D | null = null;
+  const withDelivery = steps.saveDelivery !== undefined;
+  const result = (ok: boolean): RunSaveResult<P, S, D> => ({
+    ok,
+    profile,
+    settings,
+    ...(withDelivery ? { delivery } : {}),
+  });
 
   if (steps.profileChanged) {
     profile = await steps.saveProfile();
-    if (!profile.ok) return { ok: false, profile, settings };
+    if (!profile.ok) return result(false);
   }
 
   if (steps.settingsChanged) {
     settings = await steps.saveSettings();
-    if (!settings.ok) return { ok: false, profile, settings };
+    if (!settings.ok) return result(false);
   }
 
-  return { ok: true, profile, settings };
+  if (steps.deliveryChanged && steps.saveDelivery) {
+    delivery = await steps.saveDelivery();
+    if (!delivery.ok) return result(false);
+  }
+
+  return result(true);
 }

@@ -1,3 +1,4 @@
+import type { DeliveryOptions } from "@/lib/courier/preferences";
 import { createClient } from "@/lib/supabase-server";
 
 // Zonas de la plataforma (ENVIO-46 y 56) y preferencias de envío del local (ENVIO-52 y 53). Todo
@@ -99,13 +100,6 @@ export async function saveDeliveryZoneOrder(orderedIds: string[]): Promise<{ ok:
 
 // Lo que necesita la pantalla "Envíos" de Configuración (ENVIO-53). `null` si el negocio no tiene el
 // envío habilitado.
-export type DeliveryOptions = {
-  zones: { id: string; name: string; price: number; selected: boolean; covered: boolean }[];
-  couriers: { id: string; name: string; whatsapp: string | null; zone_ids: string[] }[];
-  favorite_id: string | null;
-  favorite_minutes: number;
-};
-
 export async function getDeliveryOptions(): Promise<DeliveryOptions | null> {
   const supabase = await createClient();
 

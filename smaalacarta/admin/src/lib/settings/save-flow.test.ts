@@ -89,3 +89,69 @@ describe("prepareSettings — ADMIN-CONFIG-34", () => {
     expect(prepared.whatsapp).toBe("3510000000");
   });
 });
+
+describe("runSave con envíos — ENVIO-58", () => {
+  const ok = { ok: true } as const;
+  const fail = { ok: false, error: "no" } as const;
+
+  it("guarda los envíos al final, después del perfil y la configuración", async () => {
+    const calls: string[] = [];
+    const result = await runSave({
+      profileChanged: true,
+      settingsChanged: true,
+      deliveryChanged: true,
+      saveProfile: async () => (calls.push("perfil"), ok),
+      saveSettings: async () => (calls.push("config"), ok),
+      saveDelivery: async () => (calls.push("envios"), ok),
+    });
+
+    expect(calls).toEqual(["perfil", "config", "envios"]);
+    expect(result).toEqual({ ok: true, profile: ok, settings: ok, delivery: ok });
+  });
+
+  it("si la configuración falla, no guarda los envíos", async () => {
+    const saveDelivery = vi.fn(async () => ok);
+    const result = await runSave({
+      profileChanged: false,
+      settingsChanged: true,
+      deliveryChanged: true,
+      saveProfile: async () => ok,
+      saveSettings: async () => fail,
+      saveDelivery,
+    });
+
+    expect(saveDelivery).not.toHaveBeenCalled();
+    expect(result.ok).toBe(false);
+  });
+
+  it("solo guarda los envíos si cambiaron", async () => {
+    const saveSettings = vi.fn(async () => ok);
+    const saveDelivery = vi.fn(async () => ok);
+
+    await runSave({
+      profileChanged: false,
+      settingsChanged: false,
+      deliveryChanged: true,
+      saveProfile: async () => ok,
+      saveSettings,
+      saveDelivery,
+    });
+
+    expect(saveSettings).not.toHaveBeenCalled();
+    expect(saveDelivery).toHaveBeenCalledOnce();
+  });
+
+  it("devuelve el error de los envíos", async () => {
+    const result = await runSave({
+      profileChanged: false,
+      settingsChanged: false,
+      deliveryChanged: true,
+      saveProfile: async () => ok,
+      saveSettings: async () => ok,
+      saveDelivery: async () => fail,
+    });
+
+    expect(result.ok).toBe(false);
+    expect(result.delivery).toEqual(fail);
+  });
+});

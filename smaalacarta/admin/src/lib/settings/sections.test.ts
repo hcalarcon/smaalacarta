@@ -35,4 +35,13 @@ describe("settingsSections (ADMIN-CONFIG-22)", () => {
   it("sin servicios deja datos, compartir y contraseña", () => {
     expect(ids(false, false)).toEqual(["datos", "compartir", "contrasena"]);
   });
+
+  it("ENVIO-58: Envíos solo aparece con el envío con repartidor, antes de la contraseña", () => {
+    const withCourier = settingsSections({ digitalMenu: true, pdfService: false, courierDelivery: true }).map(
+      (section) => section.id,
+    );
+
+    expect(withCourier.slice(-2)).toEqual(["envios", "contrasena"]);
+    expect(ids(true, true)).not.toContain("envios");
+  });
 });

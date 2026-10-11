@@ -2,11 +2,13 @@ import type { Metadata } from "next";
 
 import ResetPasswordForm from "../../(auth)/components/ResetPasswordForm";
 import BusinessProfileForm from "./components/BusinessProfileForm";
+import DeliverySection from "./components/DeliverySection";
 import SettingsForm from "./components/SettingsForm";
 import SettingsLayout from "./components/SettingsLayout";
 import SettingsSaveProvider from "./components/SettingsSaveProvider";
 import ShareSection from "./components/ShareSection";
 import Section from "@/components/ui/Section";
+import { getDeliveryOptions } from "@/lib/db/delivery-zones";
 import { getSettings } from "@/lib/db/settings";
 import { requireBusiness } from "@/lib/get-current-business";
 import { hasDigitalMenu, hasPdf } from "@/lib/plan-access";
@@ -17,6 +19,8 @@ export const metadata: Metadata = { title: "Configuración" };
 export default async function SettingsPage() {
   const { business } = await requireBusiness();
   const settings = await getSettings(business.id, business.whatsapp);
+  // "Envíos" solo con el envío con repartidor habilitado por el superadmin (ENVIO-58).
+  const deliveryOptions = business.courier_delivery ? await getDeliveryOptions() : null;
   const plan = {
     planPdf: business.plan_pdf,
     planWeb: business.plan_web,
@@ -40,7 +44,7 @@ export default async function SettingsPage() {
       </section>
 
       <SettingsSaveProvider initialName={business.name} initialSlug={business.slug}>
-        <SettingsLayout sections={settingsSections({ digitalMenu, pdfService })}>
+        <SettingsLayout sections={settingsSections({ digitalMenu, pdfService, courierDelivery: deliveryOptions !== null })}>
           <BusinessProfileForm />
 
           <ShareSection
@@ -57,6 +61,8 @@ export default async function SettingsPage() {
             digitalMenu={digitalMenu}
             pdfService={pdfService}
           />
+
+          {deliveryOptions ? <DeliverySection options={deliveryOptions} /> : null}
 
           <Section
             id="contrasena"

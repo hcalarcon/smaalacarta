@@ -3,7 +3,8 @@
 import { useRouter } from "next/navigation";
 import { createContext, useContext, useEffect, useRef, useState } from "react";
 
-import { saveBusinessProfileAction, saveSettingsAction } from "../actions";
+import { saveBusinessProfileAction, saveDeliveryAction, saveSettingsAction } from "../actions";
+import type { DeliveryErrors, DeliveryInput } from "@/lib/courier/preferences";
 import { menuUrl } from "@/lib/menu-url";
 import {
   prepareSettings,
@@ -24,8 +25,12 @@ type SettingsSave = {
   setSlug: (slug: string) => void;
   profileErrors: ProfileErrors;
   settingsErrors: SettingsErrors;
+  deliveryErrors: DeliveryErrors;
   // SettingsForm avisa cómo está su formulario en cada cambio.
   reportSettings: (input: SettingsInput) => void;
+  // La sección Envíos avisa lo que edita y qué reglas incumple (ENVIO-58). Se guarda junto al resto,
+  // con "Guardar cambios".
+  reportDelivery: (report: { input: DeliveryInput; errors: DeliveryErrors }) => void;
   save: () => void;
 };
 
@@ -77,16 +82,31 @@ export default function SettingsSaveProvider({
     setBaseline((prev) => prev ?? next);
   }
 
+  // Lo mismo para la sección Envíos: se guarda con su propia función de la base (zonas y favorito
+  // juntos, en una transacción), pero con el mismo botón.
+  const latestDelivery = useRef<{ input: DeliveryInput; errors: DeliveryErrors } | null>(null);
+  const [deliverySerialized, setDeliverySerialized] = useState<string | null>(null);
+  const [deliveryBaseline, setDeliveryBaseline] = useState<string | null>(null);
+
+  function reportDelivery(report: { input: DeliveryInput; errors: DeliveryErrors }) {
+    latestDelivery.current = report;
+    const next = JSON.stringify(report.input);
+    setDeliverySerialized((prev) => (prev === next ? prev : next));
+    setDeliveryBaseline((prev) => prev ?? next);
+  }
+
   const settingsDirty = serialized !== null && serialized !== baseline;
+  const deliveryDirty = deliverySerialized !== null && deliverySerialized !== deliveryBaseline;
   const profileDirty = profileChanged(savedProfile, { name, slug });
-  const dirty = settingsDirty || profileDirty;
+  const dirty = settingsDirty || profileDirty || deliveryDirty;
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [profileErrors, setProfileErrors] = useState<ProfileErrors>({});
   const [settingsErrors, setSettingsErrors] = useState<SettingsErrors>({});
+  const [deliveryErrors, setDeliveryErrors] = useState<DeliveryErrors>({});
   // El error general se esconde cuando la persona vuelve a editar algo.
-  const editKey = `${name}|${slug}|${serialized}`;
+  const editKey = `${name}|${slug}|${serialized}|${deliverySerialized}`;
   const [failure, setFailure] = useState<{ message: string; editKey: string } | null>(null);
   const error = failure && failure.editKey === editKey ? failure.message : null;
 
@@ -102,12 +122,15 @@ export default function SettingsSaveProvider({
   async function doSave(finalSlug: string, input: SettingsInput | null) {
     const profile = { name: name.trim(), slug: finalSlug };
     const sent = serialized;
+    const delivery = latestDelivery.current?.input ?? null;
+    const sentDelivery = deliverySerialized;
 
     setSaving(true);
     setSaved(false);
     setFailure(null);
     setProfileErrors({});
     setSettingsErrors({});
+    setDeliveryErrors({});
 
     let message: string | null = null;
     // Cómo queda el formulario tras guardar: si el perfil se guardó, con sus valores ya recortados.
@@ -118,6 +141,8 @@ export default function SettingsSaveProvider({
         settingsChanged: settingsDirty && input !== null,
         saveProfile: () => saveBusinessProfileAction(profile),
         saveSettings: () => saveSettingsAction(input as SettingsInput),
+        deliveryChanged: deliveryDirty && delivery !== null,
+        saveDelivery: () => saveDeliveryAction(delivery as DeliveryInput),
       });
 
       if (result.profile?.ok) {
@@ -137,8 +162,15 @@ export default function SettingsSaveProvider({
         message = result.settings.error;
       }
 
+      if (result.delivery?.ok) {
+        setDeliveryBaseline(sentDelivery);
+      } else if (result.delivery) {
+        setDeliveryErrors(result.delivery.fieldErrors ?? {});
+        message = result.delivery.error;
+      }
+
       if (result.ok) setSaved(true);
-      if (result.profile?.ok || result.settings?.ok) router.refresh();
+      if (result.profile?.ok || result.settings?.ok || result.delivery?.ok) router.refresh();
     } catch {
       message = "No pudimos guardar los cambios. Probá de nuevo.";
     } finally {
@@ -146,7 +178,7 @@ export default function SettingsSaveProvider({
     }
 
     // Los cambios que quedaron sin guardar siguen marcados; el error se muestra hasta que se edite.
-    if (message) setFailure({ message, editKey: `${after.name}|${after.slug}|${sent}` });
+    if (message) setFailure({ message, editKey: `${after.name}|${after.slug}|${sent}|${sentDelivery}` });
   }
 
   function save() {
@@ -160,10 +192,14 @@ export default function SettingsSaveProvider({
     const settingsCheck =
       settingsDirty && input ? validateSettings(prepareSettings(input)) : { ok: true as const };
 
-    if (!profileCheck.ok || !settingsCheck.ok) {
+    const deliveryReport = deliveryDirty ? latestDelivery.current : null;
+    const deliveryOk = !deliveryReport || Object.keys(deliveryReport.errors).length === 0;
+
+    if (!profileCheck.ok || !settingsCheck.ok || !deliveryOk) {
       setSaved(false);
       setProfileErrors(profileCheck.ok ? {} : profileCheck.errors);
       setSettingsErrors(settingsCheck.ok ? {} : settingsCheck.errors);
+      setDeliveryErrors(deliveryOk ? {} : (deliveryReport as { errors: DeliveryErrors }).errors);
       setFailure({ message: "Revisá los datos marcados.", editKey });
       return;
     }
@@ -186,7 +222,9 @@ export default function SettingsSaveProvider({
     setSlug,
     profileErrors,
     settingsErrors,
+    deliveryErrors,
     reportSettings,
+    reportDelivery,
     save,
   };
 
