@@ -6,14 +6,11 @@ import {
   availableActions,
   chatLink,
   telLink,
+  validateReturnReason,
   type CourierPanelOrder,
 } from "@/lib/courier/panel";
 import { canMarkSettled, courierOrderState, settlementLabel } from "@/lib/courier/settlements";
-import {
-  collectionInfo,
-  validateCourierResponse,
-  type CourierResponseInput,
-} from "@/lib/orders/courier";
+import { collectionInfo } from "@/lib/orders/courier";
 import { formatDateTime, timeAgo } from "@/lib/orders/format";
 import { itemOptionLines } from "@/lib/orders/item-options";
 import { preorderLabel, scheduledLabel } from "@/lib/orders/scheduled";
@@ -21,23 +18,19 @@ import { STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
 import ConfirmDeleteDialog from "../../dashboard/components/ConfirmDeleteDialog";
 
-type Errors = Partial<Record<"note" | "fee" | "reason", string>>;
-
 const ENVIO_LABELS: Record<string, string> = {
-  waiting: "Esperando tu respuesta",
-  requested: "El local te consultó",
-  accepted: "Aceptado",
-  rejected: "No podés llevarlo",
+  accepted: "Lo tomaste",
+  self: "Lo lleva el local",
 };
 
-// Un pedido con envío, con todo lo que el repartidor necesita para salir (ENVIO-31). Todo texto
-// del local, del cliente o de los productos se escribe como texto, nunca como HTML.
+// Un pedido con envío que el repartidor ya tomó, con todo lo que necesita para salir (ENVIO-31).
+// Todo texto del local, del cliente o de los productos se escribe como texto, nunca como HTML.
 export default function CourierOrderCard({
   order,
   now,
   busy,
   error,
-  onRespond,
+  onReturn,
   onAdvance,
   onSettle,
 }: {
@@ -45,16 +38,15 @@ export default function CourierOrderCard({
   now: Date;
   busy: boolean;
   error: string | null;
-  onRespond: (action: "accept" | "reject", input: CourierResponseInput) => void;
+  // Devuelve el pedido, con motivo (ENVIO-66): vuelve a buscarse entre los demás repartidores.
+  onReturn: (reason: string) => void;
   onAdvance: (status: "on_the_way" | "delivered") => void;
   // Marca que ya rindió al local lo cobrado del pedido (ENVIO-42): no se deshace.
   onSettle: () => void;
 }) {
-  const [form, setForm] = useState<"accept" | "reject" | null>(null);
-  const [note, setNote] = useState("");
-  const [fee, setFee] = useState(() => String(order.envio.precio ?? ""));
+  const [returning, setReturning] = useState(false);
   const [reason, setReason] = useState("");
-  const [errors, setErrors] = useState<Errors>({});
+  const [reasonError, setReasonError] = useState<string | null>(null);
   const [settling, setSettling] = useState(false);
 
   const actions = availableActions(order);
@@ -69,26 +61,17 @@ export default function CourierOrderCard({
   const clientChat = chatLink(order.cliente.telefono);
   const clientCall = telLink(order.cliente.telefono);
 
-  // ¿El precio escrito es distinto del actual? Entonces el motivo es obligatorio.
-  const typed = validateCourierResponse({ note: "", fee, reason: "-" }, currentFee);
-  const feeChanged = form === "accept" && typed.ok && typed.fee !== null;
-
-  function submit(action: "accept" | "reject") {
-    const input: CourierResponseInput = {
-      note,
-      fee: action === "accept" ? fee : "",
-      reason: action === "accept" ? reason : "",
-    };
-
-    const result = validateCourierResponse(input, currentFee);
+  function submitReturn() {
+    const result = validateReturnReason(reason);
     if (!result.ok) {
-      setErrors(result.errors);
+      setReasonError(result.error);
       return;
     }
 
-    setErrors({});
-    setForm(null);
-    onRespond(action, input);
+    setReasonError(null);
+    setReturning(false);
+    setReason("");
+    onReturn(result.reason);
   }
 
   return (
@@ -166,7 +149,7 @@ export default function CourierOrderCard({
         </section>
       </div>
 
-      {order.envio.estado !== "rejected" && order.estado !== "cancelled" ? (
+      {order.estado !== "cancelled" ? (
         <p
           className={`mt-3 rounded-xl px-3 py-2 text-sm font-semibold ${
             collection.cash ? "bg-amber-100 text-amber-900" : "bg-sky-50 text-sky-900"
@@ -243,75 +226,30 @@ export default function CourierOrderCard({
         </p>
       ) : null}
 
-      {actions.respond ? (
-        form === null ? (
-          <div className="mt-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setForm("accept")}
-              className="min-h-11 rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60"
-            >
-              Aceptar
-            </button>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setForm("reject")}
-              className="min-h-11 rounded-xl border border-red-200 px-5 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
-            >
-              No puedo
-            </button>
-          </div>
-        ) : (
+      {actions.returnOrder ? (
+        returning ? (
           <div className="mt-3 space-y-3 rounded-xl border border-line p-3">
             <label className="block text-sm text-stone-700">
-              Nota (opcional)
+              Motivo de la devolución
               <input
-                value={note}
-                onChange={(event) => setNote(event.target.value)}
-                maxLength={120}
-                placeholder={form === "accept" ? "Juan, 21:30" : "Sin repartidores por ahora"}
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                maxLength={200}
+                placeholder="Se me pinchó la moto"
                 className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-sm"
               />
-              {errors.note ? <span className="text-xs text-red-700">{errors.note}</span> : null}
+              {reasonError ? <span className="text-xs text-red-700">{reasonError}</span> : null}
             </label>
-
-            {form === "accept" ? (
-              <>
-                <label className="block text-sm text-stone-700">
-                  Precio final del envío
-                  <input
-                    value={fee}
-                    onChange={(event) => setFee(event.target.value)}
-                    inputMode="decimal"
-                    className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-sm"
-                  />
-                  {errors.fee ? <span className="text-xs text-red-700">{errors.fee}</span> : null}
-                </label>
-
-                {feeChanged || errors.reason ? (
-                  <label className="block text-sm text-stone-700">
-                    Motivo del cambio de precio
-                    <input
-                      value={reason}
-                      onChange={(event) => setReason(event.target.value)}
-                      maxLength={200}
-                      placeholder="Fuera de zona"
-                      className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-sm"
-                    />
-                    {errors.reason ? <span className="text-xs text-red-700">{errors.reason}</span> : null}
-                  </label>
-                ) : null}
-              </>
-            ) : null}
+            <p className="text-xs text-stone-500">
+              El pedido vuelve a los demás repartidores y vos no lo vas a volver a ver.
+            </p>
 
             <div className="flex justify-end gap-2">
               <button
                 type="button"
                 onClick={() => {
-                  setForm(null);
-                  setErrors({});
+                  setReturning(false);
+                  setReasonError(null);
                 }}
                 className="rounded-xl border border-line-strong px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-brand-soft"
               >
@@ -320,12 +258,23 @@ export default function CourierOrderCard({
               <button
                 type="button"
                 disabled={busy}
-                onClick={() => submit(form)}
-                className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60"
+                onClick={submitReturn}
+                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
               >
-                {form === "accept" ? "Confirmar: acepto" : "Confirmar: no puedo"}
+                Confirmar devolución
               </button>
             </div>
+          </div>
+        ) : (
+          <div className="mt-3">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setReturning(true)}
+              className="min-h-11 rounded-xl border border-red-200 px-5 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
+            >
+              Devolver
+            </button>
           </div>
         )
       ) : null}

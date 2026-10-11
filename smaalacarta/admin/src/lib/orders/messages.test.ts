@@ -8,8 +8,9 @@ describe("orderErrorMessage", () => {
     ["P0002", /no existe/i],
     ["22023", /datos del pedido/i],
     ["42501", /permiso/i],
-    ["P0015", /envío.*aceptado/i],
     ["P0016", /barrio/i],
+    ["P0018", /teléfono/i],
+    ["P0019", /otro repartidor/i],
   ])("%s", (code, esperado) => {
     expect(orderErrorMessage({ code })).toMatch(esperado);
   });

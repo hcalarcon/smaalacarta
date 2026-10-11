@@ -7,10 +7,12 @@ export function orderErrorMessage(error: DbError) {
   switch (error.code) {
     case "P0004":
       return "Ese cambio de estado no está permitido.";
-    case "P0015":
-      return "El envío todavía no fue aceptado por el repartidor.";
     case "P0016":
       return "El barrio del envío no está disponible.";
+    case "P0018":
+      return "Falta el teléfono del cliente.";
+    case "P0019":
+      return "Lo tomó otro repartidor o el pedido ya no está disponible.";
     case "P0002":
       return "El pedido no existe.";
     case "P0010":

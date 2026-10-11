@@ -1,7 +1,7 @@
-import type { CourierPanelOrder } from "@/lib/courier/panel";
+import type { AvailableOrder, CourierPanelOrder } from "@/lib/courier/panel";
 import { createClient } from "@/lib/supabase-server";
 
-// Datos del panel del repartidor (ENVIO-31 a 38 y 57). Todo corre con la sesión del repartidor: lo que
+// Datos del panel del repartidor (ENVIO-31 a 38, 57 y 62 a 66). Todo corre con la sesión del repartidor: lo que
 // ve y toca lo decide el RLS y las funciones de la base, y las acciones nunca reciben su id.
 
 type DbFailure = { error: { code?: string; message?: string } };
@@ -18,6 +18,58 @@ export async function listCourierOrders(): Promise<CourierPanelOrder[]> {
   }
 
   return Array.isArray(data) ? (data as unknown as CourierPanelOrder[]) : [];
+}
+
+// Los pedidos que el repartidor puede tomar ahora (ENVIO-62): ya descontados los que rechazó o devolvió
+// y los que todavía están en la ventana del favorito de otro. Si la base falla, el error llega a la página.
+export async function listAvailableOrders(): Promise<AvailableOrder[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("courier_available_orders");
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return Array.isArray(data) ? (data as unknown as AvailableOrder[]) : [];
+}
+
+export type TakeOrderInput = { note: string | null; fee: number | null; feeReason: string | null };
+
+// Toma el pedido (ENVIO-63 y 64): el primero se lo queda; si ya lo tomó otro, la base da `P0019`.
+export async function courierTakeOrder(
+  orderId: string,
+  input: TakeOrderInput,
+): Promise<{ ok: true } | DbFailure> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("courier_take_order", {
+    p_order_id: orderId,
+    // La clave se omite cuando no hay valor: la función usa su DEFAULT.
+    ...(input.fee !== null ? { p_price: input.fee } : {}),
+    ...(input.feeReason ? { p_reason: input.feeReason } : {}),
+    ...(input.note ? { p_note: input.note } : {}),
+  });
+
+  return error ? { error: { code: error.code, message: error.message } } : { ok: true };
+}
+
+// Rechaza el pedido (ENVIO-65): deja de verlo este repartidor.
+export async function courierDeclineOrder(orderId: string): Promise<{ ok: true } | DbFailure> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("courier_decline_order", { p_order_id: orderId });
+
+  return error ? { error: { code: error.code, message: error.message } } : { ok: true };
+}
+
+// Devuelve un pedido que había tomado, con motivo (ENVIO-66).
+export async function courierReturnOrder(orderId: string, reason: string): Promise<{ ok: true } | DbFailure> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("courier_return_order", { p_order_id: orderId, p_reason: reason });
+
+  return error ? { error: { code: error.code, message: error.message } } : { ok: true };
 }
 
 // Pasa un pedido entregado al repartidor a En camino, y de ahí a Entregado (ENVIO-14).

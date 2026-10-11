@@ -326,6 +326,45 @@ export type Database = {
           },
         ]
       }
+      courier_order_declines: {
+        Row: {
+          courier_id: string
+          created_at: string
+          kind: string
+          order_id: string
+          reason: string | null
+        }
+        Insert: {
+          courier_id: string
+          created_at?: string
+          kind: string
+          order_id: string
+          reason?: string | null
+        }
+        Update: {
+          courier_id?: string
+          created_at?: string
+          kind?: string
+          order_id?: string
+          reason?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_order_declines_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courier_order_declines_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courier_users: {
         Row: {
           courier_id: string
@@ -711,6 +750,9 @@ export type Database = {
           id: string
           mp_payment_id: string | null
           notes: string | null
+          offer_favorite_id: string | null
+          offer_favorite_until: string | null
+          offered_at: string | null
           order_number: string
           payment: string | null
           payment_status: string
@@ -787,6 +829,9 @@ export type Database = {
           id?: string
           mp_payment_id?: string | null
           notes?: string | null
+          offer_favorite_id?: string | null
+          offer_favorite_until?: string | null
+          offered_at?: string | null
           order_number?: string
           payment?: string | null
           payment_status?: string
@@ -821,6 +866,13 @@ export type Database = {
             columns: ["delivery_zone_id"]
             isOneToOne: false
             referencedRelation: "delivery_zones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_offer_favorite_id_fkey"
+            columns: ["offer_favorite_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
             referencedColumns: ["id"]
           },
         ]
@@ -1112,15 +1164,16 @@ export type Database = {
         Returns: undefined
       }
       build_public_menu: { Args: { p_business_id: string }; Returns: Json }
+      business_assign_courier: {
+        Args: { p_courier_id: string; p_note?: string; p_order_id: string }
+        Returns: undefined
+      }
       business_confirm_settlement: {
         Args: { p_order_id: string }
         Returns: undefined
       }
       business_delivery_options: { Args: never; Returns: Json }
-      business_transition_courier: {
-        Args: { p_business_id: string }
-        Returns: string
-      }
+      business_self_delivery: { Args: { p_order_id: string }; Returns: undefined }
       confirm_order_payment: {
         Args: {
           p_amount: number
@@ -1130,14 +1183,29 @@ export type Database = {
         }
         Returns: string
       }
+      courier_available_orders: { Args: never; Returns: Json }
       courier_covers_my_zones: {
         Args: { p_courier_id: string }
         Returns: boolean
       }
+      courier_decline_order: { Args: { p_order_id: string }; Returns: undefined }
       courier_mark_settled: { Args: { p_order_id: string }; Returns: undefined }
       courier_orders: { Args: { p_since?: string }; Returns: Json }
+      courier_return_order: {
+        Args: { p_order_id: string; p_reason: string }
+        Returns: undefined
+      }
       courier_set_status: {
         Args: { p_order_id: string; p_status: string }
+        Returns: undefined
+      }
+      courier_take_order: {
+        Args: {
+          p_note?: string
+          p_order_id: string
+          p_price?: number
+          p_reason?: string
+        }
         Returns: undefined
       }
       create_business_with_owner: {
@@ -1226,7 +1294,6 @@ export type Database = {
       menu_preview: { Args: { p_business_id: string }; Returns: Json }
       my_courier_business_id: { Args: never; Returns: string }
       my_courier_id: { Args: never; Returns: string }
-      my_delivery_courier: { Args: never; Returns: Json }
       new_tracking_code: { Args: never; Returns: string }
       next_order_number: { Args: { p_business_id: string }; Returns: number }
       normalize_words: { Args: { p_text: string }; Returns: string[] }
@@ -1324,16 +1391,6 @@ export type Database = {
       }
       set_courier_preferences: {
         Args: { p_favorite: string; p_minutes: number }
-        Returns: undefined
-      }
-      set_order_courier: {
-        Args: {
-          p_action: string
-          p_fee?: number
-          p_fee_reason?: string
-          p_note?: string
-          p_order_id: string
-        }
         Returns: undefined
       }
       set_order_status: {

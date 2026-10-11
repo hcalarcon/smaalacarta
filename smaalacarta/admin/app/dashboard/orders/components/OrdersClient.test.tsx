@@ -7,7 +7,12 @@ import type { Order } from "@/lib/db/orders";
 const mocks = vi.hoisted(() => ({ refresh: vi.fn() }));
 
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: mocks.refresh }) }));
-vi.mock("../actions", () => ({ setOrderStatusAction: vi.fn(), setOrderCourierAction: vi.fn() }));
+vi.mock("../actions", () => ({
+  setOrderStatusAction: vi.fn(),
+  assignCourierAction: vi.fn(),
+  selfDeliveryAction: vi.fn(),
+  confirmSettlementAction: vi.fn(),
+}));
 vi.mock("./ManualOrderDialog", () => ({ default: () => null }));
 vi.mock("./OrderDetailDialog", () => ({ default: () => null }));
 vi.mock("./OrdersHistory", () => ({ default: () => null }));

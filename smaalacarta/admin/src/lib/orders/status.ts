@@ -41,13 +41,20 @@ const COURIER_FLOW: readonly OrderStatus[] = [
   "delivered",
 ];
 
-// Un pedido con envío: si ya lo aceptó el repartidor (ENVIO-8) y quién mueve el estado. El local
-// llega hasta `handed_to_courier`; de ahí en adelante es del repartidor (ENVIO-9).
+// Un pedido con envío: si ya tiene repartidor (`courier`), cómo va el envío y quién mueve el estado.
+// El local llega hasta `handed_to_courier`; de ahí en adelante es del repartidor (ENVIO-9). Mientras el
+// envío está por resolver (`waiting` o `searching`) el local no lo entrega: lo asigna o lo lleva él
+// (ENVIO-69).
 export type DeliveryContext = {
   courier: boolean;
   courierStatus?: string | null;
   actor?: "business" | "courier";
 };
+
+// El envío todavía no tiene quién lo lleve ni lo resolvió el local.
+function deliveryPending(delivery?: DeliveryContext) {
+  return delivery?.courierStatus === "waiting" || delivery?.courierStatus === "searching";
+}
 
 function isStatus(value: string): value is OrderStatus {
   return (STATUSES as readonly string[]).includes(value);
@@ -59,9 +66,9 @@ export function isFinal(status: string) {
 
 // Desde un estado se puede pasar a uno posterior o cancelar; Entregado y Cancelado no cambian.
 // Con el pago de Mercado Pago pendiente o fallido solo se puede cancelar (ADMIN-PEDIDOS-18).
-// Con envío (`delivery.courier`): el pedido pendiente solo se cancela hasta que el repartidor
-// acepta (ENVIO-8), el local no pasa a En camino ni a Entregado (ENVIO-9) y el repartidor
-// (`actor: "courier"`) solo avanza de a un paso desde Entregado al repartidor, sin cancelar.
+// Con envío (`delivery.courier`): el local no pasa a En camino ni a Entregado (ENVIO-9) y el repartidor
+// (`actor: "courier"`) solo avanza de a un paso desde Entregado al repartidor, sin cancelar. Confirmar
+// ya no espera al repartidor (ENVIO-60), pero con el envío sin resolver no se entrega (ENVIO-69).
 // Sin envío, los estados del repartidor no se ofrecen (ENVIO-10).
 export function nextStatuses(
   from: string,
@@ -82,13 +89,10 @@ export function nextStatuses(
 
   if (isPaymentPending(paymentStatus)) return ["cancelled"];
 
-  if (withCourier && from === "pending" && delivery?.courierStatus !== "accepted") {
-    return ["cancelled"];
-  }
-
   const later = flow
     .slice(flow.indexOf(from) + 1)
-    .filter((status) => !(withCourier && (status === "on_the_way" || status === "delivered")));
+    .filter((status) => !(withCourier && (status === "on_the_way" || status === "delivered")))
+    .filter((status) => !(deliveryPending(delivery) && status === "delivered"));
   return [...later, "cancelled"];
 }
 
@@ -114,9 +118,11 @@ const PRIMARY_COURIER: Partial<Record<OrderStatus, { status: OrderStatus; label:
 };
 
 // El botón principal de cada pedido: el paso natural siguiente. Con envío, el local termina en
-// "Entregar al repartidor": el resto es del repartidor.
+// "Entregar al repartidor" (solo con uno asignado): el resto es del repartidor. Mientras se busca
+// repartidor, un pedido Listo no tiene botón principal: el local resuelve el envío primero.
 export function primaryAction(status: string, delivery?: DeliveryContext) {
   if (!isStatus(status)) return null;
+  if (status === "ready" && deliveryPending(delivery)) return null;
   return (delivery?.courier ? PRIMARY_COURIER[status] : PRIMARY[status]) ?? null;
 }
 

@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import OrdersClient from "./components/OrdersClient";
-import { getActiveCourier, listOrders } from "@/lib/db/orders";
+import { getDeliveryOptions } from "@/lib/db/delivery-zones";
+import { listOrders } from "@/lib/db/orders";
 import { listProductsForPromotions } from "@/lib/db/promotions";
 import { requireBusiness } from "@/lib/get-current-business";
 import { hasOrders } from "@/lib/plan-access";
@@ -23,12 +24,12 @@ export default async function OrdersPage() {
     redirect("/dashboard");
   }
 
-  const [orders, products, courier] = await Promise.all([
+  const [orders, products, delivery] = await Promise.all([
     listOrders(business.id),
     // Para sugerir productos y precios al cargar un pedido a mano.
     listProductsForPromotions(business.id),
-    // Solo los negocios con envío con Repartos al Toque habilitado (ENVIO-2) tienen repartidor.
-    business.courier_delivery ? getActiveCourier() : Promise.resolve(null),
+    // Solo los negocios con envío con repartidor habilitado (ENVIO-2): a quién se puede asignar un pedido.
+    business.courier_delivery ? getDeliveryOptions() : Promise.resolve(null),
   ]);
 
   return (
@@ -37,8 +38,8 @@ export default async function OrdersPage() {
       orders={orders}
       products={products.map((p) => ({ name: p.name, price: p.price }))}
       serverNow={new Date().toISOString()}
-      businessName={business.name}
-      courier={courier}
+      couriers={delivery?.couriers ?? []}
+      favoriteId={delivery?.favorite_id ?? null}
     />
   );
 }

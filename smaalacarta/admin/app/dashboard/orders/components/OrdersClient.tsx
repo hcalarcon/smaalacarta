@@ -9,9 +9,14 @@ import OrderDetailDialog from "./OrderDetailDialog";
 import OrdersHistory from "./OrdersHistory";
 import SettlementSummary from "./SettlementSummary";
 import ConfirmDeleteDialog from "../../components/ConfirmDeleteDialog";
-import { confirmSettlementAction, setOrderCourierAction, setOrderStatusAction } from "../actions";
-import type { ActiveCourier, Order } from "@/lib/db/orders";
-import type { CourierResponseInput } from "@/lib/orders/courier";
+import {
+  assignCourierAction,
+  confirmSettlementAction,
+  selfDeliveryAction,
+  setOrderStatusAction,
+} from "../actions";
+import type { Order } from "@/lib/db/orders";
+import type { OrderCourier } from "@/lib/orders/courier";
 import { newPendingIds, pendingCount, shouldRemind, tabTitle } from "@/lib/orders/alerts";
 import { playNewOrderSound } from "@/lib/orders/sound";
 import { compareForBoard } from "@/lib/orders/scheduled";
@@ -54,16 +59,17 @@ export default function OrdersClient({
   orders,
   products,
   serverNow,
-  businessName = "",
-  courier = null,
+  couriers = [],
+  favoriteId = null,
 }: {
   slug: string;
   orders: Order[];
   products: { name: string; price: number }[];
   serverNow: string;
-  // Solo con envío con Repartos al Toque habilitado (ENVIO-2): el repartidor activo.
-  businessName?: string;
-  courier?: ActiveCourier | null;
+  // Solo con envío con repartidor habilitado (ENVIO-2): los repartidores activos que cubren zonas del
+  // local y su favorito.
+  couriers?: OrderCourier[];
+  favoriteId?: string | null;
 }) {
   const router = useRouter();
 
@@ -237,17 +243,16 @@ export default function OrdersClient({
     }
   }
 
-  async function respondCourier(
+  // Resolver el envío de un pedido que nadie tomó: asignarlo a mano o llevarlo el local (ENVIO-81).
+  async function resolveDelivery(
     orderId: string,
-    action: "request" | "accept" | "reject",
-    input: CourierResponseInput,
-    currentFee: number,
+    run: () => ReturnType<typeof selfDeliveryAction>,
   ) {
     setError(null);
     setBusyId(orderId);
 
     try {
-      const result = await setOrderCourierAction(orderId, action, input, currentFee);
+      const result = await run();
       if (!result.ok) setError(result.error);
     } catch {
       setError("No pudimos guardar el cambio. Probá de nuevo.");
@@ -369,6 +374,7 @@ export default function OrdersClient({
                           onAdvance={(status) => changeStatus(order.id, status)}
                           onOpen={() => setSelectedId(order.id)}
                           onConfirmSettlement={() => setReceivingId(order.id)}
+                          couriers={couriers}
                         />
                       ))
                     )}
@@ -394,13 +400,14 @@ export default function OrdersClient({
         busy={busyId === selected?.id}
         onClose={() => setSelectedId(null)}
         onChangeStatus={(status, note) => selected && changeStatus(selected.id, status, note)}
-        businessName={businessName}
-        courier={courier}
+        couriers={couriers}
+        favoriteId={favoriteId}
         now={now}
         error={error}
-        onCourierAction={(action, input) =>
-          selected && respondCourier(selected.id, action, input, Number(selected.delivery_fee ?? 0))
+        onAssignCourier={(courierId, note) =>
+          selected && resolveDelivery(selected.id, () => assignCourierAction(selected.id, courierId, note))
         }
+        onSelfDelivery={() => selected && resolveDelivery(selected.id, () => selfDeliveryAction(selected.id))}
         onConfirmSettlement={() => selected && setReceivingId(selected.id)}
       />
 
@@ -409,7 +416,7 @@ export default function OrdersClient({
         title="Confirmar que recibiste la rendición"
         description={
           receiving
-            ? `¿Recibiste de Repartos al Toque lo del pedido #${receiving.order_number} (${formatMoney(Number(receiving.total))})? La confirmación no se puede deshacer.`
+            ? `¿Recibiste del repartidor lo del pedido #${receiving.order_number} (${formatMoney(Number(receiving.total))})? La confirmación no se puede deshacer.`
             : undefined
         }
         confirmLabel="Sí, lo recibí"

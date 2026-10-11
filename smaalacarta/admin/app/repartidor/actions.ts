@@ -3,48 +3,86 @@
 import { revalidatePath } from "next/cache";
 
 import { requireCourier } from "@/lib/auth/courier";
-import { courierMarkSettled, courierSetStatus, setZoneCoverage } from "@/lib/db/courier";
-import { setOrderCourier } from "@/lib/db/orders";
+import { validateReturnReason } from "@/lib/courier/panel";
+import {
+  courierDeclineOrder,
+  courierMarkSettled,
+  courierReturnOrder,
+  courierSetStatus,
+  courierTakeOrder,
+  setZoneCoverage,
+} from "@/lib/db/courier";
 import { orderErrorMessage, settlementErrorMessage } from "@/lib/orders/messages";
 import { validateCourierResponse, type CourierResponseInput } from "@/lib/orders/courier";
 
 export type CourierActionResult =
   | { ok: true }
-  | { ok: false; error: string; fieldErrors?: Partial<Record<string, string>> };
+  // `taken`: el pedido ya lo tomó otro repartidor o dejó de estar disponible (P0019): el panel lo saca.
+  | { ok: false; error: string; fieldErrors?: Partial<Record<string, string>>; taken?: boolean };
 
 const GENERIC = "No pudimos guardar el cambio. Probá de nuevo.";
 
 // Todas las acciones empiezan por `requireCourier()`: el repartidor sale de la sesión, nunca del
 // navegador (ENVIO-3). La base vuelve a comprobar de quién es cada pedido y cada barrio.
 
-// Aceptar (con nota y precio final; si cambia, motivo) o "No puedo" (ENVIO-32).
-export async function respondOrderAction(
+// Tomar un pedido disponible (con nota y precio final; si cambia, motivo): el primero se lo queda
+// (ENVIO-63 y 64). Si ya lo tomó otro, la base da P0019 y la respuesta lleva `taken`.
+export async function takeOrderAction(
   orderId: string,
-  action: "accept" | "reject",
   input: CourierResponseInput,
   currentFee: number,
 ): Promise<CourierActionResult> {
   await requireCourier();
 
-  if (action !== "accept" && action !== "reject") {
-    return { ok: false, error: "Acción desconocida." };
-  }
-
-  const validation = validateCourierResponse(
-    // "No puedo" no cambia el precio.
-    action === "accept" ? input : { ...input, fee: "", reason: "" },
-    currentFee,
-  );
+  const validation = validateCourierResponse(input, currentFee);
   if (!validation.ok) {
     return { ok: false, error: "Revisá los datos marcados.", fieldErrors: validation.errors };
   }
 
-  const result = await setOrderCourier(orderId, {
-    action,
+  const result = await courierTakeOrder(orderId, {
     note: validation.note,
     fee: validation.fee,
     feeReason: validation.reason,
   });
+  if ("error" in result) {
+    return {
+      ok: false,
+      error: orderErrorMessage(result.error),
+      ...(result.error.code === "P0019" ? { taken: true } : {}),
+    };
+  }
+
+  revalidatePath("/repartidor");
+  return { ok: true };
+}
+
+// Rechazar un pedido disponible: deja de verlo (ENVIO-65).
+export async function declineOrderAction(orderId: string): Promise<CourierActionResult> {
+  await requireCourier();
+
+  const result = await courierDeclineOrder(orderId);
+  if ("error" in result) {
+    return {
+      ok: false,
+      error: orderErrorMessage(result.error),
+      ...(result.error.code === "P0019" ? { taken: true } : {}),
+    };
+  }
+
+  revalidatePath("/repartidor");
+  return { ok: true };
+}
+
+// Devolver un pedido que había tomado, con motivo obligatorio (ENVIO-66).
+export async function returnOrderAction(orderId: string, reason: string): Promise<CourierActionResult> {
+  await requireCourier();
+
+  const validation = validateReturnReason(reason);
+  if (!validation.ok) {
+    return { ok: false, error: validation.error, fieldErrors: { reason: validation.error } };
+  }
+
+  const result = await courierReturnOrder(orderId, validation.reason);
   if ("error" in result) {
     return { ok: false, error: orderErrorMessage(result.error) };
   }
@@ -53,7 +91,7 @@ export async function respondOrderAction(
   return { ok: true };
 }
 
-// En camino y Entregado (ENVIO-14 y 32).
+// En camino y Entregado (ENVIO-14 y 77).
 export async function advanceOrderAction(
   orderId: string,
   status: "on_the_way" | "delivered",

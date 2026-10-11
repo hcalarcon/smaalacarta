@@ -2,17 +2,18 @@
 
 import type { Order } from "@/lib/db/orders";
 import { timeAgo } from "@/lib/orders/format";
+import CustomerPhone from "./CustomerPhone";
 import PaymentBadge from "./PaymentBadge";
 import SettlementStatus from "./SettlementStatus";
 import { itemOptionLines } from "@/lib/orders/item-options";
 import {
-  confirmBlockReason,
-  courierActions,
   courierStatusLabel,
   deliveryContext,
+  favoriteWindowLabel,
   feeSummary,
-  hasCourier,
-  noResponseWarning,
+  hasDelivery,
+  searchWarning,
+  type OrderCourier,
 } from "@/lib/orders/courier";
 import { isPaymentPending, PAYMENT_BLOCK_REASON } from "@/lib/orders/payment";
 import { orderBadge } from "@/lib/orders/scheduled";
@@ -28,6 +29,7 @@ export default function OrderCard({
   onAdvance,
   onOpen,
   onConfirmSettlement,
+  couriers = [],
 }: {
   order: Order;
   now: Date;
@@ -35,19 +37,23 @@ export default function OrderCard({
   onAdvance: (status: string) => void;
   onOpen: () => void;
   onConfirmSettlement?: () => void;
+  // Los repartidores del local: sirven para nombrar al que tomó el pedido y al favorito.
+  couriers?: OrderCourier[];
 }) {
-  const withCourier = hasCourier(order);
+  const withDelivery = hasDelivery(order);
   const action = primaryAction(order.status, deliveryContext(order));
   const extra = order.order_items.length - SHOWN_ITEMS;
   const scheduled = orderBadge(order);
   const paymentBlocked = isPaymentPending(order.payment_status);
-  // Con envío, confirmar espera a que el repartidor acepte (ENVIO-8): la base también lo exige.
-  const courierBlock = confirmBlockReason(order);
-  const blocked = paymentBlocked || Boolean(courierBlock);
-  const blockReason = paymentBlocked ? PAYMENT_BLOCK_REASON : (courierBlock ?? undefined);
-  const courierRequest = courierActions(order).request;
-  const fee = withCourier ? feeSummary(order) : null;
-  const warning = withCourier ? noResponseWarning(order, now) : null;
+  const blocked = paymentBlocked;
+  const blockReason = paymentBlocked ? PAYMENT_BLOCK_REASON : undefined;
+  const fee = withDelivery ? feeSummary(order) : null;
+  const warning = withDelivery ? searchWarning(order, now) : null;
+  const courierName = order.courier_id
+    ? couriers.find((courier) => courier.id === order.courier_id)?.name
+    : undefined;
+  const favoriteName = couriers.find((courier) => courier.id === order.offer_favorite_id)?.name;
+  const window = favoriteWindowLabel(order, now, favoriteName);
 
   return (
     <article className="rounded-xl border border-line bg-white p-3 shadow-sm">
@@ -79,12 +85,19 @@ export default function OrderCard({
         </p>
       ) : null}
 
-      {withCourier && fee ? (
+      {order.customer_phone ? (
+        <div className="mt-2">
+          <CustomerPhone phone={order.customer_phone} compact />
+        </div>
+      ) : null}
+
+      {withDelivery && fee ? (
         <div className="mt-2 rounded-lg bg-sky-50 px-2 py-1.5 text-[11px] text-sky-900">
           <p className="font-semibold">
             🛵 {order.delivery_zone_name ?? "Envío"} · {fee.price}
           </p>
-          <p>{courierStatusLabel(order)}</p>
+          <p>{courierStatusLabel(order, courierName)}</p>
+          {window ? <p>{window}</p> : null}
           {fee.list ? (
             <p>
               Antes {fee.list}
@@ -134,14 +147,14 @@ export default function OrderCard({
             {busy ? "Guardando…" : action.label}
           </button>
         ) : null}
-        {courierRequest ? (
-          // Pedir el envío necesita la hora de listo y abre WhatsApp: se hace desde el detalle.
+        {warning ? (
+          // Nadie lo tomó: asignarlo o llevarlo se hace desde el detalle.
           <button
             type="button"
             onClick={onOpen}
-            className="rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-semibold text-brand transition hover:bg-brand-soft"
+            className="rounded-lg bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
           >
-            {courierRequest}
+            Resolver envío
           </button>
         ) : null}
         <button
