@@ -248,7 +248,8 @@ negocio nuevo funciona apenas existe y está publicado, sin tocar código.
   (`/dashboard/orders`) tiene tres columnas con scroll propio; los entregados y
   cancelados van a una tabla de historial con cuándo empezó y cuándo terminó.
 - **Envío con ofertas** (`/repartidor`, `courier_offers`): el pedido con envío nace
-  `searching` y los repartidores que cubren la zona ofertan (`courier_make_offer`, con
+  `searching` (los anticipados y programados nacen `waiting` y pasan a `searching` al
+  confirmarlos el local) y los repartidores que cubren la zona ofertan (`courier_make_offer`, con
   motivo si cambian el precio de lista); el cliente elige en su seguimiento y, si no, a
   los 5 minutos de la primera oferta se elige sola la más barata. **La elección
   automática es perezosa, sin pg_cron**: `settle_courier_offers` corre antes de leer
