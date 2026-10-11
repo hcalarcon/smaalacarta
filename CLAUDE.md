@@ -197,9 +197,11 @@ negocio nuevo funciona apenas existe y está publicado, sin tocar código.
   `must_change_password` vive en `app_metadata` (solo la escribe el servidor) y
   `proxy.ts` deja a esa cuenta solo en `/cambiar-contrasena` hasta que elija una
   propia (`src/lib/auth/change-password.ts`). `SUPABASE_SERVICE_ROLE_KEY` (solo
-  servidor, `src/lib/supabase-admin.ts` con `server-only`) se usa **únicamente** para
-  crear cuentas, restablecer contraseñas y borrar la marca de temporal, y siempre
-  después de comprobar quién pide la acción.
+  servidor, `src/lib/supabase-admin.ts` con `server-only`) se usa para crear cuentas,
+  restablecer contraseñas y borrar la marca de temporal, y siempre después de
+  comprobar quién pide la acción. Excepciones aprobadas por Herni: `/api/mp/*` (con la
+  firma de Mercado Pago) y `/api/push/order` (leer destinatarios y suscripciones, solo
+  después de comprobar el secreto del webhook).
 - **Tests contra Postgres real**: `src/test/db.ts` levanta PGlite con los stubs de
   Supabase y aplica las migraciones; `src/lib/db/*.test.ts` prueban el RLS. Toda
   migración con políticas nuevas se prueba ahí.
@@ -259,6 +261,24 @@ negocio nuevo funciona apenas existe y está publicado, sin tocar código.
   corre cada minuto con pg_cron para todos los pedidos vencidos (así el aviso llega aunque
   nadie mire); los 5 minutos viven solo en `courier_offers_window()`. El favorito del local (`favorite_courier_id`) solo ordena y
   desempata; ya no hay ventana exclusiva.
+- **Panel instalable y avisos push** (`ADMIN-PWA-*`): `app/manifest.ts`, `public/sw.js`
+  (en `/admin/sw.js`, sin caché: solo muestra avisos y abre el panel al tocarlos) y los
+  botones **Instalar app** y **Activar avisos** del header (`DashboardShell` con
+  `showAppControls`, desde los layouts del negocio y del repartidor; `/superadmin` no).
+  Lo propio del navegador vive en `src/components/pwa/`; la lógica, en `src/lib/push/`
+  (`install.ts` decide qué mostrar; `events.ts`, `messages.ts` y `service.ts` deciden
+  qué avisos salen y a quién, con dependencias inyectadas; `deps.ts` las conecta a
+  Supabase y a `web-push`), para poder pasar a app nativa. `push_subscriptions` es de la
+  persona: filtra el RLS por `user_id`. El aviso lo dispara un **Database Webhook** de
+  Supabase sobre `orders` (Insert y Update) que llama a `POST /admin/api/push/order` con
+  el encabezado `x-webhook-secret` (`PUSH_WEBHOOK_SECRET`); sin él, 401. Los eventos se
+  deducen de `record` y `old_record` (`orders.source = 'manual'` no avisa al local) y
+  los que no alcanzan se leen con la clave de servicio (`order_events.changed_by` dice si
+  el local asignó a mano). Claves VAPID: `NEXT_PUBLIC_VAPID_PUBLIC_KEY`,
+  `VAPID_PRIVATE_KEY` y `VAPID_SUBJECT`, leídas al llamar. El proxy deja pasar `sw.js`,
+  el manifest, `icons/` y `api/push/`. `run_order_timers()` (pg_cron, cada minuto)
+  adelanta la elección automática y marca una sola vez `orders.no_offers_alerted_at`
+  a los 10 minutos sin ofertas.
 - **Multi-negocio**: `getCurrentBusiness()` resuelve usuario → `business_users`
   (con `role`) → `businesses`; las páginas del panel usan `requireBusiness()`.
   Toda tabla de recursos (`categories`, `products`, `promotions`, `orders`) se filtra
