@@ -1112,14 +1112,14 @@ export type Database = {
         Returns: undefined
       }
       build_public_menu: { Args: { p_business_id: string }; Returns: Json }
+      business_confirm_settlement: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
       business_delivery_options: { Args: never; Returns: Json }
       business_transition_courier: {
         Args: { p_business_id: string }
         Returns: string
-      }
-      business_confirm_settlement: {
-        Args: { p_order_id: string }
-        Returns: undefined
       }
       confirm_order_payment: {
         Args: {
@@ -1130,17 +1130,15 @@ export type Database = {
         }
         Returns: string
       }
-      delete_delivery_zone: { Args: { p_zone_id: string }; Returns: string }
-      courier_covers_my_zones: { Args: { p_courier_id: string }; Returns: boolean }
+      courier_covers_my_zones: {
+        Args: { p_courier_id: string }
+        Returns: boolean
+      }
       courier_mark_settled: { Args: { p_order_id: string }; Returns: undefined }
       courier_orders: { Args: { p_since?: string }; Returns: Json }
       courier_set_status: {
         Args: { p_order_id: string; p_status: string }
         Returns: undefined
-      }
-      create_courier_with_user: {
-        Args: { p_name: string; p_user_id: string; p_whatsapp: string }
-        Returns: string
       }
       create_business_with_owner: {
         Args: {
@@ -1152,6 +1150,10 @@ export type Database = {
           p_slug: string
           p_whatsapp: string
         }
+        Returns: string
+      }
+      create_courier_with_user: {
+        Args: { p_name: string; p_user_id: string; p_whatsapp: string }
         Returns: string
       }
       create_manual_order: {
@@ -1204,6 +1206,7 @@ export type Database = {
           product_count: number
         }[]
       }
+      delete_delivery_zone: { Args: { p_zone_id: string }; Returns: string }
       is_open_now: {
         Args: { p_at: string; p_schedule: Json }
         Returns: boolean
@@ -1254,10 +1257,6 @@ export type Database = {
         Args: { p_business_id: string; p_options: Json; p_product_id: string }
         Returns: Json
       }
-      save_delivery_preferences: {
-        Args: { p_favorite: string; p_minutes: number; p_zone_ids: string[] }
-        Returns: undefined
-      }
       save_business_settings: {
         Args: {
           p_address: string
@@ -1290,6 +1289,10 @@ export type Database = {
           p_transfer_cbu: string
           p_whatsapp: string
         }
+        Returns: undefined
+      }
+      save_delivery_preferences: {
+        Args: { p_favorite: string; p_minutes: number; p_zone_ids: string[] }
         Returns: undefined
       }
       save_option_group: {
