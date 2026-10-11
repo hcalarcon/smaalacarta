@@ -674,3 +674,10 @@ describe("LANDING-27 — easter egg del Chaco", () => {
     expect($(".chaco-egg")).not.toBeNull();
   });
 });
+
+describe("LANDING-29 — revisión de precios", () => {
+  it("la sección de planes dice que los precios se revisan cada 4 meses", () => {
+    const planes = parse().querySelector("#planes");
+    expect(planes.textContent.replace(/\s+/g, " ")).toContain("Los precios se revisan cada 4 meses");
+  });
+});

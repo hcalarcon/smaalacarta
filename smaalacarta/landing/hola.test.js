@@ -210,3 +210,55 @@ describe("LANDING-26 — paso en curso dentro del teléfono (celular)", () => {
     expect(movil).toMatch(/\.pasos\s*\{[^}]*clip-path/);
   });
 });
+
+describe("LANDING-28 — Programa Pioneros", () => {
+  const doc = parse();
+  const texto = doc.body.textContent.replace(/\s+/g, " ");
+  const casilleros = [...doc.querySelectorAll(".lugares li")];
+  const libres = doc.querySelectorAll(".lugares li.libre");
+
+  it("la grilla tiene 7 casilleros y el primero es Ozburguer, pionero fundador", () => {
+    expect(casilleros).toHaveLength(7);
+    expect(casilleros[0].textContent).toContain("Ozburguer");
+    expect(casilleros[0].textContent).toContain("Pionero fundador");
+  });
+
+  it("los casilleros libres dicen 'Tu local acá' y no llevan enlaces ni imágenes", () => {
+    for (const li of libres) expect(li.textContent.trim()).toBe("Tu local acá");
+    expect(doc.querySelectorAll(".lugares a, .lugares img")).toHaveLength(0);
+  });
+
+  it("'Quedan N lugares' es igual a la cantidad de casilleros libres", () => {
+    const n = texto.match(/Quedan (\d+) lugares?/)?.[1];
+    expect(Number(n)).toBe(libres.length);
+  });
+
+  it("dice 30% y sin comisión, y la portada habla de 7 locales pioneros", () => {
+    expect(texto).toContain("30%");
+    expect(texto.toLowerCase()).toContain("sin comisión");
+    expect(doc.querySelector("h1").textContent).toContain("7 locales");
+  });
+
+  it("todos los WhatsApp llevan el mensaje de pioneros", () => {
+    const wa = [...doc.querySelectorAll("a[href^='https://api.whatsapp.com/send']")];
+    expect(wa).toHaveLength(3);
+    for (const a of wa) {
+      expect(new URL(a.href).searchParams.get("text")).toBe(
+        "Hola Cristian, vi tu tarjeta. Quiero ser uno de los locales pioneros. Mi local se llama: ",
+      );
+    }
+  });
+
+  it("los metadatos hablan del programa", () => {
+    for (const sel of ['meta[name="description"]', 'meta[property="og:description"]']) {
+      expect(doc.querySelector(sel).content).toContain("pioneros");
+    }
+    expect(doc.title).toContain("Pioneros");
+    expect(doc.querySelector('meta[property="og:title"]').content).toContain("Pioneros");
+  });
+
+  it("aclara que los precios se revisan cada 4 meses y los pioneros pagan 30% menos", () => {
+    expect(texto).toContain("Los precios de lista se revisan cada 4 meses");
+    expect(texto).toContain("Los pioneros pagan siempre un 30% menos");
+  });
+});

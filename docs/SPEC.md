@@ -644,6 +644,15 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
   se abre dos veces a la vez. El contorno se dibuja de a poco (2,6 s), después se rellena y aparece el punto de Sáenz Peña con su nombre. Con `prefers-reduced-motion` el mapa queda completo y quieto. En el celular
   (sin teclado) lo abren 7 toques seguidos al logo del encabezado, cada uno a menos de 1,5 s del
   anterior.
+- **LANDING-28** `/hola` es la página del Programa Pioneros: la portada dice "Buscamos 7 locales
+  pioneros" y cuántos lugares quedan; lista los beneficios (primer mes gratis, $25.000 fijos por
+  12 meses, 30% menos de por vida y sin comisión por pedido); una grilla de 7 casilleros, el primero
+  Ozburguer como pionero fundador y el resto "Tu local acá", sin enlaces ni imágenes; el número de
+  "Quedan N lugares" es igual a los casilleros libres (se actualiza a mano); los botones de WhatsApp
+  llevan el mensaje de pioneros y los metadatos hablan del programa. Sigue sin JavaScript y dentro
+  de los límites de LANDING-11, 14 y 25.
+- **LANDING-29** Los precios se revisan cada 4 meses y se dice en la sección de planes de
+  `index.html` y en `/hola` (donde además los pioneros pagan siempre un 30% menos).
 
 ---
 
