@@ -1774,6 +1774,11 @@ precios en 0; no existe "incluye N y el resto cuesta X".
   a los demás, y la ruta responde 200 aunque algún push falle.
 - **ADMIN-PWA-27** Los destinatarios y las claves salen del servidor con la clave de servicio, solo después de
   comprobar el secreto del webhook; las claves VAPID se leen al llamar, no al cargar el módulo.
+- **ADMIN-PWA-28** "Avisos activados" solo se muestra si la base tiene la suscripción de este aparato en la cuenta
+  actual: si el navegador sigue suscripto de otra cuenta que usó el mismo aparato, vuelve a ofrecer "Activar
+  avisos" (un toque, sin pedir permiso de nuevo) y la suscripción pasa a la cuenta nueva.
+- **ADMIN-PWA-29** Al salir, la suscripción de ese aparato se saca de la cuenta (el navegador sigue con el
+  permiso): quien se fue no sigue recibiendo avisos ahí, y al volver a entrar activa con un toque.
 
 ---
 

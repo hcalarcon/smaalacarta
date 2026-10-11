@@ -6,6 +6,10 @@ import { useEffect, useState } from "react";
 import DashboardNav from "./DashboardNav";
 import type { NavLink } from "./nav-links";
 import Logo from "@/components/brand/Logo";
+import InstallAppButton from "@/components/pwa/InstallAppButton";
+import PushEndpointField from "@/components/pwa/PushEndpointField";
+import PushToggle from "@/components/pwa/PushToggle";
+import ServiceWorkerRegister from "@/components/pwa/ServiceWorkerRegister";
 import { signOutAction } from "../../../app/(auth)/actions";
 
 type DashboardShellProps = {
@@ -26,6 +30,9 @@ type DashboardShellProps = {
   // Aviso de negocio suspendido (ADMIN-SUSPENSION-1): se ve en todo el panel,
   // no aplica a /superadmin.
   banner?: React.ReactNode;
+  // "Instalar app" y "Activar avisos" en el header, y el registro del service worker (ADMIN-PWA-16).
+  // Los pasan el panel del negocio y el del repartidor; /superadmin no.
+  showAppControls?: boolean;
   children: React.ReactNode;
 };
 
@@ -39,6 +46,7 @@ export default function DashboardShell({
   quickLinks,
   showChangePassword = true,
   banner,
+  showAppControls = false,
   children,
 }: DashboardShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -141,6 +149,13 @@ export default function DashboardShell({
                 {userEmail}
               </span>
 
+              {showAppControls ? (
+                <>
+                  <InstallAppButton />
+                  <PushToggle />
+                </>
+              ) : null}
+
               {quickLinks?.map((link) => (
                 <a
                   key={link.href}
@@ -186,6 +201,7 @@ export default function DashboardShell({
               ) : null}
 
               <form action={signOutAction}>
+                {showAppControls ? <PushEndpointField /> : null}
                 <button
                   type="submit"
                   className="rounded-xl border border-line-strong px-4 py-2 text-sm font-medium text-brand transition hover:bg-brand-soft"
@@ -198,6 +214,8 @@ export default function DashboardShell({
         </header>
 
         {banner}
+
+        {showAppControls ? <ServiceWorkerRegister /> : null}
 
         <main className="p-4 md:p-6 lg:p-8">{children}</main>
       </div>

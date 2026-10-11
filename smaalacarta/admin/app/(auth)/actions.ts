@@ -116,8 +116,20 @@ export async function updatePasswordAction(
   redirect("/dashboard");
 }
 
-export async function signOutAction() {
+// Antes de cerrar la sesión saca de la cuenta el aparato que se va (ADMIN-PWA-29): el formulario de "Salir"
+// lo manda en `pushEndpoint`. Si falla no impide salir.
+export async function signOutAction(formData?: FormData) {
   const supabase = await createClient();
+  const endpoint = formData ? text(formData, "pushEndpoint") : "";
+
+  if (endpoint) {
+    try {
+      await supabase.rpc("delete_push_subscription", { p_endpoint: endpoint });
+    } catch {
+      // Salir es lo importante.
+    }
+  }
+
   await supabase.auth.signOut();
 
   redirect("/login");
