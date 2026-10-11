@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 
@@ -13,6 +13,13 @@ export const metadata: Metadata = {
     template: "%s · SMA a la Carta",
   },
   description: "Panel de administración de SMA a la Carta",
+  // Cómo se llama y se ve instalada en iPhone (el manifest lo leen Android y escritorio).
+  appleWebApp: { capable: true, title: "SMA Panel", statusBarStyle: "default" },
+};
+
+// El color de la barra del navegador y de la app instalada: el de la marca (`--color-brand`).
+export const viewport: Viewport = {
+  themeColor: "#5a4a3a",
 };
 
 export default function RootLayout({

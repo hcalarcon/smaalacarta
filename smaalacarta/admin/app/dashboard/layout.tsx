@@ -72,6 +72,7 @@ export default async function DashboardLayout({
       quickLinks={quickLinks}
       showChangePassword={false}
       banner={current!.business!.active ? undefined : <SuspendedBanner />}
+      showAppControls
     >
       {children}
     </DashboardShell>

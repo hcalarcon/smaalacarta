@@ -30,8 +30,9 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    // Todo salvo archivos estáticos, imágenes y los endpoints de Mercado Pago (sin sesión: el menú y
-    // Mercado Pago los llaman desde afuera, y se autentican solos).
-    "/((?!_next/static|_next/image|favicon.ico|api/mp/|.*\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
+    // Todo salvo archivos estáticos, imágenes y los endpoints sin sesión: el menú y Mercado Pago llaman a
+    // api/mp/, y el Database Webhook de Supabase a api/push/; se autentican solos. El service worker, el
+    // manifest y los íconos de la app instalada tampoco pueden pasar por la redirección a /login.
+    "/((?!_next/static|_next/image|favicon.ico|sw.js|manifest.webmanifest|icons/|api/mp/|api/push/|.*\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)",
   ],
 };

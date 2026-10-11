@@ -794,6 +794,7 @@ export type Database = {
           delivery_zone_name: string | null
           id: string
           mp_payment_id: string | null
+          no_offers_alerted_at: string | null
           notes: string | null
           offered_at: string | null
           order_number: string
@@ -833,6 +834,7 @@ export type Database = {
           delivery_zone_name?: string | null
           id?: string
           mp_payment_id?: string | null
+          no_offers_alerted_at?: string | null
           notes?: string | null
           offered_at?: string | null
           order_number: string
@@ -872,6 +874,7 @@ export type Database = {
           delivery_zone_name?: string | null
           id?: string
           mp_payment_id?: string | null
+          no_offers_alerted_at?: string | null
           notes?: string | null
           offered_at?: string | null
           order_number?: string
@@ -1162,6 +1165,36 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       super_admins: {
         Row: {
           created_at: string
@@ -1190,6 +1223,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_courier_choice: {
+        Args: { p_automatic: boolean; p_offer_id: string; p_order_id: string }
+        Returns: boolean
+      }
       assert_my_favorite_courier: {
         Args: { p_courier_id: string }
         Returns: undefined
@@ -1206,10 +1243,6 @@ export type Database = {
       business_confirm_settlement: {
         Args: { p_order_id: string }
         Returns: undefined
-      }
-      apply_courier_choice: {
-        Args: { p_automatic: boolean; p_offer_id: string; p_order_id: string }
-        Returns: boolean
       }
       business_delivery_options: { Args: never; Returns: Json }
       business_order_offers: { Args: never; Returns: Json }
@@ -1241,8 +1274,8 @@ export type Database = {
       }
       courier_mark_settled: { Args: { p_order_id: string }; Returns: undefined }
       courier_offers_deadline: { Args: { p_order_id: string }; Returns: string }
-      courier_offers_notice_window: { Args: never; Returns: unknown }
-      courier_offers_window: { Args: never; Returns: unknown }
+      courier_offers_notice_window: { Args: never; Returns: string }
+      courier_offers_window: { Args: never; Returns: string }
       courier_orders: { Args: { p_since?: string }; Returns: Json }
       courier_return_order: {
         Args: { p_order_id: string; p_reason: string }
@@ -1326,6 +1359,10 @@ export type Database = {
           product_count: number
         }[]
       }
+      delete_push_subscription: {
+        Args: { p_endpoint: string }
+        Returns: undefined
+      }
       delete_delivery_zone: { Args: { p_zone_id: string }; Returns: string }
       is_open_now: {
         Args: { p_at: string; p_schedule: Json }
@@ -1379,6 +1416,17 @@ export type Database = {
       resolve_order_options: {
         Args: { p_business_id: string; p_options: Json; p_product_id: string }
         Returns: Json
+      }
+      no_offers_alert_window: { Args: never; Returns: string }
+      run_order_timers: { Args: never; Returns: undefined }
+      save_push_subscription: {
+        Args: {
+          p_auth: string
+          p_endpoint: string
+          p_p256dh: string
+          p_user_agent?: string
+        }
+        Returns: undefined
       }
       save_business_settings: {
         Args: {
@@ -1449,8 +1497,6 @@ export type Database = {
         Args: { p_favorite: string }
         Returns: undefined
       }
-      settle_courier_offers: { Args: { p_order_id: string }; Returns: undefined }
-      settle_due_courier_offers: { Args: never; Returns: undefined }
       set_order_status: {
         Args: { p_note?: string; p_order_id: string; p_status: string }
         Returns: undefined
@@ -1463,6 +1509,11 @@ export type Database = {
         }
         Returns: undefined
       }
+      settle_courier_offers: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
+      settle_due_courier_offers: { Args: never; Returns: undefined }
       suggest_default_image: {
         Args: { p_category?: string; p_name: string }
         Returns: {
