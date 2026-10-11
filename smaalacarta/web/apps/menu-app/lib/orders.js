@@ -45,8 +45,8 @@ const REASONS = {
   P0012: "invalid_schedule", // la hora elegida no es válida (ya pasó, falta anticipación o está cerrado)
   P0014: "invalid_options", // las opciones elegidas no son válidas (cambiaron, no corresponden o no cumplen las reglas)
   P0013: "preorder_closed", // ya no se toman pedidos anticipados (pasó el corte, no los acepta o está abierto)
-  P0015: "invalid_zone", // el envío todavía no está aceptado (no debería llegar desde el menú)
   P0016: "invalid_zone", // barrio inexistente, dado de baja o sin envío con repartidor
+  P0018: "invalid_phone", // falta el teléfono del cliente, o no tiene de 8 a 15 dígitos
   P0001: "unavailable", // un producto ya no está disponible
   P0002: "unavailable", // el negocio no existe o no está publicado
   22023: "invalid", // datos inválidos
@@ -96,6 +96,7 @@ export async function createOrder({
         ...(preorder ? { p_preorder: true } : {}),
         // Envío con repartidor (ENVIO-21): solo el id del barrio; el precio lo pone la base.
         ...(deliveryZone ? { p_delivery_zone: deliveryZone } : {}),
+        // El teléfono va en todos los pedidos (ENVIO-70 y 87).
         ...(customerPhone ? { p_customer_phone: customerPhone } : {}),
         ...(deliveryAddress ? { p_delivery_address: deliveryAddress } : {}),
       }),

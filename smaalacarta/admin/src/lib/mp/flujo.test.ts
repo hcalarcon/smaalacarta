@@ -137,7 +137,8 @@ async function newOrder(slug: "ana" | "beto", product: string): Promise<OrderRec
     db,
     null,
     `select public.create_public_order('${slug}', 'Cliente', 'retiro', 'mercadopago', null,
-       '[{"id":"${product}","kind":"product","quantity":2}]'::jsonb) as result`,
+       '[{"id":"${product}","kind":"product","quantity":2}]'::jsonb,
+       p_customer_phone => '3515551234') as result`,
   );
   if (!r.ok) throw new Error(r.error);
   const { code } = r.rows[0].result as { code: string };
@@ -399,7 +400,8 @@ describe("cobro de un pedido con opciones y extras — MP-8", () => {
       db,
       null,
       `select public.create_public_order('ana', 'Cliente', 'retiro', 'mercadopago', null,
-         '[{"id":"${HELADO}","kind":"product","quantity":${quantity},"options":${options}}]'::jsonb) as result`,
+         '[{"id":"${HELADO}","kind":"product","quantity":${quantity},"options":${options}}]'::jsonb,
+         p_customer_phone => '3515551234') as result`,
     );
     if (!r.ok) throw new Error(r.error);
     const { code } = r.rows[0].result as { code: string };

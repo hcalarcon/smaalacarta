@@ -5,6 +5,8 @@ export type NavLink = {
   icon: string;
   // Contador junto al nombre (por ejemplo, pedidos nuevos).
   badge?: number;
+  // Otras rutas que también dejan este link activo (por ejemplo, el detalle).
+  alsoActiveOn?: string[];
 };
 
 export const dashboardLinks: NavLink[] = [
@@ -44,6 +46,7 @@ export const superAdminLinks: NavLink[] = [
   {
     href: "/superadmin",
     label: "Negocios",
+    alsoActiveOn: ["/superadmin/negocios"],
     icon: "M3 21h18M5 21V8l7-5 7 5v13M9 21v-6h6v6",
   },
   {
@@ -52,13 +55,23 @@ export const superAdminLinks: NavLink[] = [
     icon: "M12 5v14M5 12h14",
   },
   {
+    href: "/superadmin/repartidores",
+    label: "Repartidores",
+    icon: "M12 11a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0",
+  },
+  {
+    href: "/superadmin/zonas",
+    label: "Zonas",
+    icon: "M12 21s-7-6.2-7-11a7 7 0 1114 0c0 4.8-7 11-7 11zM12 12a2 2 0 100-4 2 2 0 000 4z",
+  },
+  {
     href: "/superadmin/imagenes",
     label: "Imágenes",
     icon: "M4 5h16a1 1 0 011 1v12a1 1 0 01-1 1H4a1 1 0 01-1-1V6a1 1 0 011-1zM8.5 10a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM21 16l-5-5-8 8",
   },
 ];
 
-// El usuario repartidor (ENVIO-31 y 36): sus pedidos y sus barrios.
+// El usuario repartidor (ENVIO-31 y 57): sus pedidos y las zonas que lleva.
 export const courierLinks: NavLink[] = [
   {
     href: "/repartidor",
@@ -67,7 +80,7 @@ export const courierLinks: NavLink[] = [
   },
   {
     href: "/repartidor/zonas",
-    label: "Barrios y precios",
+    label: "Mis zonas",
     icon: "M12 21s-7-6.2-7-11a7 7 0 1114 0c0 4.8-7 11-7 11zM12 12a2 2 0 100-4 2 2 0 000 4z",
   },
 ];

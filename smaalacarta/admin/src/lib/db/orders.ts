@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase-server";
+import type { OrderOffers } from "@/lib/orders/courier";
 import type { OrderItemOption } from "@/lib/orders/item-options";
 import type { ManualOrderInput } from "@/lib/orders/manual-order";
 import { todayAtIso } from "@/lib/orders/scheduled";
@@ -19,9 +20,11 @@ export type OrderEvent = {
   note: string | null;
 };
 
-// Lo que se sabe del envío con repartidor de un pedido (ENVIO-6); todo nulo si no lleva.
+// Lo que se sabe del envío con repartidor de un pedido (ENVIO-6); todo nulo si no lleva. El teléfono
+// del cliente (`customer_phone`) está en todos los pedidos (ENVIO-70).
 export type OrderDelivery = {
   courier_id: string | null;
+  delivery_zone_id: string | null;
   delivery_zone_name: string | null;
   delivery_fee_list: number | null;
   delivery_fee: number | null;
@@ -31,8 +34,9 @@ export type OrderDelivery = {
   delivery_address: string | null;
   courier_status: string | null;
   courier_note: string | null;
-  courier_requested_at: string | null;
   courier_responded_at: string | null;
+  // La búsqueda de repartidor (ENVIO-59 y 95): cuándo se abrió.
+  offered_at: string | null;
   // Rendición del efectivo (ENVIO-39): cuándo la marcó el repartidor y cuándo la confirmó el local.
   settled_at: string | null;
   settlement_received_at: string | null;
@@ -56,13 +60,13 @@ export type Order = OrderDelivery & {
   updated_at: string;
   order_items: OrderItem[];
   order_events: OrderEvent[];
-  // Los cambios del envío (`kind = 'delivery'`): consultas y respuestas del repartidor, precio.
+  // Los cambios del envío (`kind = 'delivery'`): quién lo tomó, lo devolvió o lo asignó, y el precio.
   delivery_events: OrderEvent[];
 };
 
 const SELECT =
   "id, order_number, status, total, notes, customer_name, delivery, payment, payment_status, source, scheduled_for, preorder, code, created_at, updated_at, " +
-  "courier_id, delivery_zone_name, delivery_fee_list, delivery_fee, delivery_fee_reason, delivery_fee_changed_at, customer_phone, delivery_address, courier_status, courier_note, courier_requested_at, courier_responded_at, settled_at, settlement_received_at, " +
+  "courier_id, delivery_zone_id, delivery_zone_name, delivery_fee_list, delivery_fee, delivery_fee_reason, delivery_fee_changed_at, customer_phone, delivery_address, courier_status, courier_note, courier_responded_at, offered_at, settled_at, settlement_received_at, " +
   "order_items(name, quantity, unit_price, sort_order, options), order_events(kind, status, created_at, note)";
 
 // Los pedidos más recientes del negocio, con su detalle y su línea de tiempo. El RLS
@@ -97,6 +101,19 @@ export async function listOrders(businessId: string, limit = 150): Promise<Order
 
 type DbFailure = { error: { code?: string; message?: string } };
 
+// Las ofertas abiertas de los pedidos que buscan repartidor en el negocio de quien llama (ENVIO-111). La
+// función resuelve antes lo que ya venció (ENVIO-106): se llama ANTES de leer los pedidos, así lo que
+// se lee ya está resuelto. Si falla, el tablero sigue sin ofertas.
+export async function listOrderOffers(): Promise<OrderOffers[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("business_order_offers");
+
+  if (error || !Array.isArray(data)) return [];
+
+  return data as unknown as OrderOffers[];
+}
+
 export async function setOrderStatus(
   orderId: string,
   status: string,
@@ -113,29 +130,30 @@ export async function setOrderStatus(
   return error ? { error: { code: error.code, message: error.message } } : { ok: true };
 }
 
-export type CourierActionInput = {
-  action: "request" | "accept" | "reject";
-  note: string | null;
-  fee: number | null;
-  feeReason: string | null;
-};
-
-// Registra una consulta o una respuesta del repartidor, con precio final y motivo si cambió
-// (ENVIO-11 y 12). La base comprueba que quien llama es del negocio del pedido.
-export async function setOrderCourier(
+// Asigna a mano un repartidor a un pedido que está buscando (ENVIO-67). La base comprueba que quien
+// llama es del negocio del pedido y que el repartidor está activo y cubre la zona.
+export async function assignCourier(
   orderId: string,
-  input: CourierActionInput,
+  courierId: string,
+  note: string | null,
 ): Promise<{ ok: true } | DbFailure> {
   const supabase = await createClient();
 
-  const { error } = await supabase.rpc("set_order_courier", {
+  const { error } = await supabase.rpc("business_assign_courier", {
     p_order_id: orderId,
-    p_action: input.action,
+    p_courier_id: courierId,
     // La clave se omite cuando no hay valor: la función usa su DEFAULT.
-    ...(input.note ? { p_note: input.note } : {}),
-    ...(input.fee !== null ? { p_fee: input.fee } : {}),
-    ...(input.feeReason ? { p_fee_reason: input.feeReason } : {}),
+    ...(note ? { p_note: note } : {}),
   });
+
+  return error ? { error: { code: error.code, message: error.message } } : { ok: true };
+}
+
+// "Lo llevo yo" (ENVIO-68): el local resuelve el envío él mismo.
+export async function selfDelivery(orderId: string): Promise<{ ok: true } | DbFailure> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("business_self_delivery", { p_order_id: orderId });
 
   return error ? { error: { code: error.code, message: error.message } } : { ok: true };
 }
@@ -148,22 +166,6 @@ export async function confirmSettlement(orderId: string): Promise<{ ok: true } |
   const { error } = await supabase.rpc("business_confirm_settlement", { p_order_id: orderId });
 
   return error ? { error: { code: error.code, message: error.message } } : { ok: true };
-}
-
-export type ActiveCourier = { name: string; whatsapp: string | null };
-
-// El repartidor activo (nombre y WhatsApp), para armar el mensaje de "Pedir envío". Solo lo leen
-// los miembros de un negocio con `courier_delivery` (RLS); sin permiso o sin repartidor, null.
-export async function getActiveCourier(): Promise<ActiveCourier | null> {
-  const supabase = await createClient();
-
-  const { data } = await supabase
-    .from("couriers")
-    .select("name, whatsapp")
-    .eq("active", true)
-    .maybeSingle();
-
-  return data ? { name: data.name, whatsapp: data.whatsapp } : null;
 }
 
 export async function createManualOrder(

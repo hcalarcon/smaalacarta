@@ -3,17 +3,10 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import { activeHref } from "@/lib/layout/nav-active";
 import { navBadgeLabel } from "@/lib/layout/nav-badge";
 
 import type { NavLink } from "./nav-links";
-
-// La raíz de cada sección (/dashboard, /superadmin) solo es activa en su propia
-// página; el resto también en sus subrutas.
-function isActive(pathname: string, href: string, roots: string[]) {
-  return roots.includes(href)
-    ? pathname === href
-    : pathname === href || pathname.startsWith(`${href}/`);
-}
 
 export default function DashboardNav({
   links,
@@ -23,12 +16,12 @@ export default function DashboardNav({
   onNavigate?: () => void;
 }) {
   const pathname = usePathname();
-  const roots = ["/dashboard", "/superadmin", "/repartidor"];
+  const current = activeHref(pathname, links);
 
   return (
     <nav aria-label="Principal" className="flex flex-col gap-1">
       {links.map((link) => {
-        const active = isActive(pathname, link.href, roots);
+        const active = link.href === current;
 
         return (
           <Link

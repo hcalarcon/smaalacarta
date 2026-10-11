@@ -366,7 +366,7 @@ llegando al negocio por WhatsApp.
 - **SEGUIMIENTO-9** Fuera del horario del negocio no se reciben pedidos: el servidor los
   rechaza (`P0006`) y el menú avisa "Cerrado ahora", con el próximo horario de
   apertura, y no deja enviarlos.
-- **SEGUIMIENTO-10** Al confirmar un pedido guardado, el menú muestra el panel "Pedido registrado"
+- **SEGUIMIENTO-10** *Reemplazado en parte por SEGUIMIENTO-34.* Al confirmar un pedido guardado, el menú muestra el panel "Pedido registrado"
   y abre WhatsApp solo (en una ventana aparte en PC, SEGUIMIENTO-14; en la misma pestaña en celulares y tablets), con el mensaje ya armado ("Nuevo pedido #N" y el
   link de seguimiento; siempre en español y con el nombre original de los productos). El
   panel tiene un botón principal "Ver el estado de mi pedido" y, chico, "¿No se abrió
@@ -420,6 +420,31 @@ llegando al negocio por WhatsApp.
   `textContent`.
 - **SEGUIMIENTO-24** `public_order_tracking` entrega `negocio.posicion` `{x, y}` y la cabecera del seguimiento la
   aplica con `headerPosition` (solo enteros de 0 a 100).
+- **SEGUIMIENTO-25** La página muestra una línea de pasos con un ícono animado por paso, según el tipo de entrega: con
+  envío (Recibido, Aceptado, Listo, En camino, Entregado) y para retirar (Recibido, Aceptado, Listo para retirar,
+  Retirado); un pedido cancelado tiene su estado propio, con el motivo si lo hay.
+- **SEGUIMIENTO-26** El paso actual está animado, los hechos llevan tilde y los que faltan se ven apagados; con
+  `prefers-reduced-motion` no hay animación.
+- **SEGUIMIENTO-27** En un pedido con envío, una tarjeta aparte dice "Buscando repartidor", "Elegí tu repartidor",
+  "Lo lleva {repartidor}" (con teléfono y botón de WhatsApp) o "Lo lleva el local".
+- **SEGUIMIENTO-28** Las ofertas son tarjetas con nombre, precio y el motivo si cambió el de lista, con la del favorito
+  del local primero y marcada "Recomendado por el local"; "Elegir" confirma antes y manda el precio visto.
+- **SEGUIMIENTO-29** Arriba de las ofertas, una cuenta regresiva "Si no elegís en m:ss, elegimos la más barata" hasta
+  `cierra_en`; ya elegida, se ve el repartidor.
+- **SEGUIMIENTO-30** Si el link de WhatsApp quedó guardado en este navegador, un botón claramente opcional permite
+  "Enviar también por WhatsApp".
+- **SEGUIMIENTO-31** "Avisarme cuando cambie" (un toque del cliente, recordado en `localStorage`): con la página abierta,
+  cada cambio de estado del pedido o del envío, y cuando falta 1 minuto para la elección automática, suena, vibra y,
+  con la pestaña oculta y permiso, muestra una notificación del navegador. La regla de qué cambió y qué aviso toca es
+  pura y está en `lib/`.
+- **SEGUIMIENTO-32** Mientras hay ofertas abiertas se consulta cada 5 segundos; con los avisos activados se sigue
+  consultando con la pestaña oculta, más espaciado. Sin Supabase Realtime.
+- **SEGUIMIENTO-33** Los textos nuevos están en es, en y pt y todo dato del pedido o del repartidor se pinta con
+  `textContent`.
+- **SEGUIMIENTO-34** *Reemplaza a SEGUIMIENTO-10 y 14 para los pedidos guardados:* el menú no abre WhatsApp solo, lleva al
+  cliente al seguimiento; el pedido anticipado sin pago online conserva el panel "Pedido registrado".
+- **SEGUIMIENTO-35** `public_order_tracking` entrega `pedido.entrega` (`retiro` o `delivery`): la línea de pasos dice "Listo para
+  retirar" y "Retirado" solo en un pedido para retirar.
 
 ## PWA — Instalar el menú en el celular
 
@@ -644,6 +669,15 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
   se abre dos veces a la vez. El contorno se dibuja de a poco (2,6 s), después se rellena y aparece el punto de Sáenz Peña con su nombre. Con `prefers-reduced-motion` el mapa queda completo y quieto. En el celular
   (sin teclado) lo abren 7 toques seguidos al logo del encabezado, cada uno a menos de 1,5 s del
   anterior.
+- **LANDING-28** `/hola` es la página del Programa Pioneros: la portada dice "Buscamos 7 locales
+  pioneros" y cuántos lugares quedan; lista los beneficios (primer mes gratis, $25.000 fijos por
+  12 meses, 30% menos de por vida y sin comisión por pedido); una grilla de 7 casilleros, el primero
+  Ozburguer como pionero fundador y el resto "Tu local acá", sin enlaces ni imágenes; el número de
+  "Quedan N lugares" es igual a los casilleros libres (se actualiza a mano); los botones de WhatsApp
+  llevan el mensaje de pioneros y los metadatos hablan del programa. Sigue sin JavaScript y dentro
+  de los límites de LANDING-11, 14 y 25.
+- **LANDING-29** Los precios se revisan cada 4 meses y se dice en la sección de planes de
+  `index.html` y en `/hola` (donde además los pioneros pagan siempre un 30% menos).
 
 ---
 
@@ -1123,43 +1157,49 @@ por `src/lib/db/delivery.test.ts` y `status.test.ts`. Esta etapa es solo la base
 panel del local y el del repartidor vienen después. `couriers` y `courier_zones` son tablas globales
 (sin `business_id`): hay un solo repartidor y no hay precios distintos según el local.*
 
-- **ENVIO-1** Hay un solo repartidor activo, Repartos al Toque (`couriers`), con sus 39 barrios y precios
-  (`courier_zones`, por `sort_order`); la base no admite un segundo repartidor activo.
+- **ENVIO-1** Repartos al Toque (`couriers`) arranca con sus 39 barrios y precios, que pasaron a ser zonas de la
+  plataforma (`delivery_zones`, por `sort_order`, ENVIO-46). *Reemplazado en parte por ENVIO-45: ya puede haber
+  varios repartidores activos.*
 - **ENVIO-2** Solo un superadmin habilita el envío con el repartidor en un negocio (`businesses.courier_delivery`,
   falso por defecto); el dueño del negocio no puede cambiarlo.
-- **ENVIO-3** Un usuario repartidor (`courier_users`, cargado a mano) ve su repartidor y hace alta, cambio y baja
-  de sus barrios y precios; no toca los de otro repartidor ni se agrega solo como repartidor.
-- **ENVIO-4** Un miembro de un negocio con `courier_delivery` lee el repartidor activo y sus barrios activos; uno
-  de un negocio sin envío, un visitante y un miembro sin relación no leen nada de eso.
-- **ENVIO-5** `create_public_order` con entrega `delivery` en un negocio con `courier_delivery` exige barrio activo
-  del repartidor activo (`P0016`), teléfono de 8 a 15 dígitos y dirección de 5 a 200 caracteres (`22023`).
-- **ENVIO-6** El pedido guarda repartidor, barrio (id y nombre), el precio de lista y el precio final (iguales al
-  crearse), teléfono (solo dígitos), dirección y `courier_status = 'waiting'`; el navegador no manda el precio. Si
-  algo falla no queda ningún pedido.
+- **ENVIO-3** Un usuario repartidor (`courier_users`) ve su repartidor y su fila; ya no edita barrios ni precios
+  (ENVIO-46) y no se agrega solo como repartidor.
+- **ENVIO-4** Un miembro de un negocio con `courier_delivery` lee los repartidores activos que cubren alguna de
+  sus zonas (ENVIO-49); uno de un negocio sin envío y un visitante no leen nada de eso.
+- **ENVIO-5** `create_public_order` con entrega `delivery` en un negocio con `courier_delivery` exige barrio activo,
+  marcado por el local y cubierto por un repartidor activo (`P0016`, ENVIO-54) y dirección de 5 a 200 caracteres (`22023`).
+  El teléfono (de 8 a 15 dígitos) se exige en todos los pedidos, con o sin envío (`P0018`, ENVIO-70).
+- **ENVIO-6** *El estado inicial es `searching` desde ENVIO-95.* El pedido guarda barrio (id y nombre), el precio de lista y el precio final (iguales al crearse),
+  teléfono (solo dígitos), dirección y `courier_status = 'waiting'`, sin repartidor (ENVIO-59); el navegador no
+  manda el precio. Si algo falla no queda ningún pedido.
 - **ENVIO-7** Un barrio en un negocio sin `courier_delivery`, o con una entrega que no es `delivery`, se rechaza
   (`P0016`). Un pedido sin envío queda sin repartidor y sigue su camino de siempre.
-- **ENVIO-8** Un pedido con envío no sale de Pendiente (salvo para cancelarse) hasta que el envío está aceptado
-  (`P0015`), tanto por `set_order_status` como por un UPDATE directo de un miembro.
+- **ENVIO-8** *Reemplazado por ENVIO-60 y ENVIO-69: ya no hace falta el OK del repartidor para confirmar (se retira
+  `P0015`).* Antes: un pedido con envío no salía de Pendiente hasta que el envío estaba aceptado.
 - **ENVIO-9** Un pedido con envío pasa por Pendiente, Confirmado, En preparación, Listo y Entregado al repartidor
   (`handed_to_courier`), y de ahí el repartidor lo lleva a En camino (`on_the_way`) y Entregado. El local no puede
   pasarlo a `on_the_way` ni a `delivered` (`P0004`); `canTransition` y `nextStatuses` reflejan las mismas reglas.
 - **ENVIO-10** Un pedido sin envío no admite `handed_to_courier` ni `on_the_way` (`P0004`). Cancelar se puede
   siempre, salvo un pedido terminado.
-- **ENVIO-11** `set_order_courier` registra que el local consultó al repartidor (`request`) y su respuesta
-  (`accept` o `reject`, con nota y hora). La llama un miembro del negocio del pedido o el repartidor del pedido;
-  `request` solo el miembro; un pedido terminado da `P0004`.
+- **ENVIO-11** *Reemplazado por ENVIO-63, 65 y 67: `set_order_courier` se borra.* Antes registraba la consulta y la
+  respuesta del repartidor.
 - **ENVIO-12** Cambiar el precio final del envío exige un motivo y guarda quién y cuándo; el precio de lista no
-  cambia.
+  cambia (hoy lo hace `courier_take_order`, ENVIO-64).
 - **ENVIO-13** Cada cambio del envío deja un evento `kind = 'delivery'` con una nota legible; esos eventos no
   aparecen en la línea de tiempo pública (`public_order_tracking`).
 - **ENVIO-14** `courier_set_status` solo la llama el repartidor del pedido y solo hace
   `handed_to_courier → on_the_way → delivered`, con su evento de estado y quién lo hizo.
 - **ENVIO-15** `courier_orders` solo la llama el usuario repartidor y devuelve sus pedidos, los más nuevos
   primero, con negocio, cliente (nombre, teléfono, dirección), total del local, ítems y datos del envío.
-- **ENVIO-16** `public_delivery_zones(slug)` devuelve el repartidor y sus barrios con precio solo si el negocio está
-  publicado, activo, con plan completo y `courier_delivery`, y el repartidor activo; si no, `null`.
-- **ENVIO-17** `public_order_delivery(code)` devuelve repartidor, barrio, precio de lista, precio, motivo del cambio,
-  estado y nota del envío; nunca teléfono ni dirección.
+- **ENVIO-16** `public_delivery_zones(slug)` devuelve los barrios con precio solo si el negocio está publicado,
+  activo, con plan completo y `courier_delivery`, y algún repartidor activo cubre alguna de sus zonas; si no,
+  `null`. Qué barrios, en ENVIO-51; que ya no trae repartidor, en ENVIO-75.
+- **ENVIO-17** `public_order_delivery(code)` devuelve repartidor (si ya hay), barrio, precio de lista, precio, motivo
+  del cambio, estado y nota del envío; nunca teléfono ni dirección del cliente (ENVIO-75).
+- **ENVIO-44** El WhatsApp del repartidor es público una vez que lo tomó: `public_order_delivery` lo devuelve en
+  `whatsapp` (y, si no hay uno cargado, la clave no va) y el seguimiento lo muestra con un link "Escribir a
+  {repartidor}" cuando el envío está aceptado. *Ya no sale en `public_delivery_zones` ni en el mensaje de WhatsApp al
+  local (ENVIO-75, ENVIO-88).*
 - **ENVIO-18** El superadmin habilita o deshabilita el envío con Repartos al Toque por negocio desde su ficha
   (`updateCourierDeliveryAction`: exige superadmin y cambia solo `businesses.courier_delivery`).
 - **ENVIO-19** El listado `/superadmin` marca con "Envío con Repartos al Toque" los negocios que lo tienen.
@@ -1176,34 +1216,31 @@ panel del local y el del repartidor vienen después. `couriers` y `courier_zones
   barrio, dirección, nombre y teléfono del cliente, hora de listo, total del pedido, pago, precio final del envío y
   link de seguimiento) y su link (`api.whatsapp.com`, solo dígitos, 549 a un número argentino de 10 dígitos); sin
   WhatsApp cargado no hay link. La hora de listo sugerida es la del pedido programado o 20 minutos desde ahora.
-- **ENVIO-24** Con el envío sin aceptar el local puede pedirlo (abre WhatsApp y registra `request`), registrar que el
-  repartidor aceptó (nota opcional y precio final) o que no puede (`setOrderCourierAction`); un precio distinto del
-  actual exige motivo (hasta 200) y la nota admite hasta 120. Aceptado, o pedido terminado: ninguna de las tres.
-- **ENVIO-25** Si pasaron 10 minutos desde `courier_requested_at` sin respuesta, la tarjeta y el detalle lo avisan.
+- **ENVIO-24** *Reemplazado por ENVIO-80 a 83: se sacan "Pedir envío", "Volver a pedir", "Repartidor aceptó" y "No
+  puede".*
+- **ENVIO-25** *Reemplazado por ENVIO-82: el aviso de 10 minutos cuenta desde `offered_at` (la búsqueda abierta).*
 - **ENVIO-26** La tarjeta y el detalle de un pedido con envío muestran barrio, estado del envío y precio (con el de
-  lista y el motivo si cambió); mientras no esté aceptado, confirmar queda deshabilitado con el motivo visible. Tras
-  Listo, el paso del local es "Entregar al repartidor"; En camino y Entregado se ven pero no son botones del local.
+  lista y el motivo si cambió. Tras Listo, el paso del local es "Entregar al repartidor" (solo con el envío
+  aceptado, ENVIO-84); En camino y Entregado se ven pero no son botones del local. *Confirmar ya no se bloquea por el
+  envío (ENVIO-60).*
 - **ENVIO-27** En el tablero, `handed_to_courier` y `on_the_way` van en la columna Listos, y pasan al historial al
   quedar `delivered`.
 - **ENVIO-28** El seguimiento muestra los estados `handed_to_courier` ("Entregado al repartidor") y `on_the_way`
   ("En camino") en la línea de tiempo y, en un pedido con envío, un camino de siete pasos; "Listo" con envío no dice
   que pase a buscarlo. Los textos nuevos están en es, en y pt.
-- **ENVIO-29** El seguimiento pide además `public_order_delivery` y muestra un bloque de envío según `estado`:
-  waiting o requested, "Buscando repartidor"; accepted, "Envío confirmado con {repartidor} · {nota} · {precio} al
-  repartidor" y, si el precio cambió, "Antes {precio_lista}: {motivo}"; rejected, que el repartidor no puede y el
-  local se va a comunicar. Un error de esa consulta no borra el último envío visto; un pedido cancelado no lo
-  muestra; todo con `textContent`, sin teléfono ni dirección.
+- **ENVIO-29** El seguimiento pide además `public_order_delivery` y muestra un bloque de envío según `estado`
+  (ENVIO-91 y 92). Un error de esa consulta no borra el último envío visto; un pedido cancelado no lo muestra; todo
+  con `textContent`, sin teléfono ni dirección.
 - **ENVIO-30** `/repartidor` exige sesión como `/dashboard` y `/superadmin`; un usuario sin negocio que es el usuario
   repartidor (`my_courier_id()`) va a `/repartidor` en lugar de `/sin-negocio`, y quien no lo es vuelve a su panel
   (`courierAccess`). La contraseña temporal y `/cambiar-contrasena` funcionan igual que en cualquier cuenta.
-- **ENVIO-31** `/repartidor` muestra los pedidos de `courier_orders()` en tres grupos (`src/lib/courier/panel.ts`): Por
-  responder (envío waiting o requested), Aceptados en curso (accepted y no terminados) e Historial (entregados,
-  cancelados o rechazados). Cada pedido lleva el local (nombre, dirección y WhatsApp), número y hora (y hora
+- **ENVIO-31** `/repartidor` muestra los pedidos en grupos (`src/lib/courier/panel.ts`); desde la etapa 2 son
+  Disponibles, Mis envíos en curso e Historial (ENVIO-76). Cada pedido lleva el local (nombre, dirección y WhatsApp), número y hora (y hora
   programada), cliente (nombre, teléfono con `tel:` y WhatsApp, dirección), barrio, precio de lista y final con el
   motivo, total del local y pago, productos con opciones y la nota del envío.
-- **ENVIO-32** Por responder se puede Aceptar (nota opcional y precio final; si cambia, motivo obligatorio) o "No
-  puedo" (`set_order_courier`); en `handed_to_courier` solo En camino y en `on_the_way` solo Entregado
-  (`courier_set_status`). Aceptado antes de la entrega del local, terminado o rechazado: ninguna acción.
+- **ENVIO-32** En `handed_to_courier` solo En camino y en `on_the_way` solo Entregado (`courier_set_status`).
+  Aceptado antes de la entrega del local, terminado o rechazado: ninguna acción. Tomar, Rechazar y Devolver, en
+  ENVIO-77.
 - **ENVIO-33** El panel se refresca solo (`router.refresh()` cada 15 s) y avisa con sonido, y en el título de la
   pestaña, los pedidos nuevos por responder, con el mismo `alerts.ts` y `sound.ts` del tablero del local (el criterio
   de "pendiente" es un parámetro).
@@ -1236,6 +1273,259 @@ panel del local y el del repartidor vienen después. `couriers` y `courier_zones
 - **ENVIO-43** El panel del local muestra el estado de la rendición en la tarjeta y el detalle del pedido y, cuando
   el repartidor ya la marcó, el botón Recibido (con confirmación). `/dashboard/orders` resume lo pendiente de rendir
   y lo ya rendido de los pedidos que muestra el historial.
+
+### Varios repartidores, etapa 1: repartidores y zonas (ENVIO-45 a 58)
+
+*Aplicado por `supabase/migrations/20261021000000_varios_repartidores_zonas.sql`. Cubierto por
+`src/lib/db/zones.test.ts` (base) y los tests de `src/lib/courier/`, `src/lib/settings/` y
+`app/superadmin/`. Esta etapa prepara datos y pantallas: el circuito del pedido no cambia, y el pedido
+sigue naciendo con un repartidor asignado (la TRANSICIÓN de ENVIO-54; la etapa 2 la reemplaza).*
+
+- **ENVIO-45** Puede haber varios repartidores activos (se retira `couriers_one_active_idx`). La migración copia
+  `courier_zones` a `delivery_zones` con los mismos `id` (los pedidos siguen apuntando a su zona), da a cada
+  repartidor la cobertura de las zonas activas que ya tenía, marca todas las zonas activas en los negocios con
+  `courier_delivery` y borra `courier_zones`.
+- **ENVIO-46** `delivery_zones` es global: `name` de 1 a 60 y único, `price` desde 0, `sort_order`, `active`. La lee
+  cualquier usuario con sesión (no un visitante); alta, cambio y baja, solo el superadmin. El repartidor ya no edita
+  precios: los ajusta al aceptar un pedido (ENVIO-12).
+- **ENVIO-47** `courier_zone_coverage` (repartidor, zona) dice qué zonas cubre cada repartidor. Es global, como
+  `couriers`: cada repartidor ve, agrega y borra solo las suyas (`my_courier_id()`) y el superadmin todas; un local y
+  un visitante no la leen.
+- **ENVIO-48** `business_delivery_zones` (negocio, zona) dice a qué zonas envía cada local. Sus miembros ven, agregan
+  y borran las de su negocio; el superadmin todas; otro negocio, un repartidor y un visitante, ninguna.
+- **ENVIO-49** `couriers` solo lo escribe el superadmin. Un repartidor ve su fila; un miembro de un negocio con
+  `courier_delivery` ve nombre y WhatsApp de los repartidores **activos** que cubren alguna de sus zonas
+  (`courier_covers_my_zones`).
+- **ENVIO-50** `create_courier_with_user(nombre, whatsapp, usuario)` crea el repartidor y su `courier_users` en una
+  sola transacción y solo la llama un superadmin (`42501` si no). `courier_users` sigue sin políticas de escritura.
+- **ENVIO-51** `zonas` de `public_delivery_zones(slug)` son las activas que el local marcó y que cubre al menos un
+  repartidor activo, con el precio de referencia. Si no queda ninguna, `null`. *Desde la etapa 2 ya no trae
+  `repartidor` ni `whatsapp` (ENVIO-75).*
+- **ENVIO-52** *Los minutos para el favorito se quitaron en ENVIO-112.* `business_settings` gana `favorite_courier_id` (nulo = sin favorito; en la etapa 2 el pedido va a
+  todos) y `favorite_minutes` (de 1 a 60, 5 por defecto). `set_courier_preferences(favorito, minutos)` los guarda
+  con los permisos de quien llama: el favorito tiene que estar activo y cubrir al menos una zona del local
+  (`P0017`), los minutos van de 1 a 60 (`22023`) y el negocio tiene que tener `courier_delivery` (`42501`). Un
+  UPDATE directo de un miembro tampoco salta la validación del favorito.
+- **ENVIO-53** `save_delivery_preferences(zonas, favorito, minutos)` guarda las zonas del local y el favorito en una
+  sola transacción (el favorito se valida contra las zonas nuevas; si algo falla no queda nada a medias; una zona
+  inexistente o de baja da `22023`). `business_delivery_options()` entrega a la pantalla las zonas activas (con
+  `selected` y `covered`), los repartidores activos con las zonas que cubren, el favorito y los minutos.
+- **ENVIO-54** `create_public_order` solo acepta una zona activa, marcada por el local y cubierta por un repartidor
+  activo (`P0016`). *La TRANSICIÓN de la etapa 1 (el pedido nacía con el favorito o Repartos al Toque, y
+  `my_delivery_courier()`) la reemplaza la búsqueda de la etapa 2: ENVIO-59.*
+- **ENVIO-55** `/superadmin/repartidores` lista los repartidores (nombre, WhatsApp, activo, cuántas zonas cubre) y da
+  de alta una cuenta con nombre, WhatsApp y email: crea el usuario con contraseña temporal, el repartidor y su
+  usuario, y muestra las credenciales una sola vez. El email no puede ser de una cuenta que ya existe. La ficha
+  edita nombre, WhatsApp y activo, y restablece la contraseña. Todo exige superadmin antes de usar la clave de
+  servicio (`createCourierWithAccount`, con dependencias inyectadas).
+- **ENVIO-56** `/superadmin/zonas` es el ABM de `delivery_zones`: alta, nombre y precio, activar o desactivar, borrar
+  con confirmación y ordenar arrastrando. Una zona que ya usan pedidos no se borra: se desactiva y la pantalla lo
+  avisa. Las validaciones son las de `src/lib/courier/zones.ts`.
+- **ENVIO-57** `/repartidor/zonas` ("Mis zonas") lista las zonas activas con su precio de referencia y una casilla
+  "La llevo" que guarda al tocar sobre `courier_zone_coverage`. No se editan nombres ni precios.
+- **ENVIO-58** Configuración → Envíos (solo con `courier_delivery`): casillas de las zonas a las que envía el local
+  (una zona sin repartidor muestra "Sin repartidor por ahora"), repartidor favorito (solo entre los que cubren alguna
+  zona marcada, o "Sin favorito") y minutos para el favorito (5 por defecto, visibles solo con favorito). Se guarda
+  con "Guardar cambios", junto al resto, con `save_delivery_preferences`.
+
+### Varios repartidores, etapa 2: el circuito nuevo (ENVIO-59 a 92)
+
+*Aplicado por `supabase/migrations/20261022000000_busqueda_de_repartidor.sql`. Cubierto por
+`src/lib/db/offers.test.ts` y `delivery.test.ts` (base), `src/lib/courier/panel.test.ts`,
+`src/lib/orders/courier.test.ts`, `web/apps/menu-app` y `web/apps/tracker`. Reglas del dueño (Herni): el
+local confirma cuando quiere y ahí se abre la búsqueda de repartidor; primero lo ve solo el favorito, después
+todos los que cubren la zona; el primero que toca Tomar se lo queda; si nadie lo toma, el local lo asigna o lo
+lleva él. Errores nuevos: `P0018` (teléfono del cliente) y `P0019` (ya lo tomó otro o no está disponible).
+`P0015` ya no existe en este circuito.*
+
+- **ENVIO-59** Un pedido con envío nace con `courier_id` nulo y `courier_status = 'waiting'` ("todavía no
+  confirmado"). `courier_status` admite además `searching` (búsqueda abierta) y `self` (lo lleva el local); se
+  mantienen `requested` y `rejected` para los pedidos viejos. `orders` gana `offered_at`, `offer_favorite_id` y
+  `offer_favorite_until`.
+- **ENVIO-60** *Reemplazado por ENVIO-95: la búsqueda se abre al crear el pedido, no al confirmarlo.* Cuando un pedido con envío sale de Pendiente (confirmado, o salta directo a otro estado) la base abre
+  la búsqueda: `courier_status = 'searching'`, `offered_at = now()` y, si el local tiene un favorito activo que
+  cubre la zona del pedido, `offer_favorite_id` y `offer_favorite_until = now() + favorite_minutes`. Lo hace un
+  trigger, así vale para `set_order_status` y para un UPDATE directo. Confirmar ya no depende del repartidor. Si el
+  pedido se cancela mientras se busca, la búsqueda se cierra (vuelve a `waiting`, sin `offered_at`). Un pedido sin
+  envío no abre nada. Los pedidos manuales nacen Pendientes y sin envío con repartidor.
+- **ENVIO-61** *Reemplazado por ENVIO-112: ya no hay ventana exclusiva del favorito; su oferta va primero.* La ventana del favorito se calcula con la hora (`courier_sees_order`): un pedido buscando se ve si
+  `offer_favorite_until` es nulo, ya pasó, o el repartidor es `offer_favorite_id`. Sin favorito, o con un favorito que
+  no cubre la zona, no hay ventana. El favorito queda copiado en el pedido: cambiarlo después no lo altera.
+- **ENVIO-62** *Cambia en ENVIO-101: sin ventana, y con las ofertas.* `courier_available_orders()` lista los pedidos en `searching`, activos, de una zona que el repartidor
+  cubre, que no rechazó ni devolvió y que están fuera de la ventana del favorito o son de su ventana. Un repartidor
+  dado de baja no ve nada. Se ordenan por `offered_at`. Solo la llama un repartidor.
+- **ENVIO-63** *Reemplazado por ENVIO-98: el repartidor ya no toma, oferta.* `courier_take_order(pedido, precio, motivo, nota)` es un solo UPDATE condicional: el primero que toca
+  Tomar se lo queda (`courier_id`, `accepted`, `courier_responded_at`, nota de hasta 120). Si no lo ve (ya lo tomó
+  otro, no existe, no cubre la zona, está en la ventana de otro o se canceló), `P0019` y no cambia nada.
+- **ENVIO-64** *Reemplazado por ENVIO-98 y 103: el precio y el motivo van en la oferta.* Al tomarlo puede ajustar el precio final: distinto del actual exige motivo (de 1 a 200) y guarda
+  quién y cuándo; el precio de lista no cambia (`22023` si falta o el precio no es válido). Deja eventos `delivery`
+  ("Envío tomado por {repartidor}…" y "Precio del envío: $a → $b (motivo)") que el seguimiento público no muestra.
+- **ENVIO-65** `courier_decline_order(pedido)` deja una fila `rejected` en `courier_order_declines`: ese pedido
+  deja de verse y de poder tomarse para ese repartidor, y sigue para los demás. Si no le era visible, `P0019`.
+- **ENVIO-66** *Cambia en ENVIO-107: las ofertas de los demás siguen valiendo.* `courier_return_order(pedido, motivo)`: solo el repartidor asignado (`P0002` si no), solo antes de
+  `handed_to_courier` (`P0004`), con motivo obligatorio de hasta 200 (`22023`). El pedido vuelve a `searching` con
+  `courier_id` nulo, `offered_at = now()`, sin ventana del favorito, con el precio de lista y sin nota; guarda
+  `returned` con el motivo (quien lo devolvió no lo vuelve a ver) y un evento `delivery`.
+- **ENVIO-67** `business_assign_courier(pedido, repartidor, nota)`: un miembro del negocio del pedido (si no,
+  `P0002`), con el pedido en `searching` (`P0004`) y un repartidor activo que cubre la zona (`22023`). Queda
+  `accepted` y con evento. Vale durante toda la búsqueda, también dentro de la ventana del favorito.
+- **ENVIO-68** `business_self_delivery(pedido)`: un miembro, con el pedido en `searching`; pasa a `self`, con evento.
+  El pedido sigue el camino sin repartidor: el local lo entrega (`ready` → `delivered`).
+- **ENVIO-69** `handed_to_courier` solo con `courier_status = 'accepted'` y `courier_id` no nulo (`P0004`), tanto en
+  `set_order_status` como por UPDATE directo. Con el envío en `waiting` o `searching` el local no puede pasarlo a
+  `delivered` (`P0004`): primero lo asigna o lo lleva él. Un miembro no cambia por UPDATE directo `courier_id`,
+  `courier_status`, `courier_note`, `courier_responded_at`, `offered_at` ni `offer_favorite_*` (`42501`): solo las
+  funciones del circuito.
+- **ENVIO-70** `create_public_order` exige `p_customer_phone` (de 8 a 15 dígitos, solo se guardan los dígitos) en
+  todos los pedidos, con o sin envío (`P0018`). Un negocio que no existe sigue dando `P0002`.
+- **ENVIO-71** Antes de tomarlo el repartidor ve el local (nombre y dirección), número, `ofrecido_el`, hora
+  programada, zona, precio de referencia, total y medio de pago; **no** el nombre, teléfono ni dirección del
+  cliente, ni notas ni productos. Esos datos los recibe en `courier_orders()` recién cuando lo toma. `courier_orders()`
+  sigue trayendo los pedidos viejos sin rendir.
+- **ENVIO-72** Solo el repartidor llama a `courier_available_orders`, `courier_take_order`, `courier_decline_order`
+  y `courier_return_order` (`42501`; sin sesión, rechazado). Un repartidor no lee `orders` directo.
+- **ENVIO-73** `courier_order_declines` (pedido, repartidor, `rejected` o `returned`, motivo, hora; PK pedido +
+  repartidor) no tiene escritura directa. El repartidor ve las suyas; los miembros, las de pedidos de su negocio;
+  otro negocio y un visitante, ninguna.
+- **ENVIO-74** La migración convierte los pedidos abiertos de la etapa 1 que esperaban el OK de un repartidor
+  (`waiting`, `requested` o `rejected`, no entregados ni cancelados): quedan sin repartidor y en `waiting` (los que
+  ya pasaron de Pendiente, en `searching`). Los `accepted` y los terminados no se tocan.
+- **ENVIO-75** `public_delivery_zones` devuelve solo `zonas` (sin `repartidor` ni `whatsapp`). `public_order_delivery`
+  usa `LEFT JOIN` a `couriers` y devuelve los estados `waiting`, `searching`, `accepted` (con nombre y WhatsApp del
+  repartidor) y `self`, y los viejos tal cual; un pedido sin envío, `null`. Nunca teléfono ni dirección del cliente.
+- **ENVIO-76** `/repartidor` agrupa en Disponibles (`courier_available_orders()`), Mis envíos en curso (los que tomó
+  y siguen abiertos) e Historial (`src/lib/courier/panel.ts`); los viejos `waiting`/`requested` sin repartidor
+  asignado no aparecen. Rendiciones queda como antes.
+- **ENVIO-77** *Reemplazado por ENVIO-113 a 115: Ofertar, Cambiar y Retirar en lugar de Tomar.* En Disponibles, cada pedido tiene Tomar (nota opcional y precio final; si cambia, motivo
+  obligatorio) y Rechazar (con confirmación). Si al tomarlo ya lo tenía otro (`P0019`), muestra "Lo tomó otro
+  repartidor" y el pedido desaparece. En Mis envíos, Devolver (con motivo, solo antes de que el local lo entregue),
+  En camino y Entregado como hasta ahora.
+- **ENVIO-78** El sonido y el título de la pestaña avisan cuando aparece un pedido nuevo en Disponibles; `isToRespond`
+  y `useNewOrderAlert` se generalizaron (el criterio de "pendiente" es un parámetro), no se duplicaron.
+- **ENVIO-79** Las acciones de `/repartidor` (`takeOrderAction`, `declineOrderAction`, `returnOrderAction`) empiezan
+  por `requireCourier()` y nunca reciben un id de repartidor; traducen `P0019` al motivo `taken`.
+- **ENVIO-80** *Cambia en ENVIO-117 (búsqueda desde que se crea el pedido, sin ventana del favorito).* `CourierSection` (panel del local) muestra según `courier_status`: `waiting`, "Al confirmar se busca
+  repartidor"; `searching`, "Buscando repartidor desde las HH:MM" y, durante la ventana, "Lo ve solo {favorito}
+  hasta las HH:MM"; `accepted`, "Lo tomó {nombre}" con botón de WhatsApp a ese repartidor, precio de lista y final
+  con el motivo; `self`, "Lo llevás vos".
+- **ENVIO-81** Con `searching`, el local tiene **Asignar a mano** (un select con los repartidores activos que cubren
+  la zona del pedido, nota opcional) y **Lo llevo yo**, disponibles durante toda la búsqueda
+  (`assignCourierAction`, `selfDeliveryAction`).
+- **ENVIO-82** *Reemplazado por ENVIO-118: "Nadie ofertó todavía".* A los 10 minutos de `offered_at`, la tarjeta y el detalle destacan "Nadie lo tomó todavía"; las dos
+  acciones de ENVIO-81 no cambian, solo se destacan.
+- **ENVIO-83** Se sacan del panel "Pedir envío", "Volver a pedir", "Repartidor aceptó" y "No puede", con
+  `setOrderCourierAction`, `courierRequestMessage`, `courierWhatsappLink` y el aviso de falta de respuesta.
+- **ENVIO-84** Confirmar no se bloquea por el envío. "Entregar al repartidor" solo aparece con el envío `accepted`;
+  con `self` el local entrega él.
+- **ENVIO-85** El teléfono del cliente se ve en la tarjeta y en el detalle de **todos** los pedidos, con link `tel:` y
+  de WhatsApp.
+- **ENVIO-86** En Configuración → Envíos, el select de favorito solo ofrece los repartidores que cubren alguna de las
+  zonas tildadas en pantalla (sin guardar todavía).
+- **ENVIO-87** El checkout del menú pide siempre el teléfono del cliente (obligatorio), con o sin envío; `createOrder`
+  lo manda siempre y va en el mensaje de WhatsApp al local. `P0018` vuelve como motivo `invalid_phone`.
+- **ENVIO-88** `lib/delivery-zones.js`: `repartidor` y `whatsapp` son opcionales en `normalizeZones`. El aviso del
+  envío queda "Envío: $…, se paga al repartidor", sin nombre ni teléfono, y el mensaje de WhatsApp al local no
+  agrega el teléfono del repartidor.
+- **ENVIO-89** Los textos nuevos del menú y del seguimiento están en es, en y pt; el mensaje de WhatsApp al local
+  sigue en español.
+- **ENVIO-90** *(reservado)*
+- **ENVIO-91** El seguimiento muestra el bloque de envío según `estado`: `waiting`, nada nuevo; `searching`,
+  "Buscando repartidor"; `accepted`, "Lo lleva {repartidor}" con su teléfono, el botón para escribirle, la nota, el
+  precio y, si cambió, "Precio de lista {precio_lista} · {motivo}" (ENVIO-125); `self`, "Lo lleva el local".
+- **ENVIO-92** Los estados viejos (`requested`, `rejected`) o desconocidos no rompen la página: se muestran como
+  "Buscando repartidor" o no muestran el bloque, sin error.
+- **ENVIO-93** El menú lateral del superadmin lista, después de "Nuevo negocio" y antes de "Imágenes",
+  **Repartidores** (`/superadmin/repartidores`) y **Zonas** (`/superadmin/zonas`).
+- **ENVIO-94** El link activo es el de la ruta más específica: `/superadmin/repartidores/nuevo` y
+  `/superadmin/repartidores/<id>` marcan Repartidores; `/superadmin` y `/superadmin/negocios/<id>` marcan Negocios;
+  `/superadmin/negocios/nuevo` marca Nuevo negocio. Cubierto por `src/lib/layout/nav-active.test.ts`.
+
+### Varios repartidores, etapa 2b: el cliente elige entre ofertas (ENVIO-95 a 120)
+
+*Aplicado por `supabase/migrations/20261023000000_ofertas_de_repartidor.sql`. Cubierto por
+`src/lib/db/courier-offers.test.ts` (base), `src/lib/courier/panel.test.ts`, `src/lib/orders/courier.test.ts`,
+`app/repartidor`, `app/dashboard/orders`, `web/apps/menu-app` y `web/apps/tracker`. Reglas del dueño (Herni):
+desde que se crea el pedido los repartidores que cubren la zona ofertan; el cliente elige desde su
+seguimiento (el favorito del local va primero); si no elige, a los 5 minutos de la primera oferta se elige
+sola la más barata; en paralelo el local acepta la comanda. Errores nuevos: `P0020` (el pedido ya no
+recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambió). `P0019` ya no se usa.*
+
+- **ENVIO-95** *Reemplazado en parte por ENVIO-121: los anticipados y programados nacen `waiting` y se ofrecen al
+  confirmar.* Un pedido con envío nace sin repartidor y con `courier_status = 'searching'` y `offered_at = now()`:
+  no hay que esperar a que el local lo confirme, y ningún trigger abre la búsqueda. La migración pasa a
+  `searching` los pedidos abiertos que estaban en `waiting`.
+- **ENVIO-96** `courier_offers` guarda una oferta por pedido y repartidor (única; se borra con el pedido):
+  `price` desde 0, `reason` de 3 a 140 caracteres y `closed_at` (nulo = abierta).
+- **ENVIO-97** Un repartidor lee solo sus ofertas, un miembro las de pedidos de su negocio y el superadmin todas; otro
+  negocio, otro repartidor y un visitante, ninguna. Nadie escribe directo: solo las funciones.
+- **ENVIO-98** `courier_make_offer(pedido, precio, motivo)` crea o cambia la oferta propia. Con un precio distinto del de
+  lista exige motivo de 3 a 140 caracteres (`P0021`); con el de lista no guarda motivo; un precio negativo o
+  desmedido da `22023`.
+- **ENVIO-99** No puede ofertar (`P0020`, sin cambiar nada) un repartidor que no cubre la zona, está dado de baja, ya
+  rechazó o devolvió ese pedido, ni sobre un pedido que ya tiene repartidor, está cancelado, entregado, lo lleva el
+  local o es de Mercado Pago sin pagar.
+- **ENVIO-100** `courier_withdraw_offer(pedido)` retira la propia mientras el cliente no eligió; después, `P0020`.
+- **ENVIO-101** `courier_available_orders()` lista los pedidos buscando de las zonas del repartidor, sin los que
+  rechazó o devolvió, con `ofertas` (cuántas, sin nombres ni precios de los demás), `mi_oferta` y el precio de lista;
+  sin datos del cliente. Suma, por unos minutos, los pedidos donde su oferta se cerró, con `resultado`
+  (`chosen_other`, `cancelled` o `closed`).
+- **ENVIO-102** `courier_decline_order` oculta el pedido para ese repartidor y retira su oferta; `courier_take_order`
+  ya no existe.
+- **ENVIO-103** `public_choose_courier(código, oferta[, precio])`, sin sesión, en un solo UPDATE condicional: el pedido
+  queda con `courier_id`, `delivery_fee` = precio de la oferta, `delivery_fee_reason` = su motivo y
+  `courier_status = 'accepted'`, y las ofertas abiertas se cierran.
+- **ENVIO-104** No elige con el código de otro pedido ni con una oferta de otro pedido o ya cerrada (`P0020`); si el
+  repartidor cambió el precio que el cliente estaba mirando, `P0022`; un código inválido o inexistente, `P0002`. Dos
+  elecciones a la vez: gana una y la otra da `P0020`.
+- **ENVIO-105** `settle_courier_offers(pedido)`: pasados 5 minutos desde la primera oferta, y si el pedido sigue
+  buscando, elige la oferta más barata; a igual precio, la del favorito del local; después, la más vieja. Solo cuenta a
+  repartidores activos. Es idempotente y no usa ningún proceso programado.
+- **ENVIO-106** Se resuelve de forma perezosa antes de leer: `public_order_delivery`, `courier_available_orders`,
+  `settle_due_courier_offers` y `business_order_offers`; también antes de ofertar, retirar o elegir, así una oferta
+  tardía no cambia lo ya elegido. Los 5 minutos están solo en `courier_offers_window()`.
+- **ENVIO-107** `courier_return_order` vuelve el pedido a `searching`, borra la oferta de quien lo devolvió (que no puede
+  volver a ofertar), reabre las de los demás (siguen valiendo) y la cuenta de 5 minutos arranca de nuevo desde la
+  devolución.
+- **ENVIO-108** Cuando el pedido pasa a `cancelled`, sus ofertas abiertas se cierran sin borrarse (el repartidor ve
+  "Cancelado por el local").
+- **ENVIO-109** `business_assign_courier` y `business_self_delivery` siguen funcionando durante la búsqueda y cierran
+  las ofertas abiertas.
+- **ENVIO-110** `public_order_delivery` suma, mientras busca, `ofertas` (id, repartidor, precio, motivo y `favorito`,
+  con el favorito primero y después por precio y antigüedad) y `cierra_en` (cuándo se elige sola). El WhatsApp del
+  repartidor es solo del elegido; nunca el teléfono ni la dirección del cliente.
+- **ENVIO-111** `business_order_offers()` entrega al local, por pedido que busca, las ofertas con nombre y precio y
+  `cierra_en`; solo de los pedidos de su negocio.
+- **ENVIO-112** Se borran `orders.offer_favorite_id`, `orders.offer_favorite_until` y
+  `business_settings.favorite_minutes`: `set_courier_preferences(favorito)` y `save_delivery_preferences(zonas,
+  favorito)` ya no reciben minutos. `favorite_courier_id` queda para ordenar y desempatar.
+- **ENVIO-113** En Disponibles de `/repartidor`, cada pedido muestra barrio, local, precio de lista, hora (programada o
+  de creación) y "N ofertas", con el botón Ofertar y el precio de lista ya cargado; si lo cambia, pide el motivo.
+- **ENVIO-114** Con oferta hecha: "Tu oferta: $X, esperando al cliente", con Cambiar y Retirar. Rechazar sigue.
+- **ENVIO-115** Cuando lo eligen, el pedido pasa a Mis envíos en curso (ahí recién ve los datos del cliente). Si
+  eligieron a otro: "El cliente eligió otro repartidor"; si se canceló: "Cancelado por el local". Esos avisos
+  desaparecen solos pasados unos minutos.
+- **ENVIO-116** Suena un aviso cuando entra un pedido nuevo a Disponibles y otro, distinto, cuando lo eligen.
+- **ENVIO-117** En un pedido con envío buscando, el local ve "Esperando ofertas" o "N ofertas, el cliente está
+  eligiendo (se elige sola en m:ss)", con nombres y precios. Asignar a mano y Lo llevo yo siguen disponibles.
+- **ENVIO-118** A los 10 minutos de abierta la búsqueda sin ninguna oferta, la tarjeta y el detalle destacan "Nadie
+  ofertó todavía".
+- **ENVIO-119** Configuración → Envíos ya no pide minutos para el favorito; dice que su oferta le aparece primero al
+  cliente, marcada "Recomendado por el local".
+- **ENVIO-120** El menú, al confirmar un pedido que se guardó en el sistema, va directo al seguimiento y guarda el link de
+  WhatsApp con `rememberHandoff` para ofrecerlo ahí; si no se pudo guardar, sigue solo por WhatsApp.
+- **ENVIO-121** Un pedido con envío con `preorder = true` o `scheduled_for` no nulo nace `courier_status = 'waiting'`,
+  sin `offered_at`: no se ofrece al crearse. Un pedido común sigue naciendo `searching` (ENVIO-95).
+- **ENVIO-122** Cuando el local lo saca de pendiente sin cancelarlo (confirmado, o salta a otro estado), el pedido
+  `waiting` pasa a `searching` con `offered_at = now()` (trigger `orders_open_courier_search_on_confirm`). Cancelarlo no
+  abre la búsqueda. Mientras está `waiting`, `courier_available_orders` no lo muestra y `courier_make_offer` da
+  `P0020`. Los 5 minutos de la elección automática cuentan desde la primera oferta, también sin seguimiento.
+- **ENVIO-123** El panel del local, en un pedido pendiente `waiting`, dice "Se ofrece a los repartidores cuando lo
+  confirmes".
+- **ENVIO-124** La migración pasa a `waiting` los pedidos anticipados o programados que estaban `searching`, siguen
+  pendientes y no tienen ofertas.
+- **ENVIO-125** La oferta con precio distinto al de lista dice "Precio de lista {precio} · {motivo}" (sin motivo, solo
+  "Precio de lista {precio}") en el seguimiento (es, en y pt) y en el panel del local. *Reemplaza el "Antes {precio}:
+  {motivo}" de ENVIO-91 y SEGUIMIENTO-28.*
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 

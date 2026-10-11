@@ -580,6 +580,12 @@ h3 {
   color: var(--muted);
 }
 
+.plans-note {
+  margin-top: 2rem;
+  text-align: center;
+  font-size: 0.9375rem;
+}
+
 .section-dark .section-subtitle {
   color: rgba(240, 242, 238, 0.8);
 }

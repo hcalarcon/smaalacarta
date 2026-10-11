@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   brandTheme,
-  deliveryNotice,
+  chooseCourier,
+  deliveryCard,
   fetchDelivery,
   fetchTracking,
   isFinalStatus,
@@ -14,7 +15,6 @@ import {
   safeColor,
   scheduledNotice,
   statusView,
-  stepLabels,
   timeline,
 } from "./tracker.js";
 
@@ -48,13 +48,13 @@ describe("parseTrackingCode — SEGUIMIENTO-8", () => {
 
 describe("statusView — SEGUIMIENTO-8", () => {
   it.each([
-    ["pending", "Recibimos tu pedido", 0],
-    ["confirmed", "Pedido confirmado", 1],
-    ["preparing", "Estamos preparando tu pedido", 2],
-    ["ready", "¡Tu pedido está listo!", 3],
-    ["delivered", "Pedido entregado", 4],
-  ])("%s → %s (paso %i)", (status, title, step) => {
-    expect(statusView(status)).toMatchObject({ title, step, cancelled: false });
+    ["pending", "Recibimos tu pedido"],
+    ["confirmed", "Pedido confirmado"],
+    ["preparing", "Estamos preparando tu pedido"],
+    ["ready", "¡Tu pedido está listo!"],
+    ["delivered", "Pedido entregado"],
+  ])("%s → %s", (status, title) => {
+    expect(statusView(status)).toMatchObject({ title, cancelled: false });
   });
 
   it("cancelado", () => {
@@ -62,7 +62,7 @@ describe("statusView — SEGUIMIENTO-8", () => {
   });
 
   it("un estado desconocido no rompe: se muestra genérico", () => {
-    expect(statusView("volando")).toMatchObject({ title: "Estado del pedido", step: -1, cancelled: false });
+    expect(statusView("volando")).toMatchObject({ title: "Estado del pedido", cancelled: false });
   });
 });
 
@@ -217,7 +217,7 @@ describe("safeColor", () => {
 
 describe("seguimiento en otros idiomas — IDIOMA-7", () => {
   it("statusView traduce título y texto", () => {
-    expect(statusView("pending", "en")).toMatchObject({ title: "We received your order", step: 0 });
+    expect(statusView("pending", "en")).toMatchObject({ title: "We received your order" });
     expect(statusView("cancelled", "pt")).toMatchObject({ title: "Pedido cancelado", cancelled: true });
     expect(statusView("volando", "en").title).toBe("Order status");
   });
@@ -225,11 +225,6 @@ describe("seguimiento en otros idiomas — IDIOMA-7", () => {
   it("timeline traduce las etiquetas pero no las notas del local", () => {
     const events = [{ estado: "confirmed", nota: "Sin stock" }];
     expect(timeline(events, "en")[0]).toMatchObject({ label: "Order confirmed", note: "Sin stock" });
-  });
-
-  it("los pasos del camino se traducen", () => {
-    expect(stepLabels("en")).toEqual(["Received", "Confirmed", "Preparing", "Ready", "Delivered"]);
-    expect(stepLabels()).toEqual(["Recibido", "Confirmado", "Preparando", "Listo", "Entregado"]);
   });
 });
 
@@ -352,26 +347,12 @@ describe("itemRow — SEGUIMIENTO-23", () => {
 // Envío con Repartos al Toque — ENVIO-28 y 29.
 describe("estados del envío — ENVIO-28", () => {
   it.each([
-    ["handed_to_courier", "es", "Tu pedido salió del local", 4],
-    ["on_the_way", "es", "Tu pedido está en camino", 5],
-    ["on_the_way", "en", "Your order is on its way", 5],
-    ["handed_to_courier", "pt", "Seu pedido saiu do local", 4],
-  ])("%s en %s → %s (paso %i del camino con envío)", (status, lang, title, step) => {
-    expect(statusView(status, lang)).toMatchObject({ title, step, cancelled: false, final: false });
-  });
-
-  it("con envío el camino tiene siete pasos y Entregado es el último", () => {
-    expect(stepLabels("es", { courier: true })).toEqual([
-      "Recibido",
-      "Confirmado",
-      "Preparando",
-      "Listo",
-      "Al repartidor",
-      "En camino",
-      "Entregado",
-    ]);
-    expect(statusView("delivered", "es", { courier: true }).step).toBe(6);
-    expect(statusView("delivered", "es").step).toBe(4);
+    ["handed_to_courier", "es", "Tu pedido salió del local"],
+    ["on_the_way", "es", "Tu pedido está en camino"],
+    ["on_the_way", "en", "Your order is on its way"],
+    ["handed_to_courier", "pt", "Seu pedido saiu do local"],
+  ])("%s en %s → %s", (status, lang, title) => {
+    expect(statusView(status, lang)).toMatchObject({ title, cancelled: false, final: false });
   });
 
   it("Listo con envío no dice que pase a buscarlo", () => {
@@ -408,12 +389,15 @@ describe("fetchDelivery — ENVIO-29", () => {
       ok: true,
       data: {
         courier: "Repartos al Toque",
+        whatsapp: null,
         zone: "Cantera",
         listPrice: 5000,
         price: 6500,
         reason: "Fuera de zona",
         state: "accepted",
         note: "Juan, 21:30",
+        offers: [],
+        closesAt: null,
       },
     });
     const [url, init] = fetchImpl.mock.calls[0];
@@ -443,65 +427,265 @@ describe("fetchDelivery — ENVIO-29", () => {
   });
 });
 
-describe("deliveryNotice — ENVIO-29", () => {
+// ENVIO-91 y 92: los estados nuevos del envío y los viejos que no tienen que romper la página.
+describe("fetchDelivery con los estados nuevos — ENVIO-91 y 92", () => {
+  const answer = (extra) =>
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ zona: "Cantera", precio_lista: 5000, precio: 5000, ...extra }),
+    });
+
+  it.each(["waiting", "searching", "self"])("el estado %s no necesita repartidor", async (estado) => {
+    const r = await fetchDelivery({ ...cfg, code: CODE, fetchImpl: answer({ estado }) });
+
+    expect(r.ok).toBe(true);
+    expect(r.data).toMatchObject({ state: estado, courier: "", whatsapp: null });
+  });
+
+  it.each(["requested", "rejected"])("el estado viejo %s no rompe: no muestra el bloque", async (estado) => {
+    const r = await fetchDelivery({ ...cfg, code: CODE, fetchImpl: answer({ estado, repartidor: "X" }) });
+    expect(r).toEqual({ ok: true, data: null });
+  });
+
+  it("sin precios (un servidor que no los manda) no rompe", async () => {
+    const r = await fetchDelivery({
+      ...cfg,
+      code: CODE,
+      fetchImpl: vi.fn().mockResolvedValue({ ok: true, json: async () => ({ estado: "searching" }) }),
+    });
+
+    expect(r.data).toMatchObject({ state: "searching", price: null, listPrice: null });
+  });
+});
+
+describe("fetchDelivery con WhatsApp — ENVIO-44", () => {
+  const answer = (extra) =>
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ repartidor: "Damián", zona: "Cantera", precio_lista: 5000, precio: 5000, estado: "accepted", ...extra }),
+    });
+
+  it("lo deja con 8 a 15 dígitos", async () => {
+    const r = await fetchDelivery({ ...cfg, code: CODE, fetchImpl: answer({ whatsapp: "5493644277105" }) });
+    expect(r.data.whatsapp).toBe("5493644277105");
+  });
+
+  it.each([
+    ["sin la clave", undefined],
+    ["con letras", "549abc"],
+    ["con una barra", "5493644/1"],
+    ["muy corto", "1234567"],
+    ["muy largo", "1234567890123456"],
+    ["una URL", "javascript:alert(1)"],
+  ])("lo descarta %s", async (_nombre, whatsapp) => {
+    const r = await fetchDelivery({ ...cfg, code: CODE, fetchImpl: answer({ whatsapp }) });
+    expect(r.data.whatsapp).toBeNull();
+  });
+});
+
+const OFFER_A = "11111111-1111-4111-8111-111111111111";
+const OFFER_B = "22222222-2222-4222-8222-222222222222";
+
+describe("fetchDelivery con ofertas — ENVIO-110 y SEGUIMIENTO-28", () => {
+  const answer = (extra) =>
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ zona: "Cantera", precio_lista: 5000, precio: 5000, estado: "searching", ...extra }),
+    });
+
+  it("trae las ofertas abiertas y cuándo se elige sola", async () => {
+    const r = await fetchDelivery({
+      ...cfg,
+      code: CODE,
+      fetchImpl: answer({
+        cierra_en: "2026-10-09T22:05:00Z",
+        ofertas: [
+          { id: OFFER_A, repartidor: "Damián", precio: 5000, favorito: true },
+          { id: OFFER_B, repartidor: "Moto", precio: 4500, motivo: "Cerca", favorito: false },
+        ],
+      }),
+    });
+
+    expect(r.data.closesAt).toBe(Date.parse("2026-10-09T22:05:00Z"));
+    expect(r.data.offers).toEqual([
+      { id: OFFER_A, courier: "Damián", price: 5000, reason: null, favorite: true },
+      { id: OFFER_B, courier: "Moto", price: 4500, reason: "Cerca", favorite: false },
+    ]);
+  });
+
+  it("descarta las ofertas mal formadas y no inventa ofertas sin buscar", async () => {
+    const r = await fetchDelivery({
+      ...cfg,
+      code: CODE,
+      fetchImpl: answer({
+        ofertas: [
+          { id: "no-es-un-uuid", repartidor: "X", precio: 1 },
+          { id: OFFER_A, repartidor: "Y", precio: "mucho" },
+          { id: OFFER_B, repartidor: "Z", precio: -5 },
+          null,
+          "texto",
+        ],
+        cierra_en: "ayer",
+      }),
+    });
+    expect(r.data.offers).toEqual([]);
+    expect(r.data.closesAt).toBeNull();
+
+    const aceptado = await fetchDelivery({
+      ...cfg,
+      code: CODE,
+      fetchImpl: answer({ estado: "accepted", repartidor: "Damián", ofertas: [{ id: OFFER_A, precio: 1 }] }),
+    });
+    expect(aceptado.data.offers).toEqual([]);
+  });
+});
+
+describe("deliveryCard — SEGUIMIENTO-27, ENVIO-29, 44 y 91", () => {
   const money = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
   const base = {
-    courier: "Repartos al Toque",
+    courier: "Damián",
+    whatsapp: "5493644277105",
     zone: "Cantera",
     listPrice: 5000,
     price: 5000,
     reason: null,
-    state: "waiting",
+    state: "accepted",
     note: null,
+    offers: [],
+    closesAt: null,
   };
+  const offer = { id: OFFER_A, courier: "Damián", price: 5000, reason: null, favorite: true };
 
-  it.each(["waiting", "requested"])("con el envío %s dice que busca repartidor", (state) => {
-    expect(deliveryNotice({ ...base, state }, "es", money)).toEqual({
-      tone: "searching",
-      lines: ["Buscando repartidor"],
+  it("searching sin ofertas: 'Buscando repartidor', con la moto", () => {
+    expect(deliveryCard({ ...base, state: "searching", courier: "" }, "es", money)).toMatchObject({
+      kind: "searching",
+      icon: "searching",
+      title: "Buscando repartidor",
     });
   });
 
-  it("aceptado: repartidor, nota y precio al repartidor", () => {
-    const notice = deliveryNotice({ ...base, state: "accepted", note: "Juan, 21:30" }, "es", money);
-
-    expect(notice.tone).toBe("accepted");
-    expect(notice.lines).toHaveLength(1);
-    expect(notice.lines[0]).toMatch(/^Envío confirmado con Repartos al Toque · Juan, 21:30 · /);
-    expect(notice.lines[0]).toMatch(/5.000.* al repartidor$/);
+  it("searching con ofertas: 'Elegí tu repartidor'", () => {
+    expect(deliveryCard({ ...base, state: "searching", courier: "", offers: [offer] }, "es", money)).toMatchObject({
+      kind: "choose",
+      title: "Elegí tu repartidor",
+    });
   });
 
-  it("aceptado sin nota no deja un separador vacío", () => {
-    const [line] = deliveryNotice({ ...base, state: "accepted" }, "es", money).lines;
-    expect(line).not.toMatch(/·s*·/);
-    expect(line).toMatch(/^Envío confirmado con Repartos al Toque · /);
+  it("waiting (un pedido viejo) se muestra como buscando", () => {
+    expect(deliveryCard({ ...base, state: "waiting" }, "es", money).kind).toBe("searching");
   });
 
-  it("si el precio cambió, dice cuál era y por qué", () => {
-    const notice = deliveryNotice(
-      { ...base, state: "accepted", price: 6500, reason: "Fuera de zona" },
-      "es",
-      money,
-    );
-    expect(notice.lines[0]).toMatch(/6.500.* al repartidor$/);
-    expect(notice.lines[1]).toMatch(/^Antes .*5.000.*: Fuera de zona$/);
+  it("self: dice que lo lleva el local", () => {
+    expect(deliveryCard({ ...base, state: "self", courier: "", whatsapp: null }, "es", money)).toMatchObject({
+      kind: "self",
+      title: "Lo lleva el local",
+    });
+  });
+
+  it("accepted: quién lo lleva, nota y precio al repartidor, con su teléfono y el botón para escribirle", () => {
+    const card = deliveryCard({ ...base, note: "Juan, 21:30" }, "es", money);
+
+    expect(card.kind).toBe("accepted");
+    expect(card.title).toBe("Lo lleva Damián");
+    expect(card.lines[0]).toBe("Juan, 21:30");
+    expect(card.lines[1]).toMatch(/5.000.* al repartidor$/);
+    expect(card.lines[2]).toBe("Damián: +5493644277105");
+    expect(card.link).toEqual({ text: "Escribir a Damián", href: "https://wa.me/5493644277105" });
+  });
+
+  it("accepted sin WhatsApp: ni línea ni link", () => {
+    const card = deliveryCard({ ...base, whatsapp: null }, "es", money);
+
+    expect(card.link).toBeUndefined();
+    expect(card.lines.join(" ")).not.toContain("+");
+  });
+
+  it("el teléfono y el link solo salen con el envío tomado", () => {
+    for (const state of ["waiting", "searching", "self"]) {
+      expect(JSON.stringify(deliveryCard({ ...base, state }, "es", money))).not.toContain("5493644277105");
+    }
+  });
+
+  it("si el precio cambió, dice el precio de lista y el motivo", () => {
+    const card = deliveryCard({ ...base, price: 6500, reason: "Fuera de zona" }, "es", money);
+
+    expect(card.lines[0]).toMatch(/6.500.* al repartidor$/);
+    expect(card.lines[1]).toMatch(/^Precio de lista .*5.000.* · Fuera de zona$/);
   });
 
   it("si cambió sin motivo, dice solo cuál era", () => {
-    const notice = deliveryNotice({ ...base, state: "accepted", price: 6500 }, "es", money);
-    expect(notice.lines[1]).toMatch(/^Antes .*5.000.*$/);
-    expect(notice.lines[1]).not.toContain(":");
+    const card = deliveryCard({ ...base, price: 6500 }, "es", money);
+
+    expect(card.lines[1]).toMatch(/^Precio de lista .*5.000.*$/);
+    expect(card.lines[1]).not.toContain("·");
   });
 
-  it("rechazado: avisa que el local se va a comunicar", () => {
-    expect(deliveryNotice({ ...base, state: "rejected" }, "es", money)).toEqual({
-      tone: "rejected",
-      lines: ["El repartidor no puede llevar este pedido. El local se va a comunicar con vos."],
-    });
+  it("sin nombre del repartidor no inventa uno", () => {
+    const card = deliveryCard({ ...base, courier: "" }, "es", money);
+
+    expect(card.title).toBe("Ya tiene repartidor");
+    expect(card.link.text).toBe("Escribir a el repartidor");
+  });
+
+  it("los estados viejos o desconocidos no muestran nada", () => {
+    for (const state of ["requested", "rejected", "volando"]) {
+      expect(deliveryCard({ ...base, state }, "es", money)).toBeNull();
+    }
+    expect(deliveryCard(null, "es", money)).toBeNull();
   });
 
   it("se traduce", () => {
-    expect(deliveryNotice({ ...base }, "en", money).lines).toEqual(["Looking for a courier"]);
-    expect(deliveryNotice({ ...base }, "pt", money).lines).toEqual(["Procurando entregador"]);
+    expect(deliveryCard({ ...base, state: "searching" }, "en", money).title).toBe("Looking for a courier");
+    expect(deliveryCard({ ...base, state: "searching" }, "pt", money).title).toBe("Procurando entregador");
+    expect(deliveryCard({ ...base, state: "self" }, "en", money).title).toBe("The restaurant delivers it");
+    expect(deliveryCard({ ...base, state: "self" }, "pt", money).title).toBe("O estabelecimento entrega");
+    expect(deliveryCard(base, "en", money).link.text).toBe("Message Damián");
+    expect(deliveryCard(base, "pt", money).link.text).toBe("Escrever para Damián");
+    expect(deliveryCard({ ...base, state: "searching", offers: [offer] }, "en", money).title).toBe(
+      "Choose your courier",
+    );
+  });
+});
+
+describe("chooseCourier — ENVIO-103 y SEGUIMIENTO-28", () => {
+  it("manda el código, la oferta y el precio que se veía", async () => {
+    const fetchImpl = fakeFetch(null);
+    const r = await chooseCourier({ ...cfg, code: CODE, offerId: OFFER_A, price: 5000, fetchImpl });
+
+    expect(r).toEqual({ ok: true });
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(url).toBe("https://x.supabase.co/rest/v1/rpc/public_choose_courier");
+    expect(JSON.parse(init.body)).toEqual({ p_code: CODE, p_offer_id: OFFER_A, p_price: 5000 });
+  });
+
+  it.each([
+    ["P0020", "closed"],
+    ["P0022", "changed"],
+    ["P0002", "error"],
+    ["XX000", "error"],
+  ])("el error %s es '%s'", async (code, reason) => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: false, status: 400, json: async () => ({ code }) });
+    expect(await chooseCourier({ ...cfg, code: CODE, offerId: OFFER_A, fetchImpl })).toEqual({ ok: false, reason });
+  });
+
+  it("sin configuración, con un código o una oferta inválidos, no llama", async () => {
+    const fetchImpl = fakeFetch(null);
+    expect(await chooseCourier({ ...cfg, code: "corto", offerId: OFFER_A, fetchImpl })).toEqual({
+      ok: false,
+      reason: "error",
+    });
+    expect(await chooseCourier({ ...cfg, code: CODE, offerId: "x'; drop", fetchImpl })).toEqual({
+      ok: false,
+      reason: "error",
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
+  });
+
+  it("un error de red no lanza", async () => {
+    const caido = vi.fn().mockRejectedValue(new Error("red"));
+    expect(await chooseCourier({ ...cfg, code: CODE, offerId: OFFER_A, fetchImpl: caido })).toEqual({
+      ok: false,
+      reason: "error",
+    });
   });
 });

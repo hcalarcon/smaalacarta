@@ -188,7 +188,7 @@ describe("pago pendiente — ADMIN-PEDIDOS-18", () => {
   });
 });
 
-describe("pedido con envío — ENVIO-8 y ENVIO-9", () => {
+describe("pedido con envío — ENVIO-9 y ENVIO-69", () => {
   const aceptado: DeliveryContext = { courier: true, courierStatus: "accepted" };
 
   // La matriz del local para un pedido con envío aceptado: la misma regla que `set_order_status`.
@@ -212,12 +212,35 @@ describe("pedido con envío — ENVIO-8 y ENVIO-9", () => {
     }
   }
 
-  it.each(["waiting", "requested", "rejected", null, undefined])(
-    "con el envío %s, un pedido pendiente solo se puede cancelar",
+  it.each(["waiting", "searching"])(
+    "con el envío %s el pedido se confirma sin repartidor, pero el local no lo entrega — ENVIO-60 y 69",
     (courierStatus) => {
-      expect(nextStatuses("pending", null, { courier: true, courierStatus })).toEqual(["cancelled"]);
+      const ctx: DeliveryContext = { courier: false, courierStatus };
+
+      expect(nextStatuses("pending", null, ctx)).toEqual(["confirmed", "preparing", "ready", "cancelled"]);
+      expect(nextStatuses("ready", null, ctx)).toEqual(["cancelled"]);
+      expect(canTransition("ready", "delivered", null, ctx)).toBe(false);
+      // Entregarlo al repartidor exige que alguno lo tenga.
+      expect(canTransition("ready", "handed_to_courier", null, ctx)).toBe(false);
     },
   );
+
+  it("mientras se busca repartidor, un pedido Listo no tiene botón principal", () => {
+    expect(primaryAction("ready", { courier: false, courierStatus: "searching" })).toBeNull();
+    expect(primaryAction("ready", { courier: false, courierStatus: "waiting" })).toBeNull();
+    expect(primaryAction("pending", { courier: false, courierStatus: "waiting" })).toEqual({
+      status: "confirmed",
+      label: "Confirmar",
+    });
+  });
+
+  it("si lo lleva el local (self), sigue el camino sin repartidor y lo entrega él — ENVIO-68", () => {
+    const self: DeliveryContext = { courier: false, courierStatus: "self" };
+
+    expect(nextStatuses("ready", null, self)).toEqual(["delivered", "cancelled"]);
+    expect(primaryAction("ready", self)).toEqual({ status: "delivered", label: "Marcar entregado" });
+    expect(canTransition("ready", "handed_to_courier", null, self)).toBe(false);
+  });
 
   it("el repartidor avanza de a un paso y no cancela", () => {
     const repartidor: DeliveryContext = { courier: true, courierStatus: "accepted", actor: "courier" };

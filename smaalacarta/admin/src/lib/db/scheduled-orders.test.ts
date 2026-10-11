@@ -31,7 +31,8 @@ function order(scheduledFor: string | null | undefined) {
     db,
     null,
     `select public.create_public_order('ana', 'Cliente', 'retiro', 'efectivo', null,
-       '[{"id":"${CAFE}","kind":"product","quantity":1}]'::jsonb${arg}) as result`,
+       '[{"id":"${CAFE}","kind":"product","quantity":1}]'::jsonb${arg},
+       p_customer_phone => '3515551234') as result`,
   );
 }
 

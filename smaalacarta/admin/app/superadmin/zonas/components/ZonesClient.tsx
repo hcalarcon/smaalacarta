@@ -10,19 +10,20 @@ import {
   reorderZonesAction,
   setZoneActiveAction,
   updateZoneAction,
-  type CourierActionResult,
-} from "../../actions";
+  type ZoneActionResult,
+} from "../actions";
 import { SortableItem, SortableList } from "@/components/menu/Sortable";
-import { ZONE_NAME_MAX, validateZone } from "@/lib/courier/zones";
-import type { CourierZone } from "@/lib/db/courier";
+import type { DeliveryZone } from "@/lib/db/delivery-zones";
 import { formatMoney } from "@/lib/promotions/pricing";
+import { ZONE_NAME_MAX, validateZone } from "@/lib/superadmin/zones";
 
 type Errors = Partial<Record<"name" | "price", string>>;
 
-// Barrios y precios del repartidor (ENVIO-36 y 37): alta, edición de nombre y precio, activar o
-// desactivar, borrar con confirmación y ordenar arrastrando. Un precio nuevo vale para los pedidos
-// nuevos; los que ya se hicieron guardan su precio de lista.
-export default function ZonesClient({ zones }: { zones: CourierZone[] }) {
+// Zonas y precios de referencia de la plataforma (ENVIO-56): alta, edición de nombre y precio,
+// activar o desactivar, borrar con confirmación y ordenar arrastrando. Un precio nuevo vale para los
+// pedidos nuevos; los que ya se hicieron guardan su precio de lista. Una zona con pedidos no se borra:
+// se desactiva y la pantalla lo avisa.
+export default function ZonesClient({ zones }: { zones: DeliveryZone[] }) {
   const router = useRouter();
 
   const [items, setItems] = useState(zones);
@@ -34,6 +35,7 @@ export default function ZonesClient({ zones }: { zones: CourierZone[] }) {
 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
   const [newName, setNewName] = useState("");
   const [newPrice, setNewPrice] = useState("");
@@ -44,15 +46,17 @@ export default function ZonesClient({ zones }: { zones: CourierZone[] }) {
   const [editPrice, setEditPrice] = useState("");
   const [editErrors, setEditErrors] = useState<Errors>({});
 
-  const [deleting, setDeleting] = useState<CourierZone | null>(null);
+  const [deleting, setDeleting] = useState<DeliveryZone | null>(null);
 
-  async function run(call: () => Promise<CourierActionResult>): Promise<CourierActionResult | null> {
+  async function run(call: () => Promise<ZoneActionResult>): Promise<ZoneActionResult | null> {
     setError(null);
+    setNotice(null);
     setBusy(true);
 
     try {
       const result = await call();
       if (!result.ok) setError(result.error);
+      else if (result.notice) setNotice(result.notice);
       return result;
     } catch {
       setError("No pudimos guardar el cambio. Probá de nuevo.");
@@ -81,14 +85,14 @@ export default function ZonesClient({ zones }: { zones: CourierZone[] }) {
     }
   }
 
-  function startEdit(zone: CourierZone) {
+  function startEdit(zone: DeliveryZone) {
     setEditingId(zone.id);
     setEditName(zone.name);
     setEditPrice(String(zone.price));
     setEditErrors({});
   }
 
-  async function saveEdit(zone: CourierZone) {
+  async function saveEdit(zone: DeliveryZone) {
     const validation = validateZone({ name: editName, price: editPrice }, items, zone.id);
     if (!validation.ok) {
       setEditErrors(validation.errors);
@@ -120,10 +124,11 @@ export default function ZonesClient({ zones }: { zones: CourierZone[] }) {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <section>
-        <h1 className="text-3xl font-bold text-brand">Barrios y precios</h1>
+        <h1 className="text-3xl font-bold text-brand">Zonas de envío</h1>
         <p className="mt-2 text-stone-500">
-          Estos son los barrios que ofrecen los locales al pedir un envío. Un precio nuevo vale para los
-          pedidos nuevos: los que ya se hicieron conservan el precio con el que se pidieron.
+          Son comunes a toda la plataforma y el precio es de referencia: el repartidor lo ajusta, con motivo, al
+          aceptar un pedido. Un precio nuevo vale para los pedidos nuevos: los que ya se hicieron conservan el
+          precio con el que se pidieron.
         </p>
       </section>
 
@@ -133,8 +138,14 @@ export default function ZonesClient({ zones }: { zones: CourierZone[] }) {
         </div>
       ) : null}
 
+      {notice ? (
+        <div role="status" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          {notice}
+        </div>
+      ) : null}
+
       <section className="rounded-3xl border border-line bg-white p-5 shadow-sm">
-        <h2 className="text-lg font-semibold text-brand">Agregar un barrio</h2>
+        <h2 className="text-lg font-semibold text-brand">Agregar una zona</h2>
 
         <div className="mt-3 grid gap-3 sm:grid-cols-[1fr_10rem_auto] sm:items-start">
           <label className="block text-sm text-stone-700">
@@ -172,12 +183,12 @@ export default function ZonesClient({ zones }: { zones: CourierZone[] }) {
 
       <section className="rounded-3xl border border-line bg-white p-5 shadow-sm">
         <h2 className="text-lg font-semibold text-brand">
-          Tus barrios <span className="text-sm font-normal text-stone-500">({items.length})</span>
+          Zonas <span className="text-sm font-normal text-stone-500">({items.length})</span>
         </h2>
-        <p className="text-xs text-stone-500">Arrastrá para cambiar el orden en que los ve el cliente.</p>
+        <p className="text-xs text-stone-500">Arrastrá para cambiar el orden en que las ve el cliente.</p>
 
         {items.length === 0 ? (
-          <p className="mt-4 text-sm text-stone-400">Todavía no cargaste barrios.</p>
+          <p className="mt-4 text-sm text-stone-400">Todavía no cargaste zonas.</p>
         ) : (
           <div className="mt-3 space-y-2">
             <SortableList ids={items.map((zone) => zone.id)} onReorder={reorder}>
@@ -280,8 +291,8 @@ export default function ZonesClient({ zones }: { zones: CourierZone[] }) {
 
       <ConfirmDeleteDialog
         open={deleting !== null}
-        title={`Borrar ${deleting?.name ?? "el barrio"}`}
-        description="Los pedidos que ya se hicieron conservan el nombre y el precio. Si solo querés que no se ofrezca por ahora, desactivalo."
+        title={`Borrar ${deleting?.name ?? "la zona"}`}
+        description="Los pedidos que ya se hicieron conservan el nombre y el precio. Si algún pedido ya la usa, la zona no se borra: queda desactivada. Si solo querés que no se ofrezca por ahora, desactivala."
         onConfirm={confirmDelete}
         onClose={() => setDeleting(null)}
         loading={busy}

@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 
 import CourierSection from "./CourierSection";
-import type { ActiveCourier, Order } from "@/lib/db/orders";
-import { confirmBlockReason, deliveryContext, hasCourier, type CourierResponseInput } from "@/lib/orders/courier";
+import CustomerPhone from "./CustomerPhone";
+import type { Order } from "@/lib/db/orders";
+import { deliveryContext, hasDelivery, type OrderCourier, type OrderOffers } from "@/lib/orders/courier";
 import { formatDateTime, trackingUrl } from "@/lib/orders/format";
 import PaymentBadge from "./PaymentBadge";
 import SettlementStatus from "./SettlementStatus";
@@ -22,11 +23,12 @@ export default function OrderDetailDialog({
   busy,
   onClose,
   onChangeStatus,
-  businessName = "",
-  courier = null,
+  couriers = [],
+  offers,
   now,
   error = null,
-  onCourierAction,
+  onAssignCourier,
+  onSelfDelivery,
   onConfirmSettlement,
 }: {
   order: Order | null;
@@ -34,15 +36,14 @@ export default function OrderDetailDialog({
   busy: boolean;
   onClose: () => void;
   onChangeStatus: (status: string, note?: string) => void;
-  // Envío con Repartos al Toque (ENVIO-24): el repartidor activo y qué hacer con su respuesta.
-  businessName?: string;
-  courier?: ActiveCourier | null;
+  // Envío con repartidor (ENVIO-80 a 82): los repartidores del local y qué hacer si nadie toma el pedido.
+  couriers?: OrderCourier[];
+  // Las ofertas abiertas del pedido, con nombre y precio (ENVIO-117).
+  offers?: OrderOffers;
   now?: Date;
   error?: string | null;
-  onCourierAction?: (
-    action: "request" | "accept" | "reject",
-    input: CourierResponseInput,
-  ) => void;
+  onAssignCourier?: (courierId: string, note: string) => void;
+  onSelfDelivery?: () => void;
   // Rendición del efectivo (ENVIO-43): pide confirmar que se recibió.
   onConfirmSettlement?: () => void;
 }) {
@@ -77,7 +78,6 @@ export default function OrderDetailDialog({
   const link = trackingUrl(slug, order.code);
   const options = nextStatuses(order.status, order.payment_status, deliveryContext(order));
   const blocked = isPaymentPending(order.payment_status);
-  const courierBlock = confirmBlockReason(order);
 
   async function copy() {
     try {
@@ -157,6 +157,12 @@ export default function OrderDetailDialog({
           {order.payment ? (
             <div className="flex gap-2"><dt className="text-stone-400">Pago:</dt><dd>{order.payment}</dd></div>
           ) : null}
+          {order.customer_phone ? (
+            <div className="flex gap-2">
+              <dt className="text-stone-400">Teléfono:</dt>
+              <dd><CustomerPhone phone={order.customer_phone} /></dd>
+            </div>
+          ) : null}
           {order.notes ? (
             <div className="flex gap-2"><dt className="text-stone-400">Notas:</dt><dd className="whitespace-pre-wrap">{order.notes}</dd></div>
           ) : null}
@@ -164,17 +170,17 @@ export default function OrderDetailDialog({
 
         <SettlementStatus order={order} busy={busy} onReceived={onConfirmSettlement} />
 
-        {hasCourier(order) && onCourierAction ? (
+        {hasDelivery(order) && onAssignCourier && onSelfDelivery ? (
           <CourierSection
             key={order.id}
             order={order}
             now={now ?? new Date()}
-            businessName={businessName}
-            courier={courier}
-            trackingLink={link}
+            couriers={couriers}
+            offers={offers}
             busy={busy}
             error={error}
-            onAction={onCourierAction}
+            onAssign={onAssignCourier}
+            onSelf={onSelfDelivery}
           />
         ) : null}
 
@@ -211,7 +217,6 @@ export default function OrderDetailDialog({
           <div className="mt-6">
             <h3 className="text-sm font-semibold text-brand">Cambiar estado</h3>
             {blocked ? <p className="mt-1 text-xs text-stone-500">{PAYMENT_BLOCK_REASON}</p> : null}
-            {!blocked && courierBlock ? <p className="mt-1 text-xs text-stone-500">{courierBlock}</p> : null}
 
             {cancelling ? (
               <div className="mt-2 space-y-3 rounded-2xl border border-red-200 bg-red-50 p-4">

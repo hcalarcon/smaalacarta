@@ -2,9 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 
-import { confirmSettlement, createManualOrder, setOrderCourier, setOrderStatus } from "@/lib/db/orders";
+import {
+  assignCourier,
+  confirmSettlement,
+  createManualOrder,
+  selfDelivery,
+  setOrderStatus,
+} from "@/lib/db/orders";
 import { requireBusiness } from "@/lib/get-current-business";
-import { validateCourierResponse, type CourierResponseInput } from "@/lib/orders/courier";
+import { validateAssignNote } from "@/lib/orders/courier";
 import { validateManualOrder, type ManualOrderInput } from "@/lib/orders/manual-order";
 import { orderErrorMessage, settlementErrorMessage } from "@/lib/orders/messages";
 import { STATUSES } from "@/lib/orders/status";
@@ -54,31 +60,40 @@ export async function createManualOrderAction(
   return { ok: true };
 }
 
-// Consulta o respuesta del repartidor (ENVIO-11 y 12). `currentFee` es el precio final que ve el
-// local: un precio distinto exige motivo. La base vuelve a comprobar todo y quién es el que llama.
-export async function setOrderCourierAction(
+const ID = /^[0-9a-f-]{36}$/i;
+
+// Asignar a mano un repartidor a un pedido que nadie tomó (ENVIO-67 y 81). La base vuelve a comprobar
+// que el pedido es del negocio, que está buscando y que el repartidor cubre la zona.
+export async function assignCourierAction(
   orderId: string,
-  action: "request" | "accept" | "reject",
-  input: CourierResponseInput,
-  currentFee: number,
+  courierId: string,
+  note: string,
 ): Promise<OrderActionResult> {
   await requireBusiness();
 
-  if (!["request", "accept", "reject"].includes(action)) {
-    return { ok: false, error: "Acción desconocida." };
+  if (typeof courierId !== "string" || !ID.test(courierId)) {
+    return { ok: false, error: "Elegí un repartidor." };
   }
 
-  const validation = validateCourierResponse(input, currentFee);
+  const validation = validateAssignNote(note);
   if (!validation.ok) {
-    return { ok: false, error: "Revisá los datos marcados.", fieldErrors: validation.errors };
+    return { ok: false, error: validation.error, fieldErrors: { note: validation.error } };
   }
 
-  const result = await setOrderCourier(orderId, {
-    action,
-    note: validation.note,
-    fee: validation.fee,
-    feeReason: validation.reason,
-  });
+  const result = await assignCourier(orderId, courierId, validation.note);
+  if ("error" in result) {
+    return { ok: false, error: orderErrorMessage(result.error) };
+  }
+
+  revalidatePath("/dashboard/orders");
+  return { ok: true };
+}
+
+// "Lo llevo yo" (ENVIO-68 y 81): el local lleva el envío él mismo.
+export async function selfDeliveryAction(orderId: string): Promise<OrderActionResult> {
+  await requireBusiness();
+
+  const result = await selfDelivery(orderId);
   if ("error" in result) {
     return { ok: false, error: orderErrorMessage(result.error) };
   }

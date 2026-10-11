@@ -6,15 +6,17 @@ import BusinessProfileForm from "./BusinessProfileForm";
 import SettingsSaveProvider, { useSettingsSave } from "./SettingsSaveProvider";
 import { DEFAULT_SETTINGS } from "@/lib/settings/validation";
 
-const { saveProfile, saveSettings, refresh } = vi.hoisted(() => ({
+const { saveProfile, saveSettings, saveDelivery, refresh } = vi.hoisted(() => ({
   saveProfile: vi.fn(),
   saveSettings: vi.fn(),
+  saveDelivery: vi.fn(),
   refresh: vi.fn(),
 }));
 
 vi.mock("../actions", () => ({
   saveBusinessProfileAction: saveProfile,
   saveSettingsAction: saveSettings,
+  saveDeliveryAction: saveDelivery,
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
 
@@ -48,6 +50,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   saveProfile.mockResolvedValue({ ok: true });
   saveSettings.mockResolvedValue({ ok: true });
+  saveDelivery.mockResolvedValue({ ok: true });
 });
 
 describe("Configuración — un solo guardado (ADMIN-CONFIG-33 y 37)", () => {
@@ -151,5 +154,103 @@ describe("Configuración — ¿regenerar la URL? (ADMIN-CONFIG-36)", () => {
 
     await screen.findByText("Cambios guardados");
     expect(saveProfile).toHaveBeenCalledWith({ name: "Lo de Ana", slug: "casa-resto" });
+  });
+});
+
+// Hace de la sección Envíos: informa lo que edita y qué reglas incumple.
+function FakeDelivery() {
+  const { reportDelivery, deliveryErrors } = useSettingsSave();
+  const [favorite, setFavorite] = useState(false);
+  const [invalid, setInvalid] = useState(false);
+
+  useEffect(() => {
+    reportDelivery({
+      input: { zoneIds: ["z1"], favoriteId: favorite ? "c1" : null },
+      errors: favorite && invalid ? { favorite: "Favorito inválido." } : {},
+    });
+  });
+
+  return (
+    <>
+      <button type="button" onClick={() => setFavorite(true)}>
+        Elegir favorito
+      </button>
+      <button type="button" onClick={() => setInvalid(true)}>
+        Invalidar favorito
+      </button>
+      {deliveryErrors.favorite ? <p>{deliveryErrors.favorite}</p> : null}
+    </>
+  );
+}
+
+function screenWithDelivery() {
+  render(
+    <SettingsSaveProvider initialName="Casa Resto" initialSlug="casa-resto">
+      <BusinessProfileForm />
+      <FakeSettings />
+      <FakeDelivery />
+    </SettingsSaveProvider>,
+  );
+}
+
+describe("Configuración — Envíos con el mismo guardado (ENVIO-58)", () => {
+  it("un cambio en Envíos marca cambios sin guardar", () => {
+    screenWithDelivery();
+    expect(saveButton()).toBeDisabled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Elegir favorito" }));
+
+    expect(screen.getByText("Cambios sin guardar")).toBeInTheDocument();
+    expect(saveButton()).toBeEnabled();
+  });
+
+  it("guarda solo Envíos si es lo único que cambió", async () => {
+    screenWithDelivery();
+    fireEvent.click(screen.getByRole("button", { name: "Elegir favorito" }));
+    fireEvent.click(saveButton());
+
+    await screen.findByText("Cambios guardados");
+    expect(saveDelivery).toHaveBeenCalledWith({ zoneIds: ["z1"], favoriteId: "c1" });
+    expect(saveSettings).not.toHaveBeenCalled();
+    expect(saveProfile).not.toHaveBeenCalled();
+  });
+
+  it("guarda perfil, configuración y envíos con un clic, en ese orden", async () => {
+    screenWithDelivery();
+    type("URL de tu menú", "mi-casa");
+    type("WhatsApp", "3511111111");
+    fireEvent.click(screen.getByRole("button", { name: "Elegir favorito" }));
+    fireEvent.click(saveButton());
+
+    await screen.findByText("Cambios guardados");
+    expect(saveProfile.mock.invocationCallOrder[0]).toBeLessThan(saveSettings.mock.invocationCallOrder[0]);
+    expect(saveSettings.mock.invocationCallOrder[0]).toBeLessThan(saveDelivery.mock.invocationCallOrder[0]);
+  });
+
+  it("con un favorito inválido no guarda nada y marca el campo", async () => {
+    screenWithDelivery();
+    fireEvent.click(screen.getByRole("button", { name: "Elegir favorito" }));
+    fireEvent.click(screen.getByRole("button", { name: "Invalidar favorito" }));
+    type("WhatsApp", "3511111111");
+    fireEvent.click(saveButton());
+
+    expect(await screen.findByText("Favorito inválido.")).toBeInTheDocument();
+    expect(saveDelivery).not.toHaveBeenCalled();
+    expect(saveSettings).not.toHaveBeenCalled();
+  });
+
+  it("si la base rechaza el favorito, muestra el error del campo y deja el cambio sin guardar", async () => {
+    saveDelivery.mockResolvedValue({
+      ok: false,
+      error: "Revisá los datos marcados.",
+      fieldErrors: { favorite: "Ese repartidor ya no cubre ninguna de tus zonas." },
+    });
+    screenWithDelivery();
+    fireEvent.click(screen.getByRole("button", { name: "Elegir favorito" }));
+    fireEvent.click(saveButton());
+
+    expect(await screen.findByText(/ya no cubre ninguna/)).toBeInTheDocument();
+    expect(screen.queryByText("Cambios guardados")).toBeNull();
+    expect(screen.getByText("Cambios sin guardar")).toBeInTheDocument();
   });
 });

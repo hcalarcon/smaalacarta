@@ -16,11 +16,8 @@ export function parseTrackingCode(pathname, search = "") {
   return CODE.test(candidate) ? candidate : null;
 }
 
-const STEPS = ["pending", "confirmed", "preparing", "ready", "delivered"];
-
-// El camino de un pedido con envío con Repartos al Toque (ENVIO-9): el local lo entrega al
-// repartidor y de ahí lo lleva él.
-const COURIER_STEPS = [
+// Los estados que conoce la página (ENVIO-9). La línea de pasos está en `steps.js`.
+const KNOWN_STATUS = [
   "pending",
   "confirmed",
   "preparing",
@@ -28,37 +25,28 @@ const COURIER_STEPS = [
   "handed_to_courier",
   "on_the_way",
   "delivered",
+  "cancelled",
 ];
 
-// Estados que solo existen en un pedido con envío: si llegan, el camino es el del envío.
+// Estados que solo existen en un pedido con envío: si llegan, "Listo" ya no dice que se pase a buscar.
 const COURIER_ONLY = ["handed_to_courier", "on_the_way"];
-
-const KNOWN_STATUS = [...COURIER_STEPS, "cancelled"];
-
-// Los pasos del camino (cinco; siete con envío), en el idioma pedido.
-export function stepLabels(lang, { courier = false } = {}) {
-  return (courier ? COURIER_STEPS : STEPS).map((step) => t(`step.${step}`, lang));
-}
 
 export function isFinalStatus(status) {
   return status === "delivered" || status === "cancelled";
 }
 
-// Qué mostrar para cada estado: título, texto, y en qué paso del camino está (-1 si
-// se desconoce o está cancelado).
+// Qué mostrar para cada estado: título y texto (el paso del camino lo da `progressSteps`).
 export function statusView(status, lang, { courier = false } = {}) {
   if (!KNOWN_STATUS.includes(status)) {
-    return { title: t("status.unknown.title", lang), text: "", step: -1, cancelled: false, final: false };
+    return { title: t("status.unknown.title", lang), text: "", cancelled: false, final: false };
   }
 
   const withCourier = courier || COURIER_ONLY.includes(status);
-  const steps = withCourier ? COURIER_STEPS : STEPS;
 
   return {
     title: t(`status.${status}.title`, lang),
     // Con envío, "Listo" no dice que pase a buscarlo: lo retira el repartidor.
     text: t(status === "ready" && withCourier ? "status.ready.courierText" : `status.${status}.text`, lang),
-    step: steps.indexOf(status),
     cancelled: status === "cancelled",
     final: isFinalStatus(status),
   };
@@ -230,26 +218,68 @@ export function itemRow(doc, item, money) {
   return li;
 }
 
-const DELIVERY_STATES = ["waiting", "requested", "accepted", "rejected"];
+// Los estados del envío que muestra la página (ENVIO-91): esperando la confirmación, buscando
+// repartidor, tomado por uno y que lo lleva el local. Los viejos (`requested`, `rejected`) o los que
+// no se conocen no rompen nada: no muestran el bloque (ENVIO-92).
+const DELIVERY_STATES = ["waiting", "searching", "accepted", "self"];
+
+// El id de una oferta es un uuid: solo así se manda de vuelta a `public_choose_courier`.
+const OFFER_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+// Las ofertas abiertas que llegan en `ofertas` (ENVIO-110): las mal formadas se descartan.
+function normalizeOffers(list) {
+  if (!Array.isArray(list)) return [];
+
+  return list.flatMap((offer) => {
+    if (!offer || typeof offer !== "object") return [];
+
+    const price = Number(offer.precio);
+    if (typeof offer.id !== "string" || !OFFER_ID.test(offer.id) || !Number.isFinite(price) || price < 0) {
+      return [];
+    }
+
+    return [
+      {
+        id: offer.id,
+        courier: typeof offer.repartidor === "string" ? offer.repartidor : "",
+        price,
+        reason: typeof offer.motivo === "string" && offer.motivo ? offer.motivo : null,
+        favorite: offer.favorito === true,
+      },
+    ];
+  });
+}
+
+// El WhatsApp del repartidor es público (ENVIO-44): igual que el `CHECK` de `couriers`, de 8 a 15
+// dígitos; si no, no se usa (y nunca llega a un link).
+const COURIER_WHATSAPP = /^[0-9]{8,15}$/;
 
 // Valida la respuesta de `public_order_delivery`; null si no es un envío reconocible. Nunca trae
-// teléfono ni dirección (ENVIO-17): esta página tampoco los muestra.
+// teléfono ni dirección del cliente (ENVIO-17): esta página tampoco los muestra.
 function normalizeDelivery(data) {
   if (!data || typeof data !== "object") return null;
   if (!DELIVERY_STATES.includes(data.estado)) return null;
 
-  const price = Number(data.precio);
-  const list = Number(data.precio_lista);
-  if (!Number.isFinite(price) || !Number.isFinite(list)) return null;
+  // El precio solo se usa con el envío tomado: sin él (o roto) el bloque no lo muestra.
+  const price = data.precio === null || data.precio === undefined ? NaN : Number(data.precio);
+  const list = data.precio_lista === null || data.precio_lista === undefined ? NaN : Number(data.precio_lista);
 
   return {
     courier: typeof data.repartidor === "string" ? data.repartidor : "",
+    whatsapp:
+      typeof data.whatsapp === "string" && COURIER_WHATSAPP.test(data.whatsapp) ? data.whatsapp : null,
     zone: typeof data.zona === "string" ? data.zona : "",
-    listPrice: list,
-    price,
+    listPrice: Number.isFinite(list) ? list : null,
+    price: Number.isFinite(price) ? price : null,
     reason: typeof data.motivo_cambio === "string" && data.motivo_cambio ? data.motivo_cambio : null,
     state: data.estado,
     note: typeof data.nota === "string" && data.nota ? data.nota : null,
+    // Las ofertas abiertas y cuándo se elige sola (ENVIO-110): solo mientras busca.
+    offers: data.estado === "searching" ? normalizeOffers(data.ofertas) : [],
+    closesAt:
+      data.estado === "searching" && typeof data.cierra_en === "string" && !Number.isNaN(Date.parse(data.cierra_en))
+        ? Date.parse(data.cierra_en)
+        : null,
   };
 }
 
@@ -280,26 +310,65 @@ export async function fetchDelivery({ url, key, code, fetchImpl = globalThis.fet
   }
 }
 
-// El bloque de envío de la página (ENVIO-29): qué pasa con el repartidor, según `state`.
-// `money` formatea los precios en el idioma del cliente. Devuelve `{ tone, lines }`.
-export function deliveryNotice(delivery, lang, money) {
+// El teléfono del repartidor y el link para escribirle (ENVIO-44 y 91): solo con el envío tomado y si
+// hay un WhatsApp válido.
+function courierContact(delivery, lang) {
+  if (!delivery.whatsapp || delivery.state !== "accepted") return null;
+
+  const repartidor = delivery.courier || t("tracker.delivery.courierWord", lang);
+  return {
+    line: t("tracker.delivery.contact", lang, { repartidor, whatsapp: delivery.whatsapp }),
+    link: {
+      text: t("tracker.delivery.write", lang, { repartidor }),
+      href: `https://wa.me/${delivery.whatsapp}`,
+    },
+  };
+}
+
+// La tarjeta del envío (SEGUIMIENTO-27, ENVIO-91 y 92): qué pasa con el envío, según `state`.
+// - `searching` sin ofertas: "Buscando repartidor" (la moto que se mueve);
+// - `searching` con ofertas: "Elegí tu repartidor" (las ofertas las pinta la página);
+// - `accepted`: "Lo lleva {repartidor}", con su teléfono y el botón de WhatsApp;
+// - `self`: "Lo lleva el local".
+// `money` formatea los precios en el idioma del cliente. Devuelve `{ kind, icon, title, lines, link? }`, o
+// null si no hay nada que mostrar (un estado que no se conoce, como los viejos `requested`/`rejected`).
+export function deliveryCard(delivery, lang, money) {
   if (!delivery) return null;
 
-  if (delivery.state === "rejected") {
-    return { tone: "rejected", lines: [t("tracker.delivery.rejected", lang)] };
+  switch (delivery.state) {
+    // `waiting` ya no se usa (el pedido nace buscando), pero un pedido viejo se muestra igual.
+    case "waiting":
+    case "searching":
+      return delivery.offers.length > 0
+        ? { kind: "choose", icon: "choose", title: t("tracker.delivery.chooseTitle", lang), lines: [] }
+        : {
+            kind: "searching",
+            icon: "searching",
+            title: t("tracker.delivery.searching", lang),
+            lines: [t("tracker.delivery.searchingText", lang)],
+          };
+    case "self":
+      return {
+        kind: "self",
+        icon: "self",
+        title: t("tracker.delivery.self", lang),
+        lines: [t("tracker.delivery.selfText", lang)],
+      };
+    case "accepted":
+      break;
+    default:
+      return null;
   }
 
-  if (delivery.state !== "accepted") {
-    return { tone: "searching", lines: [t("tracker.delivery.searching", lang)] };
+  const contact = courierContact(delivery, lang);
+  const lines = [];
+
+  if (delivery.note) lines.push(delivery.note);
+  if (delivery.price !== null) {
+    lines.push(t("tracker.delivery.pay", lang, { precio: money.format(delivery.price) }));
   }
 
-  const parts = [t("tracker.delivery.accepted", lang, { repartidor: delivery.courier || "Repartos al Toque" })];
-  if (delivery.note) parts.push(delivery.note);
-  parts.push(t("tracker.delivery.pay", lang, { precio: money.format(delivery.price) }));
-
-  const lines = [parts.join(" · ")];
-
-  if (delivery.price !== delivery.listPrice) {
+  if (delivery.price !== null && delivery.listPrice !== null && delivery.price !== delivery.listPrice) {
     const precio = money.format(delivery.listPrice);
     lines.push(
       delivery.reason
@@ -308,5 +377,51 @@ export function deliveryNotice(delivery, lang, money) {
     );
   }
 
-  return { tone: "accepted", lines };
+  if (contact) lines.push(contact.line);
+
+  return {
+    kind: "accepted",
+    icon: "onTheWay",
+    title: delivery.courier
+      ? t("tracker.delivery.accepted", lang, { repartidor: delivery.courier })
+      : t("tracker.delivery.acceptedAnon", lang),
+    lines,
+    ...(contact ? { link: contact.link } : {}),
+  };
+}
+
+// El cliente elige una oferta (ENVIO-103): `public_choose_courier` con el código del pedido y el precio
+// que estaba viendo. Devuelve `{ ok: true }` o `{ ok: false, reason }` con `closed` (el pedido ya no
+// recibe ofertas), `changed` (el repartidor cambió el precio) o `error`.
+export async function chooseCourier({ url, key, code, offerId, price, fetchImpl = globalThis.fetch }) {
+  if (!url || !url.trim() || !key || !key.trim() || !CODE.test(String(code ?? ""))) {
+    return { ok: false, reason: "error" };
+  }
+  if (typeof offerId !== "string" || !OFFER_ID.test(offerId)) return { ok: false, reason: "error" };
+
+  const headers = { apikey: key, "Content-Type": "application/json" };
+  if (key.startsWith("eyJ")) headers.Authorization = `Bearer ${key}`;
+
+  try {
+    const res = await fetchImpl(`${url.trim().replace(/\/+$/, "")}/rest/v1/rpc/public_choose_courier`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({
+        p_code: code,
+        p_offer_id: offerId,
+        ...(Number.isFinite(price) ? { p_price: price } : {}),
+      }),
+      signal:
+        typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined,
+    });
+
+    if (res.ok) return { ok: true };
+
+    const body = await res.json().catch(() => null);
+    if (body?.code === "P0020") return { ok: false, reason: "closed" };
+    if (body?.code === "P0022") return { ok: false, reason: "changed" };
+    return { ok: false, reason: "error" };
+  } catch {
+    return { ok: false, reason: "error" };
+  }
 }

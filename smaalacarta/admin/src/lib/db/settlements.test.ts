@@ -2,6 +2,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { asUser, createTestDb, createUser, type TestDb } from "@/test/db";
+import { take } from "@/test/offers";
 
 // ENVIO-38 a 40 contra Postgres real.
 const ANA = "aaaaaaaa-0000-0000-0000-000000000001"; // dueña de un negocio con envío
@@ -22,7 +23,7 @@ const confirm = (user: string | null, id: string) =>
   call(user, `select public.business_confirm_settlement('${id}')`);
 
 async function zoneId(name: string) {
-  const r = await db.query<{ id: string }>("select id from courier_zones where name = $1", [name]);
+  const r = await db.query<{ id: string }>("select id from delivery_zones where name = $1", [name]);
   return r.rows[0].id;
 }
 
@@ -41,8 +42,10 @@ async function deliveredOrder(payment = "efectivo") {
   const id = (await db.query<{ id: string }>("select id from orders where code = $1", [code])).rows[0].id;
   if (payment !== "efectivo") await db.exec(`update orders set payment = '${payment}' where id = '${id}'`);
 
-  await call(REPA, `select public.set_order_courier('${id}', 'accept', 'Juan')`);
-  for (const s of ["confirmed", "preparing", "ready", "handed_to_courier"]) {
+  // El local confirma (abre la búsqueda), el repartidor lo toma y el local lo entrega.
+  await call(ANA, `select public.set_order_status('${id}', 'confirmed')`);
+  await take(db, REPA, id);
+  for (const s of ["preparing", "ready", "handed_to_courier"]) {
     await call(ANA, `select public.set_order_status('${id}', '${s}')`);
   }
   await call(REPA, `select public.courier_set_status('${id}', 'on_the_way')`);
@@ -79,6 +82,8 @@ beforeAll(async () => {
     insert into products (id, business_id, category_id, name, price, active) values
       ('${CAFE}', '${NEG_ANA}', 'c1000000-0000-0000-0000-000000000001', 'Café', 1000, true);
     insert into courier_users (courier_id, user_id) values ('${COURIER}', '${REPA}');
+    insert into business_delivery_zones (business_id, zone_id)
+      select '${NEG_ANA}', id from delivery_zones;
   `);
 }, 60_000);
 

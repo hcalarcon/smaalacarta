@@ -154,9 +154,11 @@ negocio nuevo funciona apenas existe y está publicado, sin tocar código.
   `static-menu.js`. No se prueban con un servidor estático: hace falta una preview de
   Vercel. La lógica va en `lib/*.js` con tests; el handler es solo el conector.
 - **Pedidos**: el checkout guarda el pedido en el sistema (`create_public_order`) y
-  abre un link de WhatsApp con el mensaje armado; si el menú viene de un JSON, o
-  guardar falla, sigue solo por WhatsApp. El cliente lo sigue en `/pedido/<código>`
-  (`apps/tracker`).
+  lleva al cliente directo a `/pedido/<código>` (`apps/tracker`), donde el WhatsApp al
+  local queda como botón opcional; si el menú viene de un JSON, o guardar falla, sigue
+  solo por WhatsApp. En el seguimiento el cliente ve la línea de pasos, **elige
+  repartidor entre las ofertas** (`public_choose_courier`) y puede activar avisos con la
+  página abierta (`lib/steps.js`, `offers.js`, `alerts.js`).
 
 ### admin/
 
@@ -245,6 +247,15 @@ negocio nuevo funciona apenas existe y está publicado, sin tocar código.
   tercer parámetro de `set_order_status`) que el cliente ve en el seguimiento. El tablero
   (`/dashboard/orders`) tiene tres columnas con scroll propio; los entregados y
   cancelados van a una tabla de historial con cuándo empezó y cuándo terminó.
+- **Envío con ofertas** (`/repartidor`, `courier_offers`): el pedido con envío nace
+  `searching` (los anticipados y programados nacen `waiting` y pasan a `searching` al
+  confirmarlos el local) y los repartidores que cubren la zona ofertan (`courier_make_offer`, con
+  motivo si cambian el precio de lista); el cliente elige en su seguimiento y, si no, a
+  los 5 minutos de la primera oferta se elige sola la más barata. **La elección
+  automática es perezosa, sin pg_cron**: `settle_courier_offers` corre antes de leer
+  (seguimiento, panel del repartidor, panel del local), y los 5 minutos viven solo en
+  `courier_offers_window()`. El favorito del local (`favorite_courier_id`) solo ordena y
+  desempata; ya no hay ventana exclusiva.
 - **Multi-negocio**: `getCurrentBusiness()` resuelve usuario → `business_users`
   (con `role`) → `businesses`; las páginas del panel usan `requireBusiness()`.
   Toda tabla de recursos (`categories`, `products`, `promotions`, `orders`) se filtra

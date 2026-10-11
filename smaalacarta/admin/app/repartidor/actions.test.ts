@@ -1,130 +1,147 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { requireCourier, courierDb, ordersDb } = vi.hoisted(() => ({
+const { requireCourier, courierDb } = vi.hoisted(() => ({
   requireCourier: vi.fn(),
   courierDb: {
-    createZone: vi.fn(),
     courierSetStatus: vi.fn(),
-    deleteZone: vi.fn(),
-    listZones: vi.fn(),
-    saveZoneOrder: vi.fn(),
-    updateZone: vi.fn(),
+    courierMarkSettled: vi.fn(),
+    setZoneCoverage: vi.fn(),
+    courierMakeOffer: vi.fn(),
+    courierWithdrawOffer: vi.fn(),
+    courierDeclineOrder: vi.fn(),
+    courierReturnOrder: vi.fn(),
   },
-  ordersDb: { setOrderCourier: vi.fn() },
 }));
 
 vi.mock("@/lib/auth/courier", () => ({ requireCourier: () => requireCourier() }));
 vi.mock("@/lib/db/courier", () => courierDb);
-vi.mock("@/lib/db/orders", () => ordersDb);
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 import {
   advanceOrderAction,
-  createZoneAction,
-  deleteZoneAction,
-  reorderZonesAction,
-  respondOrderAction,
-  updateZoneAction,
+  declineOrderAction,
+  makeOfferAction,
+  returnOrderAction,
+  setZoneCoverageAction,
+  withdrawOfferAction,
 } from "./actions";
 
 const COURIER = "7a0c0e00-0000-4000-8000-000000000001";
 const ORDER = "11111111-1111-1111-1111-111111111111";
-const input = { note: "", fee: "", reason: "" };
+const input = { price: "5000", reason: "" };
 
 beforeEach(() => {
   vi.clearAllMocks();
   requireCourier.mockResolvedValue({ user: { id: "u" }, courierId: COURIER });
-  courierDb.listZones.mockResolvedValue([{ id: "z1", name: "Cantera", price: 5000, sort_order: 1, active: true }]);
-  for (const fn of [
-    courierDb.createZone,
-    courierDb.courierSetStatus,
-    courierDb.deleteZone,
-    courierDb.saveZoneOrder,
-    courierDb.updateZone,
-    ordersDb.setOrderCourier,
-  ]) {
+  for (const fn of Object.values(courierDb)) {
     fn.mockResolvedValue({ ok: true });
   }
 });
 
-describe("quien no es el repartidor no llega a la base — ENVIO-30", () => {
+describe("quien no es el repartidor no llega a la base — ENVIO-30 y 79", () => {
   beforeEach(() => {
     requireCourier.mockRejectedValue(new Error("NEXT_REDIRECT"));
   });
 
   it.each([
-    ["responder", () => respondOrderAction(ORDER, "accept", input, 5000)],
+    ["ofertar", () => makeOfferAction(ORDER, input, 5000)],
+    ["retirar la oferta", () => withdrawOfferAction(ORDER)],
+    ["rechazar", () => declineOrderAction(ORDER)],
+    ["devolver", () => returnOrderAction(ORDER, "Motivo")],
     ["avanzar", () => advanceOrderAction(ORDER, "on_the_way")],
-    ["crear barrio", () => createZoneAction({ name: "Oasis", price: "5500" })],
-    ["editar barrio", () => updateZoneAction("z1", { name: "Oasis", price: "5500" })],
-    ["borrar barrio", () => deleteZoneAction("z1")],
-    ["ordenar barrios", () => reorderZonesAction(["z1"])],
+    ["marcar una zona", () => setZoneCoverageAction("22222222-2222-2222-2222-222222222222", true)],
   ])("%s", async (_name, run) => {
     await expect(run()).rejects.toThrow("NEXT_REDIRECT");
 
-    for (const fn of [...Object.values(courierDb), ...Object.values(ordersDb)]) {
+    for (const fn of Object.values(courierDb)) {
       expect(fn).not.toHaveBeenCalled();
     }
   });
 });
 
-describe("responder un pedido — ENVIO-32", () => {
-  it("acepta con nota y precio igual: no manda precio ni motivo", async () => {
-    const r = await respondOrderAction(ORDER, "accept", { note: " Juan, 21:30 ", fee: "5000", reason: "" }, 5000);
+describe("ofertar por un pedido — ENVIO-98 y 113", () => {
+  it("con el precio de lista manda el precio y ningún motivo", async () => {
+    const r = await makeOfferAction(ORDER, { price: "5.000", reason: "no hace falta" }, 5000);
 
     expect(r).toEqual({ ok: true });
-    expect(ordersDb.setOrderCourier).toHaveBeenCalledWith(ORDER, {
-      action: "accept",
-      note: "Juan, 21:30",
-      fee: null,
-      feeReason: null,
-    });
+    expect(courierDb.courierMakeOffer).toHaveBeenCalledWith(ORDER, { price: 5000, reason: null });
   });
 
   it("un precio distinto sin motivo se rechaza antes de llamar a la base", async () => {
-    const r = await respondOrderAction(ORDER, "accept", { note: "", fee: "26000", reason: "" }, 5000);
+    const r = await makeOfferAction(ORDER, { price: "26000", reason: "" }, 5000);
 
     expect(r).toMatchObject({ ok: false, fieldErrors: { reason: expect.any(String) } });
-    expect(ordersDb.setOrderCourier).not.toHaveBeenCalled();
+    expect(courierDb.courierMakeOffer).not.toHaveBeenCalled();
   });
 
   it("un precio distinto con motivo se manda", async () => {
-    await respondOrderAction(ORDER, "accept", { note: "", fee: "26.000", reason: "Fuera de zona" }, 5000);
+    await makeOfferAction(ORDER, { price: "26.000", reason: " Fuera de zona " }, 5000);
 
-    expect(ordersDb.setOrderCourier).toHaveBeenCalledWith(ORDER, {
-      action: "accept",
-      note: null,
-      fee: 26000,
-      feeReason: "Fuera de zona",
-    });
+    expect(courierDb.courierMakeOffer).toHaveBeenCalledWith(ORDER, { price: 26000, reason: "Fuera de zona" });
   });
 
-  it("No puedo ignora cualquier precio", async () => {
-    await respondOrderAction(ORDER, "reject", { note: "Sin moto", fee: "9999", reason: "" }, 5000);
+  it("si el pedido ya no recibe ofertas (P0020), la respuesta lo marca para que el panel lo saque", async () => {
+    courierDb.courierMakeOffer.mockResolvedValue({ error: { code: "P0020", message: "boom" } });
 
-    expect(ordersDb.setOrderCourier).toHaveBeenCalledWith(ORDER, {
-      action: "reject",
-      note: "Sin moto",
-      fee: null,
-      feeReason: null,
-    });
+    const r = await makeOfferAction(ORDER, input, 5000);
+    expect(r).toMatchObject({ ok: false, closed: true, error: expect.stringMatching(/no recibe ofertas/i) });
   });
 
-  it("una acción desconocida no llega a la base", async () => {
-    const r = await respondOrderAction(ORDER, "request" as never, input, 5000);
-    expect(r).toMatchObject({ ok: false });
-    expect(ordersDb.setOrderCourier).not.toHaveBeenCalled();
+  it("traduce otros errores de la base, sin texto técnico ni `closed`", async () => {
+    courierDb.courierMakeOffer.mockResolvedValue({ error: { code: "P0004", message: "boom" } });
+
+    const r = await makeOfferAction(ORDER, input, 5000);
+    expect(r).toMatchObject({ ok: false, error: expect.stringMatching(/no está permitido/i) });
+    expect(r).not.toHaveProperty("closed");
+  });
+});
+
+describe("retirar la oferta — ENVIO-100", () => {
+  it("llama a la base con el pedido", async () => {
+    expect(await withdrawOfferAction(ORDER)).toEqual({ ok: true });
+    expect(courierDb.courierWithdrawOffer).toHaveBeenCalledWith(ORDER);
   });
 
-  it("traduce el error de la base, sin texto técnico", async () => {
-    ordersDb.setOrderCourier.mockResolvedValue({ error: { code: "P0004", message: "boom" } });
-    const r = await respondOrderAction(ORDER, "accept", input, 5000);
+  it("si el cliente ya eligió, lo marca como cerrado", async () => {
+    courierDb.courierWithdrawOffer.mockResolvedValue({ error: { code: "P0020" } });
+    expect(await withdrawOfferAction(ORDER)).toMatchObject({ ok: false, closed: true });
+  });
+});
+
+describe("rechazar un pedido — ENVIO-65", () => {
+  it("llama a la base con el pedido", async () => {
+    expect(await declineOrderAction(ORDER)).toEqual({ ok: true });
+    expect(courierDb.courierDeclineOrder).toHaveBeenCalledWith(ORDER);
+  });
+
+  it("si ya no estaba disponible, lo marca como cerrado", async () => {
+    courierDb.courierDeclineOrder.mockResolvedValue({ error: { code: "P0020" } });
+    expect(await declineOrderAction(ORDER)).toMatchObject({ ok: false, closed: true });
+  });
+});
+
+describe("devolver un pedido — ENVIO-66", () => {
+  it("manda el motivo recortado", async () => {
+    expect(await returnOrderAction(ORDER, "  Se pinchó la moto ")).toEqual({ ok: true });
+    expect(courierDb.courierReturnOrder).toHaveBeenCalledWith(ORDER, "Se pinchó la moto");
+  });
+
+  it("sin motivo no llega a la base", async () => {
+    const r = await returnOrderAction(ORDER, "   ");
+
+    expect(r).toMatchObject({ ok: false, fieldErrors: { reason: expect.any(String) } });
+    expect(courierDb.courierReturnOrder).not.toHaveBeenCalled();
+  });
+
+  it("traduce el error de la base", async () => {
+    courierDb.courierReturnOrder.mockResolvedValue({ error: { code: "P0004", message: "boom" } });
+    const r = await returnOrderAction(ORDER, "Motivo");
     expect(r).toMatchObject({ ok: false, error: expect.stringMatching(/no está permitido/i) });
   });
 });
 
-describe("avanzar un pedido — ENVIO-32", () => {
+describe("avanzar un pedido — ENVIO-77", () => {
   it("manda En camino y Entregado a courier_set_status", async () => {
     await advanceOrderAction(ORDER, "on_the_way");
     await advanceOrderAction(ORDER, "delivered");
@@ -140,37 +157,37 @@ describe("avanzar un pedido — ENVIO-32", () => {
   });
 });
 
-describe("barrios — ENVIO-36 y 37", () => {
-  it("el repartidor sale de la sesión: las funciones reciben ese id, no uno del navegador", async () => {
-    await createZoneAction({ name: " Oasis ", price: "5.500" });
-    await deleteZoneAction("z1");
-    await reorderZonesAction(["z1", "z2"]);
+describe("Mis zonas — ENVIO-57", () => {
+  const ZONE = "22222222-2222-2222-2222-222222222222";
 
-    expect(courierDb.createZone).toHaveBeenCalledWith(COURIER, { name: "Oasis", price: 5500 });
-    expect(courierDb.deleteZone).toHaveBeenCalledWith(COURIER, "z1");
-    expect(courierDb.saveZoneOrder).toHaveBeenCalledWith(COURIER, ["z1", "z2"]);
+  it("el repartidor sale de la sesión: la base recibe ese id, no uno del navegador", async () => {
+    const on = await setZoneCoverageAction(ZONE, true);
+    const off = await setZoneCoverageAction(ZONE, false);
+
+    expect(on).toEqual({ ok: true });
+    expect(off).toEqual({ ok: true });
+    expect(courierDb.setZoneCoverage).toHaveBeenNthCalledWith(1, COURIER, ZONE, true);
+    expect(courierDb.setZoneCoverage).toHaveBeenNthCalledWith(2, COURIER, ZONE, false);
   });
 
-  it("rechaza un nombre repetido o un precio inválido sin llamar a la base", async () => {
-    const repetido = await createZoneAction({ name: "cantera", price: "1" });
-    expect(repetido).toMatchObject({ ok: false, fieldErrors: { name: expect.stringMatching(/ya existe/i) } });
+  it("un id que no es una zona no llega a la base", async () => {
+    const r = await setZoneCoverageAction("no-es-un-uuid", true);
 
-    const caro = await createZoneAction({ name: "Oasis", price: "-1" });
-    expect(caro).toMatchObject({ ok: false, fieldErrors: { price: expect.any(String) } });
-
-    expect(courierDb.createZone).not.toHaveBeenCalled();
+    expect(r).toMatchObject({ ok: false });
+    expect(courierDb.setZoneCoverage).not.toHaveBeenCalled();
   });
 
-  it("editar un barrio le deja su propio nombre", async () => {
-    const r = await updateZoneAction("z1", { name: "Cantera", price: "6000" });
+  it("si la base falla, devuelve un mensaje sin texto técnico", async () => {
+    courierDb.setZoneCoverage.mockResolvedValue({ error: { code: "42501", message: "permission denied" } });
 
-    expect(r).toEqual({ ok: true });
-    expect(courierDb.updateZone).toHaveBeenCalledWith(COURIER, "z1", { name: "Cantera", price: 6000 });
+    const r = await setZoneCoverageAction(ZONE, true);
+    expect(r).toMatchObject({ ok: false, error: expect.not.stringMatching(/permission/) });
   });
 
-  it("un nombre repetido que la base rechaza (23505) se dice como error del campo", async () => {
-    courierDb.createZone.mockResolvedValue({ error: { code: "23505" } });
-    const r = await createZoneAction({ name: "Oasis", price: "1" });
-    expect(r).toMatchObject({ ok: false, fieldErrors: { name: expect.any(String) } });
+  it("quien no es repartidor no llega a la base", async () => {
+    requireCourier.mockRejectedValue(new Error("NEXT_REDIRECT"));
+
+    await expect(setZoneCoverageAction(ZONE, true)).rejects.toThrow("NEXT_REDIRECT");
+    expect(courierDb.setZoneCoverage).not.toHaveBeenCalled();
   });
 });

@@ -2,21 +2,23 @@
 
 import type { Order } from "@/lib/db/orders";
 import { timeAgo } from "@/lib/orders/format";
+import CustomerPhone from "./CustomerPhone";
 import PaymentBadge from "./PaymentBadge";
 import SettlementStatus from "./SettlementStatus";
 import { itemOptionLines } from "@/lib/orders/item-options";
 import {
-  confirmBlockReason,
-  courierActions,
   courierStatusLabel,
   deliveryContext,
   feeSummary,
-  hasCourier,
-  noResponseWarning,
+  hasDelivery,
+  offersLabel,
+  searchWarning,
+  type OrderCourier,
+  type OrderOffers,
 } from "@/lib/orders/courier";
 import { isPaymentPending, PAYMENT_BLOCK_REASON } from "@/lib/orders/payment";
 import { orderBadge } from "@/lib/orders/scheduled";
-import { primaryAction, STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
+import { isFinal, primaryAction, STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
 
 const SHOWN_ITEMS = 3;
@@ -28,6 +30,8 @@ export default function OrderCard({
   onAdvance,
   onOpen,
   onConfirmSettlement,
+  couriers = [],
+  offers,
 }: {
   order: Order;
   now: Date;
@@ -35,19 +39,24 @@ export default function OrderCard({
   onAdvance: (status: string) => void;
   onOpen: () => void;
   onConfirmSettlement?: () => void;
+  // Los repartidores del local: sirven para nombrar al que tomó el pedido y al favorito.
+  couriers?: OrderCourier[];
+  // Las ofertas abiertas del pedido si está buscando repartidor (ENVIO-117).
+  offers?: OrderOffers;
 }) {
-  const withCourier = hasCourier(order);
+  const withDelivery = hasDelivery(order);
   const action = primaryAction(order.status, deliveryContext(order));
   const extra = order.order_items.length - SHOWN_ITEMS;
   const scheduled = orderBadge(order);
   const paymentBlocked = isPaymentPending(order.payment_status);
-  // Con envío, confirmar espera a que el repartidor acepte (ENVIO-8): la base también lo exige.
-  const courierBlock = confirmBlockReason(order);
-  const blocked = paymentBlocked || Boolean(courierBlock);
-  const blockReason = paymentBlocked ? PAYMENT_BLOCK_REASON : (courierBlock ?? undefined);
-  const courierRequest = courierActions(order).request;
-  const fee = withCourier ? feeSummary(order) : null;
-  const warning = withCourier ? noResponseWarning(order, now) : null;
+  const blocked = paymentBlocked;
+  const blockReason = paymentBlocked ? PAYMENT_BLOCK_REASON : undefined;
+  const fee = withDelivery ? feeSummary(order) : null;
+  const searching = withDelivery && order.courier_status === "searching" && !isFinal(order.status);
+  const warning = withDelivery ? searchWarning(order, now, offers?.ofertas.length ?? 0) : null;
+  const courierName = order.courier_id
+    ? couriers.find((courier) => courier.id === order.courier_id)?.name
+    : undefined;
 
   return (
     <article className="rounded-xl border border-line bg-white p-3 shadow-sm">
@@ -79,16 +88,34 @@ export default function OrderCard({
         </p>
       ) : null}
 
-      {withCourier && fee ? (
+      {order.customer_phone ? (
+        <div className="mt-2">
+          <CustomerPhone phone={order.customer_phone} compact />
+        </div>
+      ) : null}
+
+      {withDelivery && fee ? (
         <div className="mt-2 rounded-lg bg-sky-50 px-2 py-1.5 text-[11px] text-sky-900">
           <p className="font-semibold">
             🛵 {order.delivery_zone_name ?? "Envío"} · {fee.price}
           </p>
-          <p>{courierStatusLabel(order)}</p>
+          <p>{courierStatusLabel(order, courierName)}</p>
+          {searching ? <p className="font-medium">{offersLabel(offers, now)}</p> : null}
+          {searching && offers && offers.ofertas.length > 0 ? (
+            <ul className="mt-0.5 space-y-0.5">
+              {offers.ofertas.slice(0, 3).map((offer) => (
+                <li key={offer.id} className="truncate">
+                  {offer.favorito ? "⭐ " : ""}
+                  {offer.repartidor} · {formatMoney(offer.precio)}
+                </li>
+              ))}
+              {offers.ofertas.length > 3 ? <li>y {offers.ofertas.length - 3} más…</li> : null}
+            </ul>
+          ) : null}
           {fee.list ? (
             <p>
-              Antes {fee.list}
-              {fee.reason ? `: ${fee.reason}` : ""}
+              Precio de lista {fee.list}
+              {fee.reason ? ` · ${fee.reason}` : ""}
             </p>
           ) : null}
           {warning ? (
@@ -134,14 +161,14 @@ export default function OrderCard({
             {busy ? "Guardando…" : action.label}
           </button>
         ) : null}
-        {courierRequest ? (
-          // Pedir el envío necesita la hora de listo y abre WhatsApp: se hace desde el detalle.
+        {warning ? (
+          // Nadie lo tomó: asignarlo o llevarlo se hace desde el detalle.
           <button
             type="button"
             onClick={onOpen}
-            className="rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-semibold text-brand transition hover:bg-brand-soft"
+            className="rounded-lg bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
           >
-            {courierRequest}
+            Resolver envío
           </button>
         ) : null}
         <button

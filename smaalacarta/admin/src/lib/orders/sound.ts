@@ -5,10 +5,10 @@ const TONES = [
 ];
 const VOLUME = 0.25;
 
-export function playNewOrderSound(ctx: AudioContext): void {
+function playTones(ctx: AudioContext, tones: { hz: number; start: number; length: number }[]): void {
   const t0 = ctx.currentTime;
 
-  for (const tone of TONES) {
+  for (const tone of tones) {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
     const start = t0 + tone.start;
@@ -26,4 +26,19 @@ export function playNewOrderSound(ctx: AudioContext): void {
     osc.start(start);
     osc.stop(end);
   }
+}
+
+export function playNewOrderSound(ctx: AudioContext): void {
+  playTones(ctx, TONES);
+}
+
+// Aviso de "te eligieron": tres tonos que suben, para distinguirlo del pedido nuevo (ENVIO-116).
+const CHOSEN_TONES = [
+  { hz: 523, start: 0, length: 0.15 },
+  { hz: 659, start: 0.17, length: 0.15 },
+  { hz: 784, start: 0.34, length: 0.3 },
+];
+
+export function playChosenSound(ctx: AudioContext): void {
+  playTones(ctx, CHOSEN_TONES);
 }

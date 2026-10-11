@@ -1,0 +1,118 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+
+import { requireSuperAdmin } from "@/lib/auth/superadmin";
+import {
+  createDeliveryZone,
+  deleteDeliveryZone,
+  listDeliveryZones,
+  saveDeliveryZoneOrder,
+  updateDeliveryZone,
+} from "@/lib/db/delivery-zones";
+import { validateZone } from "@/lib/superadmin/zones";
+
+export type ZoneActionResult =
+  | { ok: true; notice?: string }
+  | { ok: false; error: string; fieldErrors?: Partial<Record<string, string>> };
+
+const GENERIC = "No pudimos guardar el cambio. Probá de nuevo.";
+const ID = /^[0-9a-f-]{36}$/i;
+
+// Todas las acciones empiezan por comprobar que quien las pide es superadmin; el RLS de la base lo
+// vuelve a exigir (ENVIO-46).
+
+function zoneError(error: { code?: string }): ZoneActionResult {
+  if (error.code === "23505") {
+    return {
+      ok: false,
+      error: "Ya existe una zona con ese nombre.",
+      fieldErrors: { name: "Ya existe una zona con ese nombre." },
+    };
+  }
+  return { ok: false, error: GENERIC };
+}
+
+export async function createZoneAction(input: { name: string; price: string }): Promise<ZoneActionResult> {
+  await requireSuperAdmin();
+
+  const validation = validateZone(input, await listDeliveryZones());
+  if (!validation.ok) {
+    return { ok: false, error: "Revisá los datos marcados.", fieldErrors: validation.errors };
+  }
+
+  const result = await createDeliveryZone({ name: validation.name, price: validation.price });
+  if ("error" in result) return zoneError(result.error);
+
+  revalidatePath("/superadmin/zonas");
+  return { ok: true };
+}
+
+// Un precio nuevo vale para los pedidos nuevos: los que ya se hicieron guardan su precio de lista.
+export async function updateZoneAction(
+  zoneId: string,
+  input: { name: string; price: string },
+): Promise<ZoneActionResult> {
+  await requireSuperAdmin();
+
+  if (!ID.test(zoneId)) return { ok: false, error: GENERIC };
+
+  const validation = validateZone(input, await listDeliveryZones(), zoneId);
+  if (!validation.ok) {
+    return { ok: false, error: "Revisá los datos marcados.", fieldErrors: validation.errors };
+  }
+
+  const result = await updateDeliveryZone(zoneId, { name: validation.name, price: validation.price });
+  if ("error" in result) return zoneError(result.error);
+
+  revalidatePath("/superadmin/zonas");
+  return { ok: true };
+}
+
+export async function setZoneActiveAction(zoneId: string, active: boolean): Promise<ZoneActionResult> {
+  await requireSuperAdmin();
+
+  if (!ID.test(zoneId)) return { ok: false, error: GENERIC };
+
+  const result = await updateDeliveryZone(zoneId, { active: Boolean(active) });
+  if ("error" in result) return zoneError(result.error);
+
+  revalidatePath("/superadmin/zonas");
+  return { ok: true };
+}
+
+// Una zona que ya usan pedidos no se borra: la base la desactiva y acá se avisa (ENVIO-56).
+export async function deleteZoneAction(zoneId: string): Promise<ZoneActionResult> {
+  await requireSuperAdmin();
+
+  if (!ID.test(zoneId)) return { ok: false, error: GENERIC };
+
+  const result = await deleteDeliveryZone(zoneId);
+  if ("error" in result) return zoneError(result.error);
+
+  revalidatePath("/superadmin/zonas");
+
+  if (result.result === "deactivated") {
+    return {
+      ok: true,
+      notice:
+        "Esa zona ya tiene pedidos, así que no se borró: quedó desactivada y no se ofrece más. Los pedidos conservan su nombre y precio.",
+    };
+  }
+
+  return { ok: true };
+}
+
+export async function reorderZonesAction(orderedIds: string[]): Promise<ZoneActionResult> {
+  await requireSuperAdmin();
+
+  if (!Array.isArray(orderedIds) || orderedIds.some((id) => typeof id !== "string" || !ID.test(id))) {
+    return { ok: false, error: GENERIC };
+  }
+
+  const result = await saveDeliveryZoneOrder(orderedIds);
+  if ("error" in result) return zoneError(result.error);
+
+  revalidatePath("/superadmin/zonas");
+  return { ok: true };
+}

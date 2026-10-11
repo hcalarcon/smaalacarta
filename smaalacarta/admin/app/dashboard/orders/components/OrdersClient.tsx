@@ -9,9 +9,14 @@ import OrderDetailDialog from "./OrderDetailDialog";
 import OrdersHistory from "./OrdersHistory";
 import SettlementSummary from "./SettlementSummary";
 import ConfirmDeleteDialog from "../../components/ConfirmDeleteDialog";
-import { confirmSettlementAction, setOrderCourierAction, setOrderStatusAction } from "../actions";
-import type { ActiveCourier, Order } from "@/lib/db/orders";
-import type { CourierResponseInput } from "@/lib/orders/courier";
+import {
+  assignCourierAction,
+  confirmSettlementAction,
+  selfDeliveryAction,
+  setOrderStatusAction,
+} from "../actions";
+import type { Order } from "@/lib/db/orders";
+import type { OrderCourier, OrderOffers } from "@/lib/orders/courier";
 import { newPendingIds, pendingCount, shouldRemind, tabTitle } from "@/lib/orders/alerts";
 import { playNewOrderSound } from "@/lib/orders/sound";
 import { compareForBoard } from "@/lib/orders/scheduled";
@@ -54,16 +59,18 @@ export default function OrdersClient({
   orders,
   products,
   serverNow,
-  businessName = "",
-  courier = null,
+  couriers = [],
+  offers = [],
 }: {
   slug: string;
   orders: Order[];
   products: { name: string; price: number }[];
   serverNow: string;
-  // Solo con envío con Repartos al Toque habilitado (ENVIO-2): el repartidor activo.
-  businessName?: string;
-  courier?: ActiveCourier | null;
+  // Solo con envío con repartidor habilitado (ENVIO-2): los repartidores activos que cubren zonas del
+  // local y su favorito.
+  couriers?: OrderCourier[];
+  // Las ofertas abiertas de los pedidos que buscan repartidor (ENVIO-111).
+  offers?: OrderOffers[];
 }) {
   const router = useRouter();
 
@@ -156,6 +163,28 @@ export default function OrdersClient({
     return () => clearInterval(id);
   }, [router]);
 
+  // Con ofertas abiertas la cuenta regresiva ("se elige sola en m:ss") avanza cada segundo, y al vencer
+  // se vuelve a pedir el tablero para ver el repartidor elegido (ENVIO-117).
+  const offersByOrder = new Map(offers.map((item) => [item.order_id, item]));
+  const deadlines = offers.flatMap((item) => (item.cierra_en ? [new Date(item.cierra_en).getTime()] : []));
+  const nextDeadline = deadlines.length > 0 ? Math.min(...deadlines) : null;
+
+  useEffect(() => {
+    if (nextDeadline === null) return;
+
+    const id = setInterval(() => {
+      const current = new Date();
+      setNow(current);
+
+      if (current.getTime() >= nextDeadline) {
+        clearInterval(id);
+        router.refresh();
+      }
+    }, 1000);
+
+    return () => clearInterval(id);
+  }, [nextDeadline, router]);
+
   const pending = pendingCount(orders);
 
   // Repite el sonido mientras haya pendientes sin atender.
@@ -237,17 +266,16 @@ export default function OrdersClient({
     }
   }
 
-  async function respondCourier(
+  // Resolver el envío de un pedido que nadie tomó: asignarlo a mano o llevarlo el local (ENVIO-81).
+  async function resolveDelivery(
     orderId: string,
-    action: "request" | "accept" | "reject",
-    input: CourierResponseInput,
-    currentFee: number,
+    run: () => ReturnType<typeof selfDeliveryAction>,
   ) {
     setError(null);
     setBusyId(orderId);
 
     try {
-      const result = await setOrderCourierAction(orderId, action, input, currentFee);
+      const result = await run();
       if (!result.ok) setError(result.error);
     } catch {
       setError("No pudimos guardar el cambio. Probá de nuevo.");
@@ -369,6 +397,8 @@ export default function OrdersClient({
                           onAdvance={(status) => changeStatus(order.id, status)}
                           onOpen={() => setSelectedId(order.id)}
                           onConfirmSettlement={() => setReceivingId(order.id)}
+                          couriers={couriers}
+                          offers={offersByOrder.get(order.id)}
                         />
                       ))
                     )}
@@ -394,13 +424,14 @@ export default function OrdersClient({
         busy={busyId === selected?.id}
         onClose={() => setSelectedId(null)}
         onChangeStatus={(status, note) => selected && changeStatus(selected.id, status, note)}
-        businessName={businessName}
-        courier={courier}
+        couriers={couriers}
+        offers={selected ? offersByOrder.get(selected.id) : undefined}
         now={now}
         error={error}
-        onCourierAction={(action, input) =>
-          selected && respondCourier(selected.id, action, input, Number(selected.delivery_fee ?? 0))
+        onAssignCourier={(courierId, note) =>
+          selected && resolveDelivery(selected.id, () => assignCourierAction(selected.id, courierId, note))
         }
+        onSelfDelivery={() => selected && resolveDelivery(selected.id, () => selfDeliveryAction(selected.id))}
         onConfirmSettlement={() => selected && setReceivingId(selected.id)}
       />
 
@@ -409,7 +440,7 @@ export default function OrdersClient({
         title="Confirmar que recibiste la rendición"
         description={
           receiving
-            ? `¿Recibiste de Repartos al Toque lo del pedido #${receiving.order_number} (${formatMoney(Number(receiving.total))})? La confirmación no se puede deshacer.`
+            ? `¿Recibiste del repartidor lo del pedido #${receiving.order_number} (${formatMoney(Number(receiving.total))})? La confirmación no se puede deshacer.`
             : undefined
         }
         confirmLabel="Sí, lo recibí"

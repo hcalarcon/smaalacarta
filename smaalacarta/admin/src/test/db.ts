@@ -49,24 +49,35 @@ const SUPABASE_STUBS = `
 
 export type TestDb = PGlite;
 
+// Aplica una migración por nombre de archivo; si falla, el error lo nombra.
+export async function applyMigration(db: TestDb, file: string): Promise<void> {
+  const dir = join(process.cwd(), "supabase", "migrations");
+
+  try {
+    await db.exec(readFileSync(join(dir, file), "utf8"));
+  } catch (error) {
+    throw new Error(`Migración ${file}: ${(error as Error).message}`);
+  }
+}
+
 export type QueryResult =
   | { ok: true; rows: Record<string, unknown>[]; affected: number }
   | { ok: false; error: string; code?: string };
 
 // Aplica todas las migraciones de `supabase/migrations`, en orden, como lo hace
 // `supabase db push`. Si una falla, el test falla con el nombre del archivo.
-export async function createTestDb(): Promise<TestDb> {
+//
+// `before`: nombre de una migración; se aplican solo las anteriores. Sirve para probar cómo una
+// migración transforma datos que ya existían (se aplica después con `applyMigration`).
+export async function createTestDb(options: { before?: string } = {}): Promise<TestDb> {
   const db = new PGlite();
   await db.exec(SUPABASE_STUBS);
 
   const dir = join(process.cwd(), "supabase", "migrations");
 
   for (const file of readdirSync(dir).filter((f) => f.endsWith(".sql")).sort()) {
-    try {
-      await db.exec(readFileSync(join(dir, file), "utf8"));
-    } catch (error) {
-      throw new Error(`Migración ${file}: ${(error as Error).message}`);
-    }
+    if (options.before && file >= options.before) break;
+    await applyMigration(db, file);
   }
 
   // Supabase da estos permisos por defecto; lo que limita es el RLS.

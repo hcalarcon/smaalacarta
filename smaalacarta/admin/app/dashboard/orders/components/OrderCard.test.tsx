@@ -6,6 +6,7 @@ import OrderDetailDialog from "./OrderDetailDialog";
 import SettlementStatus from "./SettlementStatus";
 import SettlementSummary from "./SettlementSummary";
 import type { Order } from "@/lib/db/orders";
+import type { OrderOffers } from "@/lib/orders/courier";
 
 afterEach(cleanup);
 
@@ -247,14 +248,28 @@ describe("opciones bajo cada ítem — ADMIN-PEDIDOS-20", () => {
   });
 });
 
-// Envío con Repartos al Toque — ENVIO-24 a 26.
-describe("pedido con envío — ENVIO-24 a 26", () => {
-  const courierOrder = (extra: Partial<Order> = {}) =>
+// Envío con repartidor: la búsqueda abierta — ENVIO-80 a 85.
+describe("pedido con envío — ENVIO-80 a 85", () => {
+  const ZONA = "aaaaaaaa-0000-4000-8000-000000000001";
+  const DAMIAN = "7a0c0e00-0000-4000-8000-000000000001";
+  const OTRO = "7a0c0e00-0000-4000-8000-000000000002";
+  const LEJOS = "7a0c0e00-0000-4000-8000-000000000003";
+
+  const couriers = [
+    { id: DAMIAN, name: "Damián", whatsapp: "5493644277105", zone_ids: [ZONA] },
+    { id: OTRO, name: "Moto Express", whatsapp: null, zone_ids: [ZONA, "otra"] },
+    { id: LEJOS, name: "Lejos", whatsapp: null, zone_ids: ["otra"] },
+  ];
+
+  // Un pedido confirmado con la búsqueda abierta a las 07:00 (10:00Z), sin repartidor todavía.
+  const searching = (extra: Partial<Order> = {}) =>
     order({
+      status: "confirmed",
       payment: "efectivo",
       payment_status: "not_required",
       code: "0123456789abcdef0123",
-      courier_id: "7a0c0e00-0000-4000-8000-000000000001",
+      courier_id: null,
+      delivery_zone_id: ZONA,
       delivery_zone_name: "Cantera",
       delivery_fee_list: 5000,
       delivery_fee: 5000,
@@ -262,16 +277,43 @@ describe("pedido con envío — ENVIO-24 a 26", () => {
       delivery_fee_changed_at: null,
       customer_phone: "3644277105",
       delivery_address: "Av. Siempre Viva 742",
-      courier_status: "waiting",
+      courier_status: "searching",
       courier_note: null,
-      courier_requested_at: null,
       courier_responded_at: null,
+      offered_at: "2026-10-08T10:00:00Z",
       delivery_events: [],
       ...extra,
     } as unknown as Partial<Order>);
 
-  const courier = { name: "Repartos al Toque", whatsapp: "5493644277105" };
-  const full = (o: Order, onCourierAction = vi.fn(), at = now) =>
+  const card2 = (o: Order, at = now, offers?: OrderOffers) =>
+    render(
+      <OrderCard
+        order={o}
+        now={at}
+        busy={false}
+        onAdvance={vi.fn()}
+        onOpen={vi.fn()}
+        couriers={couriers}
+        offers={offers}
+      />,
+    );
+
+  // Dos ofertas abiertas: el favorito (Damián) y otra más barata (ENVIO-117).
+  const OFFERS: OrderOffers = {
+    order_id: "p1",
+    cierra_en: "2026-10-08T10:05:00Z",
+    ofertas: [
+      { id: "o1", courier_id: DAMIAN, repartidor: "Damián", precio: 5000, motivo: null, favorito: true },
+      { id: "o2", courier_id: "otro", repartidor: "Moto Express", precio: 4500, motivo: "Cerca", favorito: false },
+    ],
+  };
+
+  const full = (
+    o: Order,
+    handlers: { onAssign?: () => void; onSelf?: () => void } = {},
+    at = now,
+    offers?: OrderOffers,
+  ) =>
     render(
       <OrderDetailDialog
         order={o}
@@ -279,169 +321,225 @@ describe("pedido con envío — ENVIO-24 a 26", () => {
         busy={false}
         onClose={vi.fn()}
         onChangeStatus={vi.fn()}
-        businessName="Ana Resto"
-        courier={courier}
+        couriers={couriers}
+        offers={offers}
         now={at}
-        onCourierAction={onCourierAction}
+        onAssignCourier={handlers.onAssign ?? vi.fn()}
+        onSelfDelivery={handlers.onSelf ?? vi.fn()}
       />,
     );
 
-  it("la tarjeta muestra barrio, precio y estado del envío", () => {
-    card(courierOrder());
+  it("un pedido pendiente con la búsqueda abierta, y confirmar no se bloquea", () => {
+    card2(searching({ status: "pending" } as Partial<Order>));
+
+    expect(screen.getByText("Esperando ofertas")).toBeTruthy();
+    expect((screen.getByRole("button", { name: "Confirmar" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("buscando: barrio, precio, desde qué hora y esperando ofertas", () => {
+    card2(searching());
+
     expect(screen.getByText(/Cantera/)).toBeTruthy();
     expect(screen.getByText(/\$\s?5\.000/)).toBeTruthy();
-    expect(screen.getByText("Sin pedir al repartidor")).toBeTruthy();
+    expect(screen.getByText("Buscando repartidor desde las 07:00")).toBeTruthy();
+    expect(screen.getByText("Esperando ofertas")).toBeTruthy();
   });
 
-  it("sin aceptar, confirmar está deshabilitado con el motivo a la vista", () => {
-    card(courierOrder());
-    const confirm = screen.getByRole("button", { name: "Confirmar" }) as HTMLButtonElement;
+  it("con ofertas: cuántas hay, en cuánto se elige sola, y quién ofreció cuánto", () => {
+    card2(searching(), new Date("2026-10-08T10:02:00Z"), OFFERS);
 
-    expect(confirm.disabled).toBe(true);
-    expect(confirm.title).toMatch(/aceptado por el repartidor/i);
-    expect(screen.getAllByText(/aceptado por el repartidor/i).length).toBeGreaterThan(0);
+    expect(screen.getByText("2 ofertas, el cliente está eligiendo (se elige sola en 3:00)")).toBeTruthy();
+    expect(screen.getByText(/⭐ Damián · \$\s?5\.000/)).toBeTruthy();
+    expect(screen.getByText(/Moto Express · \$\s?4\.500/)).toBeTruthy();
+    // Con ofertas no hay aviso de "nadie ofertó", aunque pasen los 10 minutos.
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("aceptado, confirmar se habilita y ya no ofrece pedir el envío", () => {
-    card(courierOrder({ courier_status: "accepted" }));
-    expect((screen.getByRole("button", { name: "Confirmar" }) as HTMLButtonElement).disabled).toBe(false);
-    expect(screen.queryByRole("button", { name: /pedir envío|volver a pedir/i })).toBeNull();
+  it("a los 10 minutos sin ninguna oferta avisa y ofrece resolverlo", () => {
+    card2(searching(), new Date("2026-10-08T10:10:00Z"));
+
+    expect(screen.getByRole("alert").textContent).toMatch(/Nadie ofertó todavía/);
+    expect(screen.getByRole("button", { name: "Resolver envío" })).toBeTruthy();
+  });
+
+  it("antes de los 10 minutos no avisa", () => {
+    card2(searching(), new Date("2026-10-08T10:09:00Z"));
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Resolver envío" })).toBeNull();
+  });
+
+  it("tomado: dice quién lo tomó", () => {
+    card2(searching({ courier_status: "accepted", courier_id: DAMIAN } as Partial<Order>));
+    expect(screen.getByText("Lo tomó Damián")).toBeTruthy();
+  });
+
+  it("si lo lleva el local lo dice, y el paso que sigue es Marcar entregado", () => {
+    card2(searching({ courier_status: "self", status: "ready" } as Partial<Order>));
+
+    expect(screen.getByText("Lo llevás vos")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Marcar entregado" })).toBeTruthy();
   });
 
   it("si cambió el precio, muestra el de lista y el motivo", () => {
-    card(courierOrder({ courier_status: "accepted", delivery_fee: 6500, delivery_fee_reason: "Fuera de zona" }));
+    card2(
+      searching({
+        courier_status: "accepted",
+        courier_id: DAMIAN,
+        delivery_fee: 6500,
+        delivery_fee_reason: "Fuera de zona",
+      } as Partial<Order>),
+    );
     expect(screen.getByText(/\$\s?6\.500/)).toBeTruthy();
-    expect(screen.getByText(/Antes.*5\.000.*Fuera de zona/)).toBeTruthy();
+    expect(screen.getByText(/Precio de lista.*5\.000.* · Fuera de zona/)).toBeTruthy();
   });
 
-  it("a los 10 minutos sin respuesta avisa en la tarjeta", () => {
-    const requested = courierOrder({
-      courier_status: "requested",
-      courier_requested_at: "2026-10-08T09:55:00Z",
-    });
-    card(requested);
-    expect(screen.getByRole("alert").textContent).toMatch(/10 min sin respuesta/);
-  });
+  it("con el pedido listo y un repartidor, el siguiente paso es Entregar al repartidor", () => {
+    card2(searching({ status: "ready", courier_status: "accepted", courier_id: DAMIAN } as Partial<Order>));
 
-  it("con el pedido listo, el siguiente paso es Entregar al repartidor", () => {
-    card(courierOrder({ status: "ready", courier_status: "accepted" }));
     expect(screen.getByRole("button", { name: "Entregar al repartidor" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Marcar entregado" })).toBeNull();
   });
 
+  it("con el pedido listo y la búsqueda abierta no hay botón de entregar", () => {
+    card2(searching({ status: "ready" } as Partial<Order>));
+
+    expect(screen.queryByRole("button", { name: /entregar|marcar entregado/i })).toBeNull();
+  });
+
   it("entregado al repartidor, el local ya no tiene botón de avance", () => {
-    card(courierOrder({ status: "handed_to_courier", courier_status: "accepted" }));
+    card2(searching({ status: "handed_to_courier", courier_status: "accepted", courier_id: DAMIAN } as Partial<Order>));
+
     expect(screen.queryByRole("button", { name: /marcar|entregar|confirmar|preparar/i })).toBeNull();
     expect(screen.getByText("Entregado al repartidor")).toBeTruthy();
   });
 
   it("un pedido sin envío no cambia", () => {
-    card(order({ payment: "efectivo", payment_status: "not_required", courier_id: null } as Partial<Order>));
+    card(order({ payment: "efectivo", payment_status: "not_required", courier_id: null, courier_status: null } as Partial<Order>));
+
     expect(screen.queryByText(/repartidor/i)).toBeNull();
     expect((screen.getByRole("button", { name: "Confirmar" }) as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it("el detalle sin aceptar solo ofrece cancelar y dice por qué", () => {
-    full(courierOrder());
-    expect(screen.getByRole("button", { name: "Cancelado" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Confirmado" })).toBeNull();
-    expect(screen.getAllByText(/aceptado por el repartidor/i).length).toBeGreaterThan(0);
-  });
+  it("el teléfono del cliente se ve en la tarjeta de cualquier pedido, con llamar y WhatsApp", () => {
+    card(order({ payment: "efectivo", payment_status: "not_required", customer_phone: "3644277105" } as Partial<Order>));
 
-  it("Pedir envío abre WhatsApp con el pedido armado y registra la consulta", () => {
-    const open = vi.fn();
-    vi.stubGlobal("open", open);
-    const onCourierAction = vi.fn();
-    full(courierOrder(), onCourierAction);
-
-    fireEvent.click(screen.getByRole("button", { name: "Pedir envío" }));
-
-    const [url] = open.mock.calls[0];
-    expect(url).toContain("https://api.whatsapp.com/send?phone=5493644277105");
-    const text = decodeURIComponent(String(url).split("text=")[1]);
-    expect(text).toContain("Ana Resto");
-    expect(text).toContain("Barrio: Cantera");
-    expect(text).toContain("Seguimiento: https://ana.smaalacarta.com.ar/pedido/0123456789abcdef0123");
-    expect(onCourierAction).toHaveBeenCalledWith("request", { note: "", fee: "", reason: "" });
-    vi.unstubAllGlobals();
-  });
-
-  it("registrar que aceptó, con nota; el mismo precio no pide motivo", () => {
-    const onCourierAction = vi.fn();
-    full(courierOrder(), onCourierAction);
-
-    fireEvent.click(screen.getByRole("button", { name: "Repartidor aceptó" }));
-    fireEvent.change(screen.getByPlaceholderText("Juan, 21:30"), { target: { value: "Juan, 21:30" } });
-    expect(screen.queryByLabelText(/motivo del cambio/i)).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Guardar: aceptó" }));
-
-    expect(onCourierAction).toHaveBeenCalledWith("accept", { note: "Juan, 21:30", fee: "5000", reason: "" });
-  });
-
-  it("un precio distinto exige motivo antes de guardar", () => {
-    const onCourierAction = vi.fn();
-    full(courierOrder(), onCourierAction);
-
-    fireEvent.click(screen.getByRole("button", { name: "Repartidor aceptó" }));
-    fireEvent.change(screen.getByLabelText(/precio final del envío/i), { target: { value: "26000" } });
-    fireEvent.click(screen.getByRole("button", { name: "Guardar: aceptó" }));
-
-    expect(onCourierAction).not.toHaveBeenCalled();
-    expect(screen.getByText(/por qué cambia el precio/i)).toBeTruthy();
-
-    fireEvent.change(screen.getByLabelText(/motivo del cambio/i), { target: { value: "Fuera de zona" } });
-    fireEvent.click(screen.getByRole("button", { name: "Guardar: aceptó" }));
-
-    expect(onCourierAction).toHaveBeenCalledWith("accept", { note: "", fee: "26000", reason: "Fuera de zona" });
-  });
-
-  it("No puede registra el rechazo", () => {
-    const onCourierAction = vi.fn();
-    full(courierOrder(), onCourierAction);
-
-    fireEvent.click(screen.getByRole("button", { name: "No puede" }));
-    fireEvent.click(screen.getByRole("button", { name: "Guardar: no puede" }));
-
-    expect(onCourierAction).toHaveBeenCalledWith("reject", { note: "", fee: "", reason: "" });
-  });
-
-  it("sin WhatsApp del repartidor no hay link, pero se puede registrar la respuesta", () => {
-    render(
-      <OrderDetailDialog
-        order={courierOrder()}
-        slug="ana"
-        busy={false}
-        onClose={vi.fn()}
-        onChangeStatus={vi.fn()}
-        businessName="Ana Resto"
-        courier={{ name: "Repartos al Toque", whatsapp: null }}
-        now={now}
-        onCourierAction={vi.fn()}
-      />,
+    expect(screen.getByText("3644277105")).toBeTruthy();
+    expect((screen.getByText("Llamar") as HTMLAnchorElement).getAttribute("href")).toBe("tel:3644277105");
+    expect((screen.getByText("WhatsApp") as HTMLAnchorElement).href).toBe(
+      "https://api.whatsapp.com/send?phone=5493644277105",
     );
+  });
 
-    expect((screen.getByRole("button", { name: "Pedir envío" }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByRole("button", { name: "Repartidor aceptó" })).toBeTruthy();
+  it("y también en el detalle, aunque no lleve envío", () => {
+    detail(order({ payment: "efectivo", payment_status: "not_required", customer_phone: "3644277105" } as Partial<Order>));
+
+    expect(screen.getByText("3644277105")).toBeTruthy();
+    expect((screen.getByText("Llamar") as HTMLAnchorElement).getAttribute("href")).toBe("tel:3644277105");
+  });
+
+  it("un pedido viejo sin teléfono no muestra nada de más", () => {
+    card(order({ customer_phone: null } as unknown as Partial<Order>));
+    expect(screen.queryByText("Llamar")).toBeNull();
+  });
+
+  it("el detalle ofrece Asignar a mano y Lo llevo yo durante toda la búsqueda, con las ofertas a la vista", () => {
+    full(searching(), {}, new Date("2026-10-08T10:02:00Z"), OFFERS);
+
+    expect(screen.getByRole("button", { name: "Asignar a mano" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Lo llevo yo" })).toBeTruthy();
+    expect(screen.getByText("2 ofertas, el cliente está eligiendo (se elige sola en 3:00)")).toBeTruthy();
+    expect(screen.getByText("Cerca")).toBeTruthy();
+    expect(screen.getByText(/tu favorito/)).toBeTruthy();
+  });
+
+  it("asignar a mano: solo los repartidores que cubren la zona, con nota opcional", () => {
+    const onAssign = vi.fn();
+    full(searching(), { onAssign });
+
+    fireEvent.click(screen.getByRole("button", { name: "Asignar a mano" }));
+
+    const options = Array.from(screen.getByLabelText("Repartidor").querySelectorAll("option")).map(
+      (option) => option.textContent,
+    );
+    expect(options).toEqual(["Elegí un repartidor", "Damián", "Moto Express"]);
+
+    // Sin elegir nadie no avisa a la base.
+    fireEvent.click(screen.getByRole("button", { name: "Asignar" }));
+    expect(onAssign).not.toHaveBeenCalled();
+    expect(screen.getByText("Elegí un repartidor.")).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText("Repartidor"), { target: { value: DAMIAN } });
+    fireEvent.change(screen.getByLabelText(/Nota/), { target: { value: "Hablamos por WhatsApp" } });
+    fireEvent.click(screen.getByRole("button", { name: "Asignar" }));
+
+    expect(onAssign).toHaveBeenCalledWith(DAMIAN, "Hablamos por WhatsApp");
+  });
+
+  it("Lo llevo yo pide confirmación antes de avisar", () => {
+    const onSelf = vi.fn();
+    full(searching(), { onSelf });
+
+    fireEvent.click(screen.getByRole("button", { name: "Lo llevo yo" }));
+    expect(onSelf).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole("button", { name: "Sí, lo llevo yo" }));
+    expect(onSelf).toHaveBeenCalledTimes(1);
+  });
+
+  it("a los 10 minutos las dos acciones siguen igual y el aviso aparece en el detalle", () => {
+    full(searching(), {}, new Date("2026-10-08T10:12:00Z"));
+
+    expect(screen.getByRole("alert").textContent).toMatch(/Nadie ofertó todavía \(12 min\)/);
+    expect(screen.getByRole("button", { name: "Asignar a mano" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Lo llevo yo" })).toBeTruthy();
+  });
+
+  it("tomado: no hay acciones de resolver y sí un WhatsApp al repartidor", () => {
+    full(searching({ courier_status: "accepted", courier_id: DAMIAN } as Partial<Order>));
+
+    expect(screen.queryByRole("button", { name: "Asignar a mano" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Lo llevo yo" })).toBeNull();
+    expect(screen.getByText("Lo tomó Damián")).toBeTruthy();
+
+    const chat = screen.getByText("WhatsApp a Damián") as HTMLAnchorElement;
+    expect(chat.href).toContain("https://api.whatsapp.com/send?phone=5493644277105");
+  });
+
+  it("el local no ve más Pedir envío, Repartidor aceptó ni No puede", () => {
+    full(searching());
+
+    for (const name of [/pedir envío/i, /volver a pedir/i, /repartidor aceptó/i, /no puede/i]) {
+      expect(screen.queryByRole("button", { name })).toBeNull();
+    }
+  });
+
+  it("el detalle con un pedido por confirmar no bloquea el cambio de estado", () => {
+    full(searching({ status: "pending" } as Partial<Order>));
+
+    expect(screen.getByRole("button", { name: "Confirmado" })).toBeTruthy();
+    expect(screen.queryByText(/aceptado por el repartidor/i)).toBeNull();
   });
 
   it("el detalle muestra el historial del envío y no usa HTML del repartidor", () => {
     const { container } = full(
-      courierOrder({
+      searching({
         courier_status: "accepted",
+        courier_id: DAMIAN,
         courier_note: "<img src=x onerror=alert(1)>",
         delivery_events: [
-          { kind: "delivery", status: "pending", created_at: "2026-10-08T10:01:00Z", note: "Envío aceptado: Juan, 21:30" },
+          { kind: "delivery", status: "confirmed", created_at: "2026-10-08T10:01:00Z", note: "Envío tomado por Damián: Juan, 21:30" },
         ],
       } as unknown as Partial<Order>),
     );
 
-    expect(screen.getByText("Envío aceptado: Juan, 21:30")).toBeTruthy();
+    expect(screen.getByText("Envío tomado por Damián: Juan, 21:30")).toBeTruthy();
     expect(container.querySelector("img")).toBeNull();
     expect(screen.getByText("<img src=x onerror=alert(1)>")).toBeTruthy();
   });
 
   it("entregado al repartidor, el detalle no ofrece En camino ni Entregado", () => {
-    full(courierOrder({ status: "handed_to_courier", courier_status: "accepted" }));
+    full(searching({ status: "handed_to_courier", courier_status: "accepted", courier_id: DAMIAN } as Partial<Order>));
+
     expect(screen.queryByRole("button", { name: "En camino" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Entregado" })).toBeNull();
     expect(screen.getByText(/lo lleva el repartidor/i)).toBeTruthy();

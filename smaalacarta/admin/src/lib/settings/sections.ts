@@ -5,9 +5,12 @@ export type SettingsSection = { id: string; label: string };
 export function settingsSections({
   digitalMenu,
   pdfService,
+  courierDelivery = false,
 }: {
   digitalMenu: boolean;
   pdfService: boolean;
+  // El negocio tiene el envío con repartidor habilitado (ENVIO-58).
+  courierDelivery?: boolean;
 }): SettingsSection[] {
   return [
     { id: "datos", label: "Datos del negocio" },
@@ -29,6 +32,7 @@ export function settingsSections({
           { id: "contacto", label: "Contacto" },
         ]
       : []),
+    ...(courierDelivery ? [{ id: "envios", label: "Envíos" }] : []),
     { id: "contrasena", label: "Contraseña" },
   ];
 }

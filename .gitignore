@@ -3,3 +3,8 @@ coverage/
 .DS_Store
 .env*
 !.env*.example
+
+# Claude Code: configuración personal y archivos de sesión
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+.claude/worktrees/

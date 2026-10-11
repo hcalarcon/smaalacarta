@@ -166,7 +166,7 @@ Hecho en el código (migración `20260929000000_pedidos.sql`, ya aplicada a la b
 
 ## Etapa 6c — Mejoras de la landing
 
-Requisitos LANDING-1 a 23 en `docs/SPEC.md`, cubiertos por `landing/landing.test.js` y `landing/hola.test.js`.
+Requisitos LANDING-1 a 29 en `docs/SPEC.md`, cubiertos por `landing/landing.test.js` y `landing/hola.test.js`.
 
 - [x] [herni] Botón principal legible sobre la foto y sin el error de tipeo ("ahora")
 - [x] [herni] Imagen para compartir real (`assets/og-image.jpg`, 1200×630, 50 KB) y logo liviano (`logo.png`) en lugar del `favicon.svg` de 2,5 MB
@@ -183,6 +183,7 @@ Requisitos LANDING-1 a 23 en `docs/SPEC.md`, cubiertos por `landing/landing.test
 - [x] [herni] Página `/hola` para quien llega por la tarjeta de visita (LANDING-10 a 16): un solo objetivo, WhatsApp, sin JS
 - [x] [herni] Renovación de la landing (LANDING-17 a 23): inicio sin foto con botón a WhatsApp y teléfono animado, sin comisión y carta en 3 idiomas, sin imágenes de terceros y botón fijo de WhatsApp en el celular; rediseño visual completo, tono de empresa (sin foto de persona ni íconos de emoji) y email smaalacarta@gmail.com
 - [x] [herni] **Revisar los textos nuevos**: que el panel, las promociones y el seguimiento estén realmente incluidos en el plan Pedidos Online antes de publicarlos
+- [x] [herni] `/hola` pasa a ser la página del Programa Pioneros (LANDING-28 y 29): 7 lugares, Ozburguer fundador, beneficios, grilla de lugares y mensaje de WhatsApp de pioneros; los precios se revisan cada 4 meses
 - [ ] [por asignar] Reemplazar `favicon.svg` (lo siguen usando las demos de `web/`) y agregar las redes sociales cuando existan
 - [ ] [por asignar] El modal de demos: la sección "Menú Web" muestra el mismo demo
       interactivo que "Pedidos Online" (no hay todavía una demo real de solo
