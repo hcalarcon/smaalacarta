@@ -60,6 +60,8 @@ dev-fede    espacio de Fede (usuario git `FedeAtadia`).
    migraciones en git, no la base.
    - Una migración que ya llegó a `main` **no se edita**: se agrega otra.
    - Toda tabla nueva lleva RLS filtrando por `business_id`, en la misma migración.
+     Excepción aprobada por Herni: `push_subscriptions` filtra por `user_id`, porque la
+     suscripción es de la persona y la cuenta repartidor no tiene negocio.
    - Después de una migración: `npm run db:types` y commitear `src/types/database.ts`.
    - Avisá antes de crear una migración si otra tarea del plan también toca el esquema.
 
@@ -252,9 +254,10 @@ negocio nuevo funciona apenas existe y está publicado, sin tocar código.
   confirmarlos el local) y los repartidores que cubren la zona ofertan (`courier_make_offer`, con
   motivo si cambian el precio de lista); el cliente elige en su seguimiento y, si no, a
   los 5 minutos de la primera oferta se elige sola la más barata. **La elección
-  automática es perezosa, sin pg_cron**: `settle_courier_offers` corre antes de leer
-  (seguimiento, panel del repartidor, panel del local), y los 5 minutos viven solo en
-  `courier_offers_window()`. El favorito del local (`favorite_courier_id`) solo ordena y
+  automática es perezosa y además corre por tiempo**: `settle_courier_offers` corre antes
+  de leer (seguimiento, panel del repartidor, panel del local) y `run_order_timers()` la
+  corre cada minuto con pg_cron para todos los pedidos vencidos (así el aviso llega aunque
+  nadie mire); los 5 minutos viven solo en `courier_offers_window()`. El favorito del local (`favorite_courier_id`) solo ordena y
   desempata; ya no hay ventana exclusiva.
 - **Multi-negocio**: `getCurrentBusiness()` resuelve usuario → `business_users`
   (con `role`) → `businesses`; las páginas del panel usan `requireBusiness()`.

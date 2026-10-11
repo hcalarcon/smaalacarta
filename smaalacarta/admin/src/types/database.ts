@@ -794,6 +794,7 @@ export type Database = {
           delivery_zone_name: string | null
           id: string
           mp_payment_id: string | null
+          no_offers_alerted_at: string | null
           notes: string | null
           offered_at: string | null
           order_number: string
@@ -833,6 +834,7 @@ export type Database = {
           delivery_zone_name?: string | null
           id?: string
           mp_payment_id?: string | null
+          no_offers_alerted_at?: string | null
           notes?: string | null
           offered_at?: string | null
           order_number: string
@@ -872,6 +874,7 @@ export type Database = {
           delivery_zone_name?: string | null
           id?: string
           mp_payment_id?: string | null
+          no_offers_alerted_at?: string | null
           notes?: string | null
           offered_at?: string | null
           order_number?: string
@@ -1162,6 +1165,36 @@ export type Database = {
           },
         ]
       }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          id: string
+          p256dh: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          id?: string
+          p256dh: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          id?: string
+          p256dh?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       super_admins: {
         Row: {
           created_at: string
@@ -1326,6 +1359,10 @@ export type Database = {
           product_count: number
         }[]
       }
+      delete_push_subscription: {
+        Args: { p_endpoint: string }
+        Returns: undefined
+      }
       delete_delivery_zone: { Args: { p_zone_id: string }; Returns: string }
       is_open_now: {
         Args: { p_at: string; p_schedule: Json }
@@ -1379,6 +1416,17 @@ export type Database = {
       resolve_order_options: {
         Args: { p_business_id: string; p_options: Json; p_product_id: string }
         Returns: Json
+      }
+      no_offers_alert_window: { Args: never; Returns: string }
+      run_order_timers: { Args: never; Returns: undefined }
+      save_push_subscription: {
+        Args: {
+          p_auth: string
+          p_endpoint: string
+          p_p256dh: string
+          p_user_agent?: string
+        }
+        Returns: undefined
       }
       save_business_settings: {
         Args: {

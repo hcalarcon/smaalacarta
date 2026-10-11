@@ -1704,6 +1704,79 @@ precios en 0; no existe "incluye N y el resto cuesta X".
 
 ---
 
+## ADMIN-PWA — Panel instalable y avisos push
+
+*Aplicado por `app/manifest.ts`, `public/sw.js`, `src/lib/push/` y `app/api/push/order/route.ts`, con la migración
+`20261025000000_avisos_push.sql`. Cubierto por `src/lib/db/push.test.ts`, `src/lib/push/*.test.ts` y
+`app/api/push/routes.test.ts`. No es la PWA del menú público (PWA-1 a 3): esta es la del panel.*
+
+**Suscripciones y tareas por tiempo (base)**
+
+- **ADMIN-PWA-1** `push_subscriptions` es de la persona, no del negocio: cada usuario lee y borra solo sus
+  suscripciones (por `user_id`), no hay INSERT ni UPDATE directos y `anon` no puede nada.
+- **ADMIN-PWA-2** `save_push_subscription(endpoint, p256dh, auth, user_agent)` guarda la suscripción del
+  usuario con sesión y, si ese `endpoint` ya estaba con otra cuenta (el mismo celular), la pasa a la actual.
+- **ADMIN-PWA-3** `save_push_subscription` rechaza lo que no tiene sesión, un `endpoint` que no empieza con
+  `https://` y cualquier dato vacío.
+- **ADMIN-PWA-4** `delete_push_subscription(endpoint)` borra la suscripción propia y nunca la de otro.
+- **ADMIN-PWA-5** `run_order_timers()` resuelve la elección automática de todos los pedidos con ofertas
+  vencidas, aunque nadie tenga el panel ni el seguimiento abierto.
+- **ADMIN-PWA-6** `run_order_timers()` marca en `orders.no_offers_alerted_at`, una sola vez, los pedidos con
+  envío que buscan repartidor hace más de 10 minutos sin ninguna oferta; no marca los que tienen ofertas, los
+  que llevan menos de 10 minutos ni los que esperan un pago de Mercado Pago.
+- **ADMIN-PWA-7** Cuando un pedido vuelve a buscar repartidor (una devolución), `no_offers_alerted_at` se limpia
+  y puede avisar de nuevo.
+- **ADMIN-PWA-8** `run_order_timers()` no la puede llamar `anon` ni `authenticated`, y si existe `pg_cron` queda
+  programada cada minuto.
+
+**Instalar y registrar**
+
+- **ADMIN-PWA-9** El manifest del panel se llama "SMA a la Carta" (corto "SMA Panel"), arranca y se acota en
+  `/admin/`, se muestra `standalone` con los colores de la marca y trae los íconos de 192, 512 y maskable.
+- **ADMIN-PWA-10** El service worker (`/admin/sw.js`) no guarda nada en caché: solo muestra los avisos
+  (`title`, `body`, `tag`, `url`) y, al tocarlos, enfoca una ventana del panel y navega a la `url`, o abre una.
+- **ADMIN-PWA-11** El `proxy` no pide sesión a `sw.js`, al manifest, a `icons/` ni a `api/push/`.
+- **ADMIN-PWA-12** "Instalar app" se ve cuando el navegador ofreció instalar (`beforeinstallprompt`) y, en
+  iPhone/iPad sin instalar, abre un diálogo con los pasos "Tocá Compartir → Agregar a inicio"; no se ve si la
+  app ya está instalada ni en navegadores que no permiten instalar.
+- **ADMIN-PWA-13** "Activar avisos" se ve si hay service worker y `PushManager` y el aparato no está suscripto;
+  suscripto dice "Avisos activados" con opción de desactivar.
+- **ADMIN-PWA-14** Con el permiso bloqueado dice "Los avisos están bloqueados: habilitalos en los ajustes del
+  navegador"; en iPhone sin instalar, "Instalá la app para recibir avisos".
+- **ADMIN-PWA-15** El panel del repartidor muestra, mientras no tenga avisos activados, un recuadro arriba:
+  "Activá los avisos para enterarte de los pedidos nuevos".
+- **ADMIN-PWA-16** Los controles solo se ven donde el layout pasa `showAppControls` (panel del negocio y del
+  repartidor), no en `/superadmin`.
+
+**Avisos (los dispara un Database Webhook sobre `orders`)**
+
+- **ADMIN-PWA-17** `POST /admin/api/push/order` responde 401 y no hace nada si falta `x-webhook-secret` o no
+  coincide con `PUSH_WEBHOOK_SECRET` (comparación de tiempo constante).
+- **ADMIN-PWA-18** Pedido nuevo para ofertar: cuando un pedido con envío pasa a ser ofertable (nace buscando,
+  el local confirma un anticipado o programado, vuelve por una devolución o se paga) avisa a los repartidores
+  activos que cubren la zona y no lo rechazaron ni lo devolvieron: "Pedido nuevo para ofertar" ·
+  "{local} · {barrio} · ${precio de lista}" → `/admin/repartidor`.
+- **ADMIN-PWA-19** Te eligieron: cuando el pedido pasa a `accepted` avisa al elegido "¡Te eligieron!" ·
+  "{local} · #{número} · {barrio}", o "{local} te asignó un envío" si lo asignó el local.
+- **ADMIN-PWA-20** Eligieron a otro: a los repartidores con oferta que no fueron elegidos (también cuando el
+  local lo lleva él) "Eligieron otro repartidor" · "{local} · {barrio}".
+- **ADMIN-PWA-21** Cancelado por el local: al repartidor elegido y a los que tenían oferta, "Pedido cancelado" ·
+  "{local} · #{número}".
+- **ADMIN-PWA-22** Pedido nuevo: a los miembros del negocio "Pedido nuevo #{número}" · "{cliente} · {entrega}"
+  → `/admin/dashboard/orders`; no avisa los pedidos cargados por el propio local (`source = 'manual'`).
+- **ADMIN-PWA-23** El cliente eligió repartidor: al local "#{número}: lo lleva {repartidor}" · "${precio}",
+  solo si lo eligió el cliente o la elección automática, no si lo asignó el local.
+- **ADMIN-PWA-24** Nadie ofertó en 10 minutos: al local "#{número}: nadie ofertó todavía" · "Asignalo a mano o
+  llevalo vos", cuando `no_offers_alerted_at` pasa de vacío a marcado.
+- **ADMIN-PWA-25** Una actualización que no cambia nada de lo anterior (otro estado, una nota) no manda ningún
+  aviso, y cada aviso lleva `tag` `order-<id>-<evento>` para no repetirse.
+- **ADMIN-PWA-26** Si un aparato responde 404 o 410 su suscripción se borra; un error con un aparato no frena
+  a los demás, y la ruta responde 200 aunque algún push falle.
+- **ADMIN-PWA-27** Los destinatarios y las claves salen del servidor con la clave de servicio, solo después de
+  comprobar el secreto del webhook; las claves VAPID se leen al llamar, no al cargar el módulo.
+
+---
+
 ## No especificado deliberadamente
 
 Lo que está fuera a propósito. Un requisito para cualquiera de estas cosas se
