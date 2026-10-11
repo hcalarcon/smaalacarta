@@ -15,8 +15,8 @@ import { formatPrice } from "./price.js";
 const ID_A = "11111111-1111-4111-8111-111111111111";
 const ID_B = "22222222-2222-4222-8222-222222222222";
 
+// Desde la etapa 2 el servidor no manda repartidor ni WhatsApp al pedir (ENVIO-75): todavía no hay uno.
 const RESPUESTA = {
-  repartidor: "Repartos al Toque",
   zonas: [
     { id: ID_A, nombre: "Centro (hasta Av. Koessler)", precio: 4500 },
     { id: ID_B, nombre: "Cantera", precio: 5000 },
@@ -24,9 +24,9 @@ const RESPUESTA = {
 };
 
 describe("normalizeZones — ENVIO-20", () => {
-  it("deja el repartidor y los barrios en el orden recibido", () => {
+  it("deja los barrios en el orden recibido, sin repartidor", () => {
     expect(normalizeZones(RESPUESTA)).toEqual({
-      courier: "Repartos al Toque",
+      courier: null,
       whatsapp: null,
       zones: [
         { id: ID_A, name: "Centro (hasta Av. Koessler)", price: 4500 },
@@ -43,9 +43,9 @@ describe("normalizeZones — ENVIO-20", () => {
   it.each([
     ["null", null],
     ["un texto", "hola"],
-    ["sin repartidor", { zonas: RESPUESTA.zonas }],
-    ["sin zonas", { repartidor: "X" }],
-    ["zonas vacías", { repartidor: "X", zonas: [] }],
+    ["sin zonas", {}],
+    ["zonas vacías", { zonas: [] }],
+    ["zonas que no son una lista", { zonas: "Cantera" }],
   ])("da null con %s", (_nombre, data) => {
     expect(normalizeZones(data)).toBeNull();
   });
@@ -57,15 +57,21 @@ describe("normalizeZones — ENVIO-20", () => {
       { id: ID_A, nombre: "B", precio: -1 },
       { id: ID_A, nombre: "C", precio: "mucho" },
     ];
-    const sucio = { repartidor: "X", zonas: [...malos, { id: ID_B, nombre: "Válido", precio: 10 }] };
+    const sucio = { zonas: [...malos, { id: ID_B, nombre: "Válido", precio: 10 }] };
 
     expect(normalizeZones(sucio)?.zones).toEqual([{ id: ID_B, name: "Válido", price: 10 }]);
-    expect(normalizeZones({ repartidor: "X", zonas: malos })).toBeNull();
+    expect(normalizeZones({ zonas: malos })).toBeNull();
+  });
+
+  it("el repartidor es opcional: si un servidor sin actualizar lo manda, se lee sin romper", () => {
+    expect(normalizeZones({ ...RESPUESTA, repartidor: "Repartos al Toque" })?.courier).toBe("Repartos al Toque");
+    expect(normalizeZones({ ...RESPUESTA, repartidor: "  " })?.courier).toBeNull();
+    expect(normalizeZones({ ...RESPUESTA, repartidor: 7 })?.courier).toBeNull();
   });
 });
 
-describe("WhatsApp del repartidor — ENVIO-44", () => {
-  it("lo deja con 8 a 15 dígitos", () => {
+describe("WhatsApp del repartidor — opcional", () => {
+  it("si viene, lo deja con 8 a 15 dígitos", () => {
     expect(normalizeZones({ ...RESPUESTA, whatsapp: "5493644277105" })?.whatsapp).toBe("5493644277105");
   });
 
@@ -147,10 +153,10 @@ describe("campos de envío en el checkout — ENVIO-20", () => {
   });
 });
 
-describe("courierOrderFields — ENVIO-21", () => {
+describe("courierOrderFields — ENVIO-21 y 87", () => {
   const zones = normalizeZones(RESPUESTA);
 
-  it("con envío manda barrio, teléfono y dirección sin espacios de más", () => {
+  it("con envío manda barrio y dirección sin espacios de más, y no el teléfono", () => {
     expect(
       courierOrderFields({
         zones,
@@ -159,72 +165,38 @@ describe("courierOrderFields — ENVIO-21", () => {
         phone: " 3644277105 ",
         address: "  Av. Siempre Viva 742 ",
       }),
-    ).toEqual({ deliveryZone: ID_B, customerPhone: "3644277105", deliveryAddress: "Av. Siempre Viva 742" });
+    ).toEqual({ deliveryZone: ID_B, deliveryAddress: "Av. Siempre Viva 742" });
   });
 
   it("sin envío, o con un barrio que no está en la lista, no manda nada", () => {
-    const base = { phone: "3644277105", address: "Calle 123" };
+    const base = { address: "Calle 123" };
     expect(courierOrderFields({ ...base, zones, delivery: "retiro", zoneId: ID_B })).toEqual({});
     expect(courierOrderFields({ ...base, zones: null, delivery: "delivery", zoneId: ID_B })).toEqual({});
     expect(courierOrderFields({ ...base, zones, delivery: "delivery", zoneId: "otro" })).toEqual({});
   });
 });
 
-describe("courierWhatsappLines con el repartidor — ENVIO-44", () => {
+describe("courierWhatsappLines — ENVIO-22 y 88", () => {
   const zone = { id: ID_B, name: "Cantera", price: 5000 };
-  const customer = { address: "Av. Siempre Viva 742", phone: "3644277105" };
 
-  it("dice el repartidor y su teléfono", () => {
-    const text = courierWhatsappLines(zone, customer, formatPrice, {
-      courier: "Repartos al Toque",
-      whatsapp: "5493644277105",
-    });
+  it("dice barrio, envío (se paga al repartidor) y dirección, en español, sin nombrar al repartidor", () => {
+    const text = courierWhatsappLines(zone, { address: "Av. Siempre Viva 742" }, formatPrice);
 
     expect(text).toBe(
       [
         "📍 Barrio: Cantera",
-        "🛵 Envío con Repartos al Toque: $5.000, se paga al repartidor",
-        "📲 Tel. de Repartos al Toque: +5493644277105",
+        "🛵 Envío: $5.000, se paga al repartidor",
         "🏠 Dirección: Av. Siempre Viva 742",
-        "📞 Teléfono: 3644277105",
         "",
       ].join("\n"),
     );
   });
 
-  it("sin WhatsApp no pone la línea del teléfono", () => {
-    const text = courierWhatsappLines(zone, customer, formatPrice, { courier: "Repartos al Toque", whatsapp: null });
+  it("no lleva el teléfono del cliente ni el de ningún repartidor (el del cliente va aparte)", () => {
+    const text = courierWhatsappLines(zone, { address: "Calle 123", phone: "3644277105" }, formatPrice);
 
-    expect(text).not.toContain("Tel. de");
-    expect(text).toContain("🛵 Envío con Repartos al Toque: $5.000, se paga al repartidor");
-  });
-
-  it("el nombre sale del dato, no está escrito a mano", () => {
-    const text = courierWhatsappLines(zone, customer, formatPrice, { courier: "Otro Reparto", whatsapp: "5493510000000" });
-
-    expect(text).toContain("Envío con Otro Reparto");
-    expect(text).toContain("Tel. de Otro Reparto: +5493510000000");
+    expect(text).not.toMatch(/Tel/);
+    expect(text).not.toContain("3644277105");
     expect(text).not.toContain("Repartos al Toque");
-  });
-});
-
-describe("courierWhatsappLines — ENVIO-22", () => {
-  it("dice barrio, envío (se paga al repartidor), dirección y teléfono, en español", () => {
-    const text = courierWhatsappLines(
-      { id: ID_B, name: "Cantera", price: 5000 },
-      { address: "Av. Siempre Viva 742", phone: "3644277105" },
-      formatPrice,
-      { courier: "Repartos al Toque", whatsapp: null },
-    );
-
-    expect(text).toBe(
-      [
-        "📍 Barrio: Cantera",
-        "🛵 Envío con Repartos al Toque: $5.000, se paga al repartidor",
-        "🏠 Dirección: Av. Siempre Viva 742",
-        "📞 Teléfono: 3644277105",
-        "",
-      ].join("\n"),
-    );
   });
 });

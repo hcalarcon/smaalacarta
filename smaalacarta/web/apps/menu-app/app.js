@@ -25,7 +25,7 @@ let MERCADOPAGO = null;
 let OPTIONS = null;
 let OPTIONS_SHEET = null;
 let CART_LINES = null;
-// Envío con Repartos al Toque (ENVIO-20): los barrios del negocio, o null si no tiene o falló.
+// Envío con repartidor (ENVIO-20): los barrios del negocio, o null si no tiene o falló.
 let DZ = null;
 let COURIER_ZONES = null;
 
@@ -1000,22 +1000,24 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
   const form = e.target;
   const f = new FormData(form);
 
-  // Envío con repartidor (ENVIO-21): barrio, dirección y teléfono. Los campos ocultos van
-  // deshabilitados y no entran en el FormData.
+  // El teléfono del cliente es obligatorio en todos los pedidos (ENVIO-87): es cómo el local lo contacta.
+  const phone = String(f.get("telefono") ?? "").trim();
+  if (DZ && !DZ.isValidPhone(phone)) {
+    alert(tr("error.invalidPhone"));
+    return;
+  }
+
+  // Envío con repartidor (ENVIO-21): barrio y dirección. Los campos ocultos van deshabilitados y no
+  // entran en el FormData.
   const courier = DZ
     ? DZ.courierOrderFields({
         zones: COURIER_ZONES,
         delivery: f.get("entrega"),
         zoneId: f.get("barrio"),
-        phone: f.get("telefono"),
         address: f.get("direccion"),
       })
     : {};
   const courierZone = courier.deliveryZone ? DZ.findZone(COURIER_ZONES, courier.deliveryZone) : null;
-  if (courierZone && !DZ.isValidPhone(courier.customerPhone)) {
-    alert(tr("error.invalidPhone"));
-    return;
-  }
 
   // Con Mercado Pago el cliente sale a pagar y WhatsApp queda para después, desde el seguimiento
   // (PUBLICO-36): no se abre la ventana.
@@ -1030,15 +1032,11 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
   let msg = `🍔 *Nuevo pedido*\n\n`;
 
   msg += `👤 Cliente: ${f.get("nombre")}\n`;
+  msg += `📞 Teléfono: ${phone}\n`;
   msg += `🚚 Entrega: ${f.get("entrega")}\n`;
   // El precio del envío es de referencia y se paga al repartidor: no entra en el total (ENVIO-22).
   if (courierZone) {
-    msg += DZ.courierWhatsappLines(
-      courierZone,
-      { address: courier.deliveryAddress, phone: courier.customerPhone },
-      PRICE.formatPrice,
-      COURIER_ZONES,
-    );
+    msg += DZ.courierWhatsappLines(courierZone, { address: courier.deliveryAddress }, PRICE.formatPrice);
   }
 
   const ahora = f.get("ahora");
@@ -1103,6 +1101,8 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
       items,
       scheduledFor,
       preorder: Boolean(preorder),
+      // El teléfono va siempre; barrio y dirección, solo con envío (ENVIO-87).
+      customerPhone: phone,
       ...courier,
     });
 
@@ -1139,6 +1139,10 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     } else if (result.reason === "invalid_delivery" || result.reason === "invalid_payment") {
       WA_WINDOW?.discardPlaceholder(placeholder);
       alert(tr("error.optionsChanged"));
+      return;
+    } else if (result.reason === "invalid_phone") {
+      WA_WINDOW?.discardPlaceholder(placeholder);
+      alert(tr("error.invalidPhone"));
       return;
     } else if (result.reason === "invalid_zone") {
       // El barrio se dio de baja o el negocio ya no tiene envío: se piden los barrios de nuevo.
@@ -1349,9 +1353,9 @@ function applyCheckoutOptions(config) {
   });
 }
 
-// Envío con Repartos al Toque (ENVIO-20): el select de barrio, la dirección y el teléfono se ven
-// (y se exigen) solo con entrega "delivery" y barrios disponibles. Los campos ocultos quedan
-// deshabilitados. Todo con textContent: el nombre del barrio no se interpreta como HTML.
+// Envío con repartidor (ENVIO-20): el select de barrio y la dirección se ven (y se exigen) solo con
+// entrega "delivery" y barrios disponibles. Los campos ocultos quedan deshabilitados. El teléfono
+// está siempre (ENVIO-87). Todo con textContent: el nombre del barrio no se interpreta como HTML.
 function renderCourierFields() {
   const box = document.querySelector("#envio-repartidor");
   if (!box || !DZ) return;
@@ -1359,13 +1363,12 @@ function renderCourierFields() {
   const delivery = document.querySelector('#form-pedido select[name="entrega"]');
   const zone = box.querySelector('select[name="barrio"]');
   const address = box.querySelector('input[name="direccion"]');
-  const phone = box.querySelector('input[name="telefono"]');
-  if (!zone || !address || !phone) return;
+  if (!zone || !address) return;
 
   const show = DZ.needsCourier(COURIER_ZONES, delivery?.value);
   box.hidden = !show;
 
-  [zone, address, phone].forEach((field) => {
+  [zone, address].forEach((field) => {
     field.disabled = !show;
     field.required = show;
   });

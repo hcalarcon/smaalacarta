@@ -391,7 +391,7 @@ describe("createOrder con envío — ENVIO-21", () => {
   const ZONA = "11111111-1111-4111-8111-111111111111";
   const RESPUESTA = { code: "0123456789abcdef0123", number: 1, total: 1 };
 
-  it("manda barrio, teléfono y dirección solo cuando vienen", async () => {
+  it("manda barrio, teléfono y dirección solo cuando vienen (el teléfono, en todos los pedidos)", async () => {
     const con = fakeFetch(RESPUESTA);
     await createOrder({
       ...base,
@@ -415,9 +415,25 @@ describe("createOrder con envío — ENVIO-21", () => {
     expect(body).not.toHaveProperty("p_delivery_address");
   });
 
-  it.each(["P0015", "P0016"])("%s (envío o barrio inválido) da el motivo invalid_zone", async (code) => {
-    const fetchImpl = vi.fn(async () => ({ ok: false, status: 400, json: async () => ({ code }) }));
+  it("P0016 (barrio inválido) da el motivo invalid_zone", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: false, status: 400, json: async () => ({ code: "P0016" }) }));
     const r = await createOrder({ ...base, deliveryZone: ZONA, fetchImpl });
     expect(r).toEqual({ ok: false, reason: "invalid_zone" });
+  });
+
+  it("un retiro también manda el teléfono, sin barrio ni dirección", async () => {
+    const fetchImpl = fakeFetch(RESPUESTA);
+    await createOrder({ ...base, delivery: "retiro", customerPhone: "3644277105", fetchImpl });
+
+    const body = JSON.parse(fetchImpl.mock.calls[0][1].body);
+    expect(body.p_customer_phone).toBe("3644277105");
+    expect(body).not.toHaveProperty("p_delivery_zone");
+    expect(body).not.toHaveProperty("p_delivery_address");
+  });
+
+  it("P0018 (falta el teléfono) da el motivo invalid_phone", async () => {
+    const fetchImpl = vi.fn(async () => ({ ok: false, status: 400, json: async () => ({ code: "P0018" }) }));
+    const r = await createOrder({ ...base, fetchImpl });
+    expect(r).toEqual({ ok: false, reason: "invalid_phone" });
   });
 });

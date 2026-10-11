@@ -230,7 +230,10 @@ export function itemRow(doc, item, money) {
   return li;
 }
 
-const DELIVERY_STATES = ["waiting", "requested", "accepted", "rejected"];
+// Los estados del envío que muestra la página (ENVIO-91): esperando la confirmación, buscando
+// repartidor, tomado por uno y que lo lleva el local. Los viejos (`requested`, `rejected`) o los que
+// no se conocen no rompen nada: no muestran el bloque (ENVIO-92).
+const DELIVERY_STATES = ["waiting", "searching", "accepted", "self"];
 
 // El WhatsApp del repartidor es público (ENVIO-44): igual que el `CHECK` de `couriers`, de 8 a 15
 // dígitos; si no, no se usa (y nunca llega a un link).
@@ -242,17 +245,17 @@ function normalizeDelivery(data) {
   if (!data || typeof data !== "object") return null;
   if (!DELIVERY_STATES.includes(data.estado)) return null;
 
-  const price = Number(data.precio);
-  const list = Number(data.precio_lista);
-  if (!Number.isFinite(price) || !Number.isFinite(list)) return null;
+  // El precio solo se usa con el envío tomado: sin él (o roto) el bloque no lo muestra.
+  const price = data.precio === null || data.precio === undefined ? NaN : Number(data.precio);
+  const list = data.precio_lista === null || data.precio_lista === undefined ? NaN : Number(data.precio_lista);
 
   return {
     courier: typeof data.repartidor === "string" ? data.repartidor : "",
     whatsapp:
       typeof data.whatsapp === "string" && COURIER_WHATSAPP.test(data.whatsapp) ? data.whatsapp : null,
     zone: typeof data.zona === "string" ? data.zona : "",
-    listPrice: list,
-    price,
+    listPrice: Number.isFinite(list) ? list : null,
+    price: Number.isFinite(price) ? price : null,
     reason: typeof data.motivo_cambio === "string" && data.motivo_cambio ? data.motivo_cambio : null,
     state: data.estado,
     note: typeof data.nota === "string" && data.nota ? data.nota : null,
@@ -286,12 +289,12 @@ export async function fetchDelivery({ url, key, code, fetchImpl = globalThis.fet
   }
 }
 
-// El teléfono del repartidor y el link para escribirle (ENVIO-44): solo mientras el envío espera,
-// fue consultado o está aceptado, y si hay un WhatsApp válido.
+// El teléfono del repartidor y el link para escribirle (ENVIO-44 y 91): solo con el envío tomado y si
+// hay un WhatsApp válido.
 function courierContact(delivery, lang) {
-  if (!delivery.whatsapp) return null;
+  if (!delivery.whatsapp || delivery.state !== "accepted") return null;
 
-  const repartidor = delivery.courier || "Repartos al Toque";
+  const repartidor = delivery.courier || t("tracker.delivery.courierWord", lang);
   return {
     line: t("tracker.delivery.contact", lang, { repartidor, whatsapp: delivery.whatsapp }),
     link: {
@@ -301,32 +304,41 @@ function courierContact(delivery, lang) {
   };
 }
 
-// El bloque de envío de la página (ENVIO-29 y 44): qué pasa con el repartidor, según `state`.
-// `money` formatea los precios en el idioma del cliente. Devuelve `{ tone, lines, link? }`.
+// El bloque de envío de la página (ENVIO-29, 44, 91 y 92): qué pasa con el envío, según `state`.
+// `money` formatea los precios en el idioma del cliente. Devuelve `{ tone, lines, link? }`, o null si
+// no hay nada que mostrar (todavía no se confirmó el pedido, o un estado que no se conoce).
 export function deliveryNotice(delivery, lang, money) {
   if (!delivery) return null;
 
-  // Rechazado: el que se comunica es el local, no el repartidor.
-  if (delivery.state === "rejected") {
-    return { tone: "rejected", lines: [t("tracker.delivery.rejected", lang)] };
+  switch (delivery.state) {
+    // Antes de que el local confirme la búsqueda no empezó: no hay nada nuevo que decir.
+    case "waiting":
+      return null;
+    case "searching":
+      return { tone: "searching", lines: [t("tracker.delivery.searching", lang)] };
+    case "self":
+      return { tone: "self", lines: [t("tracker.delivery.self", lang)] };
+    case "accepted":
+      break;
+    default:
+      return null;
   }
 
   const contact = courierContact(delivery, lang);
 
-  if (delivery.state !== "accepted") {
-    const lines = [t("tracker.delivery.searching", lang)];
-    if (contact) lines.push(contact.line);
-
-    return { tone: "searching", lines, ...(contact ? { link: contact.link } : {}) };
-  }
-
-  const parts = [t("tracker.delivery.accepted", lang, { repartidor: delivery.courier || "Repartos al Toque" })];
+  const parts = [
+    delivery.courier
+      ? t("tracker.delivery.accepted", lang, { repartidor: delivery.courier })
+      : t("tracker.delivery.acceptedAnon", lang),
+  ];
   if (delivery.note) parts.push(delivery.note);
-  parts.push(t("tracker.delivery.pay", lang, { precio: money.format(delivery.price) }));
+  if (delivery.price !== null) {
+    parts.push(t("tracker.delivery.pay", lang, { precio: money.format(delivery.price) }));
+  }
 
   const lines = [parts.join(" · ")];
 
-  if (delivery.price !== delivery.listPrice) {
+  if (delivery.price !== null && delivery.listPrice !== null && delivery.price !== delivery.listPrice) {
     const precio = money.format(delivery.listPrice);
     lines.push(
       delivery.reason

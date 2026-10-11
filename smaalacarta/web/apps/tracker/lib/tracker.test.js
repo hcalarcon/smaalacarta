@@ -444,67 +444,46 @@ describe("fetchDelivery — ENVIO-29", () => {
   });
 });
 
-describe("teléfono del repartidor en el seguimiento — ENVIO-44", () => {
-  const money = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
-  const base = {
-    courier: "Repartos al Toque",
-    whatsapp: "5493644277105",
-    zone: "Cantera",
-    listPrice: 5000,
-    price: 5000,
-    reason: null,
-    state: "waiting",
-    note: null,
-  };
-  const link = { text: "Escribir a Repartos al Toque", href: "https://wa.me/5493644277105" };
-
-  it.each(["waiting", "requested"])("con el envío %s muestra la línea y el link", (state) => {
-    expect(deliveryNotice({ ...base, state }, "es", money)).toEqual({
-      tone: "searching",
-      lines: ["Buscando repartidor", "Repartos al Toque: +5493644277105"],
-      link,
+// ENVIO-91 y 92: los estados nuevos del envío y los viejos que no tienen que romper la página.
+describe("fetchDelivery con los estados nuevos — ENVIO-91 y 92", () => {
+  const answer = (extra) =>
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ zona: "Cantera", precio_lista: 5000, precio: 5000, ...extra }),
     });
+
+  it.each(["waiting", "searching", "self"])("el estado %s no necesita repartidor", async (estado) => {
+    const r = await fetchDelivery({ ...cfg, code: CODE, fetchImpl: answer({ estado }) });
+
+    expect(r.ok).toBe(true);
+    expect(r.data).toMatchObject({ state: estado, courier: "", whatsapp: null });
   });
 
-  it("aceptado: la línea va al final y el link está", () => {
-    const notice = deliveryNotice({ ...base, state: "accepted", price: 6500, reason: "Lluvia" }, "es", money);
-
-    expect(notice.tone).toBe("accepted");
-    expect(notice.lines.at(-1)).toBe("Repartos al Toque: +5493644277105");
-    expect(notice.lines).toHaveLength(3);
-    expect(notice.link).toEqual(link);
+  it.each(["requested", "rejected"])("el estado viejo %s no rompe: no muestra el bloque", async (estado) => {
+    const r = await fetchDelivery({ ...cfg, code: CODE, fetchImpl: answer({ estado, repartidor: "X" }) });
+    expect(r).toEqual({ ok: true, data: null });
   });
 
-  it("rechazado: no aparece, el que se comunica es el local", () => {
-    const notice = deliveryNotice({ ...base, state: "rejected" }, "es", money);
+  it("sin precios (un servidor que no los manda) no rompe", async () => {
+    const r = await fetchDelivery({
+      ...cfg,
+      code: CODE,
+      fetchImpl: vi.fn().mockResolvedValue({ ok: true, json: async () => ({ estado: "searching" }) }),
+    });
 
-    expect(notice.link).toBeUndefined();
-    expect(JSON.stringify(notice)).not.toContain("5493644277105");
-  });
-
-  it.each(["waiting", "requested", "accepted"])("sin WhatsApp no aparece (%s)", (state) => {
-    const notice = deliveryNotice({ ...base, state, whatsapp: null }, "es", money);
-
-    expect(notice.link).toBeUndefined();
-    expect(notice.lines.join(" ")).not.toContain("+");
-  });
-
-  it("se traduce el link", () => {
-    expect(deliveryNotice(base, "en", money).link.text).toBe("Message Repartos al Toque");
-    expect(deliveryNotice(base, "pt", money).link.text).toBe("Escrever para Repartos al Toque");
+    expect(r.data).toMatchObject({ state: "searching", price: null, listPrice: null });
   });
 });
 
 describe("fetchDelivery con WhatsApp — ENVIO-44", () => {
-  const cfg = { url: "https://x.supabase.co", key: "sb_publishable_abc", code: CODE };
   const answer = (extra) =>
     vi.fn().mockResolvedValue({
       ok: true,
-      json: async () => ({ repartidor: "Repartos al Toque", zona: "Cantera", precio_lista: 5000, precio: 5000, estado: "waiting", ...extra }),
+      json: async () => ({ repartidor: "Damián", zona: "Cantera", precio_lista: 5000, precio: 5000, estado: "accepted", ...extra }),
     });
 
   it("lo deja con 8 a 15 dígitos", async () => {
-    const r = await fetchDelivery({ ...cfg, fetchImpl: answer({ whatsapp: "5493644277105" }) });
+    const r = await fetchDelivery({ ...cfg, code: CODE, fetchImpl: answer({ whatsapp: "5493644277105" }) });
     expect(r.data.whatsapp).toBe("5493644277105");
   });
 
@@ -516,70 +495,108 @@ describe("fetchDelivery con WhatsApp — ENVIO-44", () => {
     ["muy largo", "1234567890123456"],
     ["una URL", "javascript:alert(1)"],
   ])("lo descarta %s", async (_nombre, whatsapp) => {
-    const r = await fetchDelivery({ ...cfg, fetchImpl: answer({ whatsapp }) });
+    const r = await fetchDelivery({ ...cfg, code: CODE, fetchImpl: answer({ whatsapp }) });
     expect(r.data.whatsapp).toBeNull();
   });
 });
 
-describe("deliveryNotice — ENVIO-29", () => {
+describe("deliveryNotice — ENVIO-29, 44 y 91", () => {
   const money = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
   const base = {
-    courier: "Repartos al Toque",
+    courier: "Damián",
+    whatsapp: "5493644277105",
     zone: "Cantera",
     listPrice: 5000,
     price: 5000,
     reason: null,
-    state: "waiting",
+    state: "accepted",
     note: null,
   };
 
-  it.each(["waiting", "requested"])("con el envío %s dice que busca repartidor", (state) => {
-    expect(deliveryNotice({ ...base, state }, "es", money)).toEqual({
+  it("waiting: nada nuevo (la búsqueda empieza cuando el local confirma)", () => {
+    expect(deliveryNotice({ ...base, state: "waiting" }, "es", money)).toBeNull();
+  });
+
+  it("searching: dice que busca repartidor, sin teléfono ni link", () => {
+    expect(deliveryNotice({ ...base, state: "searching", courier: "" }, "es", money)).toEqual({
       tone: "searching",
       lines: ["Buscando repartidor"],
     });
   });
 
-  it("aceptado: repartidor, nota y precio al repartidor", () => {
-    const notice = deliveryNotice({ ...base, state: "accepted", note: "Juan, 21:30" }, "es", money);
-
-    expect(notice.tone).toBe("accepted");
-    expect(notice.lines).toHaveLength(1);
-    expect(notice.lines[0]).toMatch(/^Envío confirmado con Repartos al Toque · Juan, 21:30 · /);
-    expect(notice.lines[0]).toMatch(/5.000.* al repartidor$/);
+  it("self: dice que lo lleva el local", () => {
+    expect(deliveryNotice({ ...base, state: "self", courier: "", whatsapp: null }, "es", money)).toEqual({
+      tone: "self",
+      lines: ["Lo lleva el local"],
+    });
   });
 
-  it("aceptado sin nota no deja un separador vacío", () => {
-    const [line] = deliveryNotice({ ...base, state: "accepted" }, "es", money).lines;
+  it("accepted: quién lo lleva, nota y precio al repartidor, con su teléfono y el botón para escribirle", () => {
+    const notice = deliveryNotice({ ...base, note: "Juan, 21:30" }, "es", money);
+
+    expect(notice.tone).toBe("accepted");
+    expect(notice.lines).toHaveLength(2);
+    expect(notice.lines[0]).toMatch(/^Lo lleva Damián · Juan, 21:30 · /);
+    expect(notice.lines[0]).toMatch(/5.000.* al repartidor$/);
+    expect(notice.lines[1]).toBe("Damián: +5493644277105");
+    expect(notice.link).toEqual({ text: "Escribir a Damián", href: "https://wa.me/5493644277105" });
+  });
+
+  it("accepted sin nota no deja un separador vacío", () => {
+    const [line] = deliveryNotice({ ...base, whatsapp: null }, "es", money).lines;
     expect(line).not.toMatch(/·s*·/);
-    expect(line).toMatch(/^Envío confirmado con Repartos al Toque · /);
+    expect(line).toMatch(/^Lo lleva Damián · /);
+  });
+
+  it("accepted sin WhatsApp: ni línea ni link", () => {
+    const notice = deliveryNotice({ ...base, whatsapp: null }, "es", money);
+
+    expect(notice.link).toBeUndefined();
+    expect(notice.lines.join(" ")).not.toContain("+");
+  });
+
+  it("el teléfono y el link solo salen con el envío tomado", () => {
+    for (const state of ["waiting", "searching", "self"]) {
+      const notice = deliveryNotice({ ...base, state }, "es", money);
+      expect(JSON.stringify(notice)).not.toContain("5493644277105");
+    }
   });
 
   it("si el precio cambió, dice cuál era y por qué", () => {
-    const notice = deliveryNotice(
-      { ...base, state: "accepted", price: 6500, reason: "Fuera de zona" },
-      "es",
-      money,
-    );
+    const notice = deliveryNotice({ ...base, price: 6500, reason: "Fuera de zona" }, "es", money);
+
     expect(notice.lines[0]).toMatch(/6.500.* al repartidor$/);
     expect(notice.lines[1]).toMatch(/^Antes .*5.000.*: Fuera de zona$/);
   });
 
   it("si cambió sin motivo, dice solo cuál era", () => {
-    const notice = deliveryNotice({ ...base, state: "accepted", price: 6500 }, "es", money);
+    const notice = deliveryNotice({ ...base, price: 6500 }, "es", money);
+
     expect(notice.lines[1]).toMatch(/^Antes .*5.000.*$/);
     expect(notice.lines[1]).not.toContain(":");
   });
 
-  it("rechazado: avisa que el local se va a comunicar", () => {
-    expect(deliveryNotice({ ...base, state: "rejected" }, "es", money)).toEqual({
-      tone: "rejected",
-      lines: ["El repartidor no puede llevar este pedido. El local se va a comunicar con vos."],
-    });
+  it("sin nombre del repartidor no inventa uno", () => {
+    const notice = deliveryNotice({ ...base, courier: "" }, "es", money);
+
+    expect(notice.lines[0]).toMatch(/^Ya tiene repartidor/);
+    expect(notice.link.text).toBe("Escribir a el repartidor");
+    expect(JSON.stringify(notice)).not.toContain("Repartos al Toque");
+  });
+
+  it("los estados viejos o desconocidos no muestran nada", () => {
+    for (const state of ["requested", "rejected", "volando"]) {
+      expect(deliveryNotice({ ...base, state }, "es", money)).toBeNull();
+    }
+    expect(deliveryNotice(null, "es", money)).toBeNull();
   });
 
   it("se traduce", () => {
-    expect(deliveryNotice({ ...base }, "en", money).lines).toEqual(["Looking for a courier"]);
-    expect(deliveryNotice({ ...base }, "pt", money).lines).toEqual(["Procurando entregador"]);
+    expect(deliveryNotice({ ...base, state: "searching" }, "en", money).lines).toEqual(["Looking for a courier"]);
+    expect(deliveryNotice({ ...base, state: "searching" }, "pt", money).lines).toEqual(["Procurando entregador"]);
+    expect(deliveryNotice({ ...base, state: "self" }, "en", money).lines).toEqual(["The restaurant delivers it"]);
+    expect(deliveryNotice({ ...base, state: "self" }, "pt", money).lines).toEqual(["O estabelecimento entrega"]);
+    expect(deliveryNotice(base, "en", money).link.text).toBe("Message Damián");
+    expect(deliveryNotice(base, "pt", money).link.text).toBe("Escrever para Damián");
   });
 });

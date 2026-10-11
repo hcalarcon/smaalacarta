@@ -1,13 +1,19 @@
-// Envío con Repartos al Toque en el checkout (ENVIO-20 a 22). Los barrios y sus precios los
+// Envío con repartidor en el checkout (ENVIO-20 a 22 y 88). Los barrios y sus precios los
 // entrega `public_delivery_zones(slug)`; el navegador nunca manda un precio: solo el id del barrio
-// (la base pone el precio, ENVIO-6). Si algo falla o no hay barrios, el checkout queda como siempre.
+// (la base pone el precio, ENVIO-6). Al pedir todavía no hay repartidor: lo toma uno después de que
+// el local confirma. Si algo falla o no hay barrios, el checkout queda como siempre.
 
 import { isSupabaseConfigured } from "./public-menu.js";
+import { isValidPhone } from "./phone.js";
+
+// El teléfono se valida igual para todos los pedidos: vive en `phone.js`.
+export { isValidPhone };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// El WhatsApp del repartidor es público (ENVIO-44). Igual que el `CHECK` de `couriers`: de 8 a 15
-// dígitos; si no, no se usa.
+// El servidor ya no manda el repartidor ni su WhatsApp al pedir (ENVIO-75): si vinieran (un servidor
+// sin actualizar), no se usan para nada, pero se leen sin romper. Igual que el `CHECK` de `couriers`:
+// de 8 a 15 dígitos.
 const WHATSAPP = /^[0-9]{8,15}$/;
 
 function normalizeWhatsapp(value) {
@@ -15,10 +21,9 @@ function normalizeWhatsapp(value) {
 }
 
 // Valida la forma de la respuesta y la pasa a nombres propios. Un barrio mal formado se descarta;
-// sin repartidor o sin ningún barrio válido no hay envío (null).
+// sin ningún barrio válido no hay envío (null). El repartidor y su WhatsApp son opcionales.
 export function normalizeZones(data) {
   if (!data || typeof data !== "object") return null;
-  if (typeof data.repartidor !== "string" || !data.repartidor.trim()) return null;
   if (!Array.isArray(data.zonas)) return null;
 
   const zones = [];
@@ -33,7 +38,11 @@ export function normalizeZones(data) {
     zones.push({ id: zona.id, name: zona.nombre, price });
   }
 
-  return zones.length > 0 ? { courier: data.repartidor, whatsapp: normalizeWhatsapp(data.whatsapp), zones } : null;
+  if (zones.length === 0) return null;
+
+  const courier = typeof data.repartidor === "string" && data.repartidor.trim() ? data.repartidor : null;
+
+  return { courier, whatsapp: normalizeWhatsapp(data.whatsapp), zones };
 }
 
 export async function fetchDeliveryZones({ url, key, slug, fetchImpl = globalThis.fetch }) {
@@ -61,7 +70,8 @@ export async function fetchDeliveryZones({ url, key, slug, fetchImpl = globalThi
   }
 }
 
-// ¿El checkout pide barrio, dirección y teléfono? Solo con entrega "delivery" y barrios disponibles.
+// ¿El checkout pide barrio y dirección? Solo con entrega "delivery" y barrios disponibles. El teléfono
+// se pide siempre.
 export function needsCourier(zones, delivery) {
   return Boolean(zones && zones.zones.length > 0 && delivery === "delivery");
 }
@@ -75,34 +85,25 @@ export function zoneNoticeVars(zone, formatPrice) {
   return { barrio: zone.name, precio: formatPrice(zone.price) };
 }
 
-// El servidor exige de 8 a 15 dígitos (ENVIO-5).
-export function isValidPhone(value) {
-  const digits = String(value ?? "").replace(/\D/g, "");
-  return digits.length >= 8 && digits.length <= 15;
-}
-
-// Lo que se suma a `createOrder`; vacío si el pedido no lleva envío con repartidor.
-export function courierOrderFields({ zones, delivery, zoneId, phone, address }) {
+// Lo que se suma a `createOrder` por el envío; vacío si el pedido no lleva envío con repartidor. El
+// teléfono no está acá: va en todos los pedidos (ENVIO-87).
+export function courierOrderFields({ zones, delivery, zoneId, address }) {
   if (!needsCourier(zones, delivery) || !findZone(zones, zoneId)) return {};
 
   return {
     deliveryZone: zoneId,
-    customerPhone: String(phone ?? "").trim(),
     deliveryAddress: String(address ?? "").trim(),
   };
 }
 
 // Las líneas del mensaje de WhatsApp al local. Siempre en español (IDIOMA-5). El precio es de
-// referencia y se le paga al repartidor: no entra en el total del pedido. `courier` es
-// `{ courier, whatsapp }` (lo que entrega `normalizeZones`): el cliente ve quién hace el envío y
-// su teléfono (ENVIO-44).
-export function courierWhatsappLines(zone, { address, phone }, formatPrice, { courier, whatsapp = null }) {
+// referencia y se le paga al repartidor: no entra en el total del pedido. No nombra al repartidor
+// (todavía no hay uno) y el teléfono del cliente va aparte, en todos los pedidos (ENVIO-88).
+export function courierWhatsappLines(zone, { address }, formatPrice) {
   return [
     `📍 Barrio: ${zone.name}`,
-    `🛵 Envío con ${courier}: $${formatPrice(zone.price)}, se paga al repartidor`,
-    ...(whatsapp ? [`📲 Tel. de ${courier}: +${whatsapp}`] : []),
+    `🛵 Envío: $${formatPrice(zone.price)}, se paga al repartidor`,
     `🏠 Dirección: ${address}`,
-    `📞 Teléfono: ${phone}`,
     "",
   ].join("\n");
 }

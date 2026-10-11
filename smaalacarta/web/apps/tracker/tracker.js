@@ -181,8 +181,9 @@ function paymentCard(data, pay) {
 
 function render(data, { stale }) {
   current = { kind: "data", data, stale };
-  // Con envío con Repartos al Toque (ENVIO-9 y 28) el camino tiene siete pasos.
-  const courier = Boolean(data.envio);
+  // Con envío con repartidor (ENVIO-9 y 28) el camino tiene siete pasos. Si lo lleva el local
+  // (ENVIO-91) sigue el de siempre: lo entrega él.
+  const courier = Boolean(data.envio) && data.envio.state !== "self";
   const view = statusView(data.pedido.estado, lang, { courier });
   const theme = applyTheme(data.negocio);
   const nodes = [];
@@ -255,7 +256,7 @@ function render(data, { stale }) {
   }
   if (layout.status) nodes.push(status);
 
-  // Envío con Repartos al Toque (ENVIO-29): qué pasa con el repartidor. Un pedido cancelado ya no
+  // Envío con repartidor (ENVIO-29 y 91): qué pasa con el envío. Un pedido cancelado ya no
   // lo muestra. Todo con textContent.
   const notice = data.pedido.estado === "cancelled" ? null : deliveryNotice(data.envio, lang, money);
   if (notice) {

@@ -391,16 +391,13 @@ body {
   font-weight: 600;
 }
 
-/* Envío con Repartos al Toque (ENVIO-29). */
+/* Envío con repartidor (ENVIO-29 y 91). */
 .delivery-line {
   margin: 0.25rem 0 0;
   font-size: 0.95rem;
 }
 
-.delivery-accepted {
+.delivery-accepted,
+.delivery-self {
   border-left: 4px solid var(--accent);
-}
-
-.delivery-rejected {
-  border-left: 4px solid #b91c1c;
 }
