@@ -4,12 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const { requireCourier, courierDb, ordersDb } = vi.hoisted(() => ({
   requireCourier: vi.fn(),
   courierDb: {
-    createZone: vi.fn(),
     courierSetStatus: vi.fn(),
-    deleteZone: vi.fn(),
-    listZones: vi.fn(),
-    saveZoneOrder: vi.fn(),
-    updateZone: vi.fn(),
+    courierMarkSettled: vi.fn(),
+    setZoneCoverage: vi.fn(),
   },
   ordersDb: { setOrderCourier: vi.fn() },
 }));
@@ -19,14 +16,7 @@ vi.mock("@/lib/db/courier", () => courierDb);
 vi.mock("@/lib/db/orders", () => ordersDb);
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-import {
-  advanceOrderAction,
-  createZoneAction,
-  deleteZoneAction,
-  reorderZonesAction,
-  respondOrderAction,
-  updateZoneAction,
-} from "./actions";
+import { advanceOrderAction, respondOrderAction, setZoneCoverageAction } from "./actions";
 
 const COURIER = "7a0c0e00-0000-4000-8000-000000000001";
 const ORDER = "11111111-1111-1111-1111-111111111111";
@@ -35,15 +25,7 @@ const input = { note: "", fee: "", reason: "" };
 beforeEach(() => {
   vi.clearAllMocks();
   requireCourier.mockResolvedValue({ user: { id: "u" }, courierId: COURIER });
-  courierDb.listZones.mockResolvedValue([{ id: "z1", name: "Cantera", price: 5000, sort_order: 1, active: true }]);
-  for (const fn of [
-    courierDb.createZone,
-    courierDb.courierSetStatus,
-    courierDb.deleteZone,
-    courierDb.saveZoneOrder,
-    courierDb.updateZone,
-    ordersDb.setOrderCourier,
-  ]) {
+  for (const fn of [courierDb.courierSetStatus, courierDb.setZoneCoverage, ordersDb.setOrderCourier]) {
     fn.mockResolvedValue({ ok: true });
   }
 });
@@ -56,10 +38,7 @@ describe("quien no es el repartidor no llega a la base — ENVIO-30", () => {
   it.each([
     ["responder", () => respondOrderAction(ORDER, "accept", input, 5000)],
     ["avanzar", () => advanceOrderAction(ORDER, "on_the_way")],
-    ["crear barrio", () => createZoneAction({ name: "Oasis", price: "5500" })],
-    ["editar barrio", () => updateZoneAction("z1", { name: "Oasis", price: "5500" })],
-    ["borrar barrio", () => deleteZoneAction("z1")],
-    ["ordenar barrios", () => reorderZonesAction(["z1"])],
+    ["marcar una zona", () => setZoneCoverageAction("22222222-2222-2222-2222-222222222222", true)],
   ])("%s", async (_name, run) => {
     await expect(run()).rejects.toThrow("NEXT_REDIRECT");
 
@@ -140,37 +119,37 @@ describe("avanzar un pedido — ENVIO-32", () => {
   });
 });
 
-describe("barrios — ENVIO-36 y 37", () => {
-  it("el repartidor sale de la sesión: las funciones reciben ese id, no uno del navegador", async () => {
-    await createZoneAction({ name: " Oasis ", price: "5.500" });
-    await deleteZoneAction("z1");
-    await reorderZonesAction(["z1", "z2"]);
+describe("Mis zonas — ENVIO-57", () => {
+  const ZONE = "22222222-2222-2222-2222-222222222222";
 
-    expect(courierDb.createZone).toHaveBeenCalledWith(COURIER, { name: "Oasis", price: 5500 });
-    expect(courierDb.deleteZone).toHaveBeenCalledWith(COURIER, "z1");
-    expect(courierDb.saveZoneOrder).toHaveBeenCalledWith(COURIER, ["z1", "z2"]);
+  it("el repartidor sale de la sesión: la base recibe ese id, no uno del navegador", async () => {
+    const on = await setZoneCoverageAction(ZONE, true);
+    const off = await setZoneCoverageAction(ZONE, false);
+
+    expect(on).toEqual({ ok: true });
+    expect(off).toEqual({ ok: true });
+    expect(courierDb.setZoneCoverage).toHaveBeenNthCalledWith(1, COURIER, ZONE, true);
+    expect(courierDb.setZoneCoverage).toHaveBeenNthCalledWith(2, COURIER, ZONE, false);
   });
 
-  it("rechaza un nombre repetido o un precio inválido sin llamar a la base", async () => {
-    const repetido = await createZoneAction({ name: "cantera", price: "1" });
-    expect(repetido).toMatchObject({ ok: false, fieldErrors: { name: expect.stringMatching(/ya existe/i) } });
+  it("un id que no es una zona no llega a la base", async () => {
+    const r = await setZoneCoverageAction("no-es-un-uuid", true);
 
-    const caro = await createZoneAction({ name: "Oasis", price: "-1" });
-    expect(caro).toMatchObject({ ok: false, fieldErrors: { price: expect.any(String) } });
-
-    expect(courierDb.createZone).not.toHaveBeenCalled();
+    expect(r).toMatchObject({ ok: false });
+    expect(courierDb.setZoneCoverage).not.toHaveBeenCalled();
   });
 
-  it("editar un barrio le deja su propio nombre", async () => {
-    const r = await updateZoneAction("z1", { name: "Cantera", price: "6000" });
+  it("si la base falla, devuelve un mensaje sin texto técnico", async () => {
+    courierDb.setZoneCoverage.mockResolvedValue({ error: { code: "42501", message: "permission denied" } });
 
-    expect(r).toEqual({ ok: true });
-    expect(courierDb.updateZone).toHaveBeenCalledWith(COURIER, "z1", { name: "Cantera", price: 6000 });
+    const r = await setZoneCoverageAction(ZONE, true);
+    expect(r).toMatchObject({ ok: false, error: expect.not.stringMatching(/permission/) });
   });
 
-  it("un nombre repetido que la base rechaza (23505) se dice como error del campo", async () => {
-    courierDb.createZone.mockResolvedValue({ error: { code: "23505" } });
-    const r = await createZoneAction({ name: "Oasis", price: "1" });
-    expect(r).toMatchObject({ ok: false, fieldErrors: { name: expect.any(String) } });
+  it("quien no es repartidor no llega a la base", async () => {
+    requireCourier.mockRejectedValue(new Error("NEXT_REDIRECT"));
+
+    await expect(setZoneCoverageAction(ZONE, true)).rejects.toThrow("NEXT_REDIRECT");
+    expect(courierDb.setZoneCoverage).not.toHaveBeenCalled();
   });
 });

@@ -58,7 +58,7 @@ export const superAdminLinks: NavLink[] = [
   },
 ];
 
-// El usuario repartidor (ENVIO-31 y 36): sus pedidos y sus barrios.
+// El usuario repartidor (ENVIO-31 y 57): sus pedidos y las zonas que lleva.
 export const courierLinks: NavLink[] = [
   {
     href: "/repartidor",
@@ -67,7 +67,7 @@ export const courierLinks: NavLink[] = [
   },
   {
     href: "/repartidor/zonas",
-    label: "Barrios y precios",
+    label: "Mis zonas",
     icon: "M12 21s-7-6.2-7-11a7 7 0 1114 0c0 4.8-7 11-7 11zM12 12a2 2 0 100-4 2 2 0 000 4z",
   },
 ];

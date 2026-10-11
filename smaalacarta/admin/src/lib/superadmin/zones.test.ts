@@ -7,7 +7,7 @@ const existing = [
   { id: "2", name: "Centro (hasta Av. Koessler)" },
 ];
 
-describe("parsePrice — ENVIO-37", () => {
+describe("parsePrice — ENVIO-56", () => {
   it.each([
     ["4500", 4500],
     ["4.500", 4500],
@@ -24,8 +24,8 @@ describe("parsePrice — ENVIO-37", () => {
   });
 });
 
-describe("validateZone — ENVIO-37", () => {
-  it("un barrio válido se normaliza", () => {
+describe("validateZone — ENVIO-56", () => {
+  it("una zona válida se normaliza", () => {
     expect(validateZone({ name: "  Oasis ", price: "5.500" }, existing)).toEqual({
       ok: true,
       name: "Oasis",
@@ -56,7 +56,7 @@ describe("validateZone — ENVIO-37", () => {
     });
   });
 
-  it("al editar, el barrio puede conservar su propio nombre", () => {
+  it("al editar, la zona puede conservar su propio nombre", () => {
     expect(validateZone({ name: "Cantera", price: "6000" }, existing, "1")).toMatchObject({ ok: true });
     expect(validateZone({ name: "Cantera", price: "6000" }, existing, "2")).toMatchObject({ ok: false });
   });

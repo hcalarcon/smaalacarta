@@ -3,11 +3,10 @@
 import { revalidatePath } from "next/cache";
 
 import { requireCourier } from "@/lib/auth/courier";
-import { courierMarkSettled, createZone, courierSetStatus, deleteZone, listZones, saveZoneOrder, updateZone } from "@/lib/db/courier";
+import { courierMarkSettled, courierSetStatus, setZoneCoverage } from "@/lib/db/courier";
 import { setOrderCourier } from "@/lib/db/orders";
 import { orderErrorMessage, settlementErrorMessage } from "@/lib/orders/messages";
 import { validateCourierResponse, type CourierResponseInput } from "@/lib/orders/courier";
-import { validateZone } from "@/lib/courier/zones";
 
 export type CourierActionResult =
   | { ok: true }
@@ -74,77 +73,19 @@ export async function advanceOrderAction(
   return { ok: true };
 }
 
-function zoneError(error: { code?: string }) {
-  if (error.code === "23505") {
-    return { ok: false as const, error: "Ya existe un barrio con ese nombre.", fieldErrors: { name: "Ya existe un barrio con ese nombre." } };
-  }
-  return { ok: false as const, error: GENERIC };
-}
+const ID = /^[0-9a-f-]{36}$/i;
 
-// Alta de un barrio (ENVIO-36 y 37).
-export async function createZoneAction(input: { name: string; price: string }): Promise<CourierActionResult> {
+// "La llevo" en Mis zonas (ENVIO-57): marca o desmarca una zona de la cobertura del repartidor. El
+// repartidor sale de la sesión; la base solo deja tocar las filas propias (RLS).
+export async function setZoneCoverageAction(zoneId: string, covered: boolean): Promise<CourierActionResult> {
   const { courierId } = await requireCourier();
 
-  const validation = validateZone(input, await listZones(courierId));
-  if (!validation.ok) {
-    return { ok: false, error: "Revisá los datos marcados.", fieldErrors: validation.errors };
-  }
-
-  const result = await createZone(courierId, { name: validation.name, price: validation.price });
-  if ("error" in result) return zoneError(result.error);
-
-  revalidatePath("/repartidor/zonas");
-  return { ok: true };
-}
-
-// Cambia el nombre y el precio de un barrio. Un precio nuevo vale para los pedidos nuevos.
-export async function updateZoneAction(
-  zoneId: string,
-  input: { name: string; price: string },
-): Promise<CourierActionResult> {
-  const { courierId } = await requireCourier();
-
-  const validation = validateZone(input, await listZones(courierId), zoneId);
-  if (!validation.ok) {
-    return { ok: false, error: "Revisá los datos marcados.", fieldErrors: validation.errors };
-  }
-
-  const result = await updateZone(courierId, zoneId, { name: validation.name, price: validation.price });
-  if ("error" in result) return zoneError(result.error);
-
-  revalidatePath("/repartidor/zonas");
-  return { ok: true };
-}
-
-export async function setZoneActiveAction(zoneId: string, active: boolean): Promise<CourierActionResult> {
-  const { courierId } = await requireCourier();
-
-  const result = await updateZone(courierId, zoneId, { active: Boolean(active) });
-  if ("error" in result) return zoneError(result.error);
-
-  revalidatePath("/repartidor/zonas");
-  return { ok: true };
-}
-
-export async function deleteZoneAction(zoneId: string): Promise<CourierActionResult> {
-  const { courierId } = await requireCourier();
-
-  const result = await deleteZone(courierId, zoneId);
-  if ("error" in result) return zoneError(result.error);
-
-  revalidatePath("/repartidor/zonas");
-  return { ok: true };
-}
-
-export async function reorderZonesAction(orderedIds: string[]): Promise<CourierActionResult> {
-  const { courierId } = await requireCourier();
-
-  if (!Array.isArray(orderedIds) || orderedIds.some((id) => typeof id !== "string")) {
+  if (typeof zoneId !== "string" || !ID.test(zoneId)) {
     return { ok: false, error: GENERIC };
   }
 
-  const result = await saveZoneOrder(courierId, orderedIds);
-  if ("error" in result) return zoneError(result.error);
+  const result = await setZoneCoverage(courierId, zoneId, Boolean(covered));
+  if ("error" in result) return { ok: false, error: GENERIC };
 
   revalidatePath("/repartidor/zonas");
   return { ok: true };

@@ -535,6 +535,40 @@ REVOKE ALL ON FUNCTION public.business_delivery_options() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.business_delivery_options() TO authenticated;
 
 -- ---------------------------------------------------------------------------
+-- Borrar una zona (solo superadmin)
+-- ---------------------------------------------------------------------------
+
+-- Una zona que ya usan pedidos no se borra: se desactiva (el superadmin no lee `orders` por RLS,
+-- por eso la decisión se toma acá). Devuelve 'deleted' o 'deactivated'.
+CREATE OR REPLACE FUNCTION public.delete_delivery_zone(p_zone_id uuid)
+RETURNS text
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF NOT public.is_super_admin() THEN
+    RAISE EXCEPTION 'Solo un superadmin puede borrar zonas' USING ERRCODE = '42501';
+  END IF;
+
+  IF NOT EXISTS (SELECT 1 FROM public.delivery_zones z WHERE z.id = p_zone_id) THEN
+    RAISE EXCEPTION 'La zona no existe' USING ERRCODE = 'P0002';
+  END IF;
+
+  IF EXISTS (SELECT 1 FROM public.orders o WHERE o.delivery_zone_id = p_zone_id) THEN
+    UPDATE public.delivery_zones SET active = false WHERE id = p_zone_id;
+    RETURN 'deactivated';
+  END IF;
+
+  DELETE FROM public.delivery_zones WHERE id = p_zone_id;
+  RETURN 'deleted';
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.delete_delivery_zone(uuid) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.delete_delivery_zone(uuid) TO authenticated;
+
+-- ---------------------------------------------------------------------------
 -- Alta de repartidor con su usuario (solo superadmin)
 -- ---------------------------------------------------------------------------
 

@@ -636,3 +636,37 @@ describe("create_public_order en la transición — ENVIO-54", () => {
     await resetAna();
   });
 });
+
+describe("delete_delivery_zone — ENVIO-56", () => {
+  it("borra una zona sin pedidos y desactiva una que ya usan pedidos", async () => {
+    await db.exec("insert into delivery_zones (name, price, sort_order) values ('Sin uso', 100, 70)");
+    const sinUso = await zoneId("Sin uso");
+
+    const del = await call(SUPER, `select public.delete_delivery_zone('${sinUso}') as r`);
+    expect(del.ok && del.rows[0].r).toBe("deleted");
+    expect(await count("select count(*) n from delivery_zones where name = 'Sin uso'")).toBe(0);
+
+    // Un pedido con envío a Cantera.
+    expect((await order("ana", await zoneId("Cantera"))).ok).toBe(true);
+    const cantera = await zoneId("Cantera");
+
+    const used = await call(SUPER, `select public.delete_delivery_zone('${cantera}') as r`);
+    expect(used.ok && used.rows[0].r).toBe("deactivated");
+    expect(await count("select count(*) n from delivery_zones where name = 'Cantera' and not active")).toBe(1);
+
+    await db.exec("update delivery_zones set active = true where name = 'Cantera'");
+  });
+
+  it("solo la llama un superadmin y una zona inexistente da P0002", async () => {
+    const lolog = await zoneId("Lolog");
+    for (const user of [ANA, REPA]) {
+      const r = await call(user, `select public.delete_delivery_zone('${lolog}')`);
+      expect(!r.ok && r.code, user).toBe("42501");
+    }
+    const anon = await call(null, `select public.delete_delivery_zone('${lolog}')`);
+    expect(anon.ok).toBe(false);
+
+    const none = await call(SUPER, "select public.delete_delivery_zone('99999999-0000-0000-0000-000000000009')");
+    expect(!none.ok && none.code).toBe("P0002");
+  });
+});

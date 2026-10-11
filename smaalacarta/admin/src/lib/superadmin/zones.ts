@@ -1,5 +1,5 @@
-// Barrios y precios del repartidor (ENVIO-36 y 37). Las mismas reglas están en la base
-// (`courier_zones`: nombre de 1 a 60, precio ≥ 0, único por repartidor).
+// Zonas y precios de referencia de la plataforma (ENVIO-46 y 56). Las mismas reglas están en la base
+// (`delivery_zones`: nombre de 1 a 60, único, y precio ≥ 0).
 
 export const ZONE_NAME_MAX = 60;
 const PRICE_LIMIT = 100_000_000;
@@ -23,7 +23,7 @@ export type ZoneValidation =
 
 const normalize = (name: string) => name.trim().replace(/\s+/g, " ").toLocaleLowerCase("es-AR");
 
-// `existing` son los barrios del repartidor; `editingId`, el que se está editando (puede conservar
+// `existing` son las zonas cargadas; `editingId`, la que se está editando (puede conservar
 // su propio nombre).
 export function validateZone(
   input: ZoneInput,
@@ -34,11 +34,11 @@ export function validateZone(
 
   const name = input.name.trim().replace(/\s+/g, " ");
   if (name === "") {
-    errors.name = "El nombre del barrio es obligatorio.";
+    errors.name = "El nombre de la zona es obligatorio.";
   } else if (name.length > ZONE_NAME_MAX) {
     errors.name = `El nombre admite hasta ${ZONE_NAME_MAX} caracteres.`;
   } else if (existing.some((zone) => zone.id !== editingId && normalize(zone.name) === normalize(name))) {
-    errors.name = "Ya existe un barrio con ese nombre.";
+    errors.name = "Ya existe una zona con ese nombre.";
   }
 
   const price = parsePrice(input.price);

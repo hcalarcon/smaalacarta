@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 
-import ZonesClient from "./components/ZonesClient";
+import CoverageClient from "./components/CoverageClient";
 import { requireCourier } from "@/lib/auth/courier";
-import { listZones } from "@/lib/db/courier";
+import { listCoverageZones } from "@/lib/db/courier";
 
-export const metadata: Metadata = { title: "Barrios y precios" };
+export const metadata: Metadata = { title: "Mis zonas" };
 
 export default async function CourierZonesPage() {
   // El repartidor sale de la sesión, nunca de la URL ni del navegador (ENVIO-3).
   const { courierId } = await requireCourier();
 
-  const zones = await listZones(courierId);
+  const zones = await listCoverageZones(courierId);
 
-  return <ZonesClient zones={zones} />;
+  return <CoverageClient zones={zones} />;
 }

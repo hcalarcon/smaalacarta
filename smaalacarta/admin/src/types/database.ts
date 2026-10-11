@@ -1130,6 +1130,7 @@ export type Database = {
         }
         Returns: string
       }
+      delete_delivery_zone: { Args: { p_zone_id: string }; Returns: string }
       courier_covers_my_zones: { Args: { p_courier_id: string }; Returns: boolean }
       courier_mark_settled: { Args: { p_order_id: string }; Returns: undefined }
       courier_orders: { Args: { p_since?: string }; Returns: Json }
