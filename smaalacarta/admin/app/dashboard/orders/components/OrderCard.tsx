@@ -114,8 +114,8 @@ export default function OrderCard({
           ) : null}
           {fee.list ? (
             <p>
-              Antes {fee.list}
-              {fee.reason ? `: ${fee.reason}` : ""}
+              Precio de lista {fee.list}
+              {fee.reason ? ` · ${fee.reason}` : ""}
             </p>
           ) : null}
           {warning ? (

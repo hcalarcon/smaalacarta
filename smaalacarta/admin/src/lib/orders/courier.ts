@@ -148,12 +148,15 @@ export function searchWarning(
 // Cómo está el envío, en una línea (ENVIO-80). `courierName` es el nombre del repartidor que lo tomó,
 // si el local lo conoce.
 export function courierStatusLabel(
-  order: Pick<CourierOrder, "courier_status" | "offered_at">,
+  order: Pick<CourierOrder, "courier_status" | "offered_at"> & Partial<Pick<CourierOrder, "status">>,
   courierName?: string | null,
 ) {
   switch (order.courier_status) {
     case "waiting":
-      return "Todavía sin repartidor";
+      // Un anticipado o programado sin confirmar: se ofrece cuando el local lo confirma (ENVIO-123).
+      return order.status === "pending"
+        ? "Se ofrece a los repartidores cuando lo confirmes"
+        : "Todavía sin repartidor";
     case "searching": {
       const since = clockTime(order.offered_at);
       return since ? `Buscando repartidor desde las ${since}` : "Buscando repartidor";

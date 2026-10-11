@@ -606,18 +606,18 @@ describe("deliveryCard — SEGUIMIENTO-27, ENVIO-29, 44 y 91", () => {
     }
   });
 
-  it("si el precio cambió, dice cuál era y por qué", () => {
+  it("si el precio cambió, dice el precio de lista y el motivo", () => {
     const card = deliveryCard({ ...base, price: 6500, reason: "Fuera de zona" }, "es", money);
 
     expect(card.lines[0]).toMatch(/6.500.* al repartidor$/);
-    expect(card.lines[1]).toMatch(/^Antes .*5.000.*: Fuera de zona$/);
+    expect(card.lines[1]).toMatch(/^Precio de lista .*5.000.* · Fuera de zona$/);
   });
 
   it("si cambió sin motivo, dice solo cuál era", () => {
     const card = deliveryCard({ ...base, price: 6500 }, "es", money);
 
-    expect(card.lines[1]).toMatch(/^Antes .*5.000.*$/);
-    expect(card.lines[1]).not.toContain(":");
+    expect(card.lines[1]).toMatch(/^Precio de lista .*5.000.*$/);
+    expect(card.lines[1]).not.toContain("·");
   });
 
   it("sin nombre del repartidor no inventa uno", () => {

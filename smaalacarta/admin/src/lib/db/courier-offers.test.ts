@@ -826,3 +826,141 @@ describe("la migración — ENVIO-95", () => {
     }
   }, 60_000);
 });
+
+describe("anticipados y programados: se ofrecen al confirmar — ENVIO-121 a 125", () => {
+  const DAYS = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"];
+  const openAllDay = Object.fromEntries(DAYS.map((d) => [d, ["00:00-23:59"]]));
+  const setup = (sql: string) => db.exec(`update business_settings set ${sql} where business_id = '${NEG_ANA}'`);
+
+  // Un pedido con envío de Ana para más tarde: programado a una hora, o anticipado (el negocio está
+  // cerrado todo el día de hoy y toma pedidos para mañana).
+  async function paraMasTarde(kind: "programado" | "anticipado") {
+    const tomorrow = DAYS[new Date().getDay() % 7];
+    if (kind === "programado") {
+      await setup(`schedule = '${JSON.stringify(openAllDay)}'::jsonb, allow_scheduled_orders = true`);
+    } else {
+      await setup(
+        `preorders_enabled = true, schedule = '${JSON.stringify({ [tomorrow]: ["12:00-23:00"] })}'::jsonb,
+         preorder_cutoffs = '${JSON.stringify({ [tomorrow]: { dia: tomorrow, hora: "00:00" } })}'::jsonb`,
+      );
+    }
+
+    const extra =
+      kind === "programado"
+        ? `, p_scheduled_for => '${new Date(Date.now() + 90 * 60_000).toISOString()}'::timestamptz`
+        : ", p_preorder => true";
+    const items = JSON.stringify([{ id: CAFE, kind: "product", quantity: 1 }]);
+    const r = await call(
+      null,
+      `select public.create_public_order('ana', 'Cliente Prueba', 'delivery', 'efectivo', null,
+         '${items}'::jsonb${extra}, p_delivery_zone => '${await zoneId("Cantera")}'::uuid,
+         p_customer_phone => '351 555-1234', p_delivery_address => 'Av. Siempre Viva 742') as result`,
+    );
+    await setup("preorders_enabled = false, preorder_cutoffs = '{}'::jsonb, schedule = '{}'::jsonb");
+    if (!r.ok) throw new Error(`no se pudo crear el pedido: ${r.error}`);
+    const c = (r.rows[0].result as { code: string }).code;
+    const id = (await db.query<{ id: string }>("select id from orders where code = $1", [c])).rows[0].id;
+    return { id, code: c };
+  }
+
+  const visibleFor = async (user: string, id: string) => {
+    const r = await call(user, "select public.courier_available_orders() as l");
+    if (!r.ok) throw new Error(r.error);
+    return (r.rows[0].l as { id: string }[]).some((o) => o.id === id);
+  };
+
+  it.each(["anticipado", "programado"] as const)(
+    "un pedido %s no se ofrece hasta que el local lo confirma, y después sí",
+    async (kind) => {
+      const o = await paraMasTarde(kind);
+
+      const waiting = await row(o.id);
+      expect(waiting.courier_status).toBe("waiting");
+      expect(waiting.offered_at).toBeNull();
+      expect(await visibleFor(TOQUE_USER, o.id)).toBe(false);
+      expect(code(await offer(db, TOQUE_USER, o.id))).toBe("P0020");
+
+      expect((await setStatus(ANA, o.id, "confirmed")).ok).toBe(true);
+
+      const open = await row(o.id);
+      expect(open.courier_status).toBe("searching");
+      expect(open.offered_at).not.toBeNull();
+      expect(await visibleFor(TOQUE_USER, o.id)).toBe(true);
+      expect((await offer(db, TOQUE_USER, o.id)).ok).toBe(true);
+    },
+  );
+
+  it("cancelarlo antes de confirmar no abre la búsqueda", async () => {
+    const o = await paraMasTarde("programado");
+    expect((await setStatus(ANA, o.id, "cancelled")).ok).toBe(true);
+
+    expect((await row(o.id)).courier_status).toBe("waiting");
+    expect(code(await offer(db, TOQUE_USER, o.id))).toBe("P0020");
+  });
+
+  it("los 5 minutos de la elección automática cuentan desde la primera oferta", async () => {
+    const o = await paraMasTarde("anticipado");
+    await setStatus(ANA, o.id, "confirmed");
+    await age(o.id, 10);
+    expect((await offer(db, TOQUE_USER, o.id)).ok).toBe(true);
+
+    // Recién ofertó: la ventana corre desde la oferta, no desde la confirmación.
+    await call(ANA, "select public.business_order_offers()");
+    expect((await row(o.id)).courier_status).toBe("searching");
+
+    await age(o.id, 6);
+    await call(ANA, "select public.business_order_offers()");
+    const after = await row(o.id);
+    expect(after.courier_status).toBe("accepted");
+    expect(after.courier_id).toBe(TOQUE);
+  });
+
+  it("un pedido común se ofrece apenas se crea", async () => {
+    const o = await envio();
+    const r = await row(o.id);
+
+    expect(r.courier_status).toBe("searching");
+    expect(r.offered_at).not.toBeNull();
+    expect(await visibleFor(TOQUE_USER, o.id)).toBe(true);
+  });
+
+  it("la migración pasa a esperar los anticipados y programados pendientes sin ofertas", async () => {
+    const old = await createTestDb({ before: "20261024000000_ofertas_al_confirmar_anticipados.sql" });
+
+    try {
+      await createUser(old, { id: ANA, email: "ana@x.com" });
+      await old.exec(`
+        insert into businesses (id, name, slug, whatsapp, plan_completo, courier_delivery) values
+          ('${NEG_ANA}', 'Ana Resto', 'ana', '5493510000001', true, true);
+        insert into business_users (business_id, user_id) values ('${NEG_ANA}', '${ANA}');
+        insert into business_settings (business_id, published) values ('${NEG_ANA}', true);
+        insert into delivery_zones (id, name, price, sort_order, active) values
+          ('e0000000-0000-0000-0000-00000000000a', 'Zona migración', 1000, 99, true);
+        insert into orders (id, business_id, order_number, status, total, customer_name, courier_status,
+                            offered_at, delivery_zone_id, preorder, scheduled_for) values
+          ('f0000000-0000-0000-0000-000000000001', '${NEG_ANA}', '1', 'pending', 100, 'A', 'searching', now(), 'e0000000-0000-0000-0000-00000000000a', true, null),
+          ('f0000000-0000-0000-0000-000000000002', '${NEG_ANA}', '2', 'pending', 100, 'B', 'searching', now(), 'e0000000-0000-0000-0000-00000000000a', false, now() + interval '2 hours'),
+          ('f0000000-0000-0000-0000-000000000003', '${NEG_ANA}', '3', 'pending', 100, 'C', 'searching', now(), 'e0000000-0000-0000-0000-00000000000a', false, null),
+          ('f0000000-0000-0000-0000-000000000004', '${NEG_ANA}', '4', 'confirmed', 100, 'D', 'searching', now(), 'e0000000-0000-0000-0000-00000000000a', true, null),
+          ('f0000000-0000-0000-0000-000000000005', '${NEG_ANA}', '5', 'pending', 100, 'E', 'searching', now(), 'e0000000-0000-0000-0000-00000000000a', true, null);
+        insert into courier_offers (order_id, courier_id, price) values
+          ('f0000000-0000-0000-0000-000000000005', '${TOQUE}', 1000);
+      `);
+
+      await applyMigration(old, "20261024000000_ofertas_al_confirmar_anticipados.sql");
+
+      const r = await old.query<{ order_number: string; courier_status: string; offered: boolean }>(
+        "select order_number, courier_status, offered_at is not null as offered from orders order by order_number",
+      );
+      expect(r.rows).toEqual([
+        { order_number: "1", courier_status: "waiting", offered: false },
+        { order_number: "2", courier_status: "waiting", offered: false },
+        { order_number: "3", courier_status: "searching", offered: true },
+        { order_number: "4", courier_status: "searching", offered: true },
+        { order_number: "5", courier_status: "searching", offered: true },
+      ]);
+    } finally {
+      await old.close();
+    }
+  }, 60_000);
+});

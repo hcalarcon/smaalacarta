@@ -390,7 +390,7 @@ describe("pedido con envío — ENVIO-80 a 85", () => {
       } as Partial<Order>),
     );
     expect(screen.getByText(/\$\s?6\.500/)).toBeTruthy();
-    expect(screen.getByText(/Antes.*5\.000.*Fuera de zona/)).toBeTruthy();
+    expect(screen.getByText(/Precio de lista.*5\.000.* · Fuera de zona/)).toBeTruthy();
   });
 
   it("con el pedido listo y un repartidor, el siguiente paso es Entregar al repartidor", () => {

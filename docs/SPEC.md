@@ -1431,7 +1431,7 @@ lleva él. Errores nuevos: `P0018` (teléfono del cliente) y `P0019` (ya lo tom�
 - **ENVIO-90** *(reservado)*
 - **ENVIO-91** El seguimiento muestra el bloque de envío según `estado`: `waiting`, nada nuevo; `searching`,
   "Buscando repartidor"; `accepted`, "Lo lleva {repartidor}" con su teléfono, el botón para escribirle, la nota, el
-  precio y, si cambió, "Antes {precio_lista}: {motivo}"; `self`, "Lo lleva el local".
+  precio y, si cambió, "Precio de lista {precio_lista} · {motivo}" (ENVIO-125); `self`, "Lo lleva el local".
 - **ENVIO-92** Los estados viejos (`requested`, `rejected`) o desconocidos no rompen la página: se muestran como
   "Buscando repartidor" o no muestran el bloque, sin error.
 - **ENVIO-93** El menú lateral del superadmin lista, después de "Nuevo negocio" y antes de "Imágenes",
@@ -1450,7 +1450,8 @@ seguimiento (el favorito del local va primero); si no elige, a los 5 minutos de 
 sola la más barata; en paralelo el local acepta la comanda. Errores nuevos: `P0020` (el pedido ya no
 recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambió). `P0019` ya no se usa.*
 
-- **ENVIO-95** Un pedido con envío nace sin repartidor y con `courier_status = 'searching'` y `offered_at = now()`:
+- **ENVIO-95** *Reemplazado en parte por ENVIO-121: los anticipados y programados nacen `waiting` y se ofrecen al
+  confirmar.* Un pedido con envío nace sin repartidor y con `courier_status = 'searching'` y `offered_at = now()`:
   no hay que esperar a que el local lo confirme, y ningún trigger abre la búsqueda. La migración pasa a
   `searching` los pedidos abiertos que estaban en `waiting`.
 - **ENVIO-96** `courier_offers` guarda una oferta por pedido y repartidor (única; se borra con el pedido):
@@ -1512,6 +1513,19 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   cliente, marcada "Recomendado por el local".
 - **ENVIO-120** El menú, al confirmar un pedido que se guardó en el sistema, va directo al seguimiento y guarda el link de
   WhatsApp con `rememberHandoff` para ofrecerlo ahí; si no se pudo guardar, sigue solo por WhatsApp.
+- **ENVIO-121** Un pedido con envío con `preorder = true` o `scheduled_for` no nulo nace `courier_status = 'waiting'`,
+  sin `offered_at`: no se ofrece al crearse. Un pedido común sigue naciendo `searching` (ENVIO-95).
+- **ENVIO-122** Cuando el local lo saca de pendiente sin cancelarlo (confirmado, o salta a otro estado), el pedido
+  `waiting` pasa a `searching` con `offered_at = now()` (trigger `orders_open_courier_search_on_confirm`). Cancelarlo no
+  abre la búsqueda. Mientras está `waiting`, `courier_available_orders` no lo muestra y `courier_make_offer` da
+  `P0020`. Los 5 minutos de la elección automática cuentan desde la primera oferta, también sin seguimiento.
+- **ENVIO-123** El panel del local, en un pedido pendiente `waiting`, dice "Se ofrece a los repartidores cuando lo
+  confirmes".
+- **ENVIO-124** La migración pasa a `waiting` los pedidos anticipados o programados que estaban `searching`, siguen
+  pendientes y no tienen ofertas.
+- **ENVIO-125** La oferta con precio distinto al de lista dice "Precio de lista {precio} · {motivo}" (sin motivo, solo
+  "Precio de lista {precio}") en el seguimiento (es, en y pt) y en el panel del local. *Reemplaza el "Antes {precio}:
+  {motivo}" de ENVIO-91 y SEGUIMIENTO-28.*
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 

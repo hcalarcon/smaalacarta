@@ -166,6 +166,9 @@ describe("estado y precio del envío — ENVIO-80", () => {
     expect(courierStatusLabel(order({ courier_status: "waiting", offered_at: null }))).toBe(
       "Todavía sin repartidor",
     );
+    expect(courierStatusLabel(order({ courier_status: "waiting", offered_at: null, status: "pending" }))).toBe(
+      "Se ofrece a los repartidores cuando lo confirmes",
+    );
     expect(courierStatusLabel(order())).toBe("Buscando repartidor desde las 19:00");
     expect(courierStatusLabel(order({ courier_status: "accepted" }), "Damián")).toBe("Lo tomó Damián");
     expect(courierStatusLabel(order({ courier_status: "accepted" }))).toBe("Lo tomó un repartidor");
