@@ -1190,6 +1190,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_courier_choice: {
+        Args: { p_automatic: boolean; p_offer_id: string; p_order_id: string }
+        Returns: boolean
+      }
       assert_my_favorite_courier: {
         Args: { p_courier_id: string }
         Returns: undefined
@@ -1206,10 +1210,6 @@ export type Database = {
       business_confirm_settlement: {
         Args: { p_order_id: string }
         Returns: undefined
-      }
-      apply_courier_choice: {
-        Args: { p_automatic: boolean; p_offer_id: string; p_order_id: string }
-        Returns: boolean
       }
       business_delivery_options: { Args: never; Returns: Json }
       business_order_offers: { Args: never; Returns: Json }
@@ -1241,8 +1241,8 @@ export type Database = {
       }
       courier_mark_settled: { Args: { p_order_id: string }; Returns: undefined }
       courier_offers_deadline: { Args: { p_order_id: string }; Returns: string }
-      courier_offers_notice_window: { Args: never; Returns: unknown }
-      courier_offers_window: { Args: never; Returns: unknown }
+      courier_offers_notice_window: { Args: never; Returns: string }
+      courier_offers_window: { Args: never; Returns: string }
       courier_orders: { Args: { p_since?: string }; Returns: Json }
       courier_return_order: {
         Args: { p_order_id: string; p_reason: string }
@@ -1449,8 +1449,6 @@ export type Database = {
         Args: { p_favorite: string }
         Returns: undefined
       }
-      settle_courier_offers: { Args: { p_order_id: string }; Returns: undefined }
-      settle_due_courier_offers: { Args: never; Returns: undefined }
       set_order_status: {
         Args: { p_note?: string; p_order_id: string; p_status: string }
         Returns: undefined
@@ -1463,6 +1461,11 @@ export type Database = {
         }
         Returns: undefined
       }
+      settle_courier_offers: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
+      settle_due_courier_offers: { Args: never; Returns: undefined }
       suggest_default_image: {
         Args: { p_category?: string; p_name: string }
         Returns: {
