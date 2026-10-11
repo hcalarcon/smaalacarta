@@ -6,6 +6,7 @@ import OrderDetailDialog from "./OrderDetailDialog";
 import SettlementStatus from "./SettlementStatus";
 import SettlementSummary from "./SettlementSummary";
 import type { Order } from "@/lib/db/orders";
+import type { OrderOffers } from "@/lib/orders/courier";
 
 afterEach(cleanup);
 
@@ -280,18 +281,39 @@ describe("pedido con envío — ENVIO-80 a 85", () => {
       courier_note: null,
       courier_responded_at: null,
       offered_at: "2026-10-08T10:00:00Z",
-      offer_favorite_id: null,
-      offer_favorite_until: null,
       delivery_events: [],
       ...extra,
     } as unknown as Partial<Order>);
 
-  const card2 = (o: Order, at = now) =>
+  const card2 = (o: Order, at = now, offers?: OrderOffers) =>
     render(
-      <OrderCard order={o} now={at} busy={false} onAdvance={vi.fn()} onOpen={vi.fn()} couriers={couriers} />,
+      <OrderCard
+        order={o}
+        now={at}
+        busy={false}
+        onAdvance={vi.fn()}
+        onOpen={vi.fn()}
+        couriers={couriers}
+        offers={offers}
+      />,
     );
 
-  const full = (o: Order, handlers: { onAssign?: () => void; onSelf?: () => void } = {}, at = now) =>
+  // Dos ofertas abiertas: el favorito (Damián) y otra más barata (ENVIO-117).
+  const OFFERS: OrderOffers = {
+    order_id: "p1",
+    cierra_en: "2026-10-08T10:05:00Z",
+    ofertas: [
+      { id: "o1", courier_id: DAMIAN, repartidor: "Damián", precio: 5000, motivo: null, favorito: true },
+      { id: "o2", courier_id: "otro", repartidor: "Moto Express", precio: 4500, motivo: "Cerca", favorito: false },
+    ],
+  };
+
+  const full = (
+    o: Order,
+    handlers: { onAssign?: () => void; onSelf?: () => void } = {},
+    at = now,
+    offers?: OrderOffers,
+  ) =>
     render(
       <OrderDetailDialog
         order={o}
@@ -300,41 +322,43 @@ describe("pedido con envío — ENVIO-80 a 85", () => {
         onClose={vi.fn()}
         onChangeStatus={vi.fn()}
         couriers={couriers}
+        offers={offers}
         now={at}
         onAssignCourier={handlers.onAssign ?? vi.fn()}
         onSelfDelivery={handlers.onSelf ?? vi.fn()}
       />,
     );
 
-  it("antes de confirmar dice que al confirmar se busca repartidor, y confirmar no se bloquea", () => {
-    card2(searching({ status: "pending", courier_status: "waiting", offered_at: null } as Partial<Order>));
+  it("un pedido pendiente con la búsqueda abierta, y confirmar no se bloquea", () => {
+    card2(searching({ status: "pending" } as Partial<Order>));
 
-    expect(screen.getByText("Al confirmar se busca repartidor")).toBeTruthy();
+    expect(screen.getByText("Esperando ofertas")).toBeTruthy();
     expect((screen.getByRole("button", { name: "Confirmar" }) as HTMLButtonElement).disabled).toBe(false);
   });
 
-  it("buscando: barrio, precio y desde qué hora, con el nombre del favorito durante la ventana", () => {
-    card2(
-      searching({ offer_favorite_id: DAMIAN, offer_favorite_until: "2026-10-08T10:08:00Z" } as Partial<Order>),
-    );
+  it("buscando: barrio, precio, desde qué hora y esperando ofertas", () => {
+    card2(searching());
 
     expect(screen.getByText(/Cantera/)).toBeTruthy();
     expect(screen.getByText(/\$\s?5\.000/)).toBeTruthy();
     expect(screen.getByText("Buscando repartidor desde las 07:00")).toBeTruthy();
-    expect(screen.getByText("Lo ve solo Damián hasta las 07:08")).toBeTruthy();
+    expect(screen.getByText("Esperando ofertas")).toBeTruthy();
   });
 
-  it("vencida la ventana, ya no dice que lo ve solo el favorito", () => {
-    card2(
-      searching({ offer_favorite_id: DAMIAN, offer_favorite_until: "2026-10-08T10:03:00Z" } as Partial<Order>),
-    );
-    expect(screen.queryByText(/Lo ve solo/)).toBeNull();
+  it("con ofertas: cuántas hay, en cuánto se elige sola, y quién ofreció cuánto", () => {
+    card2(searching(), new Date("2026-10-08T10:02:00Z"), OFFERS);
+
+    expect(screen.getByText("2 ofertas, el cliente está eligiendo (se elige sola en 3:00)")).toBeTruthy();
+    expect(screen.getByText(/⭐ Damián · \$\s?5\.000/)).toBeTruthy();
+    expect(screen.getByText(/Moto Express · \$\s?4\.500/)).toBeTruthy();
+    // Con ofertas no hay aviso de "nadie ofertó", aunque pasen los 10 minutos.
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("a los 10 minutos sin que lo tome nadie avisa y ofrece resolverlo", () => {
+  it("a los 10 minutos sin ninguna oferta avisa y ofrece resolverlo", () => {
     card2(searching(), new Date("2026-10-08T10:10:00Z"));
 
-    expect(screen.getByRole("alert").textContent).toMatch(/Nadie lo tomó todavía/);
+    expect(screen.getByRole("alert").textContent).toMatch(/Nadie ofertó todavía/);
     expect(screen.getByRole("button", { name: "Resolver envío" })).toBeTruthy();
   });
 
@@ -418,12 +442,14 @@ describe("pedido con envío — ENVIO-80 a 85", () => {
     expect(screen.queryByText("Llamar")).toBeNull();
   });
 
-  it("el detalle ofrece Asignar a mano y Lo llevo yo durante toda la búsqueda, también en la ventana", () => {
-    full(searching({ offer_favorite_id: DAMIAN, offer_favorite_until: "2026-10-08T10:08:00Z" } as Partial<Order>));
+  it("el detalle ofrece Asignar a mano y Lo llevo yo durante toda la búsqueda, con las ofertas a la vista", () => {
+    full(searching(), {}, new Date("2026-10-08T10:02:00Z"), OFFERS);
 
     expect(screen.getByRole("button", { name: "Asignar a mano" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Lo llevo yo" })).toBeTruthy();
-    expect(screen.getByText("Lo ve solo Damián hasta las 07:08")).toBeTruthy();
+    expect(screen.getByText("2 ofertas, el cliente está eligiendo (se elige sola en 3:00)")).toBeTruthy();
+    expect(screen.getByText("Cerca")).toBeTruthy();
+    expect(screen.getByText(/tu favorito/)).toBeTruthy();
   });
 
   it("asignar a mano: solo los repartidores que cubren la zona, con nota opcional", () => {
@@ -463,7 +489,7 @@ describe("pedido con envío — ENVIO-80 a 85", () => {
   it("a los 10 minutos las dos acciones siguen igual y el aviso aparece en el detalle", () => {
     full(searching(), {}, new Date("2026-10-08T10:12:00Z"));
 
-    expect(screen.getByRole("alert").textContent).toMatch(/Nadie lo tomó todavía \(12 min\)/);
+    expect(screen.getByRole("alert").textContent).toMatch(/Nadie ofertó todavía \(12 min\)/);
     expect(screen.getByRole("button", { name: "Asignar a mano" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "Lo llevo yo" })).toBeTruthy();
   });
@@ -488,7 +514,7 @@ describe("pedido con envío — ENVIO-80 a 85", () => {
   });
 
   it("el detalle con un pedido por confirmar no bloquea el cambio de estado", () => {
-    full(searching({ status: "pending", courier_status: "waiting", offered_at: null } as Partial<Order>));
+    full(searching({ status: "pending" } as Partial<Order>));
 
     expect(screen.getByRole("button", { name: "Confirmado" })).toBeTruthy();
     expect(screen.queryByText(/aceptado por el repartidor/i)).toBeNull();

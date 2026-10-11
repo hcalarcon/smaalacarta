@@ -108,10 +108,10 @@ export type SaveDeliveryResult =
   | {
       ok: false;
       error: string;
-      fieldErrors?: Partial<Record<"favorite" | "minutes", string>>;
+      fieldErrors?: Partial<Record<"favorite", string>>;
     };
 
-// Zonas a las que envía el local, repartidor favorito y minutos (ENVIO-58). El negocio sale de la
+// Zonas a las que envía el local y repartidor favorito (ENVIO-58 y 112). El negocio sale de la
 // sesión; la base guarda las zonas y el favorito en una sola transacción y vuelve a validar todo.
 export async function saveDeliveryAction(input: DeliveryInput): Promise<SaveDeliveryResult> {
   const { business } = await requireBusiness();
@@ -129,7 +129,6 @@ export async function saveDeliveryAction(input: DeliveryInput): Promise<SaveDeli
     {
       zoneIds: Array.isArray(input.zoneIds) ? input.zoneIds.filter((id) => typeof id === "string") : [],
       favoriteId: typeof input.favoriteId === "string" ? input.favoriteId : null,
-      minutes: typeof input.minutes === "string" ? input.minutes : "",
     },
     options,
   );
@@ -141,7 +140,6 @@ export async function saveDeliveryAction(input: DeliveryInput): Promise<SaveDeli
   const saved = await saveDeliveryPreferences({
     zoneIds: validation.zoneIds,
     favoriteId: validation.favoriteId,
-    minutes: validation.minutes,
   });
 
   if ("error" in saved) {

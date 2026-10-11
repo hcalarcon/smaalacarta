@@ -20,8 +20,8 @@ export async function listCourierOrders(): Promise<CourierPanelOrder[]> {
   return Array.isArray(data) ? (data as unknown as CourierPanelOrder[]) : [];
 }
 
-// Los pedidos que el repartidor puede tomar ahora (ENVIO-62): ya descontados los que rechazó o devolvió
-// y los que todavía están en la ventana del favorito de otro. Si la base falla, el error llega a la página.
+// Los pedidos por los que el repartidor puede ofertar ahora (ENVIO-101), más los que cerró hace un rato.
+// La base resuelve antes lo vencido (ENVIO-106). Si falla, el error llega a la página.
 export async function listAvailableOrders(): Promise<AvailableOrder[]> {
   const supabase = await createClient();
 
@@ -34,27 +34,34 @@ export async function listAvailableOrders(): Promise<AvailableOrder[]> {
   return Array.isArray(data) ? (data as unknown as AvailableOrder[]) : [];
 }
 
-export type TakeOrderInput = { note: string | null; fee: number | null; feeReason: string | null };
-
-// Toma el pedido (ENVIO-63 y 64): el primero se lo queda; si ya lo tomó otro, la base da `P0019`.
-export async function courierTakeOrder(
+// Oferta por el pedido, o cambia la propia (ENVIO-98): con el precio de lista o con otro y su motivo. Si el
+// pedido ya no recibe ofertas, la base da `P0020`.
+export async function courierMakeOffer(
   orderId: string,
-  input: TakeOrderInput,
+  input: { price: number; reason: string | null },
 ): Promise<{ ok: true } | DbFailure> {
   const supabase = await createClient();
 
-  const { error } = await supabase.rpc("courier_take_order", {
+  const { error } = await supabase.rpc("courier_make_offer", {
     p_order_id: orderId,
-    // La clave se omite cuando no hay valor: la función usa su DEFAULT.
-    ...(input.fee !== null ? { p_price: input.fee } : {}),
-    ...(input.feeReason ? { p_reason: input.feeReason } : {}),
-    ...(input.note ? { p_note: input.note } : {}),
+    p_price: input.price,
+    // La clave se omite cuando no hay motivo: la función usa su DEFAULT.
+    ...(input.reason ? { p_reason: input.reason } : {}),
   });
 
   return error ? { error: { code: error.code, message: error.message } } : { ok: true };
 }
 
-// Rechaza el pedido (ENVIO-65): deja de verlo este repartidor.
+// Retira la propia oferta mientras el cliente no eligió (ENVIO-100).
+export async function courierWithdrawOffer(orderId: string): Promise<{ ok: true } | DbFailure> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("courier_withdraw_offer", { p_order_id: orderId });
+
+  return error ? { error: { code: error.code, message: error.message } } : { ok: true };
+}
+
+// Rechaza el pedido (ENVIO-102): deja de verlo este repartidor y retira su oferta.
 export async function courierDeclineOrder(orderId: string): Promise<{ ok: true } | DbFailure> {
   const supabase = await createClient();
 

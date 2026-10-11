@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import AvailableOrderCard from "./AvailableOrderCard";
 import CourierOrderCard from "./CourierOrderCard";
@@ -9,11 +9,13 @@ import { useNewOrderAlert } from "./useNewOrderAlert";
 import {
   advanceOrderAction,
   declineOrderAction,
+  makeOfferAction,
   markSettledAction,
   returnOrderAction,
-  takeOrderAction,
+  withdrawOfferAction,
 } from "../actions";
 import {
+  chosenOrderIds,
   GROUP_TITLES,
   isToRespond,
   sortAvailable,
@@ -29,13 +31,13 @@ const REFRESH_MS = 15_000;
 const HISTORY_SHOWN = 20;
 
 const HINTS: Record<PanelGroup, string> = {
-  disponibles: "Pedidos de tus zonas que todavía no tomó nadie: el primero que toca Tomar se lo queda",
-  en_curso: "Los que tomaste: el local te los entrega y los llevás",
+  disponibles: "Pedidos de tus zonas: ofertá con el precio de lista o con otro, y el cliente elige",
+  en_curso: "Los que te eligieron: el local te los entrega y los llevás",
   historial: "Entregados, cancelados o que no pudiste llevar",
 };
 
 const EMPTY: Record<PanelGroup, string> = {
-  disponibles: "No hay pedidos disponibles ahora.",
+  disponibles: "No hay pedidos para ofertar ahora.",
   en_curso: "No hay envíos en curso.",
   historial: "Todavía no hay historial.",
 };
@@ -58,14 +60,32 @@ export default function CourierOrdersClient({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [tab, setTab] = useState<"pedidos" | "rendiciones">("pedidos");
   const [error, setError] = useState<{ id: string; message: string } | null>(null);
-  // Aviso general: "Lo tomó otro repartidor" (el pedido desaparece de la lista al refrescar).
+  // Aviso general: "El pedido ya no recibe ofertas" (el pedido desaparece de la lista al refrescar).
   const [notice, setNotice] = useState<string | null>(null);
 
-  const { soundOn, audioReady, toggleSound, soundOnRef } = useNewOrderAlert({
+  const { soundOn, audioReady, toggleSound, soundOnRef, playChosen } = useNewOrderAlert({
     orders: available,
     isPending: isToRespond,
     label: "Pedido disponible",
   });
+
+  // Los pedidos por los que ofertó: cuando uno aparece entre sus envíos en curso, lo eligieron y suena un
+  // aviso distinto (ENVIO-116). Los que ya estaban en curso al abrir la pantalla no suenan.
+  const offeredIds = useRef<Set<string>>(new Set());
+  const announced = useRef<Set<string>>(new Set(orders.map((item) => item.id)));
+
+  useEffect(() => {
+    const fresh = chosenOrderIds(offeredIds.current, orders).filter((id) => !announced.current.has(id));
+    orders.forEach((item) => announced.current.add(item.id));
+
+    if (fresh.length > 0) playChosen();
+
+    available.forEach((item) => {
+      if (item.mi_oferta) offeredIds.current.add(item.id);
+    });
+    // `playChosen` cambia en cada render; lo que importa es cuándo llegan datos nuevos.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders, available]);
 
   // Se actualiza solo (mismo mecanismo que el tablero del local). Con la pestaña oculta solo sigue
   // si el sonido está activado: quien lo activó espera el aviso aunque esté en otra pestaña.
@@ -80,14 +100,14 @@ export default function CourierOrdersClient({
     return () => clearInterval(id);
   }, [router, soundOnRef]);
 
-  async function run(orderId: string, call: () => ReturnType<typeof takeOrderAction>) {
+  async function run(orderId: string, call: () => ReturnType<typeof makeOfferAction>) {
     setError(null);
     setNotice(null);
     setBusyId(orderId);
 
     try {
       const result = await call();
-      if (!result.ok && result.taken) setNotice("Lo tomó otro repartidor.");
+      if (!result.ok && result.closed) setNotice("El pedido ya no recibe ofertas.");
       else if (!result.ok) setError({ id: orderId, message: result.error });
     } catch {
       setError({ id: orderId, message: "No pudimos guardar el cambio. Probá de nuevo." });
@@ -99,6 +119,8 @@ export default function CourierOrdersClient({
 
   const groups = splitOrders(orders);
   const disponibles = sortAvailable(available);
+  // Los avisos de ofertas cerradas se ven un rato, pero no cuentan como pedidos para ofertar.
+  const openCount = disponibles.filter((item) => !item.resultado).length;
   const settlements = totalsByBusiness(orders);
   const settlementTotals = grandTotals(settlements);
   const toSettleCount = orders.filter((item) => courierOrderState(item) === "to_settle").length;
@@ -221,7 +243,7 @@ export default function CourierOrdersClient({
 
       {tab === "pedidos" ? order.map((group) => {
         // Del historial se ven los últimos, pero nunca queda afuera un pedido sin rendir.
-        const total = group === "disponibles" ? disponibles.length : groups[group].length;
+        const total = group === "disponibles" ? openCount : groups[group].length;
         const list =
           group === "historial"
             ? groups[group].filter(
@@ -243,7 +265,7 @@ export default function CourierOrdersClient({
               <p className="text-xs text-stone-500">{HINTS[group]}</p>
             </header>
 
-            {total === 0 ? (
+            {total === 0 && !(group === "disponibles" && disponibles.length > 0) ? (
               <p className="rounded-2xl border border-dashed border-line-strong bg-white p-4 text-center text-sm text-stone-400">
                 {EMPTY[group]}
               </p>
@@ -256,9 +278,10 @@ export default function CourierOrdersClient({
                     now={now}
                     busy={busyId === item.id}
                     error={error?.id === item.id ? error.message : null}
-                    onTake={(input) =>
-                      run(item.id, () => takeOrderAction(item.id, input, Number(item.envio.precio ?? 0)))
+                    onOffer={(input) =>
+                      run(item.id, () => makeOfferAction(item.id, input, Number(item.envio.precio_lista ?? 0)))
                     }
+                    onWithdraw={() => run(item.id, () => withdrawOfferAction(item.id))}
                     onDecline={() => run(item.id, () => declineOrderAction(item.id))}
                   />
                 ))}

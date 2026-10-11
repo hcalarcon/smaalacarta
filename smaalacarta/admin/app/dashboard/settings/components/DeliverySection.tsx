@@ -3,11 +3,8 @@
 import { useEffect, useState } from "react";
 
 import { useSettingsSave } from "./SettingsSaveProvider";
-import Field from "@/components/ui/Field";
 import Section from "@/components/ui/Section";
 import {
-  FAVORITE_MINUTES_MAX,
-  FAVORITE_MINUTES_MIN,
   favoriteCandidates,
   initialDeliveryInput,
   normalizeDeliveryInput,
@@ -17,7 +14,8 @@ import {
 } from "@/lib/courier/preferences";
 import { formatMoney } from "@/lib/promotions/pricing";
 
-// Envíos (ENVIO-58): a qué zonas envía el local, repartidor favorito y cuántos minutos lo ve solo él.
+// Envíos (ENVIO-58 y 119): a qué zonas envía el local y repartidor favorito (su oferta le aparece primero
+// al cliente, con la marca "Recomendado por el local").
 // No tiene botón propio: informa a `SettingsSaveProvider` y se guarda con "Guardar cambios", junto al
 // resto de Configuración (zonas y favorito van juntos y de forma atómica).
 export default function DeliverySection({ options }: { options: DeliveryOptions }) {
@@ -55,13 +53,13 @@ export default function DeliverySection({ options }: { options: DeliveryOptions 
     <Section
       id="envios"
       title="Envíos"
-      description="A qué zonas enviás y qué repartidor atiende primero tus pedidos."
+      description="A qué zonas enviás y qué repartidor recomendás a tus clientes."
     >
       <fieldset>
         <legend className="mb-1.5 block text-sm font-medium text-brand">Zonas a las que enviás</legend>
         <p className="mb-2 text-sm text-stone-500">
-          Tus clientes solo ven estas zonas al pedir un envío. El precio es de referencia: el repartidor puede
-          ajustarlo, con un motivo, al aceptar el pedido.
+          Tus clientes solo ven estas zonas al pedir un envío. El precio es de referencia: cada repartidor puede
+          ofertar con otro precio, con un motivo, y el cliente elige.
         </p>
 
         {options.zones.length === 0 ? (
@@ -101,7 +99,7 @@ export default function DeliverySection({ options }: { options: DeliveryOptions 
           onChange={(event) => setInput({ ...input, favoriteId: event.target.value || null })}
           className="w-full rounded-xl border border-line-strong bg-white px-4 py-3 text-base text-stone-900 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
         >
-          <option value="">Sin favorito (el pedido va a todos)</option>
+          <option value="">Sin favorito</option>
           {candidates.map((courier) => (
             <option key={courier.id} value={courier.id}>
               {courier.name}
@@ -111,25 +109,11 @@ export default function DeliverySection({ options }: { options: DeliveryOptions 
         <p className="mt-1.5 text-sm text-stone-500">
           {candidates.length === 0
             ? "Marcá al menos una zona que cubra algún repartidor para poder elegir un favorito."
-            : "Solo aparecen los repartidores que cubren alguna de las zonas marcadas."}
+            : "Su oferta le aparece primero al cliente, marcada \"Recomendado por el local\". Solo aparecen los repartidores que cubren alguna de las zonas marcadas."}
         </p>
         {deliveryErrors.favorite ? <p className="mt-1.5 text-sm text-red-600">{deliveryErrors.favorite}</p> : null}
       </div>
 
-      {input.favoriteId !== null ? (
-        <Field
-          label="Minutos para el favorito"
-          name="favorite-minutes"
-          type="number"
-          inputMode="numeric"
-          min={FAVORITE_MINUTES_MIN}
-          max={FAVORITE_MINUTES_MAX}
-          value={input.minutes}
-          onChange={(event) => setInput({ ...input, minutes: event.target.value })}
-          hint="Cuánto tiempo lo ve solo tu favorito antes de que pase a los demás repartidores."
-          error={deliveryErrors.minutes}
-        />
-      ) : null}
     </Section>
   );
 }

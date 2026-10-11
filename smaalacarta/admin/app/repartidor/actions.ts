@@ -6,49 +6,49 @@ import { requireCourier } from "@/lib/auth/courier";
 import { validateReturnReason } from "@/lib/courier/panel";
 import {
   courierDeclineOrder,
+  courierMakeOffer,
   courierMarkSettled,
   courierReturnOrder,
   courierSetStatus,
-  courierTakeOrder,
+  courierWithdrawOffer,
   setZoneCoverage,
 } from "@/lib/db/courier";
 import { orderErrorMessage, settlementErrorMessage } from "@/lib/orders/messages";
-import { validateCourierResponse, type CourierResponseInput } from "@/lib/orders/courier";
+import { validateOffer, type OfferInput } from "@/lib/orders/courier";
 
 export type CourierActionResult =
   | { ok: true }
-  // `taken`: el pedido ya lo tomó otro repartidor o dejó de estar disponible (P0019): el panel lo saca.
-  | { ok: false; error: string; fieldErrors?: Partial<Record<string, string>>; taken?: boolean };
+  // `closed`: el pedido ya no recibe ofertas (P0020): lo eligió otro, se canceló o lo resolvió el local.
+  | { ok: false; error: string; fieldErrors?: Partial<Record<string, string>>; closed?: boolean };
 
 const GENERIC = "No pudimos guardar el cambio. Probá de nuevo.";
 
 // Todas las acciones empiezan por `requireCourier()`: el repartidor sale de la sesión, nunca del
 // navegador (ENVIO-3). La base vuelve a comprobar de quién es cada pedido y cada barrio.
 
-// Tomar un pedido disponible (con nota y precio final; si cambia, motivo): el primero se lo queda
-// (ENVIO-63 y 64). Si ya lo tomó otro, la base da P0019 y la respuesta lleva `taken`.
-export async function takeOrderAction(
+const isClosed = (code?: string) => code === "P0020" || code === "P0019";
+
+// Ofertar por un pedido disponible, o cambiar la propia oferta (ENVIO-98): precio de lista o uno
+// distinto con motivo. La base valida de nuevo; si el pedido ya no recibe ofertas da P0020 y la respuesta
+// lleva `closed`.
+export async function makeOfferAction(
   orderId: string,
-  input: CourierResponseInput,
-  currentFee: number,
+  input: OfferInput,
+  listPrice: number,
 ): Promise<CourierActionResult> {
   await requireCourier();
 
-  const validation = validateCourierResponse(input, currentFee);
+  const validation = validateOffer(input, listPrice);
   if (!validation.ok) {
     return { ok: false, error: "Revisá los datos marcados.", fieldErrors: validation.errors };
   }
 
-  const result = await courierTakeOrder(orderId, {
-    note: validation.note,
-    fee: validation.fee,
-    feeReason: validation.reason,
-  });
+  const result = await courierMakeOffer(orderId, { price: validation.price, reason: validation.reason });
   if ("error" in result) {
     return {
       ok: false,
       error: orderErrorMessage(result.error),
-      ...(result.error.code === "P0019" ? { taken: true } : {}),
+      ...(isClosed(result.error.code) ? { closed: true } : {}),
     };
   }
 
@@ -56,7 +56,24 @@ export async function takeOrderAction(
   return { ok: true };
 }
 
-// Rechazar un pedido disponible: deja de verlo (ENVIO-65).
+// Retirar la propia oferta, mientras el cliente no eligió (ENVIO-100).
+export async function withdrawOfferAction(orderId: string): Promise<CourierActionResult> {
+  await requireCourier();
+
+  const result = await courierWithdrawOffer(orderId);
+  if ("error" in result) {
+    return {
+      ok: false,
+      error: orderErrorMessage(result.error),
+      ...(isClosed(result.error.code) ? { closed: true } : {}),
+    };
+  }
+
+  revalidatePath("/repartidor");
+  return { ok: true };
+}
+
+// Rechazar un pedido disponible: deja de verlo y retira su oferta (ENVIO-102).
 export async function declineOrderAction(orderId: string): Promise<CourierActionResult> {
   await requireCourier();
 
@@ -65,7 +82,7 @@ export async function declineOrderAction(orderId: string): Promise<CourierAction
     return {
       ok: false,
       error: orderErrorMessage(result.error),
-      ...(result.error.code === "P0019" ? { taken: true } : {}),
+      ...(isClosed(result.error.code) ? { closed: true } : {}),
     };
   }
 

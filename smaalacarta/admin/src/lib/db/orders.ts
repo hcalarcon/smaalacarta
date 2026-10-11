@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase-server";
+import type { OrderOffers } from "@/lib/orders/courier";
 import type { OrderItemOption } from "@/lib/orders/item-options";
 import type { ManualOrderInput } from "@/lib/orders/manual-order";
 import { todayAtIso } from "@/lib/orders/scheduled";
@@ -34,10 +35,8 @@ export type OrderDelivery = {
   courier_status: string | null;
   courier_note: string | null;
   courier_responded_at: string | null;
-  // La búsqueda de repartidor (ENVIO-59 y 60): cuándo se abrió y, si hay favorito, quién y hasta cuándo.
+  // La búsqueda de repartidor (ENVIO-59 y 95): cuándo se abrió.
   offered_at: string | null;
-  offer_favorite_id: string | null;
-  offer_favorite_until: string | null;
   // Rendición del efectivo (ENVIO-39): cuándo la marcó el repartidor y cuándo la confirmó el local.
   settled_at: string | null;
   settlement_received_at: string | null;
@@ -67,7 +66,7 @@ export type Order = OrderDelivery & {
 
 const SELECT =
   "id, order_number, status, total, notes, customer_name, delivery, payment, payment_status, source, scheduled_for, preorder, code, created_at, updated_at, " +
-  "courier_id, delivery_zone_id, delivery_zone_name, delivery_fee_list, delivery_fee, delivery_fee_reason, delivery_fee_changed_at, customer_phone, delivery_address, courier_status, courier_note, courier_responded_at, offered_at, offer_favorite_id, offer_favorite_until, settled_at, settlement_received_at, " +
+  "courier_id, delivery_zone_id, delivery_zone_name, delivery_fee_list, delivery_fee, delivery_fee_reason, delivery_fee_changed_at, customer_phone, delivery_address, courier_status, courier_note, courier_responded_at, offered_at, settled_at, settlement_received_at, " +
   "order_items(name, quantity, unit_price, sort_order, options), order_events(kind, status, created_at, note)";
 
 // Los pedidos más recientes del negocio, con su detalle y su línea de tiempo. El RLS
@@ -101,6 +100,19 @@ export async function listOrders(businessId: string, limit = 150): Promise<Order
 }
 
 type DbFailure = { error: { code?: string; message?: string } };
+
+// Las ofertas abiertas de los pedidos que buscan repartidor en el negocio de quien llama (ENVIO-111). La
+// función resuelve antes lo que ya venció (ENVIO-106): se llama ANTES de leer los pedidos, así lo que
+// se lee ya está resuelto. Si falla, el tablero sigue sin ofertas.
+export async function listOrderOffers(): Promise<OrderOffers[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("business_order_offers");
+
+  if (error || !Array.isArray(data)) return [];
+
+  return data as unknown as OrderOffers[];
+}
 
 export async function setOrderStatus(
   orderId: string,

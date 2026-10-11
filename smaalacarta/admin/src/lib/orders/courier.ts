@@ -27,16 +27,27 @@ export type CourierOrder = {
   courier_status: string | null;
   courier_note: string | null;
   courier_responded_at: string | null;
-  // Cuándo se abrió la búsqueda y, si el local tiene favorito, quién y hasta cuándo lo ve solo.
+  // Cuándo se abrió la búsqueda (al crearse el pedido, o al devolverlo el repartidor elegido).
   offered_at: string | null;
-  offer_favorite_id: string | null;
-  offer_favorite_until: string | null;
 };
+
+// Una oferta de repartidor tal como la entrega `business_order_offers()` (ENVIO-111).
+export type OrderOffer = {
+  id: string;
+  courier_id: string;
+  repartidor: string;
+  precio: number;
+  motivo: string | null;
+  favorito: boolean;
+};
+
+// Las ofertas abiertas de un pedido que busca repartidor, con cuándo se elige sola (ENVIO-105).
+export type OrderOffers = { order_id: string; cierra_en: string | null; ofertas: OrderOffer[] };
 
 // Un repartidor activo que cubre alguna zona del local (`business_delivery_options()`).
 export type OrderCourier = { id: string; name: string; whatsapp: string | null; zone_ids: string[] };
 
-// Pasados estos minutos sin que nadie lo tome, el panel lo destaca (ENVIO-82).
+// Pasados estos minutos sin ninguna oferta, el panel lo destaca (ENVIO-118).
 export const SEARCH_WARNING_MINUTES = 10;
 
 // ¿El pedido tiene un repartidor asignado (lo tomó uno o lo asignó el local)?
@@ -89,27 +100,41 @@ export function clockTime(value: string | null | undefined) {
   return Number.isNaN(date.getTime()) ? null : timeFormatter.format(date);
 }
 
-// La ventana en la que solo lo ve el favorito: cuándo termina, o null si no hay o ya terminó.
-export function favoriteWindow(
-  order: Pick<CourierOrder, "courier_status" | "offer_favorite_id" | "offer_favorite_until">,
-  now: Date,
-): { until: string } | null {
-  if (order.courier_status !== "searching" || !order.offer_favorite_id || !order.offer_favorite_until) {
-    return null;
-  }
+// "m:ss" de una cuenta regresiva en milisegundos; 0:00 si ya pasó.
+export function formatCountdown(ms: number) {
+  const total = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
 
-  const until = new Date(order.offer_favorite_until).getTime();
-  if (Number.isNaN(until) || until <= now.getTime()) return null;
-
-  return { until: timeFormatter.format(new Date(until)) };
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
-// Aviso "Nadie lo tomó todavía" a los `SEARCH_WARNING_MINUTES` de abierta la búsqueda (ENVIO-82), o null.
+// Qué pasa con las ofertas de un pedido que busca repartidor (ENVIO-117): "Esperando ofertas", o cuántas
+// hay y en cuánto se elige sola. `null` si el pedido no está buscando.
+export function offersLabel(offers: OrderOffers | undefined, now: Date): string {
+  const count = offers?.ofertas.length ?? 0;
+  if (!offers || count === 0) return "Esperando ofertas";
+
+  const noun = count === 1 ? "oferta" : "ofertas";
+  const closes = offers.cierra_en ? new Date(offers.cierra_en).getTime() : NaN;
+
+  if (Number.isNaN(closes)) return `${count} ${noun}, el cliente está eligiendo`;
+
+  const left = closes - now.getTime();
+  return left > 0
+    ? `${count} ${noun}, el cliente está eligiendo (se elige sola en ${formatCountdown(left)})`
+    : `${count} ${noun}, se está eligiendo la más barata`;
+}
+
+// Aviso "Nadie ofertó todavía" a los `SEARCH_WARNING_MINUTES` de abierta la búsqueda sin ninguna oferta
+// (ENVIO-118), o null. `offerCount` es cuántas ofertas abiertas hay.
 export function searchWarning(
   order: Pick<CourierOrder, "courier_status" | "offered_at" | "status">,
   now: Date,
+  offerCount = 0,
 ): string | null {
   if (order.courier_status !== "searching" || !order.offered_at || isFinal(order.status)) return null;
+  if (offerCount > 0) return null;
 
   const since = new Date(order.offered_at).getTime();
   if (Number.isNaN(since)) return null;
@@ -117,7 +142,7 @@ export function searchWarning(
   const minutes = Math.floor((now.getTime() - since) / 60_000);
   if (minutes < SEARCH_WARNING_MINUTES) return null;
 
-  return `Nadie lo tomó todavía (${minutes} min): asignalo a mano o llevalo vos.`;
+  return `Nadie ofertó todavía (${minutes} min): asignalo a mano o llevalo vos.`;
 }
 
 // Cómo está el envío, en una línea (ENVIO-80). `courierName` es el nombre del repartidor que lo tomó,
@@ -128,7 +153,7 @@ export function courierStatusLabel(
 ) {
   switch (order.courier_status) {
     case "waiting":
-      return "Al confirmar se busca repartidor";
+      return "Todavía sin repartidor";
     case "searching": {
       const since = clockTime(order.offered_at);
       return since ? `Buscando repartidor desde las ${since}` : "Buscando repartidor";
@@ -145,18 +170,6 @@ export function courierStatusLabel(
     default:
       return "Sin envío con repartidor";
   }
-}
-
-// "Lo ve solo {favorito} hasta las HH:MM" mientras dura la ventana, o null.
-export function favoriteWindowLabel(
-  order: Pick<CourierOrder, "courier_status" | "offer_favorite_id" | "offer_favorite_until">,
-  now: Date,
-  favoriteName?: string | null,
-) {
-  const window = favoriteWindow(order, now);
-  if (!window) return null;
-
-  return `Lo ve solo ${favoriteName || "tu repartidor favorito"} hasta las ${window.until}`;
 }
 
 // Los repartidores activos que cubren la zona del pedido (los que se pueden asignar a mano), por nombre.
@@ -231,42 +244,44 @@ export function whatsappDigits(value: string | null | undefined) {
   return local.length === 10 ? `549${local}` : digits;
 }
 
-export type CourierResponseInput = { note: string; fee: string; reason: string };
+export const OFFER_REASON_MIN = 3;
+export const OFFER_REASON_MAX = 140;
 
-export type CourierResponseResult =
-  | { ok: true; note: string | null; fee: number | null; reason: string | null }
-  | { ok: false; errors: Partial<Record<"note" | "fee" | "reason", string>> };
+export type OfferInput = { price: string; reason: string };
 
-// Valida lo que el repartidor manda al tomar un pedido (ENVIO-64): nota opcional (hasta 120) y, si el
-// precio final cambia, el motivo es obligatorio (hasta 200). El precio puede venir como "26000",
-// "26.000" o "$ 26.000"; un precio igual al actual no cuenta como cambio.
-export function validateCourierResponse(
-  input: CourierResponseInput,
-  currentFee: number,
-): CourierResponseResult {
-  const errors: Partial<Record<"note" | "fee" | "reason", string>> = {};
+export type OfferResult =
+  | { ok: true; price: number; reason: string | null }
+  | { ok: false; errors: Partial<Record<"price" | "reason", string>> };
 
-  const note = input.note.trim();
-  if (note.length > 120) errors.note = "La nota admite hasta 120 caracteres.";
+// Valida la oferta del repartidor (ENVIO-98): el precio es obligatorio ("26000", "26.000" o "$ 26.000");
+// si es distinto del de lista, el motivo también (de 3 a 140 caracteres), y se guarda; con el de lista el
+// motivo se descarta.
+export function validateOffer(input: OfferInput, listPrice: number): OfferResult {
+  const errors: Partial<Record<"price" | "reason", string>> = {};
 
-  let fee: number | null = null;
-  const rawFee = input.fee.replace(/[$\s.]/g, "").replace(",", ".");
+  const raw = input.price.replace(/[$\s.]/g, "").replace(",", ".");
+  let price = NaN;
 
-  if (rawFee !== "") {
-    if (!/^\d+(\.\d{1,2})?$/.test(rawFee) || Number(rawFee) >= 100_000_000) {
-      errors.fee = "Escribí un precio válido, por ejemplo 26000.";
-    } else if (Number(rawFee) !== Number(currentFee)) {
-      fee = Number(rawFee);
-    }
+  if (raw === "") {
+    errors.price = "Escribí el precio de tu oferta.";
+  } else if (!/^\d+(\.\d{1,2})?$/.test(raw) || Number(raw) >= 100_000_000) {
+    errors.price = "Escribí un precio válido, por ejemplo 26000.";
+  } else {
+    price = Number(raw);
   }
 
   const reason = input.reason.trim();
-  if (fee !== null && reason === "") errors.reason = "Contá por qué cambia el precio del envío.";
-  if (reason.length > 200) errors.reason = "El motivo admite hasta 200 caracteres.";
+  const changed = Number.isFinite(price) && price !== Number(listPrice);
+
+  if (changed && reason === "") {
+    errors.reason = "Contá por qué cambia el precio del envío.";
+  } else if (changed && (reason.length < OFFER_REASON_MIN || reason.length > OFFER_REASON_MAX)) {
+    errors.reason = `El motivo va de ${OFFER_REASON_MIN} a ${OFFER_REASON_MAX} caracteres.`;
+  }
 
   if (Object.keys(errors).length > 0) return { ok: false, errors };
 
-  return { ok: true, note: note || null, fee, reason: fee !== null ? reason : null };
+  return { ok: true, price, reason: changed ? reason : null };
 }
 
 // La nota opcional al asignar a mano un repartidor (ENVIO-81): hasta 120 caracteres.

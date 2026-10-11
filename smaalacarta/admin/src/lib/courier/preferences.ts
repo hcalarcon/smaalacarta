@@ -1,43 +1,27 @@
-// Preferencias de envío del local (ENVIO-58): a qué zonas envía, repartidor favorito y cuántos minutos
-// lo ve solo él. Las reglas son las de la base (`save_delivery_preferences`): el favorito tiene que
-// cubrir alguna de las zonas marcadas y los minutos van de 1 a 60.
-
-export const FAVORITE_MINUTES_DEFAULT = 5;
-export const FAVORITE_MINUTES_MIN = 1;
-export const FAVORITE_MINUTES_MAX = 60;
+// Preferencias de envío del local (ENVIO-58 y 112): a qué zonas envía y repartidor favorito (su oferta le
+// aparece primero al cliente). Las reglas son las de la base (`save_delivery_preferences`): el favorito
+// tiene que cubrir alguna de las zonas marcadas.
 
 // Lo que entrega `business_delivery_options()`.
 export type DeliveryOptions = {
   zones: { id: string; name: string; price: number; selected: boolean; covered: boolean }[];
   couriers: { id: string; name: string; whatsapp: string | null; zone_ids: string[] }[];
   favorite_id: string | null;
-  favorite_minutes: number;
 };
 
-// Lo que edita la pantalla. Los minutos son texto: es lo que escribe la persona.
+// Lo que edita la pantalla.
 export type DeliveryInput = {
   zoneIds: string[];
   favoriteId: string | null;
-  minutes: string;
 };
 
-export type DeliveryErrors = Partial<Record<"favorite" | "minutes", string>>;
-
-// Un entero de 1 a 60, o null.
-export function parseMinutes(text: string): number | null {
-  const trimmed = text.trim();
-  if (!/^\d{1,3}$/.test(trimmed)) return null;
-
-  const value = Number(trimmed);
-  return value >= FAVORITE_MINUTES_MIN && value <= FAVORITE_MINUTES_MAX ? value : null;
-}
+export type DeliveryErrors = Partial<Record<"favorite", string>>;
 
 // El estado inicial de la pantalla, a partir de lo que guardó el local.
 export function initialDeliveryInput(options: DeliveryOptions): DeliveryInput {
   const input: DeliveryInput = {
     zoneIds: options.zones.filter((zone) => zone.selected).map((zone) => zone.id),
     favoriteId: options.favorite_id,
-    minutes: String(options.favorite_minutes),
   };
 
   return normalizeDeliveryInput(input, options);
@@ -59,13 +43,13 @@ export function normalizeDeliveryInput(input: DeliveryInput, options: DeliveryOp
   const stillCovers =
     input.favoriteId !== null && favoriteCandidates(options, zoneIds).some((courier) => courier.id === input.favoriteId);
 
-  return { zoneIds, favoriteId: stillCovers ? input.favoriteId : null, minutes: input.minutes };
+  return { zoneIds, favoriteId: stillCovers ? input.favoriteId : null };
 }
 
 export function validateDeliveryInput(
   input: DeliveryInput,
   options: DeliveryOptions,
-): { ok: true; zoneIds: string[]; favoriteId: string | null; minutes: number } | { ok: false; errors: DeliveryErrors } {
+): { ok: true; zoneIds: string[]; favoriteId: string | null } | { ok: false; errors: DeliveryErrors } {
   const errors: DeliveryErrors = {};
 
   if (input.favoriteId !== null) {
@@ -75,26 +59,18 @@ export function validateDeliveryInput(
     }
   }
 
-  const minutes = parseMinutes(input.minutes);
-  // Los minutos solo cuentan con un favorito elegido: sin favorito se guarda el valor que había.
-  if (input.favoriteId !== null && minutes === null) {
-    errors.minutes = `Ingresá un número de minutos, de ${FAVORITE_MINUTES_MIN} a ${FAVORITE_MINUTES_MAX}.`;
-  }
-
   if (Object.keys(errors).length > 0) return { ok: false, errors };
 
   return {
     ok: true,
     zoneIds: input.zoneIds,
     favoriteId: input.favoriteId,
-    minutes: minutes ?? FAVORITE_MINUTES_DEFAULT,
   };
 }
 
 export function deliveryInputChanged(saved: DeliveryInput, current: DeliveryInput): boolean {
   return (
     saved.favoriteId !== current.favoriteId ||
-    saved.minutes.trim() !== current.minutes.trim() ||
     saved.zoneIds.length !== current.zoneIds.length ||
     saved.zoneIds.some((id, index) => id !== current.zoneIds[index])
   );

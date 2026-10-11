@@ -1,12 +1,16 @@
 import { whatsappDigits } from "@/lib/orders/courier";
 import type { OrderItemOption } from "@/lib/orders/item-options";
 
-// Panel del repartidor (ENVIO-76 a 79): qué grupo y qué acciones le corresponden a cada pedido.
-// Reglas puras; los componentes solo pintan. La base exige lo mismo (`courier_take_order`,
+// Panel del repartidor (ENVIO-76 a 79 y 113 a 116): qué grupo y qué acciones le corresponden a cada
+// pedido. Reglas puras; los componentes solo pintan. La base exige lo mismo (`courier_make_offer`,
 // `courier_return_order` y `courier_set_status`).
 
-// Un pedido disponible tal como lo entrega `courier_available_orders()` (ENVIO-62 y 71). Antes de
-// tomarlo el repartidor no ve nada del cliente: ni nombre, ni teléfono, ni dirección.
+// Cómo cerró una oferta que el repartidor había hecho (ENVIO-101): lo eligieron a otro, se canceló el
+// pedido o el local lo resolvió (lo asignó a mano o lo lleva él).
+export type OfferResult = "chosen_other" | "cancelled" | "closed";
+
+// Un pedido disponible tal como lo entrega `courier_available_orders()` (ENVIO-101 y 71). Antes de que lo
+// elijan el repartidor no ve nada del cliente: ni nombre, ni teléfono, ni dirección.
 export type AvailableOrder = {
   id: string;
   numero: string;
@@ -21,7 +25,13 @@ export type AvailableOrder = {
   total: number;
   pago: string | null;
   pago_estado: string;
-  envio: { zona: string | null; precio_lista: number | null; precio: number | null };
+  envio: { zona: string | null; precio_lista: number | null };
+  // Cuántas ofertas abiertas hay (sin nombres ni precios de los demás) y la propia, si ya ofertó.
+  ofertas: number;
+  mi_oferta: { id: string; precio: number; motivo: string | null; creada: string } | null;
+  // Nulo mientras sigue recibiendo ofertas; si no, cómo se cerró la suya.
+  resultado: OfferResult | null;
+  cerrado_el: string | null;
 };
 
 // Un pedido que el repartidor ya tomó, tal como lo entrega `courier_orders()` (ENVIO-15).
@@ -75,10 +85,43 @@ export function groupOf(order: Pick<CourierPanelOrder, "estado" | "envio">): Exc
   return order.envio.estado === "accepted" ? "en_curso" : "historial";
 }
 
-// El criterio de "pedido nuevo para avisar" del repartidor (`alerts.ts`): un pedido disponible que
-// sigue abierto. Es el predicado que recibe `useNewOrderAlert`.
-export function isToRespond(order: Pick<AvailableOrder, "estado">) {
-  return !FINISHED.includes(order.estado);
+// El criterio de "pedido nuevo para avisar" del repartidor (`alerts.ts`): un pedido que sigue recibiendo
+// ofertas y por el que todavía no ofertó. Es el predicado que recibe `useNewOrderAlert`.
+export function isToRespond(order: Pick<AvailableOrder, "estado" | "resultado" | "mi_oferta">) {
+  return !FINISHED.includes(order.estado) && !order.resultado && !order.mi_oferta;
+}
+
+// El aviso de una oferta que se cerró (ENVIO-115), o null si el pedido sigue recibiendo ofertas.
+export function resultNotice(order: Pick<AvailableOrder, "resultado">): string | null {
+  switch (order.resultado) {
+    case "chosen_other":
+      return "El cliente eligió otro repartidor";
+    case "cancelled":
+      return "Cancelado por el local";
+    case "closed":
+      return "El local resolvió el envío";
+    default:
+      return null;
+  }
+}
+
+// Los pedidos que había ofertado y ya aparecen entre los suyos en curso: lo eligieron (ENVIO-116). Sirve
+// para avisar con otro sonido. `offered` son los ids con oferta en la lectura anterior.
+export function chosenOrderIds(offered: ReadonlySet<string>, orders: Pick<CourierPanelOrder, "id" | "estado" | "envio">[]) {
+  return orders
+    .filter((order) => offered.has(order.id) && groupOf(order) === "en_curso")
+    .map((order) => order.id);
+}
+
+// "Tu oferta: $X, esperando al cliente" (ENVIO-114).
+export function myOfferLabel(order: Pick<AvailableOrder, "mi_oferta">, format: (value: number) => string) {
+  return order.mi_oferta ? `Tu oferta: ${format(Number(order.mi_oferta.precio))}, esperando al cliente` : null;
+}
+
+// "1 oferta" / "3 ofertas" / "Sin ofertas todavía" (ENVIO-113).
+export function offersCountLabel(count: number) {
+  if (count <= 0) return "Sin ofertas todavía";
+  return count === 1 ? "1 oferta" : `${count} ofertas`;
 }
 
 export function splitOrders(
@@ -100,10 +143,13 @@ export function splitOrders(
   return groups;
 }
 
-// Los disponibles, del que lleva más tiempo buscando al más nuevo.
+// Los disponibles, del que lleva más tiempo buscando al más nuevo; los avisos de ofertas ya cerradas,
+// al final.
 export function sortAvailable(orders: AvailableOrder[]): AvailableOrder[] {
   const key = (order: AvailableOrder) => order.ofrecido_el ?? order.creado;
-  return [...orders].sort((a, b) => key(a).localeCompare(key(b)));
+  const closed = (order: AvailableOrder) => (order.resultado ? 1 : 0);
+
+  return [...orders].sort((a, b) => closed(a) - closed(b) || key(a).localeCompare(key(b)));
 }
 
 export type PanelActions = {

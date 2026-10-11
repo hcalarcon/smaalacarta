@@ -774,6 +774,24 @@ describe("el favorito ya no tiene ventana — ENVIO-112", () => {
   });
 });
 
+describe("el seguimiento sabe si es para retirar — SEGUIMIENTO-35", () => {
+  it("public_order_tracking trae la entrega del pedido", async () => {
+    const conEnvio = await envio();
+    const t = await call(null, `select public.public_order_tracking('${conEnvio.code}') as t`);
+    expect(t.ok && (t.rows[0].t as { pedido: { entrega: string } }).pedido.entrega).toBe("delivery");
+
+    const items = JSON.stringify([{ id: CAFE, kind: "product", quantity: 1 }]);
+    const r = await call(
+      null,
+      `select public.create_public_order('ana', 'Cliente', 'retiro', 'efectivo', null, '${items}'::jsonb,
+         p_customer_phone => '3515551234') as result`,
+    );
+    const c = r.ok ? (r.rows[0].result as { code: string }).code : "";
+    const retiro = await call(null, `select public.public_order_tracking('${c}') as t`);
+    expect(retiro.ok && (retiro.rows[0].t as { pedido: { entrega: string } }).pedido.entrega).toBe("retiro");
+  });
+});
+
 describe("la migración — ENVIO-95", () => {
   it("los pedidos abiertos que esperaban pasan a buscar; los terminados no se tocan", async () => {
     const old = await createTestDb({ before: "20261023000000_ofertas_de_repartidor.sql" });

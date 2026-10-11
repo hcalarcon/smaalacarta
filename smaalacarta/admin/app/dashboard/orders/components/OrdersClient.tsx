@@ -16,7 +16,7 @@ import {
   setOrderStatusAction,
 } from "../actions";
 import type { Order } from "@/lib/db/orders";
-import type { OrderCourier } from "@/lib/orders/courier";
+import type { OrderCourier, OrderOffers } from "@/lib/orders/courier";
 import { newPendingIds, pendingCount, shouldRemind, tabTitle } from "@/lib/orders/alerts";
 import { playNewOrderSound } from "@/lib/orders/sound";
 import { compareForBoard } from "@/lib/orders/scheduled";
@@ -60,7 +60,7 @@ export default function OrdersClient({
   products,
   serverNow,
   couriers = [],
-  favoriteId = null,
+  offers = [],
 }: {
   slug: string;
   orders: Order[];
@@ -69,7 +69,8 @@ export default function OrdersClient({
   // Solo con envío con repartidor habilitado (ENVIO-2): los repartidores activos que cubren zonas del
   // local y su favorito.
   couriers?: OrderCourier[];
-  favoriteId?: string | null;
+  // Las ofertas abiertas de los pedidos que buscan repartidor (ENVIO-111).
+  offers?: OrderOffers[];
 }) {
   const router = useRouter();
 
@@ -161,6 +162,28 @@ export default function OrdersClient({
 
     return () => clearInterval(id);
   }, [router]);
+
+  // Con ofertas abiertas la cuenta regresiva ("se elige sola en m:ss") avanza cada segundo, y al vencer
+  // se vuelve a pedir el tablero para ver el repartidor elegido (ENVIO-117).
+  const offersByOrder = new Map(offers.map((item) => [item.order_id, item]));
+  const deadlines = offers.flatMap((item) => (item.cierra_en ? [new Date(item.cierra_en).getTime()] : []));
+  const nextDeadline = deadlines.length > 0 ? Math.min(...deadlines) : null;
+
+  useEffect(() => {
+    if (nextDeadline === null) return;
+
+    const id = setInterval(() => {
+      const current = new Date();
+      setNow(current);
+
+      if (current.getTime() >= nextDeadline) {
+        clearInterval(id);
+        router.refresh();
+      }
+    }, 1000);
+
+    return () => clearInterval(id);
+  }, [nextDeadline, router]);
 
   const pending = pendingCount(orders);
 
@@ -375,6 +398,7 @@ export default function OrdersClient({
                           onOpen={() => setSelectedId(order.id)}
                           onConfirmSettlement={() => setReceivingId(order.id)}
                           couriers={couriers}
+                          offers={offersByOrder.get(order.id)}
                         />
                       ))
                     )}
@@ -401,7 +425,7 @@ export default function OrdersClient({
         onClose={() => setSelectedId(null)}
         onChangeStatus={(status, note) => selected && changeStatus(selected.id, status, note)}
         couriers={couriers}
-        favoriteId={favoriteId}
+        offers={selected ? offersByOrder.get(selected.id) : undefined}
         now={now}
         error={error}
         onAssignCourier={(courierId, note) =>

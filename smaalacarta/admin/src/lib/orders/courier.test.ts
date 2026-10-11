@@ -7,17 +7,18 @@ import {
   courierStatusLabel,
   couriersForOrder,
   deliveryContext,
-  favoriteWindow,
-  favoriteWindowLabel,
   feeSummary,
+  formatCountdown,
   hasCourier,
   hasDelivery,
+  offersLabel,
   searchWarning,
   validateAssignNote,
-  validateCourierResponse,
+  validateOffer,
   whatsappDigits,
   type CourierOrder,
   type OrderCourier,
+  type OrderOffers,
 } from "./courier";
 
 const ZONA = "aaaaaaaa-0000-4000-8000-000000000001";
@@ -44,8 +45,6 @@ const order = (extra: Partial<CourierOrder> = {}): CourierOrder => ({
   courier_note: null,
   courier_responded_at: null,
   offered_at: "2026-10-09T22:00:00Z",
-  offer_favorite_id: null,
-  offer_favorite_until: null,
   ...extra,
 });
 
@@ -78,12 +77,6 @@ describe("qué puede hacer el local con el envío — ENVIO-81", () => {
   it("buscando: asignar a mano y llevarlo él, durante toda la búsqueda", () => {
     expect(courierActions(order())).toEqual({ assign: true, self: true });
     expect(courierActions(order({ status: "preparing" }))).toEqual({ assign: true, self: true });
-    // También dentro de la ventana del favorito.
-    expect(
-      courierActions(
-        order({ offer_favorite_id: "f", offer_favorite_until: "2099-01-01T00:00:00Z" }),
-      ),
-    ).toEqual({ assign: true, self: true });
   });
 
   it("sin buscar (esperando, tomado, propio) o con el pedido terminado: nada", () => {
@@ -97,43 +90,62 @@ describe("qué puede hacer el local con el envío — ENVIO-81", () => {
   });
 });
 
-describe("la ventana del favorito — ENVIO-80", () => {
-  const withWindow = order({ offer_favorite_id: "f", offer_favorite_until: "2026-10-09T22:05:00Z" });
+describe("las ofertas del pedido — ENVIO-117", () => {
+  const offer = (extra = {}) => ({
+    id: "o1",
+    courier_id: "c1",
+    repartidor: "Damián",
+    precio: 5000,
+    motivo: null,
+    favorito: true,
+    ...extra,
+  });
+  const offers = (list: ReturnType<typeof offer>[], cierra_en: string | null): OrderOffers => ({
+    order_id: "p1",
+    cierra_en,
+    ofertas: list,
+  });
 
-  it("mientras dura, dice quién lo ve y hasta cuándo (hora de Argentina)", () => {
-    expect(favoriteWindow(withWindow, at("2026-10-09T22:02:00Z"))).toEqual({ until: "19:05" });
-    expect(favoriteWindowLabel(withWindow, at("2026-10-09T22:02:00Z"), "Damián")).toBe(
-      "Lo ve solo Damián hasta las 19:05",
+  it("sin ofertas, 'Esperando ofertas'", () => {
+    expect(offersLabel(undefined, at("2026-10-09T22:02:00Z"))).toBe("Esperando ofertas");
+    expect(offersLabel(offers([], null), at("2026-10-09T22:02:00Z"))).toBe("Esperando ofertas");
+  });
+
+  it("con ofertas, cuántas hay y en cuánto se elige sola", () => {
+    const now = at("2026-10-09T22:02:00Z");
+    expect(offersLabel(offers([offer()], "2026-10-09T22:05:00Z"), now)).toBe(
+      "1 oferta, el cliente está eligiendo (se elige sola en 3:00)",
+    );
+    expect(offersLabel(offers([offer(), offer({ id: "o2" })], "2026-10-09T22:02:05Z"), now)).toBe(
+      "2 ofertas, el cliente está eligiendo (se elige sola en 0:05)",
     );
   });
 
-  it("al vencer ya no hay ventana", () => {
-    expect(favoriteWindow(withWindow, at("2026-10-09T22:05:00Z"))).toBeNull();
-    expect(favoriteWindowLabel(withWindow, at("2026-10-09T22:10:00Z"), "Damián")).toBeNull();
-  });
-
-  it("sin favorito, o sin búsqueda abierta, no hay ventana", () => {
-    expect(favoriteWindow(order(), at("2026-10-09T22:02:00Z"))).toBeNull();
-    expect(
-      favoriteWindow({ ...withWindow, courier_status: "accepted" }, at("2026-10-09T22:02:00Z")),
-    ).toBeNull();
-  });
-
-  it("si no se conoce el nombre del favorito, no inventa uno", () => {
-    expect(favoriteWindowLabel(withWindow, at("2026-10-09T22:02:00Z"))).toBe(
-      "Lo ve solo tu repartidor favorito hasta las 19:05",
+  it("vencido el plazo no muestra una cuenta negativa", () => {
+    expect(offersLabel(offers([offer()], "2026-10-09T22:01:00Z"), at("2026-10-09T22:02:00Z"))).toBe(
+      "1 oferta, se está eligiendo la más barata",
     );
+  });
+
+  it("la cuenta regresiva es m:ss", () => {
+    expect(formatCountdown(300_000)).toBe("5:00");
+    expect(formatCountdown(61_500)).toBe("1:02");
+    expect(formatCountdown(-5)).toBe("0:00");
   });
 });
 
-describe("aviso 'Nadie lo tomó todavía' — ENVIO-82", () => {
+describe("aviso 'Nadie ofertó todavía' — ENVIO-118", () => {
   it("antes de los 10 minutos no avisa", () => {
     expect(searchWarning(order(), at("2026-10-09T22:09:59Z"))).toBeNull();
   });
 
   it("a los 10 minutos avisa y dice cuánto pasó", () => {
-    expect(searchWarning(order(), at("2026-10-09T22:10:00Z"))).toMatch(/Nadie lo tomó todavía \(10 min\)/);
+    expect(searchWarning(order(), at("2026-10-09T22:10:00Z"))).toMatch(/Nadie ofertó todavía \(10 min\)/);
     expect(searchWarning(order(), at("2026-10-09T22:25:00Z"))).toMatch(/\(25 min\)/);
+  });
+
+  it("no avisa si ya hay ofertas", () => {
+    expect(searchWarning(order(), at("2026-10-09T22:30:00Z"), 2)).toBeNull();
   });
 
   it("no avisa si ya lo tomó alguien, lo lleva el local o el pedido terminó", () => {
@@ -152,7 +164,7 @@ describe("aviso 'Nadie lo tomó todavía' — ENVIO-82", () => {
 describe("estado y precio del envío — ENVIO-80", () => {
   it("etiqueta el estado del envío", () => {
     expect(courierStatusLabel(order({ courier_status: "waiting", offered_at: null }))).toBe(
-      "Al confirmar se busca repartidor",
+      "Todavía sin repartidor",
     );
     expect(courierStatusLabel(order())).toBe("Buscando repartidor desde las 19:00");
     expect(courierStatusLabel(order({ courier_status: "accepted" }), "Damián")).toBe("Lo tomó Damián");
@@ -250,55 +262,46 @@ describe("número de WhatsApp", () => {
   });
 });
 
-describe("lo que manda el repartidor al tomar un pedido — ENVIO-64", () => {
-  const input = (extra: Partial<{ note: string; fee: string; reason: string }> = {}) => ({
-    note: "",
-    fee: "",
-    reason: "",
-    ...extra,
-  });
+describe("la oferta del repartidor — ENVIO-98", () => {
+  const input = (extra: Partial<{ price: string; reason: string }> = {}) => ({ price: "5000", reason: "", ...extra });
 
-  it("sin nota ni precio nuevo no manda nada de más", () => {
-    expect(validateCourierResponse(input(), 5000)).toEqual({ ok: true, note: null, fee: null, reason: null });
-  });
-
-  it("guarda la nota sin espacios de más", () => {
-    expect(validateCourierResponse(input({ note: "  Juan, 21:30 " }), 5000)).toMatchObject({
+  it("con el precio de lista no pide motivo ni lo guarda", () => {
+    expect(validateOffer(input(), 5000)).toEqual({ ok: true, price: 5000, reason: null });
+    expect(validateOffer(input({ price: "5.000", reason: "no hace falta" }), 5000)).toEqual({
       ok: true,
-      note: "Juan, 21:30",
+      price: 5000,
+      reason: null,
     });
   });
 
-  it("el mismo precio no pide motivo", () => {
-    expect(validateCourierResponse(input({ fee: "5.000" }), 5000)).toMatchObject({ ok: true, fee: null });
-  });
-
-  it("un precio distinto exige motivo", () => {
-    expect(validateCourierResponse(input({ fee: "26000" }), 5000)).toEqual({
+  it("con otro precio exige el motivo y lo guarda recortado", () => {
+    expect(validateOffer(input({ price: "26000" }), 5000)).toEqual({
       ok: false,
-      errors: { reason: "Contá por qué cambia el precio del envío." },
+      errors: { reason: expect.any(String) },
     });
-    expect(validateCourierResponse(input({ fee: "$ 26.000", reason: " Fuera de zona " }), 5000)).toEqual({
+    expect(validateOffer(input({ price: "$ 26.000", reason: " Fuera de zona " }), 5000)).toEqual({
       ok: true,
-      note: null,
-      fee: 26000,
+      price: 26000,
       reason: "Fuera de zona",
     });
   });
 
-  it("rechaza precios inválidos, notas y motivos largos", () => {
-    expect(validateCourierResponse(input({ fee: "mucho" }), 5000)).toMatchObject({
-      ok: false,
-      errors: { fee: expect.stringMatching(/precio/i) },
-    });
-    expect(validateCourierResponse(input({ fee: "-5" }), 5000)).toMatchObject({ ok: false });
-    expect(validateCourierResponse(input({ note: "x".repeat(121) }), 5000)).toMatchObject({
-      ok: false,
-      errors: { note: expect.stringMatching(/120/) },
-    });
-    expect(validateCourierResponse(input({ fee: "6000", reason: "x".repeat(201) }), 5000)).toMatchObject({
-      ok: false,
-      errors: { reason: expect.stringMatching(/200/) },
+  it("el motivo va de 3 a 140 caracteres", () => {
+    expect(validateOffer(input({ price: "6000", reason: "no" }), 5000)).toMatchObject({ ok: false });
+    expect(validateOffer(input({ price: "6000", reason: "sí" }), 5000)).toMatchObject({ ok: false });
+    expect(validateOffer(input({ price: "6000", reason: "x".repeat(3) }), 5000)).toMatchObject({ ok: true });
+    expect(validateOffer(input({ price: "6000", reason: "x".repeat(140) }), 5000)).toMatchObject({ ok: true });
+    expect(validateOffer(input({ price: "6000", reason: "x".repeat(141) }), 5000)).toMatchObject({ ok: false });
+  });
+
+  it("el precio es obligatorio y tiene que ser válido", () => {
+    expect(validateOffer(input({ price: "" }), 5000)).toMatchObject({ ok: false, errors: { price: expect.any(String) } });
+    expect(validateOffer(input({ price: "mucho" }), 5000)).toMatchObject({ ok: false });
+    expect(validateOffer(input({ price: "-5" }), 5000)).toMatchObject({ ok: false });
+    expect(validateOffer(input({ price: "100000000" }), 5000)).toMatchObject({ ok: false });
+    expect(validateOffer(input({ price: "5000,50", reason: "Propina" }), 5000)).toMatchObject({
+      ok: true,
+      price: 5000.5,
     });
   });
 });

@@ -1283,3 +1283,96 @@ ALTER TABLE public.orders
 
 ALTER TABLE public.business_settings
   DROP COLUMN IF EXISTS favorite_minutes;
+
+-- ---------------------------------------------------------------------------
+-- El seguimiento sabe si el pedido es para retirar
+-- ---------------------------------------------------------------------------
+
+-- Misma `public_order_tracking` de `20261011000000_posicion_imagen_cabecera.sql`, con una clave más en
+-- `pedido`: `entrega` (`retiro` o `delivery`). La línea de pasos del seguimiento dice "Listo para retirar"
+-- y "Retirado" solo en un pedido para retirar (SEGUIMIENTO-25).
+CREATE OR REPLACE FUNCTION public.public_order_tracking(p_code text)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_order record;
+BEGIN
+  IF p_code IS NULL OR p_code !~ '^[0-9a-f]{20}$' THEN
+    RETURN NULL;
+  END IF;
+
+  SELECT o.id, o.order_number, o.status, o.total, o.created_at, o.updated_at, o.scheduled_for,
+         o.preorder, o.payment, o.payment_status, o.delivery,
+         b.name AS business_name, b.whatsapp, b.slug,
+         s.template, s.primary_color, s.secondary_color, s.header_image_url,
+         s.header_image_x, s.header_image_y
+  INTO v_order
+  FROM public.orders o
+  JOIN public.businesses b ON b.id = o.business_id
+  LEFT JOIN public.business_settings s ON s.business_id = b.id
+  WHERE o.code = p_code;
+
+  IF NOT FOUND THEN
+    RETURN NULL;
+  END IF;
+
+  RETURN jsonb_strip_nulls(jsonb_build_object(
+    'negocio', jsonb_build_object(
+      'nombre', v_order.business_name,
+      'telefono', v_order.whatsapp,
+      'slug', v_order.slug,
+      'plantilla', v_order.template,
+      'colores', jsonb_build_object(
+        'primary', v_order.primary_color,
+        'secondary', v_order.secondary_color
+      ),
+      'imagen', v_order.header_image_url,
+      'posicion', CASE
+        WHEN v_order.header_image_x IS NOT NULL
+        THEN jsonb_build_object('x', v_order.header_image_x, 'y', v_order.header_image_y)
+      END
+    ),
+    'pedido', jsonb_build_object(
+      'numero', v_order.order_number,
+      'estado', v_order.status,
+      'total', v_order.total,
+      'creado', v_order.created_at,
+      'actualizado', v_order.updated_at,
+      'programado', v_order.scheduled_for,
+      -- Solo los pedidos con Mercado Pago llevan estado de pago; nunca el id del pago (SEGUIMIENTO-21).
+      'pago', CASE WHEN v_order.payment = 'mercadopago' THEN v_order.payment_status END,
+      'anticipado', CASE WHEN v_order.preorder THEN true END,
+      'entrega', v_order.delivery
+    ),
+    'items', coalesce((
+      SELECT jsonb_agg(
+               jsonb_build_object(
+                 'nombre', i.name,
+                 'cantidad', i.quantity,
+                 'precio', i.unit_price,
+                 -- Foto de lo elegido (SEGUIMIENTO-22): grupo, nombre, cantidad y precio, sin ids.
+                 'opciones', i.options
+               )
+               ORDER BY i.sort_order, i.id
+             )
+      FROM public.order_items i
+      WHERE i.order_id = v_order.id
+    ), '[]'::jsonb),
+    'eventos', coalesce((
+      SELECT jsonb_agg(
+               jsonb_build_object('estado', e.status, 'fecha', e.created_at, 'nota', e.note)
+               ORDER BY e.created_at, e.id
+             )
+      FROM public.order_events e
+      WHERE e.order_id = v_order.id AND e.kind = 'status'
+    ), '[]'::jsonb)
+  ));
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.public_order_tracking(text) FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION public.public_order_tracking(text) TO anon, authenticated;

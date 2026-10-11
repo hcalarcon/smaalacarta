@@ -7,7 +7,8 @@ const { requireCourier, courierDb } = vi.hoisted(() => ({
     courierSetStatus: vi.fn(),
     courierMarkSettled: vi.fn(),
     setZoneCoverage: vi.fn(),
-    courierTakeOrder: vi.fn(),
+    courierMakeOffer: vi.fn(),
+    courierWithdrawOffer: vi.fn(),
     courierDeclineOrder: vi.fn(),
     courierReturnOrder: vi.fn(),
   },
@@ -20,14 +21,15 @@ vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 import {
   advanceOrderAction,
   declineOrderAction,
+  makeOfferAction,
   returnOrderAction,
   setZoneCoverageAction,
-  takeOrderAction,
+  withdrawOfferAction,
 } from "./actions";
 
 const COURIER = "7a0c0e00-0000-4000-8000-000000000001";
 const ORDER = "11111111-1111-1111-1111-111111111111";
-const input = { note: "", fee: "", reason: "" };
+const input = { price: "5000", reason: "" };
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -43,7 +45,8 @@ describe("quien no es el repartidor no llega a la base — ENVIO-30 y 79", () =>
   });
 
   it.each([
-    ["tomar", () => takeOrderAction(ORDER, input, 5000)],
+    ["ofertar", () => makeOfferAction(ORDER, input, 5000)],
+    ["retirar la oferta", () => withdrawOfferAction(ORDER)],
     ["rechazar", () => declineOrderAction(ORDER)],
     ["devolver", () => returnOrderAction(ORDER, "Motivo")],
     ["avanzar", () => advanceOrderAction(ORDER, "on_the_way")],
@@ -57,48 +60,52 @@ describe("quien no es el repartidor no llega a la base — ENVIO-30 y 79", () =>
   });
 });
 
-describe("tomar un pedido — ENVIO-77", () => {
-  it("toma con nota y precio igual: no manda precio ni motivo", async () => {
-    const r = await takeOrderAction(ORDER, { note: " Juan, 21:30 ", fee: "5000", reason: "" }, 5000);
+describe("ofertar por un pedido — ENVIO-98 y 113", () => {
+  it("con el precio de lista manda el precio y ningún motivo", async () => {
+    const r = await makeOfferAction(ORDER, { price: "5.000", reason: "no hace falta" }, 5000);
 
     expect(r).toEqual({ ok: true });
-    expect(courierDb.courierTakeOrder).toHaveBeenCalledWith(ORDER, {
-      note: "Juan, 21:30",
-      fee: null,
-      feeReason: null,
-    });
+    expect(courierDb.courierMakeOffer).toHaveBeenCalledWith(ORDER, { price: 5000, reason: null });
   });
 
   it("un precio distinto sin motivo se rechaza antes de llamar a la base", async () => {
-    const r = await takeOrderAction(ORDER, { note: "", fee: "26000", reason: "" }, 5000);
+    const r = await makeOfferAction(ORDER, { price: "26000", reason: "" }, 5000);
 
     expect(r).toMatchObject({ ok: false, fieldErrors: { reason: expect.any(String) } });
-    expect(courierDb.courierTakeOrder).not.toHaveBeenCalled();
+    expect(courierDb.courierMakeOffer).not.toHaveBeenCalled();
   });
 
   it("un precio distinto con motivo se manda", async () => {
-    await takeOrderAction(ORDER, { note: "", fee: "26.000", reason: "Fuera de zona" }, 5000);
+    await makeOfferAction(ORDER, { price: "26.000", reason: " Fuera de zona " }, 5000);
 
-    expect(courierDb.courierTakeOrder).toHaveBeenCalledWith(ORDER, {
-      note: null,
-      fee: 26000,
-      feeReason: "Fuera de zona",
-    });
+    expect(courierDb.courierMakeOffer).toHaveBeenCalledWith(ORDER, { price: 26000, reason: "Fuera de zona" });
   });
 
-  it("si ya lo tomó otro (P0019), la respuesta lo marca para que el panel lo saque", async () => {
-    courierDb.courierTakeOrder.mockResolvedValue({ error: { code: "P0019", message: "boom" } });
+  it("si el pedido ya no recibe ofertas (P0020), la respuesta lo marca para que el panel lo saque", async () => {
+    courierDb.courierMakeOffer.mockResolvedValue({ error: { code: "P0020", message: "boom" } });
 
-    const r = await takeOrderAction(ORDER, input, 5000);
-    expect(r).toMatchObject({ ok: false, taken: true, error: expect.stringMatching(/otro repartidor/i) });
+    const r = await makeOfferAction(ORDER, input, 5000);
+    expect(r).toMatchObject({ ok: false, closed: true, error: expect.stringMatching(/no recibe ofertas/i) });
   });
 
-  it("traduce otros errores de la base, sin texto técnico ni `taken`", async () => {
-    courierDb.courierTakeOrder.mockResolvedValue({ error: { code: "P0004", message: "boom" } });
+  it("traduce otros errores de la base, sin texto técnico ni `closed`", async () => {
+    courierDb.courierMakeOffer.mockResolvedValue({ error: { code: "P0004", message: "boom" } });
 
-    const r = await takeOrderAction(ORDER, input, 5000);
+    const r = await makeOfferAction(ORDER, input, 5000);
     expect(r).toMatchObject({ ok: false, error: expect.stringMatching(/no está permitido/i) });
-    expect(r).not.toHaveProperty("taken");
+    expect(r).not.toHaveProperty("closed");
+  });
+});
+
+describe("retirar la oferta — ENVIO-100", () => {
+  it("llama a la base con el pedido", async () => {
+    expect(await withdrawOfferAction(ORDER)).toEqual({ ok: true });
+    expect(courierDb.courierWithdrawOffer).toHaveBeenCalledWith(ORDER);
+  });
+
+  it("si el cliente ya eligió, lo marca como cerrado", async () => {
+    courierDb.courierWithdrawOffer.mockResolvedValue({ error: { code: "P0020" } });
+    expect(await withdrawOfferAction(ORDER)).toMatchObject({ ok: false, closed: true });
   });
 });
 
@@ -108,9 +115,9 @@ describe("rechazar un pedido — ENVIO-65", () => {
     expect(courierDb.courierDeclineOrder).toHaveBeenCalledWith(ORDER);
   });
 
-  it("si ya no estaba disponible, lo marca como tomado", async () => {
-    courierDb.courierDeclineOrder.mockResolvedValue({ error: { code: "P0019" } });
-    expect(await declineOrderAction(ORDER)).toMatchObject({ ok: false, taken: true });
+  it("si ya no estaba disponible, lo marca como cerrado", async () => {
+    courierDb.courierDeclineOrder.mockResolvedValue({ error: { code: "P0020" } });
+    expect(await declineOrderAction(ORDER)).toMatchObject({ ok: false, closed: true });
   });
 });
 

@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import CourierSection from "./CourierSection";
 import CustomerPhone from "./CustomerPhone";
 import type { Order } from "@/lib/db/orders";
-import { deliveryContext, hasDelivery, type OrderCourier } from "@/lib/orders/courier";
+import { deliveryContext, hasDelivery, type OrderCourier, type OrderOffers } from "@/lib/orders/courier";
 import { formatDateTime, trackingUrl } from "@/lib/orders/format";
 import PaymentBadge from "./PaymentBadge";
 import SettlementStatus from "./SettlementStatus";
@@ -24,7 +24,7 @@ export default function OrderDetailDialog({
   onClose,
   onChangeStatus,
   couriers = [],
-  favoriteId = null,
+  offers,
   now,
   error = null,
   onAssignCourier,
@@ -38,7 +38,8 @@ export default function OrderDetailDialog({
   onChangeStatus: (status: string, note?: string) => void;
   // Envío con repartidor (ENVIO-80 a 82): los repartidores del local y qué hacer si nadie toma el pedido.
   couriers?: OrderCourier[];
-  favoriteId?: string | null;
+  // Las ofertas abiertas del pedido, con nombre y precio (ENVIO-117).
+  offers?: OrderOffers;
   now?: Date;
   error?: string | null;
   onAssignCourier?: (courierId: string, note: string) => void;
@@ -175,7 +176,7 @@ export default function OrderDetailDialog({
             order={order}
             now={now ?? new Date()}
             couriers={couriers}
-            favoriteId={favoriteId}
+            offers={offers}
             busy={busy}
             error={error}
             onAssign={onAssignCourier}

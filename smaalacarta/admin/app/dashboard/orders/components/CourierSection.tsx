@@ -8,14 +8,16 @@ import {
   courierActions,
   courierStatusLabel,
   couriersForOrder,
-  favoriteWindowLabel,
   feeSummary,
+  offersLabel,
   searchWarning,
   validateAssignNote,
   type OrderCourier,
+  type OrderOffers,
 } from "@/lib/orders/courier";
 import { formatDateTime } from "@/lib/orders/format";
-import { STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
+import { formatMoney } from "@/lib/promotions/pricing";
+import { isFinal, STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 
 // El envío con repartidor dentro del detalle del pedido (ENVIO-80 a 82): cómo va la búsqueda, quién lo
 // tomó, el precio y lo que el local puede hacer si nadie lo toma — asignarlo a mano o llevarlo él.
@@ -24,7 +26,7 @@ export default function CourierSection({
   order,
   now,
   couriers,
-  favoriteId,
+  offers,
   busy,
   error,
   onAssign,
@@ -34,8 +36,8 @@ export default function CourierSection({
   now: Date;
   // Los repartidores activos que cubren alguna zona del local (`business_delivery_options()`).
   couriers: OrderCourier[];
-  // El favorito del local hoy (solo para nombrarlo si el pedido no lo guardó).
-  favoriteId?: string | null;
+  // Las ofertas abiertas del pedido, con nombre y precio (ENVIO-117).
+  offers?: OrderOffers;
   busy: boolean;
   error: string | null;
   onAssign: (courierId: string, note: string) => void;
@@ -49,14 +51,11 @@ export default function CourierSection({
 
   const actions = courierActions(order);
   const summary = feeSummary(order);
-  const warning = searchWarning(order, now);
+  const searching = order.courier_status === "searching" && !isFinal(order.status);
+  const warning = searchWarning(order, now, offers?.ofertas.length ?? 0);
   const candidates = couriersForOrder(couriers, order);
 
   const taker = order.courier_id ? couriers.find((courier) => courier.id === order.courier_id) : undefined;
-  const favoriteName = couriers.find(
-    (courier) => courier.id === (order.offer_favorite_id ?? favoriteId ?? null),
-  )?.name;
-  const window = favoriteWindowLabel(order, now, favoriteName);
   const takerChat = chatLink(
     taker?.whatsapp,
     `Hola, te escribo por el pedido #${order.order_number}.`,
@@ -130,7 +129,26 @@ export default function CourierSection({
         ) : null}
       </dl>
 
-      {window ? <p className="mt-3 text-sm font-medium text-sky-900">{window}</p> : null}
+      {searching ? (
+        <div className="mt-3">
+          <p className="text-sm font-medium text-sky-900">{offersLabel(offers, now)}</p>
+          {offers && offers.ofertas.length > 0 ? (
+            <ul className="mt-2 space-y-1 text-sm text-stone-700">
+              {offers.ofertas.map((offer) => (
+                <li key={offer.id} className="rounded-lg bg-white px-3 py-2">
+                  <span className="font-medium">
+                    {offer.favorito ? "⭐ " : ""}
+                    {offer.repartidor}
+                  </span>{" "}
+                  · {formatMoney(offer.precio)}
+                  {offer.favorito ? <span className="text-xs text-stone-500"> · tu favorito</span> : null}
+                  {offer.motivo ? <span className="block text-xs text-stone-500">{offer.motivo}</span> : null}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
 
       {warning ? (
         <p role="alert" className="mt-3 rounded-xl bg-red-100 px-3 py-2 text-sm font-semibold text-red-800">

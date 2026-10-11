@@ -9,15 +9,16 @@ import { itemOptionLines } from "@/lib/orders/item-options";
 import {
   courierStatusLabel,
   deliveryContext,
-  favoriteWindowLabel,
   feeSummary,
   hasDelivery,
+  offersLabel,
   searchWarning,
   type OrderCourier,
+  type OrderOffers,
 } from "@/lib/orders/courier";
 import { isPaymentPending, PAYMENT_BLOCK_REASON } from "@/lib/orders/payment";
 import { orderBadge } from "@/lib/orders/scheduled";
-import { primaryAction, STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
+import { isFinal, primaryAction, STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
 
 const SHOWN_ITEMS = 3;
@@ -30,6 +31,7 @@ export default function OrderCard({
   onOpen,
   onConfirmSettlement,
   couriers = [],
+  offers,
 }: {
   order: Order;
   now: Date;
@@ -39,6 +41,8 @@ export default function OrderCard({
   onConfirmSettlement?: () => void;
   // Los repartidores del local: sirven para nombrar al que tomó el pedido y al favorito.
   couriers?: OrderCourier[];
+  // Las ofertas abiertas del pedido si está buscando repartidor (ENVIO-117).
+  offers?: OrderOffers;
 }) {
   const withDelivery = hasDelivery(order);
   const action = primaryAction(order.status, deliveryContext(order));
@@ -48,12 +52,11 @@ export default function OrderCard({
   const blocked = paymentBlocked;
   const blockReason = paymentBlocked ? PAYMENT_BLOCK_REASON : undefined;
   const fee = withDelivery ? feeSummary(order) : null;
-  const warning = withDelivery ? searchWarning(order, now) : null;
+  const searching = withDelivery && order.courier_status === "searching" && !isFinal(order.status);
+  const warning = withDelivery ? searchWarning(order, now, offers?.ofertas.length ?? 0) : null;
   const courierName = order.courier_id
     ? couriers.find((courier) => courier.id === order.courier_id)?.name
     : undefined;
-  const favoriteName = couriers.find((courier) => courier.id === order.offer_favorite_id)?.name;
-  const window = favoriteWindowLabel(order, now, favoriteName);
 
   return (
     <article className="rounded-xl border border-line bg-white p-3 shadow-sm">
@@ -97,7 +100,18 @@ export default function OrderCard({
             🛵 {order.delivery_zone_name ?? "Envío"} · {fee.price}
           </p>
           <p>{courierStatusLabel(order, courierName)}</p>
-          {window ? <p>{window}</p> : null}
+          {searching ? <p className="font-medium">{offersLabel(offers, now)}</p> : null}
+          {searching && offers && offers.ofertas.length > 0 ? (
+            <ul className="mt-0.5 space-y-0.5">
+              {offers.ofertas.slice(0, 3).map((offer) => (
+                <li key={offer.id} className="truncate">
+                  {offer.favorito ? "⭐ " : ""}
+                  {offer.repartidor} · {formatMoney(offer.precio)}
+                </li>
+              ))}
+              {offers.ofertas.length > 3 ? <li>y {offers.ofertas.length - 3} más…</li> : null}
+            </ul>
+          ) : null}
           {fee.list ? (
             <p>
               Antes {fee.list}

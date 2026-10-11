@@ -30,7 +30,6 @@ const options: DeliveryOptions = {
     { id: "moto", name: "Moto Express", whatsapp: null, zone_ids: ["cantera"] },
   ],
   favorite_id: null,
-  favorite_minutes: 5,
 };
 
 function renderSection(value: DeliveryOptions = options) {
@@ -72,21 +71,20 @@ describe("Configuración → Envíos — ENVIO-58", () => {
     renderSection();
 
     const names = within(select()).getAllByRole("option").map((option) => option.textContent);
-    expect(names).toEqual(["Sin favorito (el pedido va a todos)", "Repartos al Toque"]);
+    expect(names).toEqual(["Sin favorito", "Repartos al Toque"]);
 
     fireEvent.click(zone("Cantera"));
 
     const after = within(select()).getAllByRole("option").map((option) => option.textContent);
-    expect(after).toEqual(["Sin favorito (el pedido va a todos)", "Repartos al Toque", "Moto Express"]);
+    expect(after).toEqual(["Sin favorito", "Repartos al Toque", "Moto Express"]);
   });
 
-  it("los minutos solo se ven con un favorito elegido y arrancan en 5", () => {
+  it("ya no hay minutos para el favorito: dice que su oferta le aparece primero al cliente", () => {
     renderSection();
-    expect(screen.queryByLabelText("Minutos para el favorito")).toBeNull();
-
     fireEvent.change(select(), { target: { value: "toque" } });
 
-    expect((screen.getByLabelText("Minutos para el favorito") as HTMLInputElement).value).toBe("5");
+    expect(screen.queryByLabelText("Minutos para el favorito")).toBeNull();
+    expect(screen.getByText(/Recomendado por el local/)).toBeTruthy();
   });
 
   it("al desmarcar la zona que cubría al favorito, vuelve a Sin favorito", () => {
@@ -96,7 +94,6 @@ describe("Configuración → Envíos — ENVIO-58", () => {
     fireEvent.click(zone("Centro"));
 
     expect(select().value).toBe("");
-    expect(screen.queryByLabelText("Minutos para el favorito")).toBeNull();
   });
 
   it("no tiene botón propio: guarda con Guardar cambios, zonas y favorito juntos", async () => {
@@ -105,26 +102,14 @@ describe("Configuración → Envíos — ENVIO-58", () => {
 
     fireEvent.click(zone("Cantera"));
     fireEvent.change(select(), { target: { value: "moto" } });
-    fireEvent.change(screen.getByLabelText("Minutos para el favorito"), { target: { value: "12" } });
     fireEvent.click(saveButton());
 
     await waitFor(() =>
       expect(saveDelivery).toHaveBeenCalledWith({
         zoneIds: ["centro", "cantera"],
         favoriteId: "moto",
-        minutes: "12",
       }),
     );
     expect(saveSettings).not.toHaveBeenCalled();
-  });
-
-  it("minutos fuera de 1 a 60: no guarda y lo dice en el campo", async () => {
-    renderSection();
-    fireEvent.change(select(), { target: { value: "toque" } });
-    fireEvent.change(screen.getByLabelText("Minutos para el favorito"), { target: { value: "90" } });
-    fireEvent.click(saveButton());
-
-    expect(await screen.findByText(/de 1 a 60/)).toBeTruthy();
-    expect(saveDelivery).not.toHaveBeenCalled();
   });
 });

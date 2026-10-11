@@ -116,7 +116,6 @@ export async function getDeliveryOptions(): Promise<DeliveryOptions | null> {
 export async function saveDeliveryPreferences(input: {
   zoneIds: string[];
   favoriteId: string | null;
-  minutes: number;
 }): Promise<{ ok: true } | DbFailure> {
   const supabase = await createClient();
 
@@ -124,7 +123,6 @@ export async function saveDeliveryPreferences(input: {
     p_zone_ids: input.zoneIds,
     // La función admite nulo ("sin favorito"); los tipos generados no lo reflejan.
     p_favorite: input.favoriteId as string,
-    p_minutes: input.minutes,
   });
 
   return error ? { error: { code: error.code, message: error.message } } : { ok: true };

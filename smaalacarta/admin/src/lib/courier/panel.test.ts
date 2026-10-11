@@ -3,8 +3,12 @@ import { describe, expect, it } from "vitest";
 import {
   availableActions,
   chatLink,
+  chosenOrderIds,
   groupOf,
   isToRespond,
+  myOfferLabel,
+  offersCountLabel,
+  resultNotice,
   sortAvailable,
   splitOrders,
   telLink,
@@ -60,7 +64,11 @@ const available = (id: string, extra: Partial<AvailableOrder> = {}): AvailableOr
   total: 8200,
   pago: "efectivo",
   pago_estado: "not_required",
-  envio: { zona: "Cantera", precio_lista: 5000, precio: 5000 },
+  envio: { zona: "Cantera", precio_lista: 5000 },
+  ofertas: 0,
+  mi_oferta: null,
+  resultado: null,
+  cerrado_el: null,
   ...extra,
 });
 
@@ -160,13 +168,27 @@ describe("motivo de la devolución — ENVIO-66", () => {
   });
 });
 
-describe("aviso de pedidos nuevos — ENVIO-78", () => {
+describe("aviso de pedidos nuevos — ENVIO-78 y 116", () => {
   const orders = [
     available("1"),
     available("2", { estado: "cancelled" }),
     available("3", { estado: "preparing" }),
     available("4", { estado: "delivered" }),
   ];
+
+  it("no avisa lo que ya ofertó ni las ofertas cerradas", () => {
+    const mine = { id: "o", precio: 5000, motivo: null, creada: "2026-10-09T22:02:00Z" };
+    expect(isToRespond(available("1", { mi_oferta: mine }))).toBe(false);
+    expect(isToRespond(available("1", { resultado: "chosen_other" }))).toBe(false);
+    expect(isToRespond(available("1"))).toBe(true);
+  });
+
+  it("detecta los pedidos que había ofertado y ahora lo eligieron a él", () => {
+    const orders = [order("1", "preparing", "accepted"), order("2", "preparing", "accepted"), order("3", "delivered", "accepted")];
+
+    expect(chosenOrderIds(new Set(["1", "3", "9"]), orders)).toEqual(["1"]);
+    expect(chosenOrderIds(new Set(), orders)).toEqual([]);
+  });
 
   it("solo cuenta y avisa los disponibles que siguen abiertos", () => {
     expect(isToRespond(available("1"))).toBe(true);
@@ -203,5 +225,36 @@ describe("links de contacto — ENVIO-31", () => {
     expect(chatLink("")).toBeNull();
     expect(telLink(undefined)).toBeNull();
     expect(telLink("sin número")).toBeNull();
+  });
+});
+
+describe("textos de las ofertas — ENVIO-113 a 115", () => {
+  it("cuántas ofertas hay", () => {
+    expect(offersCountLabel(0)).toBe("Sin ofertas todavía");
+    expect(offersCountLabel(1)).toBe("1 oferta");
+    expect(offersCountLabel(4)).toBe("4 ofertas");
+  });
+
+  it("la propia oferta", () => {
+    const mine = { id: "o", precio: 6000, motivo: null, creada: "2026-10-09T22:02:00Z" };
+    expect(myOfferLabel(available("1", { mi_oferta: mine }), (n) => `$${n}`)).toBe(
+      "Tu oferta: $6000, esperando al cliente",
+    );
+    expect(myOfferLabel(available("1"), (n) => `$${n}`)).toBeNull();
+  });
+
+  it("el aviso de una oferta cerrada", () => {
+    expect(resultNotice(available("1", { resultado: "chosen_other" }))).toBe("El cliente eligió otro repartidor");
+    expect(resultNotice(available("1", { resultado: "cancelled" }))).toBe("Cancelado por el local");
+    expect(resultNotice(available("1", { resultado: "closed" }))).toBe("El local resolvió el envío");
+    expect(resultNotice(available("1"))).toBeNull();
+  });
+
+  it("los avisos de ofertas cerradas van al final de la lista", () => {
+    const list = [
+      available("cerrada", { resultado: "chosen_other", ofrecido_el: "2026-10-09T21:00:00Z" }),
+      available("abierta", { ofrecido_el: "2026-10-09T22:30:00Z" }),
+    ];
+    expect(sortAvailable(list).map((o) => o.id)).toEqual(["abierta", "cerrada"]);
   });
 });

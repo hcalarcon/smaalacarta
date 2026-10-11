@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { newPendingIds, pendingCount, shouldRemind, tabTitle } from "@/lib/orders/alerts";
-import { playNewOrderSound } from "@/lib/orders/sound";
+import { playChosenSound, playNewOrderSound } from "@/lib/orders/sound";
 
 const REMIND_MS = 30_000;
 // Cada cuánto se mira si toca repetir el aviso (el intervalo real es REMIND_MS).
@@ -99,6 +99,12 @@ export function useNewOrderAlert<T extends { id: string }>({
     };
   }, []);
 
+  // Otro aviso, distinto del de pedido nuevo: lo eligieron (ENVIO-116).
+  function playChosen() {
+    const ctx = audioRef.current;
+    if (soundOnRef.current && ctx?.state === "running") playChosenSound(ctx);
+  }
+
   async function unlockAudio() {
     try {
       const Ctor =
@@ -129,5 +135,5 @@ export function useNewOrderAlert<T extends { id: string }>({
     await unlockAudio();
   }
 
-  return { soundOn, audioReady, toggleSound, pending, soundOnRef };
+  return { soundOn, audioReady, toggleSound, pending, soundOnRef, playChosen };
 }

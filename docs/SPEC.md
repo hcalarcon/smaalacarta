@@ -443,6 +443,8 @@ llegando al negocio por WhatsApp.
   `textContent`.
 - **SEGUIMIENTO-34** *Reemplaza a SEGUIMIENTO-10 y 14 para los pedidos guardados:* el menú no abre WhatsApp solo, lleva al
   cliente al seguimiento; el pedido anticipado sin pago online conserva el panel "Pedido registrado".
+- **SEGUIMIENTO-35** `public_order_tracking` entrega `pedido.entrega` (`retiro` o `delivery`): la línea de pasos dice "Listo para
+  retirar" y "Retirado" solo en un pedido para retirar.
 
 ## PWA — Instalar el menú en el celular
 

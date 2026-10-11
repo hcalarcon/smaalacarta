@@ -160,23 +160,24 @@ describe("Configuración — ¿regenerar la URL? (ADMIN-CONFIG-36)", () => {
 // Hace de la sección Envíos: informa lo que edita y qué reglas incumple.
 function FakeDelivery() {
   const { reportDelivery, deliveryErrors } = useSettingsSave();
-  const [minutes, setMinutes] = useState("5");
   const [favorite, setFavorite] = useState(false);
+  const [invalid, setInvalid] = useState(false);
 
   useEffect(() => {
     reportDelivery({
-      input: { zoneIds: ["z1"], favoriteId: favorite ? "c1" : null, minutes },
-      errors: favorite && !/^\d+$/.test(minutes) ? { minutes: "Minutos inválidos." } : {},
+      input: { zoneIds: ["z1"], favoriteId: favorite ? "c1" : null },
+      errors: favorite && invalid ? { favorite: "Favorito inválido." } : {},
     });
   });
 
   return (
     <>
-      <input aria-label="Minutos" value={minutes} onChange={(e) => setMinutes(e.target.value)} />
       <button type="button" onClick={() => setFavorite(true)}>
         Elegir favorito
       </button>
-      {deliveryErrors.minutes ? <p>{deliveryErrors.minutes}</p> : null}
+      <button type="button" onClick={() => setInvalid(true)}>
+        Invalidar favorito
+      </button>
       {deliveryErrors.favorite ? <p>{deliveryErrors.favorite}</p> : null}
     </>
   );
@@ -209,7 +210,7 @@ describe("Configuración — Envíos con el mismo guardado (ENVIO-58)", () => {
     fireEvent.click(saveButton());
 
     await screen.findByText("Cambios guardados");
-    expect(saveDelivery).toHaveBeenCalledWith({ zoneIds: ["z1"], favoriteId: "c1", minutes: "5" });
+    expect(saveDelivery).toHaveBeenCalledWith({ zoneIds: ["z1"], favoriteId: "c1" });
     expect(saveSettings).not.toHaveBeenCalled();
     expect(saveProfile).not.toHaveBeenCalled();
   });
@@ -226,14 +227,14 @@ describe("Configuración — Envíos con el mismo guardado (ENVIO-58)", () => {
     expect(saveSettings.mock.invocationCallOrder[0]).toBeLessThan(saveDelivery.mock.invocationCallOrder[0]);
   });
 
-  it("con minutos inválidos no guarda nada y marca el campo", async () => {
+  it("con un favorito inválido no guarda nada y marca el campo", async () => {
     screenWithDelivery();
     fireEvent.click(screen.getByRole("button", { name: "Elegir favorito" }));
-    type("Minutos", "abc");
+    fireEvent.click(screen.getByRole("button", { name: "Invalidar favorito" }));
     type("WhatsApp", "3511111111");
     fireEvent.click(saveButton());
 
-    expect(await screen.findByText("Minutos inválidos.")).toBeInTheDocument();
+    expect(await screen.findByText("Favorito inválido.")).toBeInTheDocument();
     expect(saveDelivery).not.toHaveBeenCalled();
     expect(saveSettings).not.toHaveBeenCalled();
   });

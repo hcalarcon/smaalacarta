@@ -10,7 +10,9 @@ describe("orderErrorMessage", () => {
     ["42501", /permiso/i],
     ["P0016", /barrio/i],
     ["P0018", /teléfono/i],
-    ["P0019", /otro repartidor/i],
+    ["P0019", /no recibe ofertas/i],
+    ["P0020", /no recibe ofertas/i],
+    ["P0021", /motivo|por qué/i],
   ])("%s", (code, esperado) => {
     expect(orderErrorMessage({ code })).toMatch(esperado);
   });
