@@ -23,6 +23,8 @@ export type SuperAdminFormState = {
   credentials?: Credentials | null;
   // Negocio recién creado.
   businessId?: string;
+  // Repartidor recién creado.
+  courierId?: string;
 };
 
 function text(formData: FormData, name: string) {

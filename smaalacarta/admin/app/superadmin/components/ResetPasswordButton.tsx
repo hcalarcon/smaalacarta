@@ -4,21 +4,27 @@ import { useActionState } from "react";
 
 import CredentialsCard from "./CredentialsCard";
 import { resetPasswordAction, type SuperAdminFormState } from "../actions";
+import { resetCourierPasswordAction } from "../repartidores/actions";
 import FormAlert from "@/components/ui/FormAlert";
 
 const initialState: SuperAdminFormState = {};
 
+// Restablece la contraseña de una cuenta: la de un miembro de un negocio (`businessId` + `userId`) o
+// la de un repartidor (`courierId`). La acción comprueba superadmin y que la cuenta sea de ese
+// negocio o de ese repartidor.
 export default function ResetPasswordButton({
   businessId,
   userId,
+  courierId,
   label,
 }: {
-  businessId: string;
-  userId: string;
+  businessId?: string;
+  userId?: string;
+  courierId?: string;
   label: string;
 }) {
   const [state, formAction, pending] = useActionState(
-    resetPasswordAction,
+    courierId ? resetCourierPasswordAction : resetPasswordAction,
     initialState,
   );
 
@@ -36,8 +42,14 @@ export default function ResetPasswordButton({
           }
         }}
       >
-        <input type="hidden" name="businessId" value={businessId} />
-        <input type="hidden" name="userId" value={userId} />
+        {courierId ? (
+          <input type="hidden" name="courierId" value={courierId} />
+        ) : (
+          <>
+            <input type="hidden" name="businessId" value={businessId ?? ""} />
+            <input type="hidden" name="userId" value={userId ?? ""} />
+          </>
+        )}
         <button
           type="submit"
           disabled={pending}

@@ -152,18 +152,23 @@ export async function confirmSettlement(orderId: string): Promise<{ ok: true } |
 
 export type ActiveCourier = { name: string; whatsapp: string | null };
 
-// El repartidor activo (nombre y WhatsApp), para armar el mensaje de "Pedir envío". Solo lo leen
-// los miembros de un negocio con `courier_delivery` (RLS); sin permiso o sin repartidor, null.
+// El repartidor que atiende los pedidos de este local (nombre y WhatsApp), para armar el mensaje de
+// "Pedir envío": el favorito del local o, si no tiene, Repartos al Toque (TRANSICIÓN, ENVIO-54).
+// Solo lo entrega a los miembros de un negocio con `courier_delivery`; si no, null.
 export async function getActiveCourier(): Promise<ActiveCourier | null> {
   const supabase = await createClient();
 
-  const { data } = await supabase
-    .from("couriers")
-    .select("name, whatsapp")
-    .eq("active", true)
-    .maybeSingle();
+  const { data } = await supabase.rpc("my_delivery_courier");
 
-  return data ? { name: data.name, whatsapp: data.whatsapp } : null;
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return null;
+  }
+
+  const courier = data as { name?: unknown; whatsapp?: unknown };
+
+  return typeof courier.name === "string"
+    ? { name: courier.name, whatsapp: typeof courier.whatsapp === "string" ? courier.whatsapp : null }
+    : null;
 }
 
 export async function createManualOrder(
