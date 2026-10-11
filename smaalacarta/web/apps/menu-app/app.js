@@ -1202,13 +1202,17 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     return;
   }
 
+  if (saved && !preorder) {
+    // Un pedido guardado va directo al seguimiento (SEGUIMIENTO-34): ahí se ve el estado, se elige el
+    // repartidor y, si quiere, se manda también por WhatsApp (el link queda guardado, es opcional).
+    ORDERS.rememberHandoff(window.localStorage, saved.code, whatsappUrl);
+    WA_WINDOW?.discardPlaceholder(placeholder);
+    window.location.href = link;
+    return;
+  }
+
   if (saved) {
-    // Se anota el pedido antes de salir: si el navegador recarga la página al volver de
-    // WhatsApp, el panel se muestra de nuevo (SEGUIMIENTO-10).
-    if (!preorder) {
-      ORDERS.rememberHandoff(window.localStorage, saved.code, whatsappUrl);
-      ORDERS.rememberLastOrder(window.localStorage, { ...saved, payment: f.get("pago") });
-    }
+    // Pedido anticipado (sin seguimiento): conserva el panel "Pedido registrado" y abre WhatsApp.
     showThanks({
       number: saved.number,
       code: saved.code,
@@ -1217,7 +1221,6 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
       transfer: CHECKOUT?.transferDetails(CONFIG, f.get("pago")) ?? null,
       preorder,
     });
-    if (!preorder) ORDERS.markHandoffSent(window.localStorage, saved.code);
     // En PC, WhatsApp va a la ventana abierta al tocar; si no hubo, a la misma pestaña.
     openWhatsAppUrl(placeholder, whatsappUrl);
   } else {

@@ -165,55 +165,6 @@ body {
   color: #b91c1c;
 }
 
-.steps {
-  display: flex;
-  justify-content: space-between;
-  list-style: none;
-  padding: 0;
-  margin: 1.25rem 0 0;
-  gap: 0.25rem;
-}
-
-/* Con envío son siete pasos: texto más chico para que entren en un celular. */
-.steps-courier .step {
-  font-size: 0.6rem;
-  overflow-wrap: anywhere;
-}
-
-.step {
-  flex: 1;
-  text-align: center;
-  font-size: 0.7rem;
-  color: #9ca3af;
-}
-
-.step::before {
-  content: "";
-  display: block;
-  width: 1.1rem;
-  height: 1.1rem;
-  margin: 0 auto 0.35rem;
-  border-radius: 50%;
-  background: var(--line);
-}
-
-.step.done {
-  color: var(--brand);
-}
-
-.step.done::before {
-  background: var(--brand);
-}
-
-.step.current {
-  font-weight: 700;
-}
-
-.step.current::before {
-  background: var(--accent);
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent);
-}
-
 .card h2 {
   font-size: 1rem;
   color: var(--brand);
@@ -391,13 +342,436 @@ body {
   font-weight: 600;
 }
 
-/* Envío con repartidor (ENVIO-29 y 91). */
-.delivery-line {
-  margin: 0.25rem 0 0;
-  font-size: 0.95rem;
+/* ------------------------------------------------------------------ */
+/* Línea de pasos con íconos (SEGUIMIENTO-25 y 26)                      */
+/* ------------------------------------------------------------------ */
+
+.progress {
+  display: flex;
+  justify-content: space-between;
+  list-style: none;
+  padding: 0;
+  margin: 1.5rem 0 0.25rem;
+  gap: 0.25rem;
 }
 
-.delivery-accepted,
-.delivery-self {
-  border-left: 4px solid var(--accent);
+.step {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  color: #9ca3af;
+}
+
+/* La línea que une un paso con el siguiente: llena (marca) si el paso ya se hizo. */
+.step:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  top: 1.3rem;
+  left: calc(50% + 1.5rem);
+  right: calc(-50% + 1.5rem);
+  height: 3px;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.step.step-done:not(:last-child)::after {
+  background: var(--brand);
+}
+
+.step-icon {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  margin: 0 auto 0.4rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--line) 55%, white);
+  color: #9ca3af;
+}
+
+.step-icon .icon {
+  width: 1.4rem;
+  height: 1.4rem;
+}
+
+.step-done .step-icon {
+  background: var(--brand);
+  color: #fff;
+}
+
+.step-current .step-icon {
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent);
+  animation: step-pulse 1.8s ease-in-out infinite;
+}
+
+/* La tilde de "hecho": una marca chica en la esquina del círculo. */
+.step-check {
+  position: absolute;
+  right: -0.25rem;
+  bottom: -0.2rem;
+  display: grid;
+  place-items: center;
+  width: 1.05rem;
+  height: 1.05rem;
+  border-radius: 50%;
+  background: var(--ok);
+  color: #fff;
+  box-shadow: 0 0 0 2px #fff;
+}
+
+.step-check .icon {
+  width: 0.7rem;
+  height: 0.7rem;
+  stroke-width: 3;
+}
+
+.step-label {
+  display: block;
+  font-size: 0.72rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.step-done .step-label {
+  color: var(--brand);
+}
+
+.step-current .step-label {
+  color: var(--brand);
+  font-weight: 700;
+}
+
+/* El ícono del paso actual se mueve distinto según el paso. */
+.step-current .icon-onTheWay {
+  animation: ride 1.4s ease-in-out infinite;
+}
+
+.step-current .icon-accepted {
+  animation: steam 1.6s ease-in-out infinite;
+}
+
+.step-current .icon-received {
+  animation: step-nudge 1.8s ease-in-out infinite;
+}
+
+@keyframes step-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.08);
+  }
+}
+
+@keyframes ride {
+  0%,
+  100% {
+    transform: translateX(-2px);
+  }
+  50% {
+    transform: translateX(2px);
+  }
+}
+
+@keyframes steam {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes step-nudge {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  25% {
+    transform: rotate(-6deg);
+  }
+  75% {
+    transform: rotate(6deg);
+  }
+}
+
+/* Pedido cancelado: un estado propio, con el motivo si lo hay. */
+.status-icon {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto 0.5rem;
+  border-radius: 50%;
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.status-icon .icon {
+  width: 1.8rem;
+  height: 1.8rem;
+}
+
+.cancel-reason {
+  margin-top: 0.6rem;
+  text-align: center;
+  font-size: 0.95rem;
+  color: #7f1d1d;
+}
+
+/* ------------------------------------------------------------------ */
+/* Tarjeta del envío y ofertas (SEGUIMIENTO-27 a 29)                    */
+/* ------------------------------------------------------------------ */
+
+.delivery-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+  overflow: hidden;
+}
+
+.delivery-icon {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 2.8rem;
+  height: 2.8rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--accent) 18%, white);
+  color: var(--brand);
+}
+
+.delivery-icon .icon {
+  width: 1.6rem;
+  height: 1.6rem;
+}
+
+.delivery-title {
+  font-size: 1.05rem;
+  color: var(--brand);
+  margin: 0;
+}
+
+.card h2.delivery-title {
+  margin-bottom: 0.15rem;
+}
+
+.delivery-line {
+  margin: 0.2rem 0 0;
+  font-size: 0.92rem;
+  color: #4b5563;
+}
+
+/* Buscando repartidor: la moto cruza el ícono de lado a lado. */
+.delivery-head.moving .delivery-icon .icon {
+  animation: search-ride 2.2s ease-in-out infinite;
+}
+
+@keyframes search-ride {
+  0% {
+    transform: translateX(-5px);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateX(5px);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(-5px);
+    opacity: 0.6;
+  }
+}
+
+.delivery-link {
+  display: block;
+  margin-top: 0.9rem;
+  text-align: center;
+  background: #25d366;
+  color: #fff;
+  padding: 0.7rem 1rem;
+  border-radius: 0.75rem;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.offers {
+  margin-top: 1rem;
+}
+
+.countdown {
+  margin: 0 0 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 0.75rem;
+  background: color-mix(in srgb, var(--accent) 14%, white);
+  color: var(--brand);
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.countdown.warn {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.offer-list {
+  list-style: none;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.offer {
+  border: 1px solid var(--line);
+  border-radius: 1rem;
+  padding: 0.8rem 0.9rem;
+  background: #fff;
+}
+
+.offer.recommended {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.offer-badge {
+  display: inline-block;
+  margin-bottom: 0.4rem;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 20%, white);
+  color: var(--brand);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.offer-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.offer-name {
+  font-weight: 700;
+  color: var(--brand);
+}
+
+.offer-price {
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.offer-reason {
+  margin: 0.3rem 0 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.offer-confirm {
+  margin: 0.7rem 0 0.5rem;
+  font-weight: 600;
+}
+
+.offer-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.offer-choose,
+.offer-yes,
+.offer-no {
+  min-height: 2.75rem;
+  border-radius: 0.75rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.offer-choose {
+  width: 100%;
+  margin-top: 0.7rem;
+  border: 0;
+  background: var(--brand);
+  color: #fff;
+}
+
+.offer-yes {
+  flex: 1;
+  border: 0;
+  background: var(--brand);
+  color: #fff;
+}
+
+.offer-no {
+  flex: 1;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--brand);
+}
+
+.offer-yes:disabled,
+.offer-no:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.choose-error {
+  margin-top: 0.7rem;
+  color: #b91c1c;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+/* ------------------------------------------------------------------ */
+/* Avisos con la página abierta (SEGUIMIENTO-31)                        */
+/* ------------------------------------------------------------------ */
+
+.alerts {
+  text-align: center;
+}
+
+.alerts-on {
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+  color: var(--ok);
+}
+
+.alerts-btn {
+  width: 100%;
+  min-height: 2.75rem;
+  border: 2px solid var(--brand);
+  border-radius: 0.75rem;
+  background: #fff;
+  color: var(--brand);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.alerts-btn.on {
+  border-color: var(--line);
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.alerts-hint {
+  margin-top: 0.5rem;
+  color: #6b7280;
+  font-size: 0.82rem;
+}
+
+/* Sin animaciones si el sistema lo pide (SEGUIMIENTO-26): solo queda el ícono. */
+@media (prefers-reduced-motion: reduce) {
+  .step-current .step-icon,
+  .step-current .icon,
+  .delivery-head.moving .delivery-icon .icon {
+    animation: none;
+  }
 }
