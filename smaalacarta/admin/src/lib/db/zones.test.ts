@@ -379,11 +379,12 @@ describe("create_courier_with_user — ENVIO-50", () => {
 describe("public_delivery_zones — ENVIO-51", () => {
   it("devuelve solo las zonas del local que cubre algún repartidor activo, con precio de referencia", async () => {
     const r = await call(null, "select public.public_delivery_zones('ana') as z");
-    const z = r.ok ? (r.rows[0].z as { repartidor: string; zonas: { id: string; nombre: string; precio: number }[] }) : null;
+    const z = r.ok ? (r.rows[0].z as { zonas: { id: string; nombre: string; precio: number }[] }) : null;
 
     expect(z?.zonas.map((x) => x.nombre)).toEqual(["Centro (hasta Av. Koessler)", "Cantera"]);
     expect(z?.zonas[1]).toMatchObject({ nombre: "Cantera", precio: 5000 });
-    expect(z?.repartidor).toBe("Repartos al Toque");
+    // Al pedir todavía no hay repartidor: no se nombra a ninguno.
+    expect(Object.keys(z ?? {})).toEqual(["zonas"]);
   });
 
   it("una zona marcada que nadie cubre, o dada de baja, no aparece", async () => {
@@ -426,10 +427,15 @@ describe("public_delivery_zones — ENVIO-51", () => {
     const celia = await call(null, "select public.public_delivery_zones('celia') as z");
     expect(celia.ok && celia.rows[0].z).toBeNull();
 
+    // Con un solo repartidor de baja, el otro sigue cubriendo las zonas de Ana.
     await db.exec(`update couriers set active = false where id = '${TOQUE}'`);
+    const uno = await call(null, "select public.public_delivery_zones('ana') as z");
+    expect(uno.ok && (uno.rows[0].z as { zonas: unknown[] }).zonas).toHaveLength(2);
+
+    await db.exec(`update couriers set active = false where id = '${DOS}'`);
     const none = await call(null, "select public.public_delivery_zones('ana') as z");
     expect(none.ok && none.rows[0].z).toBeNull();
-    await db.exec(`update couriers set active = true where id = '${TOQUE}'`);
+    await db.exec(`update couriers set active = true where id in ('${TOQUE}', '${DOS}')`);
   });
 });
 
@@ -572,7 +578,7 @@ describe("save_delivery_preferences — ENVIO-53", () => {
   });
 });
 
-describe("create_public_order en la transición — ENVIO-54", () => {
+describe("create_public_order con las zonas del local — ENVIO-54", () => {
   it("solo acepta zonas que el local marcó y que cubre un repartidor activo (P0016)", async () => {
     const lolog = await zoneId("Lolog"); // existe, pero Ana no la marcó
     const noMarcada = await order("ana", lolog);
@@ -588,52 +594,35 @@ describe("create_public_order en la transición — ENVIO-54", () => {
     await resetAna();
   });
 
-  it("sin favorito, el pedido queda con Repartos al Toque", async () => {
-    const r = await order("ana", await zoneId("Cantera"));
-    expect(r.ok).toBe(true);
-
-    const code = (r.ok ? (r.rows[0].result as { code: string }).code : "") as string;
-    const o = await db.query<{ courier_id: string; delivery_fee_list: string }>(
-      "select courier_id, delivery_fee_list from orders where code = $1",
-      [code],
+  it("el pedido nace sin repartidor, con o sin favorito: lo asigna la búsqueda", async () => {
+    const sin = await order("ana", await zoneId("Cantera"));
+    const sinCode = (sin.ok ? (sin.rows[0].result as { code: string }).code : "") as string;
+    const o = await db.query<{ courier_id: string | null; delivery_fee_list: string; courier_status: string }>(
+      "select courier_id, delivery_fee_list, courier_status from orders where code = $1",
+      [sinCode],
     );
-    expect(o.rows[0]).toEqual({ courier_id: TOQUE, delivery_fee_list: "5000.00" });
-  });
+    expect(o.rows[0]).toEqual({ courier_id: null, delivery_fee_list: "5000.00", courier_status: "waiting" });
 
-  it("con favorito, el pedido queda con el favorito; si se da de baja, vuelve a Repartos al Toque", async () => {
     expect((await prefs(ANA, DOS, 5)).ok).toBe(true);
-
     const fav = await order("ana", await zoneId("Cantera"));
     const favCode = (fav.ok ? (fav.rows[0].result as { code: string }).code : "") as string;
-    const favOrder = await db.query<{ courier_id: string }>("select courier_id from orders where code = $1", [favCode]);
-    expect(favOrder.rows[0].courier_id).toBe(DOS);
+    const favOrder = await db.query<{ courier_id: string | null }>(
+      "select courier_id from orders where code = $1",
+      [favCode],
+    );
+    expect(favOrder.rows[0].courier_id).toBeNull();
 
-    // El menú muestra al mismo repartidor y su WhatsApp.
+    // El menú ya no nombra a ningún repartidor: todavía no lo hay.
     const menu = await call(null, "select public.public_delivery_zones('ana') as z");
-    expect(menu.ok && menu.rows[0].z).toMatchObject({ repartidor: "Moto Express", whatsapp: "5493510000099" });
+    const z = (menu.ok ? menu.rows[0].z : null) as Record<string, unknown>;
+    expect(Object.keys(z)).toEqual(["zonas"]);
 
-    await db.exec(`update couriers set active = false where id = '${DOS}'`);
-    const back = await order("ana", await zoneId("Cantera"));
-    const backCode = (back.ok ? (back.rows[0].result as { code: string }).code : "") as string;
-    const backOrder = await db.query<{ courier_id: string }>("select courier_id from orders where code = $1", [backCode]);
-    expect(backOrder.rows[0].courier_id).toBe(TOQUE);
-
-    await db.exec(`update couriers set active = true where id = '${DOS}'`);
     await resetAna();
   });
 
-  it("my_delivery_courier dice qué repartidor atiende al local", async () => {
-    const def = await call(ANA, "select public.my_delivery_courier() as c");
-    expect(def.ok && def.rows[0].c).toMatchObject({ name: "Repartos al Toque" });
-
-    await prefs(ANA, DOS, 5);
-    const fav = await call(ANA, "select public.my_delivery_courier() as c");
-    expect(fav.ok && fav.rows[0].c).toMatchObject({ name: "Moto Express", whatsapp: "5493510000099" });
-
-    const sin = await call(CELIA, "select public.my_delivery_courier() as c");
-    expect(sin.ok && sin.rows[0].c).toBeNull();
-
-    await resetAna();
+  it("las funciones de la transición ya no existen", async () => {
+    const r = await call(ANA, "select public.my_delivery_courier()");
+    expect(r.ok).toBe(false);
   });
 });
 

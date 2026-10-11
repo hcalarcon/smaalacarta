@@ -33,7 +33,7 @@ const sqlText = (value: string | null) => (value === null ? "null" : "'" + value
 function order(
   slug: string,
   lines: Line[] | string,
-  extra: { name?: string | null; delivery?: string; payment?: string; notes?: string | null } = {},
+  extra: { name?: string | null; delivery?: string; payment?: string; notes?: string | null; phone?: string | null } = {},
   user: string | null = null,
 ) {
   const payload = typeof lines === "string" ? lines : items(lines);
@@ -46,7 +46,8 @@ function order(
        ${sqlText(extra.delivery ?? "retiro")},
        ${sqlText(extra.payment ?? "efectivo")},
        ${sqlText(extra.notes === undefined ? "Sin cebolla" : extra.notes)},
-       '${payload}'::jsonb) as result`,
+       '${payload}'::jsonb,
+       p_customer_phone => ${sqlText(extra.phone === undefined ? "3515551234" : extra.phone)}) as result`,
   );
 }
 

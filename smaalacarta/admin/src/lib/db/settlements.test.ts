@@ -41,8 +41,10 @@ async function deliveredOrder(payment = "efectivo") {
   const id = (await db.query<{ id: string }>("select id from orders where code = $1", [code])).rows[0].id;
   if (payment !== "efectivo") await db.exec(`update orders set payment = '${payment}' where id = '${id}'`);
 
-  await call(REPA, `select public.set_order_courier('${id}', 'accept', 'Juan')`);
-  for (const s of ["confirmed", "preparing", "ready", "handed_to_courier"]) {
+  // El local confirma (abre la búsqueda), el repartidor lo toma y el local lo entrega.
+  await call(ANA, `select public.set_order_status('${id}', 'confirmed')`);
+  await call(REPA, `select public.courier_take_order('${id}', null, null, 'Juan')`);
+  for (const s of ["preparing", "ready", "handed_to_courier"]) {
     await call(ANA, `select public.set_order_status('${id}', '${s}')`);
   }
   await call(REPA, `select public.courier_set_status('${id}', 'on_the_way')`);

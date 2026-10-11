@@ -25,7 +25,8 @@ function order(payment: string, extra = "") {
     db,
     null,
     `select public.create_public_order('ana', 'Cliente', 'retiro', '${payment}', null,
-       '[{"id":"${CAFE}","kind":"product","quantity":2}]'::jsonb${extra}) as result`,
+       '[{"id":"${CAFE}","kind":"product","quantity":2}]'::jsonb${extra},
+       p_customer_phone => '3515551234') as result`,
   );
 }
 

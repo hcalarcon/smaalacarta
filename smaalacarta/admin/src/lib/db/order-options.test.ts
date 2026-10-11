@@ -62,7 +62,8 @@ function order(lines: Line[], slug = "ana") {
   return asUser(
     db,
     null,
-    `select public.create_public_order('${slug}', 'Cliente', 'retiro', 'efectivo', null, '${payload}'::jsonb) as result`,
+    `select public.create_public_order('${slug}', 'Cliente', 'retiro', 'efectivo', null, '${payload}'::jsonb,
+       p_customer_phone => '3515551234') as result`,
   );
 }
 
