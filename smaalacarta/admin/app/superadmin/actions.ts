@@ -117,8 +117,8 @@ export async function updateCourierDeliveryAction(
 
   return {
     message: enabled
-      ? "Envío con Repartos al Toque habilitado."
-      : "Envío con Repartos al Toque deshabilitado.",
+      ? "Envío con repartidores habilitado."
+      : "Envío con repartidores deshabilitado.",
   };
 }
 

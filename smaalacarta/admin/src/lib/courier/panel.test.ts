@@ -4,6 +4,7 @@ import {
   availableActions,
   chatLink,
   chosenOrderIds,
+  courierPanelTitle,
   groupOf,
   isToRespond,
   myOfferLabel,
@@ -256,5 +257,17 @@ describe("textos de las ofertas — ENVIO-113 a 115", () => {
       available("abierta", { ofrecido_el: "2026-10-09T22:30:00Z" }),
     ];
     expect(sortAvailable(list).map((o) => o.id)).toEqual(["abierta", "cerrada"]);
+  });
+});
+
+describe("título del panel — ENVIO-126", () => {
+  it("lleva el nombre del repartidor que entró", () => {
+    expect(courierPanelTitle("Repartos al Toque")).toBe("Repartos al Toque");
+    expect(courierPanelTitle("  Moto Express ")).toBe("Moto Express");
+  });
+
+  it("sin nombre dice Repartidor", () => {
+    expect(courierPanelTitle(null)).toBe("Repartidor");
+    expect(courierPanelTitle("   ")).toBe("Repartidor");
   });
 });

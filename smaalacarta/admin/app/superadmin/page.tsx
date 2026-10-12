@@ -78,7 +78,7 @@ export default async function SuperAdminHomePage() {
                     ) : null}
                     {business.courier_delivery ? (
                       <span className="rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-semibold text-accent">
-                        Envío con Repartos al Toque
+                        Envío con repartidores
                       </span>
                     ) : null}
                   </p>

@@ -1526,6 +1526,10 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
 - **ENVIO-125** La oferta con precio distinto al de lista dice "Precio de lista {precio} · {motivo}" (sin motivo, solo
   "Precio de lista {precio}") en el seguimiento (es, en y pt) y en el panel del local. *Reemplaza el "Antes {precio}:
   {motivo}" de ENVIO-91 y SEGUIMIENTO-28.*
+- **ENVIO-126** El título del panel del repartidor es el nombre del repartidor que entró, y "Repartidor" si no tiene.
+- **ENVIO-127** Los textos del superadmin y del tablero ya no nombran a un solo repartidor: "Envío con repartidores"
+  (habilitado y deshabilitado) y "Rendiciones de repartidores". Si el resumen de rendiciones junta pedidos de más de un
+  repartidor, muestra un renglón por cada uno con su nombre ("Repartidor" si no se lo puede leer).
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 
@@ -1779,6 +1783,8 @@ precios en 0; no existe "incluye N y el resto cuesta X".
   avisos" (un toque, sin pedir permiso de nuevo) y la suscripción pasa a la cuenta nueva.
 - **ADMIN-PWA-29** Al salir, la suscripción de ese aparato se saca de la cuenta (el navegador sigue con el
   permiso): quien se fue no sigue recibiendo avisos ahí, y al volver a entrar activa con un toque.
+- **ADMIN-PWA-30** El ícono de la pestaña y del acceso directo del panel es el de SMA a la Carta (`app/favicon.ico` y
+  `public/favicon.ico`), no el que trae Next.
 
 ---
 

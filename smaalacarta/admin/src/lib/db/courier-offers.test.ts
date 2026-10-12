@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { applyMigration, asUser, createTestDb, createUser, type TestDb } from "@/test/db";
 import { choose, offer } from "@/test/offers";
@@ -831,6 +831,8 @@ describe("anticipados y programados: se ofrecen al confirmar — ENVIO-121 a 125
   const DAYS = ["lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo"];
   const openAllDay = Object.fromEntries(DAYS.map((d) => [d, ["00:00-23:59"]]));
   const setup = (sql: string) => db.exec(`update business_settings set ${sql} where business_id = '${NEG_ANA}'`);
+  // Mediodía en Argentina (15:00 UTC) de un día fijo.
+  const NOON = new Date("2026-10-14T15:00:00Z");
 
   // Un pedido con envío de Ana para más tarde: programado a una hora, o anticipado (el negocio está
   // cerrado todo el día de hoy y toma pedidos para mañana).
@@ -845,17 +847,23 @@ describe("anticipados y programados: se ofrecen al confirmar — ENVIO-121 a 125
       );
     }
 
+    // La base exige que la hora programada sea de hoy (hora de Argentina). Con "ahora + 90 min" el test
+    // fallaba de noche, así que el reloj queda fijo al mediodía mientras se crea el pedido.
     const extra =
       kind === "programado"
-        ? `, p_scheduled_for => '${new Date(Date.now() + 90 * 60_000).toISOString()}'::timestamptz`
+        ? `, p_scheduled_for => '${new Date(NOON.getTime() + 90 * 60_000).toISOString()}'::timestamptz`
         : ", p_preorder => true";
     const items = JSON.stringify([{ id: CAFE, kind: "product", quantity: 1 }]);
-    const r = await call(
-      null,
-      `select public.create_public_order('ana', 'Cliente Prueba', 'delivery', 'efectivo', null,
+    const sql = `select public.create_public_order('ana', 'Cliente Prueba', 'delivery', 'efectivo', null,
          '${items}'::jsonb${extra}, p_delivery_zone => '${await zoneId("Cantera")}'::uuid,
-         p_customer_phone => '351 555-1234', p_delivery_address => 'Av. Siempre Viva 742') as result`,
-    );
+         p_customer_phone => '351 555-1234', p_delivery_address => 'Av. Siempre Viva 742') as result`;
+    if (kind === "programado") vi.useFakeTimers({ toFake: ["Date"], now: NOON });
+    let r: Awaited<ReturnType<typeof call>>;
+    try {
+      r = await call(null, sql);
+    } finally {
+      vi.useRealTimers();
+    }
     await setup("preorders_enabled = false, preorder_cutoffs = '{}'::jsonb, schedule = '{}'::jsonb");
     if (!r.ok) throw new Error(`no se pudo crear el pedido: ${r.error}`);
     const c = (r.rows[0].result as { code: string }).code;

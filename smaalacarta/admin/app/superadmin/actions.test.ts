@@ -28,7 +28,7 @@ beforeEach(() => {
   db.updateCourierDelivery.mockResolvedValue({ ok: true });
 });
 
-describe("envío con Repartos al Toque por negocio — ENVIO-18", () => {
+describe("envío con repartidores por negocio — ENVIO-18", () => {
   it("quien no es superadmin no llega a la base", async () => {
     requireSuperAdmin.mockRejectedValue(new Error("NEXT_REDIRECT"));
 
@@ -43,14 +43,14 @@ describe("envío con Repartos al Toque por negocio — ENVIO-18", () => {
 
     expect(db.updateCourierDelivery).toHaveBeenCalledWith(ID, true);
     expect(result.error).toBeUndefined();
-    expect(result.message).toMatch(/habilitado/i);
+    expect(result.message).toBe("Envío con repartidores habilitado.");
   });
 
   it("lo deshabilita con el interruptor desmarcado", async () => {
     const result = await updateCourierDeliveryAction({}, form({ businessId: ID }));
 
     expect(db.updateCourierDelivery).toHaveBeenCalledWith(ID, false);
-    expect(result.message).toMatch(/deshabilitado/i);
+    expect(result.message).toBe("Envío con repartidores deshabilitado.");
   });
 
   it("devuelve el error de la base", async () => {

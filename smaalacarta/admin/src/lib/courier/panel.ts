@@ -9,6 +9,11 @@ import type { OrderItemOption } from "@/lib/orders/item-options";
 // pedido o el local lo resolvió (lo asignó a mano o lo lleva él).
 export type OfferResult = "chosen_other" | "cancelled" | "closed";
 
+// Título del panel: el nombre del repartidor que entró, o "Repartidor" si no tiene (ENVIO-126).
+export function courierPanelTitle(name: string | null | undefined) {
+  return name?.trim() || "Repartidor";
+}
+
 // Un pedido disponible tal como lo entrega `courier_available_orders()` (ENVIO-101 y 71). Antes de que lo
 // elijan el repartidor no ve nada del cliente: ni nombre, ni teléfono, ni dirección.
 export type AvailableOrder = {
