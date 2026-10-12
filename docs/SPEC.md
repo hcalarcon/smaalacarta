@@ -1172,13 +1172,14 @@ PR 2. Guía: [MERCADOPAGO.md](MERCADOPAGO.md).*
   su versión, IV aleatorio y el `business_id` como dato asociado); `payment_connections` y `mp_oauth_states` tienen
   RLS sin políticas y sin permisos para `anon` y `authenticated`: solo la clave de servicio las toca.
 - **MP-13** El callback comprueba con la API de Mercado Pago que la cuenta es la del token y es de Argentina
-  (`MLA`); una cuenta ya conectada a otro negocio se rechaza sin tocar nada, y conectar otra vez en el mismo
-  negocio reemplaza la conexión anterior.
+  (`MLA`); una cuenta ya conectada a otro negocio se rechaza sin tocar nada (una conexión revocada libera la cuenta),
+  y conectar otra vez en el mismo negocio reemplaza la conexión anterior.
 - **MP-14** Desconectar borra los tokens y deja la conexión en `revoked`; no llama a Mercado Pago (el negocio
   puede revocar desde su cuenta).
 - **MP-15** Conectar exige `MP_OAUTH_ENABLED` en `"true"` y `businesses.mp_oauth_enabled` del negocio; si
-  cualquiera está apagado, los tres endpoints responden un 404 genérico, y el dueño no puede prender el
-  interruptor de su negocio (solo un superadmin o la clave de servicio).
+  cualquiera está apagado, `start` y `callback` responden un 404 genérico (`disconnect` no depende de los
+  interruptores: el negocio siempre puede sacar sus tokens), y el dueño no puede prender el interruptor de
+  su negocio (solo un superadmin o la clave de servicio).
 - **MP-16** Ningún secreto (`code`, tokens, `client_secret`, `state`, `code_verifier`) aparece en una URL, un
   log, una respuesta ni un mensaje de error; de un fallo de Mercado Pago solo se registra el código HTTP.
 

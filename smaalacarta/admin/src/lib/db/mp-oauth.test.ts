@@ -87,6 +87,31 @@ describe("las tablas de la conexión — MP-12", () => {
     if (!r.ok) expect(r.code).toBe("23505");
   });
 
+  it("una conexión revocada libera la cuenta para otro negocio", async () => {
+    await db.exec(`
+      insert into businesses (id, name, slug, whatsapp)
+        values ('d4d4d4d4-0000-0000-0000-000000000004', 'Cuarto', 'cuarto', '5493510000007');
+    `);
+    await asService(db, `update payment_connections set status = 'revoked', access_token_enc = null,
+      refresh_token_enc = null where business_id = '${NEG_ANA}'`);
+
+    const other = await asService(
+      db,
+      connection.replace(NEG_ANA, "d4d4d4d4-0000-0000-0000-000000000004").replace("'connected', '" + ANA + "'", "'connected', '" + ANA + "'"),
+    );
+    expect(other.ok).toBe(true);
+
+    // Y la cuenta ya no se puede repetir en un tercero mientras esté conectada.
+    const third = await asService(db, `update payment_connections set status = 'connected', access_token_enc = 'x',
+      refresh_token_enc = 'y' where business_id = '${NEG_ANA}'`);
+    expect(third.ok).toBe(false);
+    if (!third.ok) expect(third.code).toBe("23505");
+
+    await asService(db, "delete from payment_connections where business_id = 'd4d4d4d4-0000-0000-0000-000000000004'");
+    await asService(db, `update payment_connections set status = 'connected', access_token_enc = 'cifrado-a',
+      refresh_token_enc = 'cifrado-r' where business_id = '${NEG_ANA}'`);
+  });
+
   it("un negocio tiene una sola conexión y un state no se repite", async () => {
     const again = await asService(db, connection.replace("111", "222"));
     expect(again.ok).toBe(false);

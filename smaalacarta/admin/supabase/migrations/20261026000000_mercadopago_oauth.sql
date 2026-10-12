@@ -2,7 +2,8 @@
 --
 -- - `payment_connections`: la cuenta de Mercado Pago de un negocio. Los tokens van cifrados (AES-256-GCM, lo
 --   hace el servidor: la base nunca ve un token en claro) con la versión de la clave. Un negocio tiene una
---   sola conexión y una cuenta de Mercado Pago (`mp_user_id`) está en un solo negocio.
+--   sola conexión y una cuenta de Mercado Pago (`mp_user_id`) está en un solo negocio mientras no esté
+--   revocada.
 -- - `mp_oauth_states`: un intento de conexión. Solo se guarda el hash del `state` y el `code_verifier` de PKCE
 --   cifrado; vence a los 10 minutos y se usa una sola vez (`used_at`).
 -- - Las dos tablas tienen RLS activo y SIN políticas, y no se les da ningún permiso a `anon` ni a
@@ -14,7 +15,7 @@
 
 CREATE TABLE IF NOT EXISTS public.payment_connections (
   business_id uuid PRIMARY KEY REFERENCES public.businesses(id) ON DELETE CASCADE,
-  mp_user_id bigint NOT NULL UNIQUE,
+  mp_user_id bigint NOT NULL,
   -- Nulos solo al desconectar (`revoked`): los tokens se borran, la fila queda como constancia.
   access_token_enc text,
   refresh_token_enc text,
@@ -30,6 +31,12 @@ CREATE TABLE IF NOT EXISTS public.payment_connections (
     status = 'revoked' OR (access_token_enc IS NOT NULL AND refresh_token_enc IS NOT NULL)
   )
 );
+
+-- Una cuenta de Mercado Pago en un solo negocio (MP-13). Una conexión revocada no la retiene: la cuenta
+-- queda libre para conectarse en otro negocio.
+CREATE UNIQUE INDEX IF NOT EXISTS payment_connections_mp_user_idx
+  ON public.payment_connections (mp_user_id)
+  WHERE status <> 'revoked';
 
 CREATE TABLE IF NOT EXISTS public.mp_oauth_states (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
