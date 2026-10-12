@@ -1463,7 +1463,10 @@ export type Database = {
         Args: { p_endpoint: string }
         Returns: undefined
       }
-      effective_favorite_courier: { Args: { p_business: string }; Returns: string }
+      effective_favorite_courier: {
+        Args: { p_business: string }
+        Returns: string
+      }
       is_open_now: {
         Args: { p_at: string; p_schedule: Json }
         Returns: boolean
