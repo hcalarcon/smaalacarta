@@ -2,9 +2,11 @@ import type { MetadataRoute } from "next";
 
 import { BASE_PATH } from "@/lib/base-path";
 
-// El panel instalable (ADMIN-PWA-9). `start_url` "/admin/" ya lleva a cada uno a su panel: el proxy y los
-// layouts mandan al negocio, al repartidor o al superadmin según quién entró. Los colores son los de la marca
-// (`--color-brand` y `--color-cream` en `app/globals.css`).
+// El panel instalable (ADMIN-PWA-9). `start_url` es una página real del panel (`/admin/dashboard`), no
+// `/admin/`: el landing (que reescribe hacia este proyecto) no resolvía la barra final y la app instalada
+// abría en 404 (ADMIN-PWA-31). El proxy y los layouts mandan al negocio, al repartidor o al superadmin según
+// quién entró. `id` se mantiene en `/admin/` para que quien ya la instaló no tenga que reinstalarla. Los
+// colores son los de la marca (`--color-brand` y `--color-cream` en `app/globals.css`).
 //
 // Next sirve esta ruta como `<basePath>/manifest.webmanifest` y pone el `<link rel="manifest">` solo; lo
 // que se escribe a mano (URLs de adentro) lleva el `basePath` explícito, porque el manifest no lo suma.
@@ -15,7 +17,7 @@ export default function manifest(): MetadataRoute.Manifest {
     short_name: "SMA Panel",
     description: "Panel de administración de SMA a la Carta",
     lang: "es",
-    start_url: `${BASE_PATH}/`,
+    start_url: `${BASE_PATH}/dashboard`,
     scope: `${BASE_PATH}/`,
     display: "standalone",
     background_color: "#faf8f3",

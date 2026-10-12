@@ -13,11 +13,18 @@ describe("manifest del panel — ADMIN-PWA-9", () => {
     expect(m.short_name).toBe("SMA Panel");
   });
 
-  it("arranca y se acota en /admin/, y se muestra como app", () => {
-    expect(m.start_url).toBe("/admin/");
+  it("se acota en /admin/, se muestra como app y conserva su id", () => {
     expect(m.scope).toBe("/admin/");
     expect(m.id).toBe("/admin/");
     expect(m.display).toBe("standalone");
+  });
+
+  // ADMIN-PWA-31: `/admin/` con barra final no lo resuelve el landing (404); arrancar en una página real
+  // del panel evita redirecciones y queda dentro del scope.
+  it("arranca en una página real del panel, dentro del scope y sin barra final suelta", () => {
+    expect(m.start_url).toBe("/admin/dashboard");
+    expect(m.start_url?.startsWith(m.scope ?? "")).toBe(true);
+    expect(m.start_url?.endsWith("/")).toBe(false);
   });
 
   it("usa los colores de la marca", () => {

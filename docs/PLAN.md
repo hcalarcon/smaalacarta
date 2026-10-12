@@ -563,8 +563,27 @@ paso a paso (cuenta, aplicación, credenciales, webhook y pruebas), está en [ME
       Lo que no se automatiza (pagar en el checkout real) sigue en [MERCADOPAGO.md](MERCADOPAGO.md)
 - [ ] [herni] `npm run db:types` después de aplicar la migración a la base propia (los tipos de esta rama se
       escribieron a mano) y seguir la guía de [MERCADOPAGO.md](MERCADOPAGO.md) antes y después del PR
-- [ ] [por asignar] Ofrecer Mercado Pago a clientes con OAuth: una sola aplicación de SMA a la Carta y cada negocio
-      conecta su cuenta desde Configuración (un solo webhook y una sola clave)
+- [ ] [herni] Ofrecer Mercado Pago a clientes con OAuth: una sola aplicación de SMA a la Carta y cada negocio
+      conecta su cuenta desde Configuración. Prueba con 2 o 3 negocios invitados, sin comisión (no se manda
+      `marketplace_fee`). Seguridad primero; por partes, un PR cada una:
+  - [ ] [herni] Antes del código: aplicación nueva en Mercado Pago solo para OAuth (en la misma cuenta, aparte de la
+        que cobra el negocio propio), URL de redirección `https://www.smaalacarta.com.ar/admin/api/mp/oauth/callback`,
+        PKCE y evento "Pagos"; variables `MP_OAUTH_CLIENT_ID`, `MP_OAUTH_CLIENT_SECRET`, `MP_OAUTH_WEBHOOK_SECRET`,
+        `MP_TOKEN_ENCRYPTION_KEY` y `MP_OAUTH_ENABLED` (nunca por chat); usuarios de prueba vendedor y comprador;
+        textos de términos y privacidad
+  - [ ] [herni] PR 1 — conectar y desconectar: requisitos `MP-8…` en SPEC.md; tablas `payment_connections` (tokens
+        cifrados con AES-256-GCM, clave en el entorno con versión y el `business_id` como dato asociado; RLS sin
+        políticas) y `mp_oauth_states`; `mp_oauth_enabled` por negocio; `POST /api/mp/oauth/start` y
+        `GET /api/mp/oauth/callback` (state de un solo uso, PKCE, solo el dueño); desconectar
+  - [ ] [herni] PR 2 — cobrar con la conexión: `getCredentials` usa primero OAuth y cae a las credenciales
+        manuales; renovación con bloqueo de fila (el `refresh_token` rota) y cron de respaldo; webhook con la clave
+        de la aplicación y `collector_id` igual al `mp_user_id` del negocio; `needs_reconnect` oculta Mercado Pago
+  - [ ] [herni] PR 3 — panel: tarjeta de Mercado Pago en Configuración (estado, vencimiento, reconectar,
+        desconectar) y aviso cuando hay que reconectar
+  - [ ] [herni] Prueba con usuarios de prueba (conectar, pagar, vencer y renovar, revocar desde MP) y alta de los
+        2 o 3 negocios uno por uno con un pago real chico; revisar `notifications_history` después de cada alta
+  - [ ] [por asignar] Preferencias por negocio (cuotas, exclusión de medios de pago, vencimiento) y, más adelante,
+        comisión de la plataforma
 - [ ] [por asignar] Cancelar solos los pedidos que quedan en "Esperando pago" (hoy el negocio los cancela a mano)
 - [ ] [por asignar] El tablero no debería sonar ni contar como "Nuevo pedido" un pedido que todavía espera el pago
 - [ ] [por asignar] Cupos de pedidos por semana por negocio

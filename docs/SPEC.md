@@ -678,6 +678,9 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
   de los límites de LANDING-11, 14 y 25.
 - **LANDING-29** Los precios se revisan cada 4 meses y se dice en la sección de planes de
   `index.html` y en `/hola` (donde además los pioneros pagan siempre un 30% menos).
+- **LANDING-30** Una dirección inexistente en `smaalacarta.com.ar` muestra `landing/404.html`: la marca, "No
+  encontramos esta página" y un botón al inicio. Usa rutas absolutas porque Vercel la sirve en cualquier
+  dirección; los menús (`web/`) no la usan, ahí una ruta desconocida abre el menú.
 
 ---
 
@@ -1735,8 +1738,9 @@ precios en 0; no existe "incluye N y el resto cuesta X".
 
 **Instalar y registrar**
 
-- **ADMIN-PWA-9** El manifest del panel se llama "SMA a la Carta" (corto "SMA Panel"), arranca y se acota en
-  `/admin/`, se muestra `standalone` con los colores de la marca y trae los íconos de 192, 512 y maskable.
+- **ADMIN-PWA-9** El manifest del panel se llama "SMA a la Carta" (corto "SMA Panel"), se acota en `/admin/`
+  (su `id` también), arranca en `/admin/dashboard` (ver ADMIN-PWA-31), se muestra `standalone` con los colores
+  de la marca y trae los íconos de 192, 512 y maskable.
 - **ADMIN-PWA-10** El service worker (`/admin/sw.js`) no guarda nada en caché: solo muestra los avisos
   (`title`, `body`, `tag`, `url`) y, al tocarlos, enfoca una ventana del panel y navega a la `url`, o abre una.
 - **ADMIN-PWA-11** El `proxy` no pide sesión a `sw.js`, al manifest, a `icons/` ni a `api/push/`.
@@ -1785,6 +1789,11 @@ precios en 0; no existe "incluye N y el resto cuesta X".
   permiso): quien se fue no sigue recibiendo avisos ahí, y al volver a entrar activa con un toque.
 - **ADMIN-PWA-30** El ícono de la pestaña y del acceso directo del panel es el de SMA a la Carta (`app/favicon.ico` y
   `public/favicon.ico`), no el que trae Next.
+- **ADMIN-PWA-31** La app instalada abre en el panel, no en un 404: `start_url` es una página real
+  (`/admin/dashboard`, dentro del `scope`) y `landing/vercel.json` reescribe también `/admin/` (con barra final,
+  que el comodín `/admin/:path*` no cubre) hacia el panel.
+- **ADMIN-PWA-32** Una dirección inexistente bajo `/admin` muestra la 404 del panel (`app/not-found.tsx`):
+  con la marca, "No encontramos esta página" y un botón "Volver al panel" que lleva a la raíz del panel.
 
 ---
 
