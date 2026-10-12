@@ -20,6 +20,23 @@ export async function getMpConnectionStatus(businessId: string): Promise<MpConne
   return "none";
 }
 
+// Si el negocio tiene con qué cobrar con Mercado Pago: una conexión `connected` o credenciales manuales
+// habilitadas. Es lo mismo que decide `business_has_mp` en la base (MP-23); solo sirve para el texto de ayuda de
+// Configuración, la base es la que manda.
+export async function hasMercadoPago(businessId: string): Promise<boolean> {
+  const supabase = createAdminClient();
+
+  const [connection, credentials] = await Promise.all([
+    supabase.from("payment_connections").select("status").eq("business_id", businessId).maybeSingle(),
+    supabase.from("payment_credentials").select("enabled").eq("business_id", businessId).maybeSingle(),
+  ]);
+
+  if (connection.error) throw new Error(connection.error.message);
+  if (credentials.error) throw new Error(credentials.error.message);
+
+  return connection.data?.status === "connected" || credentials.data?.enabled === true;
+}
+
 // La sección solo se muestra con los dos interruptores prendidos (MP-15).
 export const mpOauthAvailable = (business: { mp_oauth_enabled: boolean }) =>
   process.env.MP_OAUTH_ENABLED === "true" && business.mp_oauth_enabled;

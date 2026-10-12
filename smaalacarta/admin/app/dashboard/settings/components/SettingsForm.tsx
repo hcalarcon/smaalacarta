@@ -8,7 +8,7 @@ import ImageUploader from "@/components/ui/ImageUploader";
 import PdfUploader from "@/components/ui/PdfUploader";
 import Section from "@/components/ui/Section";
 import AppearancePreview from "./AppearancePreview";
-import { DELIVERY_OPTIONS, PAYMENT_OPTIONS, hasTransfer } from "@/lib/settings/payment";
+import { DELIVERY_OPTIONS, PAYMENT_OPTIONS, hasTransfer, mercadoPagoHint } from "@/lib/settings/payment";
 import type { PreorderCutoffs } from "@/lib/settings/preorders";
 import {
   DAYS,
@@ -132,6 +132,7 @@ export default function SettingsForm({
   initial,
   digitalMenu,
   pdfService,
+  mercadoPagoReady = false,
 }: {
   businessId: string;
   initial: SettingsInput;
@@ -140,6 +141,8 @@ export default function SettingsForm({
   digitalMenu: boolean;
   // Sin plan_pdf no hay servicio de PDF: se esconde "Menú en PDF" (ADMIN-PLAN-4).
   pdfService: boolean;
+  // El negocio tiene con qué cobrar con Mercado Pago: conexión conectada o credenciales habilitadas (MP-23).
+  mercadoPagoReady?: boolean;
 }) {
   const [published, setPublished] = useState(initial.published);
   const [template, setTemplate] = useState(initial.template);
@@ -782,8 +785,7 @@ export default function SettingsForm({
           </div>
           {paymentOptions.includes("mercadopago") ? (
             <p className="mt-1.5 text-sm text-stone-500">
-              Mercado Pago le aparece a tus clientes solo cuando el equipo de SMA a la Carta termina de
-              conectar tu cuenta.
+              {mercadoPagoHint(mercadoPagoReady)}
             </p>
           ) : null}
           {fieldErrors.paymentOptions ? (

@@ -9,6 +9,9 @@ export type MpPayment = {
   external_reference?: string | null;
   transaction_amount?: number | null;
   currency_id?: string | null;
+  // La cuenta que cobró. Con una conexión OAuth tiene que ser la del negocio (MP-25). Suposición hasta verlo en
+  // un pago real: si Mercado Pago lo llama distinto, el aviso se ignora (falla cerrado).
+  collector_id?: number | string | null;
 };
 
 export type PreferenceInput = {

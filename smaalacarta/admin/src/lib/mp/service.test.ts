@@ -428,3 +428,151 @@ describe("GET /verify — MP-5", () => {
     error.mockRestore();
   });
 });
+
+// Cobro con la conexión por OAuth: MP-22, MP-24 y MP-25.
+describe("cobro con una conexión por OAuth", () => {
+  const APP_SECRET = "CLAVE-DE-LA-APP";
+  const MP_USER = 777;
+  const oauth: Credentials = {
+    accessToken: "TOKEN-OAUTH",
+    webhookSecret: APP_SECRET,
+    fallbackWebhookSecret: SECRET,
+    enabled: true,
+    source: "oauth",
+    mpUserId: MP_USER,
+  };
+  // Un negocio conectado que no tiene token útil (needs_reconnect o token que no se descifra).
+  const sinToken: Credentials = { ...oauth, accessToken: "", enabled: false, fallbackWebhookSecret: null };
+
+  const ts = "1760000000000";
+  const signed = (secret: string, dataId = "777", requestId = "req-1") => ({
+    businessId: BUSINESS,
+    dataId,
+    type: "payment",
+    requestId,
+    signature: `ts=${ts},v1=${signWebhook(secret, { dataId, requestId, ts })}`,
+  });
+  const payment = (extra: Partial<MpPayment> = {}): MpPayment => ({
+    id: 777,
+    status: "approved",
+    external_reference: ORDER_ID,
+    transaction_amount: 3500,
+    currency_id: "ARS",
+    collector_id: MP_USER,
+    ...extra,
+  });
+
+  function withOauth(creds: Credentials | null = oauth, collector: Partial<MpPayment> = {}) {
+    const deps = makeDeps({ credentials: creds });
+    deps.mp.getPayment.mockResolvedValue(payment(collector));
+    return deps;
+  }
+
+  it("/create cobra con el token de la conexión", async () => {
+    const deps = withOauth();
+    const r = await createPayment(deps, { code: CODE });
+
+    expect(r.status).toBe(200);
+    expect(deps.mp.createPreference).toHaveBeenCalledWith("TOKEN-OAUTH", expect.anything());
+  });
+
+  it("/create con la conexión sin token útil responde 409 not_configured y no llama a Mercado Pago", async () => {
+    const deps = withOauth(sinToken);
+
+    expect(await createPayment(deps, { code: CODE })).toEqual({ status: 409, body: { error: "not_configured" } });
+    expect(deps.mp.createPreference).not.toHaveBeenCalled();
+  });
+
+  it("el webhook valida la firma con la clave de la aplicación y confirma con el token de la conexión", async () => {
+    const deps = withOauth();
+    const r = await handleWebhook(deps, signed(APP_SECRET));
+
+    expect(r).toEqual({ status: 200, body: { result: "paid" } });
+    expect(deps.mp.getPayment).toHaveBeenCalledWith("TOKEN-OAUTH", "777");
+    expect(deps.confirmPayment).toHaveBeenCalledWith(ORDER_ID, "777", "paid", 3500);
+  });
+
+  it("un aviso viejo firmado con la clave manual del negocio también se acepta", async () => {
+    const deps = withOauth();
+
+    expect((await handleWebhook(deps, signed(SECRET))).status).toBe(200);
+    expect(deps.confirmPayment).toHaveBeenCalled();
+  });
+
+  it("una firma de otra clave responde 401 y no consulta nada", async () => {
+    const deps = withOauth();
+    const r = await handleWebhook(deps, signed("clave-ajena"));
+
+    expect(r.status).toBe(401);
+    expect(deps.mp.getPayment).not.toHaveBeenCalled();
+    expect(deps.confirmPayment).not.toHaveBeenCalled();
+  });
+
+  it("sin la clave de la aplicación cargada ni clave manual, responde 401", async () => {
+    const deps = withOauth({ ...oauth, webhookSecret: "", fallbackWebhookSecret: null });
+
+    expect((await handleWebhook(deps, signed(APP_SECRET))).status).toBe(401);
+  });
+
+  it("un collector_id distinto se ignora con 200 y sin valores en el log", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const deps = withOauth(oauth, { collector_id: 999 });
+    const r = await handleWebhook(deps, signed(APP_SECRET));
+
+    expect(r).toEqual({ status: 200, body: { ignored: true } });
+    expect(deps.confirmPayment).not.toHaveBeenCalled();
+
+    const logged = [...log.mock.calls, ...warn.mock.calls].flat().join(" ");
+    expect(logged).toContain("collector distinto");
+    expect(logged).not.toMatch(/999|777|TOKEN-OAUTH/);
+    log.mockRestore();
+    warn.mockRestore();
+  });
+
+  it("un pago sin collector_id se ignora", async () => {
+    const log = vi.spyOn(console, "error").mockImplementation(() => {});
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const deps = withOauth(oauth, { collector_id: null });
+
+    expect(await handleWebhook(deps, signed(APP_SECRET))).toEqual({ status: 200, body: { ignored: true } });
+    expect(deps.confirmPayment).not.toHaveBeenCalled();
+    log.mockRestore();
+    warn.mockRestore();
+  });
+
+  it("el collector_id como texto del mismo número coincide", async () => {
+    const deps = withOauth(oauth, { collector_id: "777" });
+
+    expect((await handleWebhook(deps, signed(APP_SECRET))).body).toEqual({ result: "paid" });
+  });
+
+  it("con credenciales manuales no se pide collector_id (no hay regresión)", async () => {
+    const deps = makeDeps();
+    deps.mp.getPayment.mockResolvedValue({ ...payment(), collector_id: undefined });
+
+    expect((await handleWebhook(deps, signed(SECRET))).body).toEqual({ result: "paid" });
+  });
+
+  it("con la conexión sin token útil el webhook firmado responde 200 ignored y no consulta a Mercado Pago", async () => {
+    const deps = withOauth(sinToken);
+
+    expect(await handleWebhook(deps, signed(APP_SECRET))).toEqual({ status: 200, body: { ignored: true } });
+    expect(deps.mp.getPayment).not.toHaveBeenCalled();
+  });
+
+  it("con la conexión sin token útil /verify no consulta a Mercado Pago y devuelve el estado", async () => {
+    const deps = withOauth(sinToken);
+    const r = await verifyPayment(deps, { code: CODE }, createRateLimiter(0));
+
+    expect(r).toEqual({ status: 200, body: { pago: "awaiting" } });
+    expect(deps.mp.searchPayments).not.toHaveBeenCalled();
+  });
+
+  it("/verify con la conexión usa su token", async () => {
+    const deps = withOauth();
+    await verifyPayment(deps, { code: CODE }, createRateLimiter(0));
+
+    expect(deps.mp.searchPayments).toHaveBeenCalledWith("TOKEN-OAUTH", ORDER_ID);
+  });
+});

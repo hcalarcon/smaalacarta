@@ -22,7 +22,18 @@ export type OrderRecord = {
   items: { name: string; quantity: number; unitPrice: number; options?: OrderItemOption[] | null }[];
 };
 
-export type Credentials = { accessToken: string; webhookSecret: string; enabled: boolean };
+// De dónde salen las credenciales (MP-18). `source` falta en las manuales de antes y vale lo mismo que `manual`.
+// Con `oauth`: `mpUserId` es la cuenta conectada (MP-25), `webhookSecret` la clave de la aplicación y
+// `fallbackWebhookSecret` la de `payment_credentials`, si existe (MP-24). Sin token útil, `accessToken` queda vacío
+// y `enabled` en falso: no se cobra ni se consulta a Mercado Pago (MP-22).
+export type Credentials = {
+  accessToken: string;
+  webhookSecret: string;
+  enabled: boolean;
+  source?: "oauth" | "manual";
+  mpUserId?: number;
+  fallbackWebhookSecret?: string | null;
+};
 
 export type MpDeps = {
   findOrderByCode(code: string): Promise<OrderRecord | null>;
@@ -58,6 +69,12 @@ const usable = (credentials: Credentials | null): credentials is Credentials =>
 
 export function trackingUrl(deps: Pick<MpDeps, "menuDomain">, order: Pick<OrderRecord, "slug" | "code">) {
   return `https://${order.slug}.${deps.menuDomain}/pedido/${order.code}`;
+}
+
+// Sin `collector_id` o sin `mpUserId` no coincide: falla cerrado.
+function sameCollector(collector: number | string | null | undefined, mpUserId: number | undefined) {
+  if (collector === null || collector === undefined || mpUserId === undefined) return false;
+  return String(collector) === String(mpUserId);
 }
 
 const failureStatus = (error: unknown) => (error instanceof MpApiError ? error.status : "error");
@@ -121,18 +138,19 @@ export async function handleWebhook(
   if (!input.businessId || !UUID.test(input.businessId)) return unauthorized;
 
   const credentials = await deps.getCredentials(input.businessId);
-  if (!credentials || !credentials.webhookSecret) return unauthorized;
+  if (!credentials) return unauthorized;
 
-  // La firma se valida antes de hacer cualquier otra cosa.
-  if (
-    !verifyWebhookSignature(credentials.webhookSecret, {
-      signatureHeader: input.signature,
-      requestId: input.requestId,
-      dataId: input.dataId,
-    })
-  ) {
-    return unauthorized;
-  }
+  // Con una conexión vale la clave de la aplicación y, para un aviso viejo de antes de conectar, la del
+  // negocio (MP-24). La firma se valida antes de hacer cualquier otra cosa.
+  const secrets = [credentials.webhookSecret, credentials.fallbackWebhookSecret].filter(
+    (secret): secret is string => !!secret,
+  );
+  const signature = {
+    signatureHeader: input.signature,
+    requestId: input.requestId,
+    dataId: input.dataId,
+  };
+  if (!secrets.some((secret) => verifyWebhookSignature(secret, signature))) return unauthorized;
 
   // Solo interesan los pagos; cualquier otro aviso se acepta y se ignora.
   if ((input.type && input.type !== "payment") || !input.dataId) return reply(200, { ignored: true });
@@ -147,6 +165,12 @@ export async function handleWebhook(
     console.error("mp/webhook: no se pudo consultar el pago", failureStatus(error));
     // 5xx: Mercado Pago reintenta.
     return reply(502, { error: "mp_unavailable" });
+  }
+
+  // Con una conexión, el pago tiene que haber entrado en la cuenta conectada del negocio (MP-25).
+  if (credentials.source === "oauth" && !sameCollector(payment.collector_id, credentials.mpUserId)) {
+    console.error("mp/webhook: collector distinto");
+    return reply(200, { ignored: true });
   }
 
   const outcome = paymentOutcome(payment.status);

@@ -4,6 +4,9 @@ import type { OrderItemOption } from "@/lib/orders/item-options";
 import { createAdminClient } from "@/lib/supabase-admin";
 
 import { createMpApi } from "./api";
+import { createConnectionStore } from "./connection-store";
+import { resolveCredentials } from "./credentials";
+import { createTokenRefresher } from "./oauth-api";
 import type { MpDeps, OrderRecord, PaymentStatus } from "./service";
 
 const ORDER_SELECT =
@@ -64,22 +67,45 @@ export function buildMpDeps(): MpDeps {
     return data ? toRecord(data as unknown as OrderRow) : null;
   }
 
+  async function readManualCredentials(businessId: string) {
+    const { data, error } = await supabase
+      .from("payment_credentials")
+      .select("mp_access_token, mp_webhook_secret, enabled")
+      .eq("business_id", businessId)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!data) return null;
+
+    return { accessToken: data.mp_access_token, webhookSecret: data.mp_webhook_secret, enabled: data.enabled };
+  }
+
+  const refresher = createTokenRefresher();
+
   return {
     findOrderByCode: (code) => findOrder("code", code),
     findOrderById: (id) => findOrder("id", id),
 
-    async getCredentials(businessId) {
-      const { data, error } = await supabase
-        .from("payment_credentials")
-        .select("mp_access_token, mp_webhook_secret, enabled")
-        .eq("business_id", businessId)
-        .maybeSingle();
+    // Conexión OAuth `connected` primero; si no, `payment_credentials` (MP-18). Renueva el token al usarlo
+    // (MP-19 a MP-21). Las variables se leen al llamar, no al cargar el módulo.
+    getCredentials: (businessId) =>
+      resolveCredentials(
+        {
+          store: createConnectionStore(supabase),
+          manual: readManualCredentials,
+          refresh: (refreshToken) => {
+            const clientId = process.env.MP_OAUTH_CLIENT_ID;
+            const clientSecret = process.env.MP_OAUTH_CLIENT_SECRET;
+            if (!clientId || !clientSecret) throw new Error("Falta la aplicación de OAuth.");
 
-      if (error) throw new Error(error.message);
-      if (!data) return null;
-
-      return { accessToken: data.mp_access_token, webhookSecret: data.mp_webhook_secret, enabled: data.enabled };
-    },
+            return refresher({ clientId, clientSecret, refreshToken });
+          },
+          webhookSecret: () => process.env.MP_OAUTH_WEBHOOK_SECRET ?? "",
+          now: () => Date.now(),
+          sleep: (ms) => new Promise((resolve) => setTimeout(resolve, ms)),
+        },
+        businessId,
+      ),
 
     async confirmPayment(orderId, paymentId, status, amount) {
       const { data, error } = await supabase.rpc("confirm_order_payment", {

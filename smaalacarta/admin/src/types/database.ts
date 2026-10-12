@@ -968,6 +968,7 @@ export type Database = {
           expires_at: string | null
           key_version: number
           mp_user_id: number
+          refreshing_until: string | null
           refresh_token_enc: string | null
           scope: string | null
           status: string
@@ -981,6 +982,7 @@ export type Database = {
           expires_at?: string | null
           key_version: number
           mp_user_id: number
+          refreshing_until?: string | null
           refresh_token_enc?: string | null
           scope?: string | null
           status?: string
@@ -994,6 +996,7 @@ export type Database = {
           expires_at?: string | null
           key_version?: number
           mp_user_id?: number
+          refreshing_until?: string | null
           refresh_token_enc?: string | null
           scope?: string | null
           status?: string
@@ -1330,6 +1333,7 @@ export type Database = {
         Returns: undefined
       }
       build_public_menu: { Args: { p_business_id: string }; Returns: Json }
+      business_has_mp: { Args: { p_business_id: string }; Returns: boolean }
       business_assign_courier: {
         Args: { p_courier_id: string; p_note?: string; p_order_id: string }
         Returns: undefined

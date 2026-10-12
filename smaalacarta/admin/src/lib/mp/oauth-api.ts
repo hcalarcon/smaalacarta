@@ -51,3 +51,24 @@ export function createOAuthApi(fetcher: Fetch = fetch): OAuthApi {
     },
   };
 }
+
+// POST /oauth/token con `grant_type=refresh_token` (MP-19). Mercado Pago devuelve un access_token y un
+// refresh_token NUEVOS; el viejo deja de servir. Un fallo lleva solo el código HTTP (MP-26).
+export function createTokenRefresher(fetcher: Fetch = fetch) {
+  return async (input: { clientId: string; clientSecret: string; refreshToken: string }): Promise<TokenResponse> => {
+    const response = await fetcher(MP_TOKEN_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json" },
+      body: JSON.stringify({
+        grant_type: "refresh_token",
+        client_id: input.clientId,
+        client_secret: input.clientSecret,
+        refresh_token: input.refreshToken,
+      }),
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+      cache: "no-store",
+    });
+
+    return readJson<TokenResponse>(response);
+  };
+}

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { MpApiError } from "./api";
 import { MP_ME_URL, MP_TOKEN_URL } from "./oauth";
-import { createOAuthApi } from "./oauth-api";
+import { createOAuthApi, createTokenRefresher } from "./oauth-api";
 
 // El cliente de OAuth de Mercado Pago (MP-11, MP-16): qué manda y qué hace con los fallos.
 const input = {
@@ -72,5 +72,34 @@ describe("getMe", () => {
     const [url, init] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe(MP_ME_URL);
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer APP_USR-1");
+  });
+});
+
+describe("createTokenRefresher — MP-19", () => {
+  const refresh = { clientId: "123", clientSecret: "SECRETO", refreshToken: "TG-REFRESH" };
+
+  it("manda grant_type=refresh_token con las credenciales de la aplicación y el refresh_token", async () => {
+    const fetcher = vi.fn(async () => json({ access_token: "a", refresh_token: "r", expires_in: 1 }));
+    const r = await createTokenRefresher(fetcher as unknown as typeof fetch)(refresh);
+
+    expect(r).toEqual({ access_token: "a", refresh_token: "r", expires_in: 1 });
+    const [url, init] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe(MP_TOKEN_URL);
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({
+      grant_type: "refresh_token",
+      client_id: "123",
+      client_secret: "SECRETO",
+      refresh_token: "TG-REFRESH",
+    });
+  });
+
+  it("un error lleva solo el código HTTP, sin el cuerpo ni los secretos", async () => {
+    const fetcher = vi.fn(async () => json({ error: "invalid_grant", detail: "TG-REFRESH SECRETO" }, 400));
+
+    const error = await createTokenRefresher(fetcher as unknown as typeof fetch)(refresh).catch((e) => e);
+    expect(error).toBeInstanceOf(MpApiError);
+    expect(error.status).toBe(400);
+    expect(String(error.message)).not.toMatch(/TG-REFRESH|SECRETO|invalid_grant/);
   });
 });

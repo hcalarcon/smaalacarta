@@ -1158,7 +1158,7 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
 *Aplicado por `supabase/migrations/*_mercadopago_oauth.sql`, `src/lib/mp/crypto.ts`, `src/lib/mp/oauth.ts` y
 `app/api/mp/oauth/`. Cubierto por `src/lib/db/mp-oauth.test.ts`, `src/lib/mp/crypto.test.ts`,
 `src/lib/mp/oauth.test.ts` y `app/api/mp/oauth/routes.test.ts`. Todavía no se cobra con la conexión: eso es el
-PR 2. Guía: [MERCADOPAGO.md](MERCADOPAGO.md).*
+PR 2 (más abajo). Guía: [MERCADOPAGO.md](MERCADOPAGO.md).*
 
 - **MP-9** Solo el dueño del negocio (`business_users.role = 'owner'`; un `staff` no) conecta o desconecta su
   cuenta de Mercado Pago; `start` y `disconnect` solo aceptan POST y, si el encabezado `Origin` viene, tiene
@@ -1185,6 +1185,47 @@ PR 2. Guía: [MERCADOPAGO.md](MERCADOPAGO.md).*
 - **MP-17** La vuelta del callback siempre es al origen público fijo (`https://www.smaalacarta.com.ar`) más
   `/admin`, nunca al host ni al `basePath` de la request: detrás del rewrite de `landing/` la request llega
   con el host del deploy directo de `admin/` y con el `basePath` vacío. Vale también para el redirect de error.
+
+### Cobro con la conexión por OAuth (PR 2: cobrar)
+
+*Aplicado por `supabase/migrations/*_mercadopago_oauth_cobro.sql`, `src/lib/mp/credentials.ts`, `src/lib/mp/deps.ts`
+y `src/lib/mp/service.ts`. Cubierto por `src/lib/mp/credentials.test.ts`, `src/lib/mp/service.test.ts`,
+`src/lib/mp/flujo-oauth.test.ts` y `src/lib/db/mp-oauth-cobro.test.ts`. Las credenciales manuales
+(`payment_credentials`, MP-1) siguen funcionando igual. Guía: [MERCADOPAGO.md](MERCADOPAGO.md).*
+
+- **MP-18** Con una conexión en `connected`, `/create`, `/verify` y `/webhook` usan su token (descifrado solo
+  en el servidor) y `mp_user_id`; sin conexión `connected`, usan `payment_credentials` como antes. Cobrar con
+  una conexión no depende de `MP_OAUTH_ENABLED` ni de `businesses.mp_oauth_enabled`: esos interruptores solo
+  gobiernan conectar (MP-15). Si el token no se puede descifrar, esa conexión no se usa, no se cobra
+  (`not_configured`) y no se cae a otra fuente; solo se registra el motivo, sin valores.
+- **MP-19** Antes de usar el token, si `expires_at` vence en menos de 30 días (o ya venció), se renueva con
+  `grant_type=refresh_token`. La respuesta tiene que traer `access_token`, `refresh_token` y `expires_in` y, si
+  trae `user_id`, ser el de la conexión; si no, no se guarda nada. El token y el refresh nuevos se guardan
+  cifrados en una sola operación.
+- **MP-20** El `refresh_token` no se gasta dos veces: la renovación la hace quien toma un arriendo
+  atómico (`refreshing_until`, de 30 segundos, con `UPDATE … WHERE … RETURNING`). Quien pierde la carrera relee la
+  fila y usa el token que dejó el otro; si el token actual todavía no venció lo usa sin esperar, y si venció
+  espera unos segundos acotados y, si no aparece uno nuevo, no cobra (`not_configured`) sin marcar la conexión.
+- **MP-21** Un error transitorio (red, 5xx, tiempo agotado) o perder la carrera no marca `needs_reconnect`. Solo
+  lo marca un rechazo del `refresh_token` (400 o 401 de Mercado Pago), y antes se relee la fila por si otro ya
+  lo renovó. No hay cron en esta etapa: se renueva al usarlo.
+- **MP-22** Con la conexión en `needs_reconnect` (y sin credenciales manuales habilitadas) `/create` responde
+  409 `not_configured`; `/verify` y `/webhook` no consultan a Mercado Pago con ese token y no fallan (el
+  webhook con firma válida responde 200 `ignored`).
+- **MP-23** `business_has_mp(business_id)` (interna, sin permisos para `anon` ni `authenticated`) es verdadera
+  con credenciales manuales habilitadas o con una conexión `connected`; el menú público (`pagos`) y
+  `create_public_order` (P0008) la usan en lugar de mirar `payment_credentials`. La opción exige además que
+  el negocio tenga `mercadopago` en `payment_options`. Parada de emergencia de un negocio:
+  `UPDATE payment_connections SET status = 'needs_reconnect'`.
+- **MP-24** Para un negocio con conexión `connected`, el webhook valida la firma `x-signature` con
+  `MP_OAUTH_WEBHOOK_SECRET` (leída al llamar) y, si no valida, con el secreto de `payment_credentials` si existe
+  (un aviso viejo de antes de conectar). Si ninguna valida: 401, y antes de cualquier otra cosa.
+- **MP-25** Con una conexión, el `collector_id` del pago consultado a la API tiene que ser igual al
+  `mp_user_id` de la conexión; si no coincide o no viene, el aviso se ignora (200 `ignored`) y solo se registra
+  "collector distinto". El resto sigue como MP-4: se consulta el pago con el token del negocio, ARS, pedido del
+  negocio con Mercado Pago y monto de la API.
+- **MP-26** Ningún token, `client_secret` ni clave de webhook aparece en una respuesta, un log o un mensaje de
+  error del cobro (MP-7, MP-16).
 
 ## ENVIO — Envío con Repartos al Toque
 
