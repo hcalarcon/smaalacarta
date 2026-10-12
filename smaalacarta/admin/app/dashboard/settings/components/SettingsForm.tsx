@@ -153,6 +153,7 @@ export default function SettingsForm({
   const [headerImageUrl, setHeaderImageUrl] = useState(initial.headerImageUrl);
   const [headerFocus, setHeaderFocus] = useState({ x: initial.headerImageX, y: initial.headerImageY });
   const [showDefaultImages, setShowDefaultImages] = useState(initial.showDefaultImages);
+  const [allowItemNotes, setAllowItemNotes] = useState(initial.allowItemNotes);
   const [logoUrl, setLogoUrl] = useState(initial.logoUrl);
   const [menuPdfUrl, setMenuPdfUrl] = useState(initial.menuPdfUrl);
   const [whatsapp, setWhatsapp] = useState(initial.whatsapp);
@@ -227,6 +228,7 @@ export default function SettingsForm({
         headerImageX: headerFocus.x,
         headerImageY: headerFocus.y,
         showDefaultImages,
+        allowItemNotes,
         logoUrl,
         menuPdfUrl,
         schedule: toSchedule(days, scheduleEnabled),
@@ -817,6 +819,22 @@ export default function SettingsForm({
             />
           </div>
         ) : null}
+
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={allowItemNotes}
+            onChange={(event) => setAllowItemNotes(event.target.checked)}
+            className="mt-1 h-5 w-5"
+          />
+          <span>
+            <span className="block font-medium text-stone-900">Permitir notas en cada producto</span>
+            <span className="block text-sm text-stone-500">
+              Tus clientes pueden dejar una nota por producto (por ejemplo, «sin cheddar»). La ves destacada en el
+              pedido; es un pedido al local, no una promesa. Apagado, el menú no muestra el campo.
+            </span>
+          </span>
+        </label>
       </Section>
 
       <Section

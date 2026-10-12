@@ -14,6 +14,7 @@
 --   `note`. La envoltura `create_public_order` y `public_menu` no cambian: delegan en estas dos.
 -- - Misma `public_order_tracking` de `20261023000000_ofertas_de_repartidor.sql`, con `nota` en cada ítem.
 -- - Misma `create_manual_order` de `20261005000000_pedidos_programados.sql`: cada ítem acepta `note`.
+-- - Misma `courier_orders` de `20261019000000_rendiciones_efectivo.sql`, con `nota` en cada ítem.
 --
 -- El RLS de `order_items` y de `business_settings` no cambia: son columnas nuevas de tablas que ya
 -- filtran por `business_id`.
@@ -898,3 +899,93 @@ REVOKE ALL ON FUNCTION public.create_manual_order(uuid, text, text, text, text, 
   FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.create_manual_order(uuid, text, text, text, text, jsonb, timestamptz)
   TO authenticated;
+
+-- Misma `courier_orders` de `20261019000000_rendiciones_efectivo.sql`, con `nota` en cada ítem: el repartidor
+-- ve lo que el cliente pidió para cada producto (ADMIN-PEDIDOS-22).
+CREATE OR REPLACE FUNCTION public.courier_orders(
+  p_since timestamptz DEFAULT now() - interval '2 days'
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_courier uuid := public.my_courier_id();
+BEGIN
+  IF (select auth.uid()) IS NULL OR v_courier IS NULL THEN
+    RAISE EXCEPTION 'Solo el repartidor puede hacer esto' USING ERRCODE = '42501';
+  END IF;
+
+  RETURN coalesce((
+    SELECT jsonb_agg(
+             jsonb_build_object(
+               'id', o.id,
+               'numero', o.order_number,
+               'estado', o.status,
+               'creado', o.created_at,
+               'programado', o.scheduled_for,
+               'anticipado', o.preorder,
+               'negocio', jsonb_build_object(
+                 'nombre', b.name,
+                 'direccion', s.address,
+                 'whatsapp', b.whatsapp
+               ),
+               'cliente', jsonb_build_object(
+                 'nombre', o.customer_name,
+                 'telefono', o.customer_phone,
+                 'direccion', o.delivery_address
+               ),
+               'total', o.total,
+               'pago', o.payment,
+               'pago_estado', o.payment_status,
+               'notas', o.notes,
+               'items', coalesce((
+                 SELECT jsonb_agg(
+                          jsonb_build_object(
+                            'nombre', i.name,
+                            'cantidad', i.quantity,
+                            'precio', i.unit_price,
+                            'opciones', i.options,
+                            'nota', i.note
+                          )
+                          ORDER BY i.sort_order, i.id
+                        )
+                 FROM public.order_items i
+                 WHERE i.order_id = o.id
+               ), '[]'::jsonb),
+               'envio', jsonb_build_object(
+                 'zona', o.delivery_zone_name,
+                 'precio_lista', o.delivery_fee_list,
+                 'precio', o.delivery_fee,
+                 'motivo_cambio', o.delivery_fee_reason,
+                 'cambiado_el', o.delivery_fee_changed_at,
+                 'estado', o.courier_status,
+                 'nota', o.courier_note,
+                 'consultado_el', o.courier_requested_at,
+                 'respondido_el', o.courier_responded_at
+               ),
+               'rendicion', jsonb_build_object(
+                 'rendido_el', o.settled_at,
+                 'recibido_el', o.settlement_received_at
+               )
+             )
+             ORDER BY o.created_at DESC, o.id
+           )
+    FROM public.orders o
+    JOIN public.businesses b ON b.id = o.business_id
+    LEFT JOIN public.business_settings s ON s.business_id = b.id
+    WHERE o.courier_id = v_courier
+      AND (
+        o.created_at >= p_since
+        OR o.status NOT IN ('delivered', 'cancelled')
+        -- Una rendición sin cerrar no desaparece del panel por ser vieja.
+        OR (o.status = 'delivered' AND o.payment = 'efectivo' AND o.settlement_received_at IS NULL)
+      )
+  ), '[]'::jsonb);
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.courier_orders(timestamptz) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.courier_orders(timestamptz) TO authenticated;

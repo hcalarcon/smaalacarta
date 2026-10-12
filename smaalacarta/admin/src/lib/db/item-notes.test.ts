@@ -235,6 +235,27 @@ describe("pedido manual — ADMIN-PEDIDOS-23", () => {
   });
 });
 
+describe("panel del repartidor — ADMIN-PEDIDOS-22", () => {
+  it("courier_orders trae la nota de cada ítem del pedido que lleva", async () => {
+    const REPA = "cccccccc-0000-0000-0000-000000000003";
+    const TOQUE = "7a0c0e00-0000-4000-8000-000000000001";
+    await createUser(db, { id: REPA, email: "repa@x.com" });
+    await db.exec(`insert into courier_users (courier_id, user_id) values ('${TOQUE}', '${REPA}')`);
+
+    const code = await placed([{ id: HAMB, note: "sin cheddar" }]);
+    await db.exec(
+      `update orders set courier_id = '${TOQUE}', courier_status = 'accepted' where code = '${code}'`,
+    );
+
+    const r = await asUser(db, REPA, "select public.courier_orders() as l");
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+
+    const list = r.rows[0].l as { items: { nombre: string; nota?: string }[] }[];
+    expect(list.flatMap((o) => o.items.map((i) => i.nota))).toContain("sin cheddar");
+  });
+});
+
 describe("restricciones y RLS — ADMIN-PEDIDOS-23", () => {
   it("la base rechaza una nota de más de 140 caracteres", async () => {
     const o = await placed([{ id: HAMB }]);

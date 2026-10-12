@@ -39,6 +39,7 @@ export async function getSettings(
     headerImageX: data.header_image_x,
     headerImageY: data.header_image_y,
     showDefaultImages: data.show_default_images,
+    allowItemNotes: data.allow_item_notes,
     logoUrl: data.logo_url ?? "",
     menuPdfUrl: data.menu_pdf_url ?? "",
     schedule: (data.schedule ?? {}) as Schedule,
@@ -121,6 +122,7 @@ export async function saveSettings(
     p_header_image_x: input.headerImageX,
     p_header_image_y: input.headerImageY,
     p_show_default_images: input.showDefaultImages,
+    p_allow_item_notes: input.allowItemNotes,
   });
 
   return error ? { error: { code: error.code, message: error.message } } : {};

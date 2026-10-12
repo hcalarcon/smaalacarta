@@ -578,3 +578,40 @@ describe("pedido con envío — ENVIO-80 a 85", () => {
     expect(screen.getByText(/lo lleva el repartidor/i)).toBeTruthy();
   });
 });
+
+describe("nota por ítem — ADMIN-PEDIDOS-22", () => {
+  const withNote = (note: string | null) =>
+    order({
+      order_items: [
+        { name: "Hamburguesa", quantity: 1, unit_price: 1500, sort_order: 1, options: null, note },
+        { name: "Gaseosa", quantity: 1, unit_price: 500, sort_order: 2, options: null, note: null },
+      ],
+    });
+
+  it("el tablero muestra la nota destacada bajo el ítem que la lleva", () => {
+    card(withNote("Sin cheddar y con mostaza"));
+
+    const note = screen.getByText("Sin cheddar y con mostaza");
+    expect(note.closest("li")?.textContent).toContain("Hamburguesa");
+    expect(screen.getAllByText(/Nota del cliente/)).toHaveLength(1);
+  });
+
+  it("el detalle también la muestra", () => {
+    detail(withNote("Sin cheddar y con mostaza"));
+
+    expect(screen.getByText("Sin cheddar y con mostaza")).toBeTruthy();
+  });
+
+  it("es texto del cliente: un HTML en la nota no se interpreta", () => {
+    const { container } = detail(withNote("<img src=x onerror=alert(1)>"));
+
+    expect(container.querySelector("img")).toBeNull();
+    expect(screen.getByText("<img src=x onerror=alert(1)>")).toBeTruthy();
+  });
+
+  it("sin nota no dibuja nada extra", () => {
+    card(withNote(null));
+
+    expect(screen.queryByText(/Nota del cliente/)).toBeNull();
+  });
+});

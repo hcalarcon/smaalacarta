@@ -28,6 +28,16 @@ describe("showDefaultImages — ADMIN-CONFIG-31", () => {
   });
 });
 
+describe("allowItemNotes — ADMIN-CONFIG-48", () => {
+  it("por defecto las notas por producto están permitidas", () => {
+    expect(DEFAULT_SETTINGS.allowItemNotes).toBe(true);
+  });
+
+  it("apagadas también es válido", () => {
+    expect(validateSettings({ ...valid, allowItemNotes: false })).toEqual({ ok: true });
+  });
+});
+
 describe("validateSettings — ADMIN-CONFIG-2", () => {
   it("acepta una configuración válida", () => {
     expect(validateSettings(valid)).toEqual({ ok: true });

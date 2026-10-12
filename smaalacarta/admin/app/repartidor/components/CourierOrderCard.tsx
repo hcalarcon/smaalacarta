@@ -17,6 +17,7 @@ import { preorderLabel, scheduledLabel } from "@/lib/orders/scheduled";
 import { STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
 import ConfirmDeleteDialog from "../../dashboard/components/ConfirmDeleteDialog";
+import ItemNote from "@/components/ui/ItemNote";
 
 const ENVIO_LABELS: Record<string, string> = {
   accepted: "Lo tomaste",
@@ -215,6 +216,7 @@ export default function CourierOrderCard({
                   {line}
                 </span>
               ))}
+              <ItemNote note={item.nota} />
             </li>
           ))}
         </ul>
