@@ -42,10 +42,13 @@ export default function DeliverySection({ options }: { options: DeliveryOptions 
 
   const candidates = favoriteCandidates(options, input.zoneIds);
   const marked = new Set(input.zoneIds);
+  // Sin favorito elegido, la base recomienda a Repartos al Toque (ENVIO-130): el nombre sale del dato.
+  const defaultName = options.default_courier?.name;
+  const unsetLabel = defaultName ? `Sin elegir: se recomienda ${defaultName}` : "Sin elegir";
 
   function toggleZone(id: string, checked: boolean) {
     const next = checked ? [...input.zoneIds, id] : input.zoneIds.filter((zoneId) => zoneId !== id);
-    // Si el favorito deja de cubrir las zonas marcadas, vuelve a "Sin favorito".
+    // Si el favorito deja de cubrir las zonas marcadas, vuelve a "Sin elegir".
     setInput((current) => normalizeDeliveryInput({ ...current, zoneIds: next }, options));
   }
 
@@ -55,6 +58,12 @@ export default function DeliverySection({ options }: { options: DeliveryOptions 
       title="Envíos"
       description="A qué zonas enviás y qué repartidor recomendás a tus clientes."
     >
+      {input.zoneIds.length === 0 ? (
+        <p role="alert" className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          Todavía no elegiste a qué zonas enviás: tus clientes no ven el envío.
+        </p>
+      ) : null}
+
       <fieldset>
         <legend className="mb-1.5 block text-sm font-medium text-brand">Zonas a las que enviás</legend>
         <p className="mb-2 text-sm text-stone-500">
@@ -99,7 +108,7 @@ export default function DeliverySection({ options }: { options: DeliveryOptions 
           onChange={(event) => setInput({ ...input, favoriteId: event.target.value || null })}
           className="w-full rounded-xl border border-line-strong bg-white px-4 py-3 text-base text-stone-900 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
         >
-          <option value="">Sin favorito</option>
+          <option value="">{unsetLabel}</option>
           {candidates.map((courier) => (
             <option key={courier.id} value={courier.id}>
               {courier.name}

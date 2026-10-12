@@ -40,6 +40,23 @@ export async function listBusinesses(): Promise<BusinessWithMembers[]> {
   return (data ?? []) as unknown as BusinessWithMembers[];
 }
 
+// Cuántas zonas tiene tildadas el local (ENVIO-136). Corre con la sesión del superadmin: lo deja ver la
+// política `business_delivery_zones_all_super_admin`.
+export async function countBusinessDeliveryZones(businessId: string): Promise<number> {
+  const supabase = await createClient();
+
+  const { count, error } = await supabase
+    .from("business_delivery_zones")
+    .select("zone_id", { count: "exact", head: true })
+    .eq("business_id", businessId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return count ?? 0;
+}
+
 export async function getBusinessWithMembers(
   id: string,
 ): Promise<BusinessWithMembers | null> {

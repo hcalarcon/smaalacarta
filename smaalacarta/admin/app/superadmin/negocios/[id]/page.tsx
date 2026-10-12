@@ -7,7 +7,7 @@ import CourierDeliveryForm from "../../components/CourierDeliveryForm";
 import PlanForm from "../../components/PlanForm";
 import RemoveMemberButton from "../../components/RemoveMemberButton";
 import ResetPasswordButton from "../../components/ResetPasswordButton";
-import { getBusinessWithMembers } from "@/lib/db/superadmin";
+import { countBusinessDeliveryZones, getBusinessWithMembers } from "@/lib/db/superadmin";
 
 export const metadata: Metadata = { title: "Negocio" };
 
@@ -28,6 +28,8 @@ export default async function BusinessDetailPage({
 
   const business = await getBusinessWithMembers(id);
   if (!business) notFound();
+
+  const zoneCount = business.courier_delivery ? await countBusinessDeliveryZones(business.id) : null;
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
@@ -67,6 +69,7 @@ export default async function BusinessDetailPage({
           <CourierDeliveryForm
             businessId={business.id}
             courierDelivery={business.courier_delivery}
+            zoneCount={zoneCount}
           />
         </div>
       </section>

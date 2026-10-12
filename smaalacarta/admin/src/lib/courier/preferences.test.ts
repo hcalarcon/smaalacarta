@@ -45,7 +45,7 @@ describe("estado inicial y normalización — ENVIO-58", () => {
     expect(input).toEqual({ zoneIds: ["centro", "cantera"], favoriteId: "moto" });
   });
 
-  it("al desmarcar las zonas de un favorito, vuelve a Sin favorito", () => {
+  it("al desmarcar las zonas de un favorito, vuelve a Sin elegir", () => {
     const input = normalizeDeliveryInput({ zoneIds: ["centro"], favoriteId: "moto" }, options);
     expect(input.favoriteId).toBeNull();
   });
