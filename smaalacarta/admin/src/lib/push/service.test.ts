@@ -99,6 +99,15 @@ describe("destinatarios — ADMIN-PWA-18 a 24", () => {
     expect(d.sent[0].url).toBe("/admin/dashboard/orders");
   });
 
+  it("recordatorio de pedido nuevo: a los miembros del negocio, hacia el tablero (ADMIN-PWA-33)", async () => {
+    const d = deps();
+    await handlePushWebhook(d, update({ new_order_reminders: 1 }, { new_order_reminders: 2 }));
+
+    expect(usersOf(d)).toEqual(["u-ana", "u-socio"]);
+    expect(d.sent[0].title).toMatch(/^Pedido #0042 sin atender hace \d+ min$/);
+    expect(d.sent[0].url).toBe("/admin/dashboard/orders");
+  });
+
   it("sin destinatarios o sin suscripciones no manda nada y no falla", async () => {
     const d = deps({ coveringCourierIds: vi.fn(async () => []), subscriptions: vi.fn(async () => []) });
     const result = await handlePushWebhook(d, insert());

@@ -80,6 +80,7 @@ async function recipients(deps: PushDeps, event: PushEvent, once: Once): Promise
       return deps.courierUserIds(couriers);
     }
     case "local_new_order":
+    case "local_new_order_reminder":
     case "local_no_offers":
       return deps.businessUserIds(order.business_id);
     case "local_courier_chosen": {

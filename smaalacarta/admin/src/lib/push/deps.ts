@@ -4,6 +4,7 @@ import webpush from "web-push";
 
 import { createAdminClient } from "@/lib/supabase-admin";
 
+import { pushPayload, ttlSeconds } from "./messages";
 import type { PushDeps, PushSubscriptionRow } from "./service";
 
 // Las dependencias reales de `service.ts`: la base con la clave de servicio (solo servidor) y `web-push`.
@@ -20,9 +21,8 @@ function readVapid() {
   return { subject, publicKey, privateKey };
 }
 
-// Cuánto vive un aviso en el servicio push si el aparato está apagado: un pedido que espera ofertas de
-// hace media hora ya no le sirve a nadie.
-const TTL_SECONDS = 10 * 60;
+// El TTL de cada aviso (cuánto vive en el servicio push si el aparato está apagado) lo decide
+// `ttlSeconds()` en `messages.ts`: 60 s para el pedido nuevo y su recordatorio, 10 minutos el resto.
 const SEND_TIMEOUT_MS = 4000;
 
 const ids = (rows: { [key: string]: unknown }[] | null, key: string) =>
@@ -110,10 +110,10 @@ export function buildPushDeps(): PushDeps {
       try {
         await webpush.sendNotification(
           { endpoint: subscription.endpoint, keys: { p256dh: subscription.p256dh, auth: subscription.auth } },
-          JSON.stringify({ title: message.title, body: message.body, tag: message.tag, url: message.url }),
+          pushPayload(message),
           {
             vapidDetails: vapid,
-            TTL: TTL_SECONDS,
+            TTL: ttlSeconds(message),
             urgency: "high",
             timeout: SEND_TIMEOUT_MS,
           },

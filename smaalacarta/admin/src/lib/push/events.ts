@@ -20,6 +20,11 @@ export type OrderRecord = {
   delivery_fee_list: number | null;
   delivery_fee: number | null;
   no_offers_alerted_at: string | null;
+  // Para el texto del recordatorio ("sin atender hace X min") y el total del aviso.
+  created_at: string;
+  total: number | null;
+  // Cuántos recordatorios de pedido sin atender mandó `run_order_timers()` (ADMIN-PWA-33).
+  new_order_reminders: number;
 };
 
 export type WebhookPayload = {
@@ -37,6 +42,7 @@ export type PushEventKind =
   | "order_cancelled"
   // Al local
   | "local_new_order"
+  | "local_new_order_reminder"
   | "local_courier_chosen"
   | "local_no_offers";
 
@@ -91,6 +97,16 @@ export function detectEvents(payload: WebhookPayload): PushEvent[] {
   }
 
   if (order.status === "cancelled" && before.status !== "cancelled") add("order_cancelled");
+
+  // El cron suma un recordatorio mientras el pedido por menú sigue sin atender; si ya lo atendieron en el
+  // medio, el aviso no tiene sentido.
+  if (
+    order.new_order_reminders > before.new_order_reminders &&
+    order.status === "pending" &&
+    order.source === "web"
+  ) {
+    add("local_new_order_reminder");
+  }
 
   if (
     before.no_offers_alerted_at === null &&

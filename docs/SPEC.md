@@ -1951,6 +1951,24 @@ se resuelve en su propia rama `fix/`.
   `.maybeSingle()`: con más de una falla, devuelve `null` y manda a `/login`.
 - **Superadmin: pasos manuales en Supabase.** (1) Apagar el registro público
   (`Allow new users to sign up`): con la clave pública, cualquiera puede crear
+**Recordatorios de pedido nuevo sin atender** (migración `20261030000000_recordatorios_pedido_nuevo.sql`)
+
+- **ADMIN-PWA-33** `run_order_timers()` suma un recordatorio (`orders.new_order_reminders`, con la hora en
+  `new_order_reminded_at`) a cada pedido por menú que sigue Pendiente, cada 2 minutos desde que llegó o desde
+  el último, hasta 5. Ese UPDATE dispara el evento `local_new_order_reminder`, que avisa a los miembros del
+  negocio "Pedido #N sin atender hace X min" → `/admin/dashboard/orders`; el aviso lleva el mismo `tag` que el
+  del pedido nuevo, así lo reemplaza en vez de apilarse.
+- **ADMIN-PWA-34** Un pedido que sale de Pendiente (confirmado, cancelado…) deja de recibir recordatorios, y
+  si el contador sube cuando ya no está Pendiente no sale ningún aviso.
+- **ADMIN-PWA-35** No se recuerdan los pedidos cargados por el local (`manual`) ni los de Mercado Pago con el
+  pago esperando o fallido; los recordatorios no tocan `courier_status` ni `no_offers_alerted_at`.
+- **ADMIN-PWA-36** El service worker muestra el pedido nuevo y su recordatorio con `requireInteraction`,
+  vibración `[300, 150, 300, 150, 300]`, `renotify`, `silent: false` y un `tag` por pedido (siempre lleva
+  uno, porque `renotify` lo exige), con el total en el cuerpo; el resto de los avisos se muestran igual que
+  antes.
+- **ADMIN-PWA-37** El payload push lleva `kind` y `urgent` (y `number` y `total` en los urgentes); los
+  urgentes salen con urgencia alta y TTL de 60 s, y los demás avisos conservan sus 10 minutos.
+
   cuentas llamando a la API aunque el admin no tenga pantalla para eso. (2) Cargar
   el primer superadmin con SQL. (3) Poner `SUPABASE_SERVICE_ROLE_KEY` en el
   servidor. Ver [PLAN.md](PLAN.md).

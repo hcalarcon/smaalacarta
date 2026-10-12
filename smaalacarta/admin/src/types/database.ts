@@ -844,6 +844,8 @@ export type Database = {
           delivery_zone_name: string | null
           id: string
           mp_payment_id: string | null
+          new_order_reminded_at: string | null
+          new_order_reminders: number
           no_offers_alerted_at: string | null
           notes: string | null
           offered_at: string | null
@@ -884,6 +886,8 @@ export type Database = {
           delivery_zone_name?: string | null
           id?: string
           mp_payment_id?: string | null
+          new_order_reminded_at?: string | null
+          new_order_reminders?: number
           no_offers_alerted_at?: string | null
           notes?: string | null
           offered_at?: string | null
@@ -924,6 +928,8 @@ export type Database = {
           delivery_zone_name?: string | null
           id?: string
           mp_payment_id?: string | null
+          new_order_reminded_at?: string | null
+          new_order_reminders?: number
           no_offers_alerted_at?: string | null
           notes?: string | null
           offered_at?: string | null
@@ -1354,6 +1360,7 @@ export type Database = {
         Args: { p_order_id: string }
         Returns: undefined
       }
+      clean_item_note: { Args: { p_note: string }; Returns: string }
       confirm_order_payment: {
         Args: {
           p_amount: number
@@ -1454,7 +1461,6 @@ export type Database = {
         }
         Returns: Json
       }
-      clean_item_note: { Args: { p_note: string }; Returns: string }
       default_courier_id: { Args: never; Returns: string }
       default_images_unmatched: {
         Args: never
@@ -1532,6 +1538,7 @@ export type Database = {
       save_business_settings: {
         Args: {
           p_address: string
+          p_allow_item_notes?: boolean
           p_allow_scheduled_orders: boolean
           p_business_id: string
           p_closed_message: string
@@ -1553,7 +1560,6 @@ export type Database = {
           p_scheduled_lead_minutes: number
           p_secondary_color: string
           p_show_default_images?: boolean
-          p_allow_item_notes?: boolean
           p_tagline: string
           p_template: string
           p_temporarily_closed: boolean

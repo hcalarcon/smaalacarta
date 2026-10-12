@@ -103,3 +103,27 @@ describe("lo que no es un pedido", () => {
     expect(detectEvents({ type: "INSERT", table: "orders", record: null, old_record: null })).toEqual([]);
   });
 });
+
+describe("recordatorio de pedido nuevo — ADMIN-PWA-33", () => {
+  it("avisa al local cuando el recordatorio sube y el pedido sigue pendiente", () => {
+    expect(kinds(update({ new_order_reminders: 0 }, { new_order_reminders: 1 }))).toEqual(["local_new_order_reminder"]);
+    expect(kinds(update({ new_order_reminders: 4 }, { new_order_reminders: 5 }))).toEqual(["local_new_order_reminder"]);
+  });
+
+  it("no avisa si el pedido ya salió de pendiente o lo cargó el local", () => {
+    expect(kinds(update({ new_order_reminders: 1 }, { new_order_reminders: 2, status: "confirmed" }))).toEqual([]);
+    expect(kinds(update({ new_order_reminders: 1 }, { new_order_reminders: 2, status: "cancelled" }))).not.toContain(
+      "local_new_order_reminder",
+    );
+    expect(kinds(update({ new_order_reminders: 0 }, { new_order_reminders: 1, source: "manual" }))).toEqual([]);
+  });
+
+  it("un cambio que no sube el contador no es un recordatorio (ADMIN-PWA-25)", () => {
+    expect(kinds(update({ new_order_reminders: 2 }, { new_order_reminders: 2, payment_status: "paid" }))).toEqual([]);
+    expect(kinds(insert({ new_order_reminders: 0 }))).not.toContain("local_new_order_reminder");
+  });
+
+  it("confirmar el pedido no vuelve a avisar nada", () => {
+    expect(kinds(update({ status: "pending", new_order_reminders: 2 }, { status: "confirmed", new_order_reminders: 2 }))).toEqual([]);
+  });
+});

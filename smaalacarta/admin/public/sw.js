@@ -10,7 +10,7 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
-// El aviso llega como JSON: { title, body, tag, url }. `tag` es `order-<id>-<evento>`: un mismo aviso se
+// El aviso llega como JSON: { title, body, tag, url, kind, urgent, number?, total? }. `tag` es `order-<id>-<evento>`: un mismo aviso se
 // reemplaza en vez de repetirse. El navegador exige mostrar algo en cada push, aunque el cuerpo venga roto.
 self.addEventListener("push", (event) => {
   let data = {};
@@ -23,15 +23,30 @@ self.addEventListener("push", (event) => {
 
   const scope = self.registration.scope;
 
-  event.waitUntil(
-    self.registration.showNotification(data.title || "SMA a la Carta", {
-      body: data.body || "",
-      tag: data.tag || undefined,
-      icon: new URL("icons/icon-192.png", scope).href,
-      badge: new URL("icons/icon-192.png", scope).href,
-      data: { url: data.url || scope },
-    }),
-  );
+  const options = {
+    body: data.body || "",
+    tag: data.tag || undefined,
+    icon: new URL("icons/icon-192.png", scope).href,
+    badge: new URL("icons/icon-192.png", scope).href,
+    data: { url: data.url || scope },
+  };
+
+  // Pedido nuevo y su recordatorio (ADMIN-PWA-36): quedan en pantalla hasta que alguien los toque, vibran
+  // y, con el mismo tag por pedido, vuelven a sonar al reemplazarse (`renotify`). `renotify` exige un tag.
+  if (data.urgent === true) {
+    options.tag = data.tag || "order-new";
+    options.requireInteraction = true;
+    options.renotify = true;
+    options.silent = false;
+    options.vibrate = [300, 150, 300, 150, 300];
+
+    const head = [data.total ? String(data.total) : ""].filter(Boolean);
+    const numberShown = data.number && String(data.title || "").includes("#" + data.number);
+    if (data.number && !numberShown) head.unshift("#" + data.number);
+    options.body = head.concat(data.body ? [data.body] : []).join(" · ");
+  }
+
+  event.waitUntil(self.registration.showNotification(data.title || "SMA a la Carta", options));
 });
 
 // Si hay una ventana del panel abierta, se enfoca y va a la url; si no, se abre una.

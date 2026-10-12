@@ -17,6 +17,9 @@ export const ORDER: OrderRecord = {
   delivery_fee_list: 5000,
   delivery_fee: 5000,
   no_offers_alerted_at: null,
+  created_at: "2026-10-12T15:00:00.000Z",
+  total: 12500,
+  new_order_reminders: 0,
 };
 
 export const insert = (record: Partial<OrderRecord> = {}): WebhookPayload => ({

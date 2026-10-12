@@ -292,3 +292,95 @@ describe("tareas por tiempo — ADMIN-PWA-5 a 8", () => {
     expect(sql).toMatch(/cron\.schedule\(\s*'order-timers',\s*'\* \* \* \* \*'/);
   });
 });
+
+// Cuánto hace que llegó el pedido y que se recordó por última vez: pasan `minutes` minutos.
+async function agePending(orderId: string, minutes: number) {
+  await db.exec(`
+    update orders
+    set created_at = created_at - interval '${minutes} minutes',
+        new_order_reminded_at = new_order_reminded_at - interval '${minutes} minutes'
+    where id = '${orderId}'
+  `);
+}
+
+const reminders = async (id: string) =>
+  (
+    await db.query<{ new_order_reminders: number; new_order_reminded_at: Date | null }>(
+      "select new_order_reminders, new_order_reminded_at from orders where id = $1",
+      [id],
+    )
+  ).rows[0];
+
+describe("recordatorios de pedido nuevo — ADMIN-PWA-33 a 35", () => {
+  it("recuerda cada 2 minutos desde que llegó y hasta 5 veces (ADMIN-PWA-33)", async () => {
+    const o = await envio();
+
+    // Recién llegado: nada. El aviso del INSERT ya salió por el webhook.
+    await runTimers();
+    expect(await reminders(o.id)).toEqual({ new_order_reminders: 0, new_order_reminded_at: null });
+
+    await agePending(o.id, 3);
+    await runTimers();
+
+    const first = await reminders(o.id);
+    expect(first.new_order_reminders).toBe(1);
+    expect(first.new_order_reminded_at).not.toBeNull();
+
+    // Otra vuelta enseguida no suma: faltan 2 minutos desde el último recordatorio.
+    await runTimers();
+    expect((await reminders(o.id)).new_order_reminders).toBe(1);
+
+    for (let i = 0; i < 8; i++) {
+      await agePending(o.id, 3);
+      await runTimers();
+    }
+
+    // Tope de 5: después de eso ya no insiste.
+    expect((await reminders(o.id)).new_order_reminders).toBe(5);
+  });
+
+  it("un pedido atendido o cancelado corta los recordatorios (ADMIN-PWA-34)", async () => {
+    const confirmado = await envio();
+    const cancelado = await envio();
+    const abierto = await envio();
+
+    for (const o of [confirmado, cancelado, abierto]) await agePending(o.id, 3);
+    await runTimers();
+    for (const o of [confirmado, cancelado, abierto]) expect((await reminders(o.id)).new_order_reminders).toBe(1);
+
+    await db.exec(`update orders set status = 'confirmed' where id = '${confirmado.id}'`);
+    await db.exec(`update orders set status = 'cancelled' where id = '${cancelado.id}'`);
+
+    for (const o of [confirmado, cancelado, abierto]) await agePending(o.id, 3);
+    await runTimers();
+
+    expect((await reminders(confirmado.id)).new_order_reminders).toBe(1);
+    expect((await reminders(cancelado.id)).new_order_reminders).toBe(1);
+    expect((await reminders(abierto.id)).new_order_reminders).toBe(2);
+  });
+
+  it("no recuerda el pedido manual ni el de Mercado Pago sin pagar o fallido (ADMIN-PWA-35)", async () => {
+    const manual = await envio();
+    const sinPagar = await envio();
+    const fallido = await envio();
+
+    await db.exec(`update orders set source = 'manual' where id = '${manual.id}'`);
+    await db.exec(`update orders set payment_status = 'awaiting' where id = '${sinPagar.id}'`);
+    await db.exec(`update orders set payment_status = 'failed' where id = '${fallido.id}'`);
+
+    for (const o of [manual, sinPagar, fallido]) await agePending(o.id, 3);
+    await runTimers();
+
+    for (const o of [manual, sinPagar, fallido]) expect((await reminders(o.id)).new_order_reminders).toBe(0);
+  });
+
+  it("el recordatorio no toca la búsqueda de repartidor ni su marca de sin ofertas (ADMIN-PWA-33)", async () => {
+    const o = await envio();
+    await agePending(o.id, 3);
+    await runTimers();
+
+    const row = await orderRow(o.id);
+    expect(row.courier_status).toBe("searching");
+    expect(row.no_offers_alerted_at).toBeNull();
+  });
+});
