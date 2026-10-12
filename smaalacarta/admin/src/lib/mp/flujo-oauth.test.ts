@@ -148,6 +148,24 @@ function fakeMp() {
   return { mp, payments, preferences, calls, behavior, pay };
 }
 
+// Deja la renovación simulada en pausa: `started` se cumple cuando Mercado Pago recibió el pedido (el arriendo ya
+// está tomado) y `go()` la deja terminar.
+function holdRefresh(sim: ReturnType<typeof fakeMp>) {
+  let go!: () => void;
+  let markStarted!: () => void;
+  const gate = new Promise<void>((resolve) => (go = resolve));
+  const started = new Promise<void>((resolve) => (markStarted = resolve));
+  const inner = sim.behavior.refresh;
+
+  sim.behavior.refresh = async (token) => {
+    markStarted();
+    await gate;
+    return inner(token);
+  };
+
+  return { started, go };
+}
+
 async function findOrder(column: "code" | "id", value: string): Promise<OrderRecord | null> {
   const { rows } = await db.query<{
     id: string;
@@ -186,7 +204,9 @@ async function findOrder(column: "code" | "id", value: string): Promise<OrderRec
   };
 }
 
-function realDeps(sim: ReturnType<typeof fakeMp>): MpDeps {
+// `sleep` es la espera de quien pierde la carrera. Por defecto no espera nada: los tests que dependen de ella
+// pasan una promesa controlada, sin temporizadores reales.
+function realDeps(sim: ReturnType<typeof fakeMp>, sleep: () => Promise<void> = async () => undefined): MpDeps {
   return {
     findOrderByCode: (code) => findOrder("code", code),
     findOrderById: (id) => findOrder("id", id),
@@ -208,7 +228,7 @@ function realDeps(sim: ReturnType<typeof fakeMp>): MpDeps {
           },
           webhookSecret: () => process.env.MP_OAUTH_WEBHOOK_SECRET ?? "",
           now: () => Date.now(),
-          sleep: (ms) => new Promise((resolve) => setTimeout(resolve, Math.min(ms, 5))),
+          sleep,
         },
         businessId,
       ),
@@ -415,18 +435,15 @@ describe("renovación del token contra la base — MP-19 a MP-21", () => {
   it("dos pedidos a la vez renuevan una sola vez", async () => {
     await connect(10);
     const sim = fakeMp();
-    const slow = sim.behavior.refresh;
-    sim.behavior.refresh = async (token) => {
-      await new Promise((resolve) => setTimeout(resolve, 20));
-      return slow(token);
-    };
+    const hold = holdRefresh(sim);
     const deps = realDeps(sim);
     const [a, b] = [await newOrder("ana", CAFE_A), await newOrder("ana", CAFE_A)];
 
-    const [ra, rb] = await Promise.all([
-      createPayment(deps, { code: a.code }),
-      createPayment(deps, { code: b.code }),
-    ]);
+    // Los dos arrancan juntos; la renovación queda en pausa con el arriendo ya tomado.
+    const both = Promise.all([createPayment(deps, { code: a.code }), createPayment(deps, { code: b.code })]);
+    await hold.started;
+    hold.go();
+    const [ra, rb] = await both;
 
     expect([ra.status, rb.status]).toEqual([200, 200]);
     expect(sim.calls.refresh).toBe(1);
@@ -436,20 +453,25 @@ describe("renovación del token contra la base — MP-19 a MP-21", () => {
   it("con el token vencido y otro renovando, el que pierde usa el token que dejó el otro", async () => {
     await connect(-1);
     const sim = fakeMp();
-    const slow = sim.behavior.refresh;
-    sim.behavior.refresh = async (token) => {
-      await new Promise((resolve) => setTimeout(resolve, 30));
-      return slow(token);
-    };
-    const deps = realDeps(sim);
+    const hold = holdRefresh(sim);
     const [a, b] = [await newOrder("ana", CAFE_A), await newOrder("ana", CAFE_A)];
 
-    const [ra, rb] = await Promise.all([
-      createPayment(deps, { code: a.code }),
-      createPayment(deps, { code: b.code }),
-    ]);
+    // Quien renueva arranca primero y queda en pausa con el arriendo tomado.
+    const winner = createPayment(realDeps(sim), { code: a.code });
+    await hold.started;
 
-    expect([ra.status, rb.status]).toEqual([200, 200]);
+    // Quien pierde espera, de forma determinista, a que el otro termine de guardar.
+    const loser = createPayment(
+      realDeps(sim, async () => {
+        hold.go();
+        await winner;
+      }),
+      { code: b.code },
+    );
+
+    const [rw, rl] = await Promise.all([winner, loser]);
+
+    expect([rw.status, rl.status]).toEqual([200, 200]);
     expect(sim.calls.refresh).toBe(1);
     expect(sim.preferences.map((p) => p.token)).toEqual(["ACCESS-RENOVADO", "ACCESS-RENOVADO"]);
   });
@@ -476,7 +498,7 @@ describe("renovación del token contra la base — MP-19 a MP-21", () => {
     await connect(10);
     const sim = fakeMp();
     sim.behavior.refresh = async () => {
-      throw new MpApiError(400);
+      throw new MpApiError(400, "invalid_grant");
     };
     const order = await newOrder("ana", CAFE_A);
 

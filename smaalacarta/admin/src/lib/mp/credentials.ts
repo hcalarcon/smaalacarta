@@ -117,10 +117,14 @@ async function renew(
       body = await deps.refresh(refreshToken);
     } catch (error) {
       const status = error instanceof MpApiError ? error.status : null;
-      console.error("mp/credentials: no se pudo renovar el token", status ?? "error");
+      const code = error instanceof MpApiError ? error.code : null;
+      // Solo el código HTTP y el código de error de la lista fija: nunca el cuerpo ni el mensaje (MP-26).
+      console.error("mp/credentials: no se pudo renovar el token", status ?? "error", code ?? "sin_codigo");
 
-      // Solo el rechazo del refresh_token cuenta como "hay que reconectar" (MP-21); red, 5xx y tiempo agotado no.
-      if (status !== 400 && status !== 401) return currentIfValid(businessId, row, now);
+      // Solo `invalid_grant` (Mercado Pago rechaza ese refresh_token) cuenta como "hay que reconectar" (MP-21).
+      // Un `invalid_client` (client_secret rotado), un `invalid_request`, un 400 o 401 sin código, la red, un 5xx
+      // o el tiempo agotado son problemas nuestros o pasajeros: no se marca a nadie.
+      if (code !== "invalid_grant") return currentIfValid(businessId, row, now);
 
       // Antes de marcar, se relee: puede que otro ya lo haya renovado.
       const fresh = await deps.store.find(businessId);

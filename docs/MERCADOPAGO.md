@@ -89,8 +89,11 @@ Requisitos `MP-18` a `MP-26` en [SPEC.md](SPEC.md). Con la cuenta del negocio en
   así que la renovación la hace un solo pedido a la vez (arriendo de 30 segundos en `refreshing_until`); los demás
   usan el token vigente o esperan unos segundos. No hay cron: un negocio que no cobra no renueva, y su token
   vence a los 180 días (la renovación necesita que haya sido autorizada con `offline_access`).
-- **`needs_reconnect`.** Solo lo marca un 400 o 401 de Mercado Pago al renovar. Un error de red, un 5xx o perder la
-  carrera no lo marcan. Con la conexión en `needs_reconnect` y sin credenciales manuales habilitadas: la opción
+- **`needs_reconnect`.** Solo lo marca un `invalid_grant` de Mercado Pago al renovar (rechazó ese refresh_token).
+  Un `invalid_client` (client_secret equivocado o rotado), un `invalid_request`, un 400 o 401 sin código, un error de
+  red, un 5xx o perder la carrera no lo marcan: es un problema de configuración o pasajero y se ve en los logs como
+  `mp/credentials: no se pudo renovar el token <HTTP> <código>`. Si aparece `invalid_client`, revisá
+  `MP_OAUTH_CLIENT_ID` y `MP_OAUTH_CLIENT_SECRET` en Vercel. Con la conexión en `needs_reconnect` y sin credenciales manuales habilitadas: la opción
   desaparece del menú, `/create` responde 409 `not_configured` y el webhook responde 200 sin consultar a Mercado Pago.
   El dueño reconecta desde Configuración (la tarjeta con el aviso es el PR 3).
 - **Webhook.** Se valida con `MP_OAUTH_WEBHOOK_SECRET` (o con la clave manual del negocio, para un aviso viejo) y el

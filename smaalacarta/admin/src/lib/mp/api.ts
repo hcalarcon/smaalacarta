@@ -28,8 +28,27 @@ export type MpApi = {
   searchPayments(token: string, externalReference: string): Promise<MpPayment[]>;
 };
 
+// Los únicos códigos de error de OAuth que se conservan (RFC 6749, 5.2). Cualquier otro valor del campo `error`
+// de Mercado Pago se descarta: ni el cuerpo ni el mensaje salen de la respuesta (MP-16, MP-21).
+export const MP_ERROR_CODES = [
+  "invalid_grant",
+  "invalid_client",
+  "invalid_request",
+  "unauthorized_client",
+  "invalid_scope",
+] as const;
+
+export type MpErrorCode = (typeof MP_ERROR_CODES)[number];
+
+export const asMpErrorCode = (value: unknown): MpErrorCode | null =>
+  typeof value === "string" && (MP_ERROR_CODES as readonly string[]).includes(value) ? (value as MpErrorCode) : null;
+
 export class MpApiError extends Error {
-  constructor(public status: number) {
+  // `code`: el campo `error` de la respuesta, solo si es uno de `MP_ERROR_CODES`; si no, `null`.
+  constructor(
+    public status: number,
+    public code: MpErrorCode | null = null,
+  ) {
     super(`Mercado Pago respondió ${status}`);
   }
 }

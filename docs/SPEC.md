@@ -1206,9 +1206,14 @@ y `src/lib/mp/service.ts`. Cubierto por `src/lib/mp/credentials.test.ts`, `src/l
   atómico (`refreshing_until`, de 30 segundos, con `UPDATE … WHERE … RETURNING`). Quien pierde la carrera relee la
   fila y usa el token que dejó el otro; si el token actual todavía no venció lo usa sin esperar, y si venció
   espera unos segundos acotados y, si no aparece uno nuevo, no cobra (`not_configured`) sin marcar la conexión.
-- **MP-21** Un error transitorio (red, 5xx, tiempo agotado) o perder la carrera no marca `needs_reconnect`. Solo
-  lo marca un rechazo del `refresh_token` (400 o 401 de Mercado Pago), y antes se relee la fila por si otro ya
-  lo renovó. No hay cron en esta etapa: se renueva al usarlo.
+- **MP-21** `needs_reconnect` lo marca únicamente un rechazo del `refresh_token`: la respuesta de Mercado Pago
+  trae `error = invalid_grant`, y antes de marcar se relee la fila por si otro ya lo renovó. Cualquier otra cosa
+  (`invalid_client` por un `client_secret` equivocado o rotado, `invalid_request`, un 400 o 401 sin código, red,
+  5xx, tiempo agotado o perder la carrera) se trata como un problema de configuración o pasajero: no marca
+  nada, se usa el token vigente si lo hay y solo se registra el código. Del error de Mercado Pago solo se
+  conserva el campo `error` y solo si es uno de `invalid_grant`, `invalid_client`, `invalid_request`,
+  `unauthorized_client` o `invalid_scope`; nunca el cuerpo ni el mensaje. No hay cron en esta etapa: se renueva
+  al usarlo.
 - **MP-22** Con la conexión en `needs_reconnect` (y sin credenciales manuales habilitadas) `/create` responde
   409 `not_configured`; `/verify` y `/webhook` no consultan a Mercado Pago con ese token y no fallan (el
   webhook con firma válida responde 200 `ignored`).

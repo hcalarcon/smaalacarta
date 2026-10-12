@@ -258,18 +258,26 @@ describe("no gastar el refresh_token dos veces — MP-20", () => {
 
   it("con el token vencido, quien pierde la carrera espera y usa el token que dejó el otro", async () => {
     let release!: () => void;
+    let markSaved!: () => void;
     const gate = new Promise<void>((resolve) => (release = resolve));
-    const { deps, refresh } = setup(build({ expiresAt: new Date(NOW - DAY) }), {
+    const saved = new Promise<void>((resolve) => (markSaved = resolve));
+    const { deps, store, refresh } = setup(build({ expiresAt: new Date(NOW - DAY) }), {
       refresh: async () => {
         await gate;
         return refreshed();
       },
-      // La espera deja terminar al que renueva.
+      // La espera deja terminar al que renueva y vuelve cuando ya guardó: sin temporizadores.
       sleep: async () => {
         release();
-        await new Promise((resolve) => setTimeout(resolve, 0));
+        await saved;
       },
     });
+    const save = store.saveRenewed;
+    store.saveRenewed = async (...args) => {
+      const result = await save(...args);
+      markSaved();
+      return result;
+    };
 
     const [a, b] = await Promise.all([resolveCredentials(deps, BUSINESS), resolveCredentials(deps, BUSINESS)]);
 
@@ -333,10 +341,10 @@ describe("errores al renovar — MP-21", () => {
     expect(store.row()!.status).toBe("connected");
   });
 
-  it.each([400, 401])("un %s de Mercado Pago al renovar marca needs_reconnect", async (status) => {
+  it.each([400, 401])("un %s con invalid_grant al renovar marca needs_reconnect", async (status) => {
     const { deps, store } = setup(build({ expiresAt: new Date(NOW + 10 * DAY) }), {
       refresh: async () => {
-        throw new MpApiError(status);
+        throw new MpApiError(status, "invalid_grant");
       },
     });
     const credentials = await resolveCredentials(deps, BUSINESS);
@@ -350,11 +358,50 @@ describe("errores al renovar — MP-21", () => {
     expect(refresh).not.toHaveBeenCalled();
   });
 
+  // Un client_secret rotado o un pedido mal armado no son "el negocio revocó el acceso": marcar a todos los
+  // negocios como "reconectar" al primer cobro sería peor que el problema (MP-21).
+  it.each([
+    ["400 con invalid_client", new MpApiError(400, "invalid_client")],
+    ["401 con invalid_client", new MpApiError(401, "invalid_client")],
+    ["400 con invalid_request", new MpApiError(400, "invalid_request")],
+    ["400 con unauthorized_client", new MpApiError(400, "unauthorized_client")],
+    ["400 con invalid_scope", new MpApiError(400, "invalid_scope")],
+    ["400 sin código", new MpApiError(400)],
+    ["401 sin código", new MpApiError(401)],
+  ])("un %s NO marca needs_reconnect: usa el token vigente y registra solo el código", async (_name, error) => {
+    const { deps, store } = setup(build({ expiresAt: new Date(NOW + 10 * DAY) }), {
+      refresh: async () => {
+        throw error;
+      },
+    });
+
+    const credentials = await resolveCredentials(deps, BUSINESS);
+
+    expect(store.row()!.status).toBe("connected");
+    expect(store.row()!.refreshingUntil).toBeNull();
+    expect(credentials?.accessToken).toBe("ACCESS-VIEJO");
+
+    expect(logged).toContain(String(error.status));
+    expect(logged).toContain(error.code ?? "sin_codigo");
+    expect(logged).not.toMatch(/ACCESS-VIEJO|REFRESH-VIEJO|CLAVE-DE-LA-APP/);
+  });
+
+  it("un invalid_client con el token ya vencido no cobra, pero tampoco marca la conexión", async () => {
+    const { deps, store } = setup(build({ expiresAt: new Date(NOW - DAY) }), {
+      refresh: async () => {
+        throw new MpApiError(401, "invalid_client");
+      },
+    });
+
+    expect(await resolveCredentials(deps, BUSINESS)).toMatchObject({ accessToken: "", enabled: false });
+    expect(store.row()!.status).toBe("connected");
+  });
+
   it("al marcar needs_reconnect con credenciales manuales habilitadas, esa misma llamada ya cobra con ellas", async () => {
     const { deps, store } = setup(build({ expiresAt: new Date(NOW + 10 * DAY) }), {
       manual: MANUAL,
       refresh: async () => {
-        throw new MpApiError(400);
+        throw new MpApiError(400, "invalid_grant");
       },
     });
 
@@ -386,7 +433,7 @@ describe("errores al renovar — MP-21", () => {
           refreshTokenEnc: nextRefresh,
           expiresAt: new Date(NOW + 180 * DAY),
         });
-        throw new MpApiError(400);
+        throw new MpApiError(400, "invalid_grant");
       },
     });
 
@@ -414,7 +461,7 @@ describe("errores al renovar — MP-21", () => {
 
 describe("ningún secreto sale en logs ni errores — MP-26", () => {
   it("ni el token, ni el refresh, ni la clave de la app aparecen en lo que se registra", async () => {
-    for (const error of [new MpApiError(400), new MpApiError(500), new TypeError("ACCESS-VIEJO REFRESH-VIEJO")]) {
+    for (const error of [new MpApiError(400, "invalid_grant"), new MpApiError(400, "invalid_client"), new MpApiError(500), new TypeError("ACCESS-VIEJO REFRESH-VIEJO")]) {
       const { deps } = setup(build({ expiresAt: new Date(NOW + 10 * DAY) }), {
         refresh: async () => {
           throw error;
