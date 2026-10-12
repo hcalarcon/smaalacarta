@@ -6,11 +6,14 @@ export function settingsSections({
   digitalMenu,
   pdfService,
   courierDelivery = false,
+  mercadoPago = false,
 }: {
   digitalMenu: boolean;
   pdfService: boolean;
   // El negocio tiene el envío con repartidor habilitado (ENVIO-58).
   courierDelivery?: boolean;
+  // El negocio puede conectar su cuenta de Mercado Pago (MP-15).
+  mercadoPago?: boolean;
 }): SettingsSection[] {
   return [
     { id: "datos", label: "Datos del negocio" },
@@ -33,6 +36,7 @@ export function settingsSections({
         ]
       : []),
     ...(courierDelivery ? [{ id: "envios", label: "Envíos" }] : []),
+    ...(mercadoPago ? [{ id: "mercadopago", label: "Mercado Pago" }] : []),
     { id: "contrasena", label: "Contraseña" },
   ];
 }

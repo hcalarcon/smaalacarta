@@ -6,21 +6,31 @@ import DeliverySection from "./components/DeliverySection";
 import SettingsForm from "./components/SettingsForm";
 import SettingsLayout from "./components/SettingsLayout";
 import SettingsSaveProvider from "./components/SettingsSaveProvider";
+import MercadoPagoSection from "./components/MercadoPagoSection";
 import ShareSection from "./components/ShareSection";
 import Section from "@/components/ui/Section";
 import { getDeliveryOptions } from "@/lib/db/delivery-zones";
 import { getSettings } from "@/lib/db/settings";
 import { requireBusiness } from "@/lib/get-current-business";
+import { getMpConnectionStatus, mpOauthAvailable } from "@/lib/mp/oauth-status";
 import { hasDigitalMenu, hasPdf } from "@/lib/plan-access";
 import { settingsSections } from "@/lib/settings/sections";
 
 export const metadata: Metadata = { title: "Configuración" };
 
-export default async function SettingsPage() {
-  const { business } = await requireBusiness();
+export default async function SettingsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mp?: string }>;
+}) {
+  const { business, role } = await requireBusiness();
+  const { mp } = await searchParams;
   const settings = await getSettings(business.id, business.whatsapp);
   // "Envíos" solo con el envío con repartidor habilitado por el superadmin (ENVIO-58).
   const deliveryOptions = business.courier_delivery ? await getDeliveryOptions() : null;
+  // "Mercado Pago" solo con los dos interruptores prendidos: el global y el del negocio (MP-15).
+  const mercadoPago = mpOauthAvailable(business);
+  const mpStatus = mercadoPago ? await getMpConnectionStatus(business.id) : "none";
   const plan = {
     planPdf: business.plan_pdf,
     planWeb: business.plan_web,
@@ -44,7 +54,12 @@ export default async function SettingsPage() {
       </section>
 
       <SettingsSaveProvider initialName={business.name} initialSlug={business.slug}>
-        <SettingsLayout sections={settingsSections({ digitalMenu, pdfService, courierDelivery: deliveryOptions !== null })}>
+        <SettingsLayout sections={settingsSections({
+            digitalMenu,
+            pdfService,
+            courierDelivery: deliveryOptions !== null,
+            mercadoPago,
+          })}>
           <BusinessProfileForm />
 
           <ShareSection
@@ -63,6 +78,14 @@ export default async function SettingsPage() {
           />
 
           {deliveryOptions ? <DeliverySection options={deliveryOptions} /> : null}
+
+          {mercadoPago ? (
+            <MercadoPagoSection
+              status={mpStatus}
+              isOwner={role === "owner"}
+              result={mp === "connected" || mp === "error" ? mp : null}
+            />
+          ) : null}
 
           <Section
             id="contrasena"
