@@ -313,6 +313,20 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   pasando por `escapeHtml` o `textContent`.
 - **PUBLICO-61** La vista previa avisa al panel que está lista (`preview-ready`) y, tras cada dibujo o cambio de
   tamaño, el rectángulo de la cabecera (`headerRect`, `preview-header`) solo al origen que le escribió.
+- **PUBLICO-62** Cada producto del pedido puede llevar una nota del cliente (`order_items.note`): texto libre de hasta
+  140 caracteres. La base la limpia (`clean_item_note`: caracteres de control y espacios, saltos de línea incluidos,
+  pasan a un solo espacio), la recorta a 140 y la deja nula si queda vacía; un valor que no es texto se ignora. La nota
+  no cambia el precio ni el total, y el navegador sigue mandando solo ids y cantidades.
+- **PUBLICO-63** Dos líneas con el mismo producto y las mismas opciones pero distinta nota son líneas distintas; con la
+  misma nota (ya limpia), es una repetida y la base la rechaza como cualquier línea repetida.
+- **PUBLICO-64** `business_settings.allow_item_notes` (por defecto `true`) lo decide el negocio. Con el interruptor
+  apagado, `create_public_order` ignora las notas sin error y `config.notasPorItem` es `false`.
+- **PUBLICO-65** En el menú interactivo, en la hoja de opciones del producto y en cada línea del carrito, el campo "Nota
+  para este producto (opcional)" (140 caracteres, contador, ejemplo "Sin cheddar, con mostaza") solo aparece si
+  `config.notasPorItem`. Dice que es un pedido al local, no una promesa. Textos en es, en y pt. La nota entra en la
+  firma del ítem del carrito (misma nota, suman cantidad); un carrito viejo de `localStorage` sigue funcionando.
+- **PUBLICO-66** `buildOrderItems` manda `{id, kind, quantity, options, note}`, y el mensaje de WhatsApp lista la nota
+  bajo cada ítem (`  📝 sin cheddar`). Cualquier texto del cliente se muestra con `textContent` o `escapeHtml`.
 
 ## BUSQUEDA — Buscador
 
@@ -445,6 +459,8 @@ llegando al negocio por WhatsApp.
   cliente al seguimiento; el pedido anticipado sin pago online conserva el panel "Pedido registrado".
 - **SEGUIMIENTO-35** `public_order_tracking` entrega `pedido.entrega` (`retiro` o `delivery`): la línea de pasos dice "Listo para
   retirar" y "Retirado" solo en un pedido para retirar.
+- **SEGUIMIENTO-36** `public_order_tracking` entrega `nota` en cada ítem que la tiene; el seguimiento la muestra bajo el
+  ítem con `textContent`, como lo que el cliente pidió.
 
 ## PWA — Instalar el menú en el celular
 
@@ -1054,6 +1070,9 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
 - **ADMIN-CONFIG-47** La vista previa muestra su estado: "Cargando vista previa…" mientras llega el menú o el
   `iframe` dibuja; si no se pudo leer el menú, o el menú no responde en 12 segundos, dice que no pudo
   conectar y deja reintentar; un menú sin productos avisa que solo se ve la cabecera.
+- **ADMIN-CONFIG-48** Configuración tiene el interruptor "Permitir notas en cada producto" (`allow_item_notes`, activo
+  por defecto), en Entrega y pago; se guarda con "Guardar cambios" y `save_business_settings` lo recibe en
+  `p_allow_item_notes`.
 
 ## ADMIN-PEDIDOS — Pedidos
 
@@ -1115,6 +1134,11 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   tabla no lista ítems) muestran las opciones elegidas bajo cada ítem (`+ Queso`, `+ Frutilla ×2`).
 - **ADMIN-PEDIDOS-21** El pedido manual (`create_manual_order`) no exige ni valida opciones en esta
   versión: sus ítems nunca las llevan.
+- **ADMIN-PEDIDOS-22** El tablero, el detalle y el historial de pedidos muestran la nota de cada ítem destacada (en un
+  recuadro) bajo el ítem, para que no pase desapercibida; también el panel del repartidor si lista el detalle.
+- **ADMIN-PEDIDOS-23** `create_manual_order` acepta `note` por ítem (la limpia y recorta igual, y no depende del
+  interruptor: la escribe el propio local). Las notas no cambian el RLS: el local lee las de sus pedidos y no las de
+  otro negocio.
 
 ## MP — Cobro con Mercado Pago (Checkout Pro)
 

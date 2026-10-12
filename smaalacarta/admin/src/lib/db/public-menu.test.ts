@@ -291,6 +291,7 @@ describe("configuración — PUBLICO-4", () => {
       pagos: ["efectivo", "transferencia", "tarjeta"],
       programados: true,
       anticipacionMin: 30,
+      notasPorItem: true,
     });
   });
 

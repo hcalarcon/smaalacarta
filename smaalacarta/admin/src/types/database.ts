@@ -72,6 +72,7 @@ export type Database = {
       business_settings: {
         Row: {
           address: string | null
+          allow_item_notes: boolean
           allow_scheduled_orders: boolean
           business_id: string
           closed_message: string | null
@@ -105,6 +106,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          allow_item_notes?: boolean
           allow_scheduled_orders?: boolean
           business_id: string
           closed_message?: string | null
@@ -138,6 +140,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          allow_item_notes?: boolean
           allow_scheduled_orders?: boolean
           business_id?: string
           closed_message?: string | null
@@ -758,6 +761,7 @@ export type Database = {
           business_id: string
           id: string
           name: string
+          note: string | null
           options: Json | null
           order_id: string
           product_id: string | null
@@ -770,6 +774,7 @@ export type Database = {
           business_id: string
           id?: string
           name: string
+          note?: string | null
           options?: Json | null
           order_id: string
           product_id?: string | null
@@ -782,6 +787,7 @@ export type Database = {
           business_id?: string
           id?: string
           name?: string
+          note?: string | null
           options?: Json | null
           order_id?: string
           product_id?: string | null
@@ -1448,6 +1454,7 @@ export type Database = {
         }
         Returns: Json
       }
+      clean_item_note: { Args: { p_note: string }; Returns: string }
       default_courier_id: { Args: never; Returns: string }
       default_images_unmatched: {
         Args: never
@@ -1546,6 +1553,7 @@ export type Database = {
           p_scheduled_lead_minutes: number
           p_secondary_color: string
           p_show_default_images?: boolean
+          p_allow_item_notes?: boolean
           p_tagline: string
           p_template: string
           p_temporarily_closed: boolean
