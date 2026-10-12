@@ -8,6 +8,7 @@ import { SUPABASE } from "/apps/menu-app/supabase-config.js";
 import { nextAlerts, pollInterval, snapshotOf } from "/apps/tracker/lib/alerts.js";
 import { icon } from "/apps/tracker/lib/icons.js";
 import { confirmText, countdown, countdownText, offerView, sortOffers } from "/apps/tracker/lib/offers.js";
+import { prepView } from "/apps/tracker/lib/prep.js";
 import { cancelReason, deliveryMode, progressSteps } from "/apps/tracker/lib/steps.js";
 import {
   fetchDelivery,
@@ -338,6 +339,18 @@ function progressCard(data, mode, view) {
   // Pedido programado: se dice para qué hora es, para que no parezca una demora (SEGUIMIENTO-18).
   const scheduled = scheduledNotice(data.pedido.programado, lang);
   if (scheduled) card.insertBefore(el("p", { className: "status-scheduled", text: scheduled }), card.firstChild);
+
+  // El tiempo estimado del local (SEGUIMIENTO-39 a 42): solo llega si el negocio lo activó. Con textContent.
+  const prep = prepView(data.pedido.prep, { now: new Date(), lang, pickup: mode === "pickup" });
+  if (prep) {
+    card.appendChild(
+      el("div", { className: `status-prep status-prep-${prep.kind}` }, [
+        el("p", { className: "status-prep-text", text: prep.text }),
+        ...(prep.hint ? [el("p", { className: "status-prep-hint", text: prep.hint })] : []),
+        ...(prep.reason ? [el("p", { className: "status-prep-reason", text: prep.reason })] : []),
+      ]),
+    );
+  }
 
   if (progress.steps.length > 0) {
     card.appendChild(
