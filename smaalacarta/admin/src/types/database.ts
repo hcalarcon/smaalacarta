@@ -232,6 +232,7 @@ export type Database = {
           created_at: string | null
           id: string
           logo_url: string | null
+          mp_oauth_enabled: boolean
           name: string
           plan_completo: boolean
           plan_pdf: boolean
@@ -245,6 +246,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           logo_url?: string | null
+          mp_oauth_enabled?: boolean
           name: string
           plan_completo?: boolean
           plan_pdf?: boolean
@@ -258,6 +260,7 @@ export type Database = {
           created_at?: string | null
           id?: string
           logo_url?: string | null
+          mp_oauth_enabled?: boolean
           name?: string
           plan_completo?: boolean
           plan_pdf?: boolean
@@ -543,6 +546,47 @@ export type Database = {
           sort_order?: number
         }
         Relationships: []
+      }
+      mp_oauth_states: {
+        Row: {
+          business_id: string
+          code_verifier_enc: string
+          created_at: string
+          expires_at: string
+          id: string
+          state_hash: string
+          used_at: string | null
+          user_id: string
+        }
+        Insert: {
+          business_id: string
+          code_verifier_enc: string
+          created_at?: string
+          expires_at: string
+          id?: string
+          state_hash: string
+          used_at?: string | null
+          user_id: string
+        }
+        Update: {
+          business_id?: string
+          code_verifier_enc?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          state_hash?: string
+          used_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mp_oauth_states_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       option_groups: {
         Row: {
@@ -911,6 +955,56 @@ export type Database = {
             columns: ["delivery_zone_id"]
             isOneToOne: false
             referencedRelation: "delivery_zones"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_connections: {
+        Row: {
+          access_token_enc: string | null
+          business_id: string
+          connected_at: string
+          connected_by: string | null
+          expires_at: string | null
+          key_version: number
+          mp_user_id: number
+          refresh_token_enc: string | null
+          scope: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          access_token_enc?: string | null
+          business_id: string
+          connected_at?: string
+          connected_by?: string | null
+          expires_at?: string | null
+          key_version: number
+          mp_user_id: number
+          refresh_token_enc?: string | null
+          scope?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          access_token_enc?: string | null
+          business_id?: string
+          connected_at?: string
+          connected_by?: string | null
+          expires_at?: string | null
+          key_version?: number
+          mp_user_id?: number
+          refresh_token_enc?: string | null
+          scope?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_connections_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: true
+            referencedRelation: "businesses"
             referencedColumns: ["id"]
           },
         ]

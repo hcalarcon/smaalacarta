@@ -1153,6 +1153,35 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   extras) y llevan las opciones elegidas en el título; la suma de la preferencia coincide con
   `orders.total`.
 
+### Conexión por OAuth (PR 1: conectar y desconectar)
+
+*Aplicado por `supabase/migrations/*_mercadopago_oauth.sql`, `src/lib/mp/crypto.ts`, `src/lib/mp/oauth.ts` y
+`app/api/mp/oauth/`. Cubierto por `src/lib/db/mp-oauth.test.ts`, `src/lib/mp/crypto.test.ts`,
+`src/lib/mp/oauth.test.ts` y `app/api/mp/oauth/routes.test.ts`. Todavía no se cobra con la conexión: eso es el
+PR 2. Guía: [MERCADOPAGO.md](MERCADOPAGO.md).*
+
+- **MP-9** Solo el dueño del negocio (`business_users.role = 'owner'`; un `staff` no) conecta o desconecta su
+  cuenta de Mercado Pago; `start` y `disconnect` solo aceptan POST y, si el encabezado `Origin` viene, tiene
+  que ser el del sitio.
+- **MP-10** `start` guarda un `state` aleatorio de 32 bytes del que solo queda el hash SHA-256, atado al
+  negocio y al usuario que lo pidió; vence a los 10 minutos, se usa una sola vez (el callback lo marca usado en
+  la misma operación que lo valida) y `start` frena a un negocio que lo pide sin pausa.
+- **MP-11** La autorización usa PKCE con `S256`: el `code_verifier` queda cifrado en la base y se manda recién
+  al canjear el código; un `state` inexistente, usado, vencido o de otro usuario no canjea nada.
+- **MP-12** El `access_token` y el `refresh_token` se guardan cifrados con AES-256-GCM (clave del entorno con
+  su versión, IV aleatorio y el `business_id` como dato asociado); `payment_connections` y `mp_oauth_states` tienen
+  RLS sin políticas y sin permisos para `anon` y `authenticated`: solo la clave de servicio las toca.
+- **MP-13** El callback comprueba con la API de Mercado Pago que la cuenta es la del token y es de Argentina
+  (`MLA`); una cuenta ya conectada a otro negocio se rechaza sin tocar nada, y conectar otra vez en el mismo
+  negocio reemplaza la conexión anterior.
+- **MP-14** Desconectar borra los tokens y deja la conexión en `revoked`; no llama a Mercado Pago (el negocio
+  puede revocar desde su cuenta).
+- **MP-15** Conectar exige `MP_OAUTH_ENABLED` en `"true"` y `businesses.mp_oauth_enabled` del negocio; si
+  cualquiera está apagado, los tres endpoints responden un 404 genérico, y el dueño no puede prender el
+  interruptor de su negocio (solo un superadmin o la clave de servicio).
+- **MP-16** Ningún secreto (`code`, tokens, `client_secret`, `state`, `code_verifier`) aparece en una URL, un
+  log, una respuesta ni un mensaje de error; de un fallo de Mercado Pago solo se registra el código HTTP.
+
 ## ENVIO — Envío con Repartos al Toque
 
 *Aplicado por `supabase/migrations/*_envio_repartos_al_toque.sql` y `src/lib/orders/status.ts`. Cubierto

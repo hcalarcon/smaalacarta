@@ -571,7 +571,7 @@ paso a paso (cuenta, aplicación, credenciales, webhook y pruebas), está en [ME
         PKCE y evento "Pagos"; variables `MP_OAUTH_CLIENT_ID`, `MP_OAUTH_CLIENT_SECRET`, `MP_OAUTH_WEBHOOK_SECRET`,
         `MP_TOKEN_ENCRYPTION_KEY` y `MP_OAUTH_ENABLED` (nunca por chat); usuarios de prueba vendedor y comprador;
         textos de términos y privacidad
-  - [ ] [herni] PR 1 — conectar y desconectar: requisitos `MP-8…` en SPEC.md; tablas `payment_connections` (tokens
+  - [ ] [herni] PR 1 — conectar y desconectar: requisitos `MP-9` a `MP-16` en SPEC.md; tablas `payment_connections` (tokens
         cifrados con AES-256-GCM, clave en el entorno con versión y el `business_id` como dato asociado; RLS sin
         políticas) y `mp_oauth_states`; `mp_oauth_enabled` por negocio; `POST /api/mp/oauth/start` y
         `GET /api/mp/oauth/callback` (state de un solo uso, PKCE, solo el dueño); desconectar
