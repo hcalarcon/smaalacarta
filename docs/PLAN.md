@@ -687,6 +687,27 @@ ADMIN-CONFIG-48, ADMIN-PEDIDOS-22 y 23). Migración `20261029000000_notas_por_it
 - [ ] [herni] **Después de mergear**: `db:push` de la migración y `db:types`; probar a mano un pedido con
       notas (menú → tablero → seguimiento → repartidor) y con el interruptor apagado
 
+## Etapa 6s — Aviso fuerte de pedido nuevo
+
+Que un pedido nuevo no pase desapercibido para el local, con el panel abierto o cerrado. Requisitos en
+`docs/SPEC.md` (ADMIN-PEDIDOS-24 a 30 y ADMIN-PWA-33 a 37). Migración
+`20261030000000_recordatorios_pedido_nuevo.sql`.
+
+- [x] [herni] Recordatorios push desde el servidor: `run_order_timers()` suma uno cada 2 minutos por pedido
+      sin atender, hasta 5 (`orders.new_order_reminders`, `new_order_reminded_at`); evento
+      `local_new_order_reminder` y su texto
+- [x] [herni] Notificación persistente: el pedido nuevo y su recordatorio con `requireInteraction`,
+      vibración y `renotify`; urgencia alta y TTL de 60 s en el servidor
+- [x] [herni] Panel abierto: tarjeta a pantalla completa con "Aceptar", alarma en bucle que sube de volumen a
+      los 60 s, "Silenciar 5 min", voz "Nuevo pedido", título parpadeante, globito en el favicon y en la app
+      instalada, y barra roja fija en todo el panel del negocio si el sonido o los avisos no están activos
+- [ ] [herni] **Después de mergear**: `db:push` de la migración y `db:types`; probar a mano con el panel
+      abierto, con la pestaña en segundo plano y con la app instalada en el celular
+- [ ] [por asignar] **Aviso por Telegram**: un bot gratuito al que el local vincula su chat, como canal
+      independiente del navegador (hoy el aviso depende del permiso de notificaciones y de que el
+      navegador no esté cerrado por el sistema). Pide decidir: vinculación (código de un solo uso),
+      dónde se guarda el `chat_id` (por persona, como `push_subscriptions`) y quién crea y paga el bot
+
 ## Etapa 7 — Pendientes técnicos (backlog)
 
 - [ ] [por asignar] **Marketplace** ("un lugar donde encontrar de todo para

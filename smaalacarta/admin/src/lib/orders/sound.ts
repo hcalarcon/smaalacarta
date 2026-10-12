@@ -5,7 +5,9 @@ const TONES = [
 ];
 const VOLUME = 0.25;
 
-function playTones(ctx: AudioContext, tones: { hz: number; start: number; length: number }[]): void {
+type Tone = { hz: number; start: number; length: number };
+
+function playTones(ctx: AudioContext, tones: Tone[], volume = VOLUME, type: OscillatorType = "sine"): void {
   const t0 = ctx.currentTime;
 
   for (const tone of tones) {
@@ -14,11 +16,11 @@ function playTones(ctx: AudioContext, tones: { hz: number; start: number; length
     const start = t0 + tone.start;
     const end = start + tone.length;
 
-    osc.type = "sine";
+    osc.type = type;
     osc.frequency.setValueAtTime(tone.hz, start);
     // Sube y baja el volumen para que no suene el "clic" de cortar la onda de golpe.
     gain.gain.setValueAtTime(0.0001, start);
-    gain.gain.linearRampToValueAtTime(VOLUME, start + 0.02);
+    gain.gain.linearRampToValueAtTime(volume, start + 0.02);
     gain.gain.exponentialRampToValueAtTime(0.0001, end);
 
     osc.connect(gain);
@@ -41,4 +43,20 @@ const CHOSEN_TONES = [
 
 export function playChosenSound(ctx: AudioContext): void {
   playTones(ctx, CHOSEN_TONES);
+}
+
+// Alarma de pedido sin atender (ADMIN-PEDIDOS-26): una sirena corta, más aguda y áspera que el aviso de
+// pedido nuevo, pensada para repetirse en bucle. El volumen lo decide quien la llama según la espera.
+const ALARM_TONES: Tone[] = [
+  { hz: 1046, start: 0, length: 0.2 },
+  { hz: 784, start: 0.24, length: 0.2 },
+  { hz: 1046, start: 0.48, length: 0.2 },
+  { hz: 784, start: 0.72, length: 0.2 },
+];
+
+// Cada cuánto se repite la alarma: dura ~1 s y descansa antes de volver.
+export const ALARM_LOOP_MS = 2500;
+
+export function playAlarmSound(ctx: AudioContext, volume: number): void {
+  playTones(ctx, ALARM_TONES, volume, "triangle");
 }

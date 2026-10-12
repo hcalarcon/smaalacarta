@@ -1097,17 +1097,21 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   Pendiente no cuenta.
 - **ADMIN-PEDIDOS-7** Los pedidos pendientes se cuentan por estado "pending"; los
   demás estados, conocidos o no, no suman.
-- **ADMIN-PEDIDOS-8** Si tras actualizarse el tablero aparecen pedidos Pendientes nuevos,
-  suena un aviso una sola vez; los que ya estaban al abrir el tablero no suenan.
+- **ADMIN-PEDIDOS-8** Si tras actualizarse el tablero aparecen pedidos sin atender nuevos
+  mientras la alarma ya suena, suena enseguida, una sola vez; los que ya estaban al abrir el
+  tablero no suenan hasta que la persona activa el sonido (ver ADMIN-PEDIDOS-26).
 - **ADMIN-PEDIDOS-9** El aviso solo suena si el negocio activó el sonido con un botón
   (el navegador lo exige); la preferencia se recuerda, pero tras recargar el botón
   pide tocar de nuevo para volver a permitirlo.
 - **ADMIN-PEDIDOS-10** Con el sonido activado, el tablero sigue consultando pedidos cada
   20 segundos aunque la pestaña esté oculta; sin sonido, solo con la pestaña a la vista.
-- **ADMIN-PEDIDOS-11** Con el sonido activado y pedidos Pendientes sin atender, el aviso
-  se repite cada 30 segundos hasta que no quede ninguno.
-- **ADMIN-PEDIDOS-12** Mientras haya N pedidos Pendientes, el título de la pestaña es
-  "(N) Nuevo pedido · <título original>"; cuando no queda ninguno, vuelve al original.
+- **ADMIN-PEDIDOS-11** Con el sonido activado y pedidos sin atender, el aviso suena en
+  bucle (alarma, ver ADMIN-PEDIDOS-26) hasta que no quede ninguno; ya no espera 30 segundos
+  entre vueltas.
+- **ADMIN-PEDIDOS-12** Mientras haya N pedidos sin atender, el título de la pestaña lleva la
+  cantidad ("(N) NUEVO PEDIDO", parpadeando con el título original, ver ADMIN-PEDIDOS-27; con
+  `prefers-reduced-motion`, fijo en "(N) Nuevo pedido · <título original>"); cuando no queda
+  ninguno, vuelve al original.
 - **ADMIN-PEDIDOS-13** Con el sonido activado, el tablero pide mantener la pantalla
   encendida, lo vuelve a pedir cada vez que la pestaña vuelve a estar visible y lo
   libera al desactivar el sonido o al salir; si el navegador no lo soporta, no pasa
@@ -1139,6 +1143,34 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
 - **ADMIN-PEDIDOS-23** `create_manual_order` acepta `note` por ítem (la limpia y recorta igual, y no depende del
   interruptor: la escribe el propio local). Las notas no cambian el RLS: el local lee las de sus pedidos y no las de
   otro negocio.
+
+**Aviso fuerte de pedido nuevo** (`src/lib/orders/urgent-alert.ts`, `badge.ts`, `speech.ts`, `sound-pref.ts`,
+`app/dashboard/orders/components/NewOrderAlert.tsx`, `src/components/dashboard/OrderAlertsBar.tsx`; los
+recordatorios push son ADMIN-PWA-33 a 37)
+
+- **ADMIN-PEDIDOS-24** Un pedido está sin atender si está Pendiente, no es manual (`source = 'manual'`) y,
+  si es de Mercado Pago, no está esperando ni falló el pago. Mientras haya alguno, el tablero muestra una
+  tarjeta a pantalla completa "NUEVO PEDIDO #N" con cliente, entrega, ítems y total, y los botones
+  "Aceptar" (lo pasa a Confirmado, como "Confirmar") y "Ver pedidos" (la cierra hasta que llegue otro
+  pedido nuevo); con varios muestra el más viejo y cuántos más hay. Desaparece sola si el pedido se atiende.
+- **ADMIN-PEDIDOS-25** "Silenciar" calla la alarma y la voz durante 5 minutos y después vuelven solas; el
+  título, el globito, la barra y la tarjeta siguen.
+- **ADMIN-PEDIDOS-26** Con el sonido activado, mientras haya pedidos sin atender suena una alarma en bucle,
+  distinta del aviso de prueba, que sube de volumen cuando el pedido más viejo lleva 60 segundos sin
+  atender. Nada suena antes de que la persona active el sonido (política de autoplay del navegador).
+- **ADMIN-PEDIDOS-27** Mientras suena la alarma, la voz del navegador dice "Nuevo pedido" en es-AR, ahora y
+  cada 30 segundos; sin `speechSynthesis` no hace nada. El título de la pestaña parpadea entre
+  "(N) NUEVO PEDIDO" y el título normal, salvo con `prefers-reduced-motion`.
+- **ADMIN-PEDIDOS-28** La cantidad de pedidos sin atender se dibuja en el favicon (canvas) y, en la app
+  instalada, en el ícono con `navigator.setAppBadge`/`clearAppBadge`; si el navegador no las tiene, no rompe.
+  Al atenderlos o salir del tablero, el ícono vuelve al original y el globito se borra.
+- **ADMIN-PEDIDOS-29** Activar el sonido desde la barra deja listo el mismo contexto de audio que usa el
+  tablero: al abrir Pedidos no hay que tocar de nuevo.
+- **ADMIN-PEDIDOS-30** Los negocios con pedidos por menú ven, fija arriba de cualquier pantalla del panel, una
+  barra roja "No vas a oír los pedidos nuevos" mientras el sonido esté apagado (o sin habilitar tras recargar)
+  o los avisos push no estén activados, con los botones "Activar el sonido" (lo guarda y lleva a Pedidos) y
+  "Activar los avisos"; con los avisos bloqueados o por instalar lo dice sin botón, y sin nada que arreglar
+  no se ve.
 
 ## MP — Cobro con Mercado Pago (Checkout Pro)
 
@@ -1919,6 +1951,24 @@ precios en 0; no existe "incluye N y el resto cuesta X".
 - **ADMIN-PWA-32** Una dirección inexistente bajo `/admin` muestra la 404 del panel (`app/not-found.tsx`):
   con la marca, "No encontramos esta página" y un botón "Volver al panel" que lleva a la raíz del panel.
 
+**Recordatorios de pedido nuevo sin atender** (migración `20261030000000_recordatorios_pedido_nuevo.sql`)
+
+- **ADMIN-PWA-33** `run_order_timers()` suma un recordatorio (`orders.new_order_reminders`, con la hora en
+  `new_order_reminded_at`) a cada pedido por menú que sigue Pendiente, cada 2 minutos desde que llegó o desde
+  el último, hasta 5. Ese UPDATE dispara el evento `local_new_order_reminder`, que avisa a los miembros del
+  negocio "Pedido #N sin atender hace X min" → `/admin/dashboard/orders`; el aviso lleva el mismo `tag` que el
+  del pedido nuevo, así lo reemplaza en vez de apilarse.
+- **ADMIN-PWA-34** Un pedido que sale de Pendiente (confirmado, cancelado…) deja de recibir recordatorios, y
+  si el contador sube cuando ya no está Pendiente no sale ningún aviso.
+- **ADMIN-PWA-35** No se recuerdan los pedidos cargados por el local (`manual`) ni los de Mercado Pago con el
+  pago esperando o fallido; los recordatorios no tocan `courier_status` ni `no_offers_alerted_at`.
+- **ADMIN-PWA-36** El service worker muestra el pedido nuevo y su recordatorio con `requireInteraction`,
+  vibración `[300, 150, 300, 150, 300]`, `renotify`, `silent: false` y un `tag` por pedido (siempre lleva
+  uno, porque `renotify` lo exige), con el total en el cuerpo; el resto de los avisos se muestran igual que
+  antes.
+- **ADMIN-PWA-37** El payload push lleva `kind` y `urgent` (y `number` y `total` en los urgentes); los
+  urgentes salen con urgencia alta y TTL de 60 s, y los demás avisos conservan sus 10 minutos.
+
 ---
 
 ## No especificado deliberadamente
@@ -1951,24 +2001,6 @@ se resuelve en su propia rama `fix/`.
   `.maybeSingle()`: con más de una falla, devuelve `null` y manda a `/login`.
 - **Superadmin: pasos manuales en Supabase.** (1) Apagar el registro público
   (`Allow new users to sign up`): con la clave pública, cualquiera puede crear
-**Recordatorios de pedido nuevo sin atender** (migración `20261030000000_recordatorios_pedido_nuevo.sql`)
-
-- **ADMIN-PWA-33** `run_order_timers()` suma un recordatorio (`orders.new_order_reminders`, con la hora en
-  `new_order_reminded_at`) a cada pedido por menú que sigue Pendiente, cada 2 minutos desde que llegó o desde
-  el último, hasta 5. Ese UPDATE dispara el evento `local_new_order_reminder`, que avisa a los miembros del
-  negocio "Pedido #N sin atender hace X min" → `/admin/dashboard/orders`; el aviso lleva el mismo `tag` que el
-  del pedido nuevo, así lo reemplaza en vez de apilarse.
-- **ADMIN-PWA-34** Un pedido que sale de Pendiente (confirmado, cancelado…) deja de recibir recordatorios, y
-  si el contador sube cuando ya no está Pendiente no sale ningún aviso.
-- **ADMIN-PWA-35** No se recuerdan los pedidos cargados por el local (`manual`) ni los de Mercado Pago con el
-  pago esperando o fallido; los recordatorios no tocan `courier_status` ni `no_offers_alerted_at`.
-- **ADMIN-PWA-36** El service worker muestra el pedido nuevo y su recordatorio con `requireInteraction`,
-  vibración `[300, 150, 300, 150, 300]`, `renotify`, `silent: false` y un `tag` por pedido (siempre lleva
-  uno, porque `renotify` lo exige), con el total en el cuerpo; el resto de los avisos se muestran igual que
-  antes.
-- **ADMIN-PWA-37** El payload push lleva `kind` y `urgent` (y `number` y `total` en los urgentes); los
-  urgentes salen con urgencia alta y TTL de 60 s, y los demás avisos conservan sus 10 minutos.
-
   cuentas llamando a la API aunque el admin no tenga pantalla para eso. (2) Cargar
   el primer superadmin con SQL. (3) Poner `SUPABASE_SERVICE_ROLE_KEY` en el
   servidor. Ver [PLAN.md](PLAN.md).
