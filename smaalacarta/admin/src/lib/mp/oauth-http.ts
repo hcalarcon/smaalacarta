@@ -1,11 +1,12 @@
 import "server-only";
 
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
+import { BASE_PATH } from "@/lib/base-path";
 import { getCurrentBusiness } from "@/lib/get-current-business";
 
 import { buildOAuthDeps } from "./oauth-deps";
-import type { CallbackResult, OAuthActor, OAuthDeps } from "./oauth";
+import { SITE_ORIGIN, type CallbackResult, type OAuthActor, type OAuthDeps } from "./oauth";
 import type { Reply } from "./service";
 
 // Pegamento de los route handlers de `app/api/mp/oauth/`: la sesión, las dependencias reales y la respuesta.
@@ -42,13 +43,14 @@ export async function withOAuth(handler: (deps: OAuthDeps, actor: OAuthActor | n
 }
 
 // El callback es una navegación del navegador: vuelve siempre a Configuración, con un mensaje genérico.
-// `to` es relativo a la app: hay que sumarle el basePath a mano (igual que `proxy.ts`).
+// `to` es relativo a la app. La vuelta se arma con el origen público fijo y el basePath de la configuración
+// (MP-17), nunca con `request.url` ni `request.nextUrl`: detrás del rewrite de landing/ la request llega con el
+// host del deploy directo de admin/ y con el basePath vacío, y volver ahí da un 404.
 export async function withOAuthCallback(
-  request: NextRequest,
   handler: (deps: OAuthDeps, actor: OAuthActor | null) => Promise<CallbackResult>,
 ) {
   const back = (to: string) => {
-    const response = NextResponse.redirect(new URL(request.nextUrl.basePath + to, request.url));
+    const response = NextResponse.redirect(new URL(`${SITE_ORIGIN}${BASE_PATH}${to}`));
     response.headers.set("Cache-Control", "no-store");
     // El code y el state ya no están en la URL de destino; que tampoco viajen en el Referer.
     response.headers.set("Referrer-Policy", "no-referrer");

@@ -211,6 +211,49 @@ describe("GET /oauth/callback", () => {
   });
 });
 
+describe("GET /oauth/callback detrás del rewrite de landing/ — MP-17", () => {
+  // Llega con el host del deploy directo de admin/ y con el basePath vacío en nextUrl.
+  const behindRewrite = (query: string) =>
+    new NextRequest(`https://smaalacarta-admin.vercel.app/api/mp/oauth/callback?${query}`);
+
+  it("vuelve al origen público + /admin tras conectar", async () => {
+    const codeVerifierEnc = (await import("@/lib/mp/crypto")).encryptSecret("VERIFIER", BUSINESS).value;
+    buildOAuthDeps.mockReturnValue(
+      deps({
+        consumeState: vi.fn(async () => ({ businessId: BUSINESS, userId: USER, codeVerifierEnc })),
+        mp: {
+          exchangeCode: vi.fn(async () => ({
+            access_token: "a",
+            refresh_token: "r",
+            user_id: 777,
+            expires_in: 100,
+          })),
+          getMe: vi.fn(async () => ({ id: 777, site_id: "MLA" })),
+        },
+      }),
+    );
+
+    const res = await callback(behindRewrite("code=c&state=s"));
+
+    expect(res.headers.get("location")).toBe("https://www.smaalacarta.com.ar/admin/dashboard/settings?mp=connected");
+  });
+
+  it("vuelve al origen público + /admin cuando falla el state", async () => {
+    const res = await callback(behindRewrite("code=c&state=inventado"));
+
+    expect(res.headers.get("location")).toBe("https://www.smaalacarta.com.ar/admin/dashboard/settings?mp=error");
+  });
+
+  it("vuelve al origen público + /admin aun si el error ocurre al armar las dependencias", async () => {
+    buildOAuthDeps.mockImplementation(() => {
+      throw new Error("falta SUPABASE_SERVICE_ROLE_KEY");
+    });
+    const res = await callback(behindRewrite("code=c&state=s"));
+
+    expect(res.headers.get("location")).toBe("https://www.smaalacarta.com.ar/admin/dashboard/settings?mp=error");
+  });
+});
+
 describe("POST /oauth/disconnect", () => {
   it("el dueño desconecta", async () => {
     const d = deps();

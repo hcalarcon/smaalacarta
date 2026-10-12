@@ -5,7 +5,7 @@ import { randomBytes } from "node:crypto";
 import { createAdminClient } from "@/lib/supabase-admin";
 
 import { createOAuthApi } from "./oauth-api";
-import type { OAuthDeps } from "./oauth";
+import { SITE_ORIGIN, type OAuthDeps } from "./oauth";
 import { createRateLimiter } from "./rate-limit";
 
 // Una conexión nueva cada pocos segundos por negocio alcanza: es un botón, no un proceso (MP-10). Vive en la
@@ -26,9 +26,7 @@ export function buildOAuthDeps(): OAuthDeps {
     testMode: process.env.MP_OAUTH_TEST_MODE === "true",
     clientId: process.env.MP_OAUTH_CLIENT_ID || null,
     clientSecret: process.env.MP_OAUTH_CLIENT_SECRET || null,
-    // El panel vive en www.smaalacarta.com.ar/admin (rewrite desde landing/): es el dominio registrado en la
-    // aplicación de Mercado Pago.
-    siteOrigin: "https://www.smaalacarta.com.ar",
+    siteOrigin: SITE_ORIGIN,
 
     async isBusinessEnabled(businessId) {
       const { data, error } = await supabase
