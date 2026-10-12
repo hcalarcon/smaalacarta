@@ -62,6 +62,15 @@ export async function listCouriers(): Promise<CourierSummary[]> {
   return withEmails(supabase, (data ?? []) as unknown as CourierRow[]);
 }
 
+// Solo el nombre, con la sesión de quien llama: el repartidor lee su propia fila (ENVIO-3).
+export async function getCourierName(id: string): Promise<string | null> {
+  const supabase = await createClient();
+
+  const { data } = await supabase.from("couriers").select("name").eq("id", id).maybeSingle();
+
+  return data?.name ?? null;
+}
+
 export async function getCourier(id: string): Promise<CourierSummary | null> {
   const supabase = await createClient();
 

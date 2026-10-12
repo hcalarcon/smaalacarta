@@ -89,7 +89,7 @@ export async function updateBusinessPlan(
   return { ok: true };
 }
 
-// El envío con Repartos al Toque de un negocio (ENVIO-2 y 18). Igual que el plan: el trigger
+// El envío con repartidores de un negocio (ENVIO-2 y 18). Igual que el plan: el trigger
 // `businesses_guard_admin_columns` es quien exige superadmin.
 export async function updateCourierDelivery(
   businessId: string,

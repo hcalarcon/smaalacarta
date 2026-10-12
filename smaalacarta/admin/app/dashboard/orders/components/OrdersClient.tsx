@@ -408,7 +408,7 @@ export default function OrdersClient({
             })}
           </div>
 
-          <SettlementSummary orders={orders} />
+          <SettlementSummary orders={orders} couriers={couriers} />
 
           <OrdersHistory
             orders={byColumn("cerrados")}

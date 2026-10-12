@@ -8,7 +8,7 @@ import SubmitButton from "@/components/ui/SubmitButton";
 
 const initialState: SuperAdminFormState = {};
 
-// El envío con Repartos al Toque lo habilita solo el equipo de SMA a la Carta (ENVIO-2 y 18).
+// El envío con repartidores lo habilita solo el equipo de SMA a la Carta (ENVIO-2 y 18).
 export default function CourierDeliveryForm({
   businessId,
   courierDelivery,
@@ -27,7 +27,7 @@ export default function CourierDeliveryForm({
 
       <label className="flex items-center gap-2 text-sm font-medium">
         <input type="checkbox" name="courierDelivery" defaultChecked={courierDelivery} />
-        Envío con Repartos al Toque
+        Envío con repartidores
       </label>
       <p className="text-sm text-stone-500">
         Si lo marcás, el menú de este negocio ofrece elegir el barrio al pedir con entrega a domicilio

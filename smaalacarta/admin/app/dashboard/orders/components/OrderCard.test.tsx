@@ -128,6 +128,39 @@ describe("rendición del efectivo — ENVIO-43", () => {
     expect(text).not.toContain("9.999");
   });
 
+  it("el resumen se titula por repartidores y separa lo de cada uno si hay varios — ENVIO-127", () => {
+    const couriers = [
+      { id: "c1", name: "Repartos al Toque" },
+      { id: "c2", name: "Moto Express" },
+    ] as never;
+    render(
+      <SettlementSummary
+        couriers={couriers}
+        orders={[
+          delivered({ id: "1", total: 8000, courier_id: "c1" }),
+          delivered({ id: "2", total: 2000, courier_id: "c2" }),
+        ]}
+      />,
+    );
+
+    const region = screen.getByRole("region", { name: "Rendiciones de repartidores" });
+    expect(region.textContent).not.toMatch(/Rendiciones de Repartos al Toque/);
+    const text = region.textContent!.replace(/\s/g, " ");
+    expect(text).toMatch(/Repartos al Toque.*\$ 8\.000/);
+    expect(text).toMatch(/Moto Express.*\$ 2\.000/);
+  });
+
+  it("con un solo repartidor no repite su nombre — ENVIO-127", () => {
+    render(
+      <SettlementSummary
+        couriers={[{ id: "c1", name: "Moto Express" }] as never}
+        orders={[delivered({ id: "1", total: 8000, courier_id: "c1" })]}
+      />,
+    );
+
+    expect(screen.queryByText("Moto Express")).toBeNull();
+  });
+
   it("el resumen no aparece si no hay efectivo con envío", () => {
     const { container } = render(<SettlementSummary orders={[delivered({ payment: "transferencia" })]} />);
     expect(container.textContent).toBe("");
