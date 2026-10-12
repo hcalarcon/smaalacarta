@@ -137,6 +137,8 @@ beforeAll(async () => {
       select '${OTRO_COURIER}', id from delivery_zones where name = 'Zona ajena';
 
     -- Ana envía a todas las zonas (el negocio se creó después de la migración, que ya no lo ve).
+    -- Con el envío activo, la base ya les cargó todas las zonas (ENVIO-128): se parte de cero.
+    delete from business_delivery_zones;
     insert into business_delivery_zones (business_id, zone_id)
       select '${NEG_ANA}', id from delivery_zones;
   `);

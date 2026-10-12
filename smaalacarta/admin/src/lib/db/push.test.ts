@@ -91,6 +91,8 @@ beforeAll(async () => {
     insert into courier_users (courier_id, user_id) values ('7a0c0e00-0000-4000-8000-000000000002', '${MOTO_USER}');
     insert into courier_zone_coverage (courier_id, zone_id)
       select '7a0c0e00-0000-4000-8000-000000000002', id from delivery_zones where name = 'Cantera';
+    -- Con el envío activo, la base ya les cargó todas las zonas (ENVIO-128): se parte de cero.
+    delete from business_delivery_zones;
     insert into business_delivery_zones (business_id, zone_id)
       select '${NEG_ANA}', id from delivery_zones where name in ('Centro (hasta Av. Koessler)', 'Cantera');
   `);

@@ -1612,6 +1612,27 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
 - **ENVIO-127** Los textos del superadmin y del tablero ya no nombran a un solo repartidor: "Envío con repartidores"
   (habilitado y deshabilitado) y "Rendiciones de repartidores". Si el resumen de rendiciones junta pedidos de más de un
   repartidor, muestra un renglón por cada uno con su nombre ("Repartidor" si no se lo puede leer).
+- **ENVIO-128** Cuando un negocio pasa a `courier_delivery = true` (o nace con eso) y no tiene ninguna fila en
+  `business_delivery_zones`, la base le carga todas las zonas activas (trigger en `businesses`: vale para la pantalla
+  del superadmin, para SQL o para lo que venga). Si ya tenía zonas tildadas, no las toca.
+- **ENVIO-129** La migración `*_envio_listo_al_activar.sql` carga todas las zonas activas a los negocios que ya tenían
+  `courier_delivery = true` y cero zonas.
+- **ENVIO-130** `default_courier_id()` es el único lugar con el id de Repartos al Toque.
+  `effective_favorite_courier(negocio)` devuelve `business_settings.favorite_courier_id` y, si es nulo (o el negocio
+  no tiene fila de ajustes), Repartos al Toque mientras esté activo; si no, nulo. No escribe en `favorite_courier_id`.
+- **ENVIO-131** En `public_order_delivery` y `business_order_offers` la marca `favorito` y el orden usan el favorito
+  efectivo: sin favorito elegido, la oferta de Repartos al Toque sale primera y marcada "Recomendado por el local".
+- **ENVIO-132** El desempate a igual precio de `settle_courier_offers` (y por lo tanto el de `run_order_timers`) usa el
+  favorito efectivo.
+- **ENVIO-133** Con otro favorito elegido vale el del local. Con Repartos al Toque inactivo y sin favorito elegido, no
+  hay favorito.
+- **ENVIO-134** `business_delivery_options` entrega `default_courier` (`{id, name}` de Repartos al Toque si está
+  activo, o nulo). Configuración → Envíos muestra, sin favorito elegido, "Sin elegir: se recomienda {nombre}" (sin
+  nombre, "Sin elegir"); el nombre sale de ese dato.
+- **ENVIO-135** Si el local tiene el envío activo y ninguna zona tildada, Configuración → Envíos muestra arriba de la
+  sección: "Todavía no elegiste a qué zonas enviás: tus clientes no ven el envío".
+- **ENVIO-136** El detalle del negocio en el superadmin, junto a "Envío con repartidores", dice cuántas zonas tiene
+  tildadas el local ("39 zonas", "1 zona", "Sin zonas").
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 

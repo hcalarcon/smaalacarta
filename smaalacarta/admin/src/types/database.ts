@@ -1448,6 +1448,7 @@ export type Database = {
         }
         Returns: Json
       }
+      default_courier_id: { Args: never; Returns: string }
       default_images_unmatched: {
         Args: never
         Returns: {
@@ -1462,6 +1463,7 @@ export type Database = {
         Args: { p_endpoint: string }
         Returns: undefined
       }
+      effective_favorite_courier: { Args: { p_business: string }; Returns: string }
       is_open_now: {
         Args: { p_at: string; p_schedule: Json }
         Returns: boolean
