@@ -82,6 +82,8 @@ beforeAll(async () => {
     insert into products (id, business_id, category_id, name, price, active) values
       ('${CAFE}', '${NEG_ANA}', 'c1000000-0000-0000-0000-000000000001', 'Café', 1000, true);
     insert into courier_users (courier_id, user_id) values ('${COURIER}', '${REPA}');
+    -- Con el envío activo, la base ya les cargó todas las zonas (ENVIO-128): se parte de cero.
+    delete from business_delivery_zones;
     insert into business_delivery_zones (business_id, zone_id)
       select '${NEG_ANA}', id from delivery_zones;
   `);

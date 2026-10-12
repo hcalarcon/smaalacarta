@@ -74,6 +74,59 @@ describe("service worker del panel — ADMIN-PWA-10", () => {
     expect(sw.showNotification.mock.calls[0][0]).toBe("SMA a la Carta");
   });
 
+  it("el pedido nuevo y su recordatorio no se pueden ignorar: quedan, vibran y vuelven a sonar (ADMIN-PWA-36)", async () => {
+    for (const kind of ["local_new_order", "local_new_order_reminder"]) {
+      sw.showNotification.mockClear();
+
+      await sw.dispatch(
+        "push",
+        push({
+          title: "Pedido nuevo #0042",
+          body: "Lucía · Retiro en el local",
+          tag: "order-1-local_new_order",
+          url: "/admin/dashboard/orders",
+          kind,
+          urgent: true,
+          number: "0042",
+          total: "$12.500",
+        }),
+      );
+
+      expect(sw.showNotification).toHaveBeenCalledWith(
+        "Pedido nuevo #0042",
+        expect.objectContaining({
+          requireInteraction: true,
+          renotify: true,
+          silent: false,
+          vibrate: [300, 150, 300, 150, 300],
+          tag: "order-1-local_new_order",
+          body: "$12.500 · Lucía · Retiro en el local",
+        }),
+      );
+    }
+  });
+
+  it("un urgente sin tag igual lleva uno, porque renotify lo exige (ADMIN-PWA-36)", async () => {
+    await sw.dispatch("push", push({ title: "Pedido nuevo #7", body: "", urgent: true, kind: "local_new_order" }));
+
+    const options = sw.showNotification.mock.calls[0][1] as Record<string, unknown>;
+    expect(options.renotify).toBe(true);
+    expect(typeof options.tag).toBe("string");
+    expect(options.tag).toBeTruthy();
+  });
+
+  it("los demás avisos se muestran como siempre, sin insistir (ADMIN-PWA-36)", async () => {
+    await sw.dispatch(
+      "push",
+      push({ title: "¡Te eligieron!", body: "Ana Resto", tag: "order-1-courier_chosen", kind: "courier_chosen", urgent: false }),
+    );
+
+    const options = sw.showNotification.mock.calls[0][1] as Record<string, unknown>;
+    expect(options).not.toHaveProperty("requireInteraction");
+    expect(options).not.toHaveProperty("renotify");
+    expect(options).not.toHaveProperty("vibrate");
+  });
+
   it("al tocarlo enfoca una ventana abierta del panel y navega a la url", async () => {
     const focused = { navigate: vi.fn(async () => undefined) };
     const open = { url: `${SCOPE}dashboard`, focus: vi.fn(async () => focused) };

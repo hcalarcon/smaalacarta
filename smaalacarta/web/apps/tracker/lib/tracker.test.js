@@ -689,3 +689,31 @@ describe("chooseCourier — ENVIO-103 y SEGUIMIENTO-28", () => {
     });
   });
 });
+
+describe("nota por ítem — SEGUIMIENTO-36", () => {
+  const money = { format: (n) => `$${n}` };
+
+  it("muestra la nota del cliente bajo el ítem", () => {
+    const li = itemRow(document, { nombre: "Hamburguesa", cantidad: 1, precio: 1000, nota: "sin cheddar" }, money);
+
+    expect(li.querySelector(".item-nota").textContent).toBe("📝 sin cheddar");
+  });
+
+  it("sin nota (o vacía) no agrega nada", () => {
+    for (const nota of [undefined, null, "", "   ", 5]) {
+      const li = itemRow(document, { nombre: "Café", cantidad: 1, precio: 1000, nota }, money);
+      expect(li.querySelector(".item-nota")).toBeNull();
+    }
+  });
+
+  it("es texto: un HTML en la nota no se interpreta", () => {
+    const li = itemRow(
+      document,
+      { nombre: "Café", cantidad: 1, precio: 1000, nota: "<img src=x onerror=alert(1)>" },
+      money,
+    );
+
+    expect(li.querySelector("img")).toBeNull();
+    expect(li.querySelector(".item-nota").textContent).toBe("📝 <img src=x onerror=alert(1)>");
+  });
+});

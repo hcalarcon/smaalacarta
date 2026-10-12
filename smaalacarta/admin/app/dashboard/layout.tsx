@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 
+import OrderAlertsBar from "@/components/dashboard/OrderAlertsBar";
 import SuspendedBanner from "@/components/dashboard/SuspendedBanner";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { dashboardLinks } from "@/components/layout/nav-links";
@@ -72,6 +73,7 @@ export default async function DashboardLayout({
       quickLinks={quickLinks}
       showChangePassword={false}
       banner={current!.business!.active ? undefined : <SuspendedBanner />}
+      alertBar={orders ? <OrderAlertsBar /> : undefined}
       showAppControls
     >
       {children}

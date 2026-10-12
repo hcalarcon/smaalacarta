@@ -122,6 +122,8 @@ beforeAll(async () => {
     insert into courier_zone_coverage (courier_id, zone_id)
       select '${LEJOS}', id from delivery_zones where name = 'Oasis';
 
+    -- Con el envío activo, la base ya les cargó todas las zonas (ENVIO-128): se parte de cero.
+    delete from business_delivery_zones;
     insert into business_delivery_zones (business_id, zone_id)
       select '${NEG_ANA}', id from delivery_zones where name in ('Centro (hasta Av. Koessler)', 'Cantera', 'Oasis');
     insert into business_delivery_zones (business_id, zone_id)
@@ -494,7 +496,7 @@ describe("la elección automática — ENVIO-105 y 106", () => {
     expect(ev.rows).toHaveLength(1);
   });
 
-  it("a igual precio gana el favorito del local; sin favorito, la más vieja", async () => {
+  it("a igual precio gana el favorito del local; sin favorito elegido, Repartos al Toque; si ninguno es el favorito, la más vieja", async () => {
     await setFavorite(MOTO);
     const conFavorito = await envio();
     await offer(db, TOQUE_USER, conFavorito.id);
@@ -503,16 +505,30 @@ describe("la elección automática — ENVIO-105 y 106", () => {
     await delivery(conFavorito.code);
     expect((await row(conFavorito.id)).courier_id).toBe(MOTO);
 
+    // Sin favorito elegido vale el de por defecto (ENVIO-130), aunque la otra oferta sea más vieja.
     await setFavorite(null);
-    const sinFavorito = await envio();
-    await offer(db, MOTO_USER, sinFavorito.id);
+    const porDefecto = await envio();
+    await offer(db, MOTO_USER, porDefecto.id);
     await db.exec(
-      `update courier_offers set created_at = created_at - interval '10 seconds' where order_id = '${sinFavorito.id}'`,
+      `update courier_offers set created_at = created_at - interval '10 seconds' where order_id = '${porDefecto.id}'`,
     );
-    await offer(db, TOQUE_USER, sinFavorito.id);
-    await age(sinFavorito.id, 6);
-    await delivery(sinFavorito.code);
-    expect((await row(sinFavorito.id)).courier_id).toBe(MOTO);
+    await offer(db, TOQUE_USER, porDefecto.id);
+    await age(porDefecto.id, 6);
+    await delivery(porDefecto.code);
+    expect((await row(porDefecto.id)).courier_id).toBe(TOQUE);
+
+    // El favorito elegido (Moto) no ofertó: entre Lejos y Toque, la más vieja.
+    await setFavorite(MOTO);
+    const ninguno = await envio("ana", "Oasis");
+    await offer(db, LEJOS_USER, ninguno.id);
+    await db.exec(
+      `update courier_offers set created_at = created_at - interval '10 seconds' where order_id = '${ninguno.id}'`,
+    );
+    await offer(db, TOQUE_USER, ninguno.id);
+    await age(ninguno.id, 6);
+    await delivery(ninguno.code);
+    expect((await row(ninguno.id)).courier_id).toBe(LEJOS);
+    await setFavorite(null);
   });
 
   it("el favorito no le gana a una oferta más barata", async () => {
@@ -703,14 +719,14 @@ describe("lo que ve el cliente — ENVIO-110", () => {
     expect(elegido).not.toHaveProperty("ofertas");
   });
 
-  it("las ordena por precio y, a igual precio, la más vieja primero; el cierre es 5 minutos después de la primera", async () => {
+  it("las ordena con el favorito primero (por defecto, Repartos al Toque) y después por precio y antigüedad; el cierre es 5 minutos después de la primera", async () => {
     const o = await envio();
     await offer(db, MOTO_USER, o.id);
     await age(o.id, 1);
     await offer(db, TOQUE_USER, o.id);
 
     const d = await delivery(o.code);
-    expect(d.ofertas!.map((x) => x.repartidor)).toEqual(["Moto Express", "Repartos al Toque"]);
+    expect(d.ofertas!.map((x) => x.repartidor)).toEqual(["Repartos al Toque", "Moto Express"]);
 
     const first = (await db.query<{ t: Date }>("select min(created_at) t from courier_offers where order_id = $1", [o.id]))
       .rows[0].t;

@@ -30,6 +30,9 @@ type DashboardShellProps = {
   // Aviso de negocio suspendido (ADMIN-SUSPENSION-1): se ve en todo el panel,
   // no aplica a /superadmin.
   banner?: React.ReactNode;
+  // Barra fija arriba de todo el panel (ADMIN-PEDIDOS-30): va dentro del header pegajoso para que no se
+  // vaya al hacer scroll. Solo la pasa el panel del negocio con pedidos por menú.
+  alertBar?: React.ReactNode;
   // "Instalar app" y "Activar avisos" en el header, y el registro del service worker (ADMIN-PWA-16).
   // Los pasan el panel del negocio y el del repartidor; /superadmin no.
   showAppControls?: boolean;
@@ -46,6 +49,7 @@ export default function DashboardShell({
   quickLinks,
   showChangePassword = true,
   banner,
+  alertBar,
   showAppControls = false,
   children,
 }: DashboardShellProps) {
@@ -112,6 +116,7 @@ export default function DashboardShell({
 
       <div className="lg:pl-60">
         <header className="sticky top-0 z-30 border-b border-line bg-white/90 backdrop-blur">
+          {alertBar}
           <div className="flex items-center justify-between gap-4 px-4 py-3 md:px-6 lg:px-8">
             <div className="flex min-w-0 items-center gap-3">
               <button

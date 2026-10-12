@@ -72,6 +72,7 @@ export type Database = {
       business_settings: {
         Row: {
           address: string | null
+          allow_item_notes: boolean
           allow_scheduled_orders: boolean
           business_id: string
           closed_message: string | null
@@ -105,6 +106,7 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          allow_item_notes?: boolean
           allow_scheduled_orders?: boolean
           business_id: string
           closed_message?: string | null
@@ -138,6 +140,7 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          allow_item_notes?: boolean
           allow_scheduled_orders?: boolean
           business_id?: string
           closed_message?: string | null
@@ -758,6 +761,7 @@ export type Database = {
           business_id: string
           id: string
           name: string
+          note: string | null
           options: Json | null
           order_id: string
           product_id: string | null
@@ -770,6 +774,7 @@ export type Database = {
           business_id: string
           id?: string
           name: string
+          note?: string | null
           options?: Json | null
           order_id: string
           product_id?: string | null
@@ -782,6 +787,7 @@ export type Database = {
           business_id?: string
           id?: string
           name?: string
+          note?: string | null
           options?: Json | null
           order_id?: string
           product_id?: string | null
@@ -838,6 +844,8 @@ export type Database = {
           delivery_zone_name: string | null
           id: string
           mp_payment_id: string | null
+          new_order_reminded_at: string | null
+          new_order_reminders: number
           no_offers_alerted_at: string | null
           notes: string | null
           offered_at: string | null
@@ -878,6 +886,8 @@ export type Database = {
           delivery_zone_name?: string | null
           id?: string
           mp_payment_id?: string | null
+          new_order_reminded_at?: string | null
+          new_order_reminders?: number
           no_offers_alerted_at?: string | null
           notes?: string | null
           offered_at?: string | null
@@ -918,6 +928,8 @@ export type Database = {
           delivery_zone_name?: string | null
           id?: string
           mp_payment_id?: string | null
+          new_order_reminded_at?: string | null
+          new_order_reminders?: number
           no_offers_alerted_at?: string | null
           notes?: string | null
           offered_at?: string | null
@@ -968,8 +980,8 @@ export type Database = {
           expires_at: string | null
           key_version: number
           mp_user_id: number
-          refreshing_until: string | null
           refresh_token_enc: string | null
+          refreshing_until: string | null
           scope: string | null
           status: string
           updated_at: string
@@ -982,8 +994,8 @@ export type Database = {
           expires_at?: string | null
           key_version: number
           mp_user_id: number
-          refreshing_until?: string | null
           refresh_token_enc?: string | null
+          refreshing_until?: string | null
           scope?: string | null
           status?: string
           updated_at?: string
@@ -996,8 +1008,8 @@ export type Database = {
           expires_at?: string | null
           key_version?: number
           mp_user_id?: number
-          refreshing_until?: string | null
           refresh_token_enc?: string | null
+          refreshing_until?: string | null
           scope?: string | null
           status?: string
           updated_at?: string
@@ -1333,7 +1345,6 @@ export type Database = {
         Returns: undefined
       }
       build_public_menu: { Args: { p_business_id: string }; Returns: Json }
-      business_has_mp: { Args: { p_business_id: string }; Returns: boolean }
       business_assign_courier: {
         Args: { p_courier_id: string; p_note?: string; p_order_id: string }
         Returns: undefined
@@ -1343,11 +1354,13 @@ export type Database = {
         Returns: undefined
       }
       business_delivery_options: { Args: never; Returns: Json }
+      business_has_mp: { Args: { p_business_id: string }; Returns: boolean }
       business_order_offers: { Args: never; Returns: Json }
       business_self_delivery: {
         Args: { p_order_id: string }
         Returns: undefined
       }
+      clean_item_note: { Args: { p_note: string }; Returns: string }
       confirm_order_payment: {
         Args: {
           p_amount: number
@@ -1448,6 +1461,7 @@ export type Database = {
         }
         Returns: Json
       }
+      default_courier_id: { Args: never; Returns: string }
       default_images_unmatched: {
         Args: never
         Returns: {
@@ -1461,6 +1475,10 @@ export type Database = {
       delete_push_subscription: {
         Args: { p_endpoint: string }
         Returns: undefined
+      }
+      effective_favorite_courier: {
+        Args: { p_business: string }
+        Returns: string
       }
       is_open_now: {
         Args: { p_at: string; p_schedule: Json }
@@ -1520,6 +1538,7 @@ export type Database = {
       save_business_settings: {
         Args: {
           p_address: string
+          p_allow_item_notes?: boolean
           p_allow_scheduled_orders: boolean
           p_business_id: string
           p_closed_message: string

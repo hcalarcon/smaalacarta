@@ -71,12 +71,40 @@ describe("Configuración → Envíos — ENVIO-58", () => {
     renderSection();
 
     const names = within(select()).getAllByRole("option").map((option) => option.textContent);
-    expect(names).toEqual(["Sin favorito", "Repartos al Toque"]);
+    expect(names).toEqual(["Sin elegir", "Repartos al Toque"]);
 
     fireEvent.click(zone("Cantera"));
 
     const after = within(select()).getAllByRole("option").map((option) => option.textContent);
-    expect(after).toEqual(["Sin favorito", "Repartos al Toque", "Moto Express"]);
+    expect(after).toEqual(["Sin elegir", "Repartos al Toque", "Moto Express"]);
+  });
+
+  it("sin favorito elegido dice a quién se recomienda; el nombre sale del dato — ENVIO-134", () => {
+    renderSection({ ...options, default_courier: { id: "toque", name: "Repartos al Toque" } });
+    expect(within(select()).getAllByRole("option")[0].textContent).toBe(
+      "Sin elegir: se recomienda Repartos al Toque",
+    );
+
+    cleanup();
+    renderSection({ ...options, default_courier: { id: "moto", name: "Moto Express" } });
+    expect(within(select()).getAllByRole("option")[0].textContent).toBe("Sin elegir: se recomienda Moto Express");
+  });
+
+  it("avisa si el local no tiene ninguna zona tildada y deja de avisar al tildar una — ENVIO-135", () => {
+    const sinZonas = { ...options, zones: options.zones.map((z) => ({ ...z, selected: false })) };
+    renderSection(sinZonas);
+
+    expect(
+      screen.getByText("Todavía no elegiste a qué zonas enviás: tus clientes no ven el envío."),
+    ).toBeTruthy();
+
+    fireEvent.click(zone("Cantera"));
+    expect(screen.queryByText(/Todavía no elegiste a qué zonas enviás/)).toBeNull();
+  });
+
+  it("con zonas tildadas no muestra el aviso — ENVIO-135", () => {
+    renderSection();
+    expect(screen.queryByText(/Todavía no elegiste a qué zonas enviás/)).toBeNull();
   });
 
   it("ya no hay minutos para el favorito: dice que su oferta le aparece primero al cliente", () => {
@@ -87,7 +115,7 @@ describe("Configuración → Envíos — ENVIO-58", () => {
     expect(screen.getByText(/Recomendado por el local/)).toBeTruthy();
   });
 
-  it("al desmarcar la zona que cubría al favorito, vuelve a Sin favorito", () => {
+  it("al desmarcar la zona que cubría al favorito, vuelve a Sin elegir", () => {
     renderSection({ ...options, favorite_id: "toque" });
     expect(select().value).toBe("toque");
 

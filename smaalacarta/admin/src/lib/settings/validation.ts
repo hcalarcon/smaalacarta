@@ -47,6 +47,8 @@ export type SettingsInput = {
   headerImageY: number;
   // Ilustraciones de muestra en los productos sin foto (ADMIN-CONFIG-31).
   showDefaultImages: boolean;
+  // Campo de nota en cada producto del pedido (ADMIN-CONFIG-48).
+  allowItemNotes: boolean;
   logoUrl: string;
   // El PDF del menú (Etapa 6e): independiente de `published`, no se muestra en
   // el menú digital, solo se linkea aparte (QR).
@@ -89,6 +91,7 @@ export const DEFAULT_SETTINGS: SettingsInput = {
   headerImageX: CENTER,
   headerImageY: CENTER,
   showDefaultImages: true,
+  allowItemNotes: true,
   logoUrl: "",
   menuPdfUrl: "",
   schedule: {},

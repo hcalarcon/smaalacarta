@@ -7,6 +7,8 @@ export type DeliveryOptions = {
   zones: { id: string; name: string; price: number; selected: boolean; covered: boolean }[];
   couriers: { id: string; name: string; whatsapp: string | null; zone_ids: string[] }[];
   favorite_id: string | null;
+  // El repartidor que se recomienda si el local no elige uno (Repartos al Toque, si está activo): ENVIO-134.
+  default_courier?: { id: string; name: string } | null;
 };
 
 // Lo que edita la pantalla.
@@ -34,7 +36,7 @@ export function favoriteCandidates(options: DeliveryOptions, zoneIds: string[]):
   return options.couriers.filter((courier) => courier.zone_ids.some((id) => marked.has(id)));
 }
 
-// Si el favorito ya no cubre ninguna zona marcada, la pantalla vuelve a "Sin favorito": no se deja
+// Si el favorito ya no cubre ninguna zona marcada, la pantalla vuelve a "Sin elegir": no se deja
 // elegido a alguien que la base va a rechazar. Las zonas van en el orden de la lista.
 export function normalizeDeliveryInput(input: DeliveryInput, options: DeliveryOptions): DeliveryInput {
   const marked = new Set(input.zoneIds);

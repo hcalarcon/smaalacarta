@@ -131,6 +131,8 @@ beforeAll(async () => {
       select '${LEJOS}', id from delivery_zones where name = 'Oasis';
 
     -- Ana envía a Centro, Cantera y Oasis; Beto, a Cantera.
+    -- Con el envío activo, la base ya les cargó todas las zonas (ENVIO-128): se parte de cero.
+    delete from business_delivery_zones;
     insert into business_delivery_zones (business_id, zone_id)
       select '${NEG_ANA}', id from delivery_zones where name in ('Centro (hasta Av. Koessler)', 'Cantera', 'Oasis');
     insert into business_delivery_zones (business_id, zone_id)

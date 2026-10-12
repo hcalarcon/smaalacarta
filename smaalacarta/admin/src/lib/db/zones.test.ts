@@ -90,6 +90,8 @@ beforeAll(async () => {
     insert into courier_zone_coverage (courier_id, zone_id)
       select '${INACTIVO}', id from delivery_zones where name = 'Oasis';
   `);
+  // Con el envío activo, la base ya les cargó todas las zonas (ENVIO-128): se parte de cero.
+  await db.exec("delete from business_delivery_zones");
   await resetAna();
   await db.exec(`
     insert into business_delivery_zones (business_id, zone_id)

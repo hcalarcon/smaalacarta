@@ -20,6 +20,7 @@ import { isPaymentPending, PAYMENT_BLOCK_REASON } from "@/lib/orders/payment";
 import { orderBadge } from "@/lib/orders/scheduled";
 import { isFinal, primaryAction, STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
+import ItemNote from "@/components/ui/ItemNote";
 
 const SHOWN_ITEMS = 3;
 
@@ -139,6 +140,7 @@ export default function OrderCard({
                 {line}
               </span>
             ))}
+            <ItemNote note={item.note} />
           </li>
         ))}
         {extra > 0 ? <li className="text-stone-400">y {extra} más…</li> : null}

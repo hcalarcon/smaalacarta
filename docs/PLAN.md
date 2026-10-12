@@ -668,6 +668,46 @@ van en la parte B. Requisitos en `docs/SPEC.md` (ADMIN-OPCIONES-1 a 16). Migraci
       del propio sitio. Los `.svg` se borran cuando la migración esté en todas las bases
 - [ ] [por asignar] Fotos propias de cada producto o por rubro, subidas desde `/superadmin/imagenes`
 
+## Etapa 6r — Nota por producto del pedido
+
+El cliente puede dejar una nota por producto ("hamburguesa grande: sin cheddar y con mostaza"): texto
+libre de hasta 140 caracteres, sin saltos de línea. Es un pedido al local, no una promesa. El negocio la
+puede apagar en Configuración. Requisitos en `docs/SPEC.md` (PUBLICO-62 a 66, SEGUIMIENTO-36,
+ADMIN-CONFIG-48, ADMIN-PEDIDOS-22 y 23). Migración `20261029000000_notas_por_item.sql`.
+
+- [x] [herni] Migración: `order_items.note` (140), `business_settings.allow_item_notes`,
+      `clean_item_note`, y `create_public_order_base`, `build_public_menu` (`config.notasPorItem`),
+      `public_order_tracking`, `create_manual_order`, `courier_orders` y `save_business_settings` con la nota
+- [x] [herni] Menú interactivo: campo en la hoja de opciones y en cada línea del carrito (solo con
+      `config.notasPorItem`), la nota entra en la firma de la línea, viaja en `buildOrderItems` y sale
+      en el mensaje de WhatsApp; textos en es/en/pt
+- [x] [herni] Panel: la nota destacada en el tablero, el detalle, el historial y el panel del repartidor;
+      interruptor "Permitir notas en cada producto" en Entrega y pago
+- [x] [herni] Seguimiento del cliente: la nota bajo cada ítem, con `textContent`
+- [ ] [herni] **Después de mergear**: `db:push` de la migración y `db:types`; probar a mano un pedido con
+      notas (menú → tablero → seguimiento → repartidor) y con el interruptor apagado
+
+## Etapa 6s — Aviso fuerte de pedido nuevo
+
+Que un pedido nuevo no pase desapercibido para el local, con el panel abierto o cerrado. Requisitos en
+`docs/SPEC.md` (ADMIN-PEDIDOS-24 a 30 y ADMIN-PWA-33 a 37). Migración
+`20261030000000_recordatorios_pedido_nuevo.sql`.
+
+- [x] [herni] Recordatorios push desde el servidor: `run_order_timers()` suma uno cada 2 minutos por pedido
+      sin atender, hasta 5 (`orders.new_order_reminders`, `new_order_reminded_at`); evento
+      `local_new_order_reminder` y su texto
+- [x] [herni] Notificación persistente: el pedido nuevo y su recordatorio con `requireInteraction`,
+      vibración y `renotify`; urgencia alta y TTL de 60 s en el servidor
+- [x] [herni] Panel abierto: tarjeta a pantalla completa con "Aceptar", alarma en bucle que sube de volumen a
+      los 60 s, "Silenciar 5 min", voz "Nuevo pedido", título parpadeante, globito en el favicon y en la app
+      instalada, y barra roja fija en todo el panel del negocio si el sonido o los avisos no están activos
+- [ ] [herni] **Después de mergear**: `db:push` de la migración y `db:types`; probar a mano con el panel
+      abierto, con la pestaña en segundo plano y con la app instalada en el celular
+- [ ] [por asignar] **Aviso por Telegram**: un bot gratuito al que el local vincula su chat, como canal
+      independiente del navegador (hoy el aviso depende del permiso de notificaciones y de que el
+      navegador no esté cerrado por el sistema). Pide decidir: vinculación (código de un solo uso),
+      dónde se guarda el `chat_id` (por persona, como `push_subscriptions`) y quién crea y paga el bot
+
 ## Etapa 7 — Pendientes técnicos (backlog)
 
 - [ ] [por asignar] **Marketplace** ("un lugar donde encontrar de todo para

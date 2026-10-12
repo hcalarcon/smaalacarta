@@ -53,7 +53,7 @@ export type CourierPanelOrder = {
   pago: string | null;
   pago_estado: string;
   notas: string | null;
-  items: { nombre: string; cantidad: number; precio: number; opciones: OrderItemOption[] | null }[];
+  items: { nombre: string; cantidad: number; precio: number; opciones: OrderItemOption[] | null; nota?: string | null }[];
   envio: {
     zona: string | null;
     precio_lista: number | null;

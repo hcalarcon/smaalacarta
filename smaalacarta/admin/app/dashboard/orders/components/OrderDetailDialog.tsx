@@ -14,6 +14,7 @@ import { isPaymentPending, PAYMENT_BLOCK_REASON } from "@/lib/orders/payment";
 import { orderBadge } from "@/lib/orders/scheduled";
 import { nextStatuses, STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
+import ItemNote from "@/components/ui/ItemNote";
 
 const label = (status: string) => STATUS_LABELS[status as OrderStatus] ?? status;
 
@@ -141,6 +142,9 @@ export default function OrderDetailDialog({
                   {line}
                 </p>
               ))}
+              <div className="pl-4">
+                <ItemNote note={item.note} />
+              </div>
             </li>
           ))}
         </ul>

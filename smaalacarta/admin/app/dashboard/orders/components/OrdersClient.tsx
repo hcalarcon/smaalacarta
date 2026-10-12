@@ -1,9 +1,10 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import ManualOrderDialog from "./ManualOrderDialog";
+import NewOrderAlert from "./NewOrderAlert";
 import OrderCard from "./OrderCard";
 import OrderDetailDialog from "./OrderDetailDialog";
 import OrdersHistory from "./OrdersHistory";
@@ -17,8 +18,28 @@ import {
 } from "../actions";
 import type { Order } from "@/lib/db/orders";
 import type { OrderCourier, OrderOffers } from "@/lib/orders/courier";
-import { newPendingIds, pendingCount, shouldRemind, tabTitle } from "@/lib/orders/alerts";
-import { playNewOrderSound } from "@/lib/orders/sound";
+import { newPendingIds, tabTitle } from "@/lib/orders/alerts";
+import { clearAppBadgeSafe, restoreFavicon, setAppBadgeSafe, updateFavicon } from "@/lib/orders/badge";
+import { ALARM_LOOP_MS, playAlarmSound, playNewOrderSound } from "@/lib/orders/sound";
+import {
+  SOUND_CHANGE_EVENT,
+  isAudioReady,
+  readSoundPref,
+  saveSoundPref,
+  sharedAudioContext,
+  unlockSharedAudio,
+} from "@/lib/orders/sound-pref";
+import { cancelSpeech, speakNewOrder } from "@/lib/orders/speech";
+import {
+  MUTE_MS,
+  VOICE_REPEAT_MS,
+  alarmVolume,
+  blinkTitle,
+  isUnattended,
+  oldestWaitingMs,
+  shouldBlink,
+  unattendedOrders,
+} from "@/lib/orders/urgent-alert";
 import { compareForBoard } from "@/lib/orders/scheduled";
 import { boardColumn, type BoardColumn } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
@@ -32,26 +53,23 @@ const COLUMNS: { key: BoardColumn; title: string; hint: string }[] = [
 ];
 
 const REFRESH_MS = 20_000;
-const REMIND_MS = 30_000;
-// Cada cuánto se mira si toca repetir el aviso (el intervalo real es REMIND_MS).
-const REMIND_CHECK_MS = 5_000;
+const BLINK_MS = 1_000;
 const CLOSED_SHOWN = 10;
-const SOUND_PREF_KEY = "sma-orders-sound";
 
-function readSoundPref(): boolean {
-  try {
-    return localStorage.getItem(SOUND_PREF_KEY) === "1";
-  } catch {
-    return false;
-  }
+// `prefers-reduced-motion`: sin parpadeo del título. En el servidor y sin `matchMedia`, no.
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+function subscribeReducedMotion(onChange: () => void) {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") return () => {};
+  const query = window.matchMedia(REDUCED_MOTION_QUERY);
+  query.addEventListener?.("change", onChange);
+  return () => query.removeEventListener?.("change", onChange);
 }
 
-function saveSoundPref(on: boolean) {
-  try {
-    localStorage.setItem(SOUND_PREF_KEY, on ? "1" : "0");
-  } catch {
-    // Modo privado: la preferencia no se recuerda, el sonido sigue funcionando.
-  }
+function reducedMotionSnapshot() {
+  return typeof window !== "undefined" && typeof window.matchMedia === "function"
+    ? window.matchMedia(REDUCED_MOTION_QUERY).matches
+    : false;
 }
 
 export default function OrdersClient({
@@ -86,57 +104,106 @@ export default function OrdersClient({
 
   // Sonido: la preferencia se lee en el navegador (no en el servidor) para que el primer
   // render coincida. `audioReady` dice si el navegador ya dejó sonar: tras recargar hay
-  // que volver a tocar el botón aunque la preferencia siga activada.
+  // que volver a tocar el botón aunque la preferencia siga activada. El contexto de audio es el
+  // compartido con la barra de avisos del panel (`sound-pref.ts`).
   const [soundOn, setSoundOn] = useState(false);
   const [audioReady, setAudioReady] = useState(false);
-  const audioRef = useRef<AudioContext | null>(null);
   const soundOnRef = useRef(false);
-  // Los pedidos que ya estaban al abrir no suenan.
+  // Los pedidos que ya estaban al abrir no suenan de golpe: la alarma arranca al activar el sonido.
   const seenIds = useRef<Set<string>>(new Set(orders.map((o) => o.id)));
-  const lastBeepAt = useRef<number | null>(null);
-
-  function beep(ctx: AudioContext) {
-    lastBeepAt.current = Date.now();
-    playNewOrderSound(ctx);
-  }
+  // Hasta cuándo está silenciada la alarma (ADMIN-PEDIDOS-25).
+  const [mutedUntil, setMutedUntil] = useState<number | null>(null);
+  // Pedidos cuya tarjeta se cerró con "Ver pedidos": no vuelve a aparecer por ellos.
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => new Set());
+  const [blinkPhase, setBlinkPhase] = useState(true);
+  const reducedMotion = useSyncExternalStore(subscribeReducedMotion, reducedMotionSnapshot, () => false);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage solo existe en el navegador
-    setSoundOn(readSoundPref());
+    function sync() {
+      setSoundOn(readSoundPref());
+      setAudioReady(isAudioReady());
+    }
+
+    sync();
+    window.addEventListener(SOUND_CHANGE_EVENT, sync);
+    return () => window.removeEventListener(SOUND_CHANGE_EVENT, sync);
   }, []);
 
   useEffect(() => {
     soundOnRef.current = soundOn;
   }, [soundOn]);
 
+  const unattended = unattendedOrders(orders);
+  const count = unattended.length;
+  const ordersRef = useRef(orders);
+  const alarmActive = soundOn && audioReady && count > 0 && mutedUntil === null;
+  // Si la alarma ya estaba sonando en el render anterior (se actualiza al final de los efectos).
+  const alarmWasActive = useRef(false);
+
+  // Un pedido nuevo mientras la alarma ya suena: se oye enseguida, sin esperar la próxima vuelta.
   useEffect(() => {
-    const fresh = newPendingIds(seenIds.current, orders);
+    ordersRef.current = orders;
+
+    const fresh = newPendingIds(seenIds.current, orders, isUnattended);
     orders.forEach((o) => seenIds.current.add(o.id));
 
-    const ctx = audioRef.current;
-    if (fresh.length > 0 && soundOnRef.current && ctx?.state === "running") {
-      beep(ctx);
+    const ctx = sharedAudioContext();
+    if (fresh.length > 0 && alarmWasActive.current && ctx?.state === "running") {
+      playAlarmSound(ctx, alarmVolume(oldestWaitingMs(orders, Date.now())));
     }
   }, [orders]);
 
+  useEffect(() => {
+    alarmWasActive.current = alarmActive;
+  }, [alarmActive]);
+
   async function unlockAudio(): Promise<boolean> {
-    try {
-      const Ctor =
-        window.AudioContext ??
-        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!Ctor) return false;
-
-      audioRef.current ??= new Ctor();
-      if (audioRef.current.state !== "running") await audioRef.current.resume();
-
-      const ready = audioRef.current.state === "running";
-      setAudioReady(ready);
-      if (ready) beep(audioRef.current);
-      return ready;
-    } catch {
-      return false;
-    }
+    const ctx = await unlockSharedAudio();
+    setAudioReady(ctx !== null);
+    if (ctx) playNewOrderSound(ctx);
+    return ctx !== null;
   }
+
+  // Silenciar: la alarma y la voz callan 5 minutos y vuelven solas.
+  function silence() {
+    setMutedUntil(Date.now() + MUTE_MS);
+  }
+
+  useEffect(() => {
+    if (mutedUntil === null) return;
+
+    const wait = mutedUntil - Date.now();
+    const id = setTimeout(() => setMutedUntil(null), Math.max(0, wait));
+    return () => clearTimeout(id);
+  }, [mutedUntil]);
+
+  // La alarma en bucle mientras haya pedidos sin atender, más fuerte pasados los 60 s (ADMIN-PEDIDOS-26).
+  useEffect(() => {
+    if (!alarmActive) return;
+
+    function play() {
+      const ctx = sharedAudioContext();
+      if (ctx?.state !== "running") return;
+      playAlarmSound(ctx, alarmVolume(oldestWaitingMs(ordersRef.current, Date.now())));
+    }
+
+    play();
+    const id = setInterval(play, ALARM_LOOP_MS);
+    return () => clearInterval(id);
+  }, [alarmActive]);
+
+  // La voz, mientras suena la alarma: "Nuevo pedido" ahora y cada 30 s (ADMIN-PEDIDOS-27).
+  useEffect(() => {
+    if (!alarmActive) return;
+
+    speakNewOrder();
+    const id = setInterval(speakNewOrder, VOICE_REPEAT_MS);
+
+    return () => {
+      clearInterval(id);
+      cancelSpeech();
+    };
+  }, [alarmActive]);
 
   async function toggleSound() {
     if (soundOn && audioReady) {
@@ -185,22 +252,6 @@ export default function OrdersClient({
     return () => clearInterval(id);
   }, [nextDeadline, router]);
 
-  const pending = pendingCount(orders);
-
-  // Repite el sonido mientras haya pendientes sin atender.
-  useEffect(() => {
-    if (!soundOn || !audioReady || pending === 0) return;
-
-    const id = setInterval(() => {
-      const ctx = audioRef.current;
-      if (ctx?.state === "running" && shouldRemind(lastBeepAt.current, Date.now(), pending, REMIND_MS)) {
-        beep(ctx);
-      }
-    }, REMIND_CHECK_MS);
-
-    return () => clearInterval(id);
-  }, [soundOn, audioReady, pending]);
-
   // Pantalla encendida mientras el sonido esté activado. El navegador suelta el bloqueo
   // al ocultarse la pestaña, así que se vuelve a pedir al volver a verla.
   useEffect(() => {
@@ -239,17 +290,53 @@ export default function OrdersClient({
     };
   }, [soundOn, audioReady]);
 
-  // Título de la pestaña: la cantidad de pendientes, sin parpadeo.
+  // Título de la pestaña: con pedidos sin atender parpadea entre "(n) NUEVO PEDIDO" y el título normal
+  // (ADMIN-PEDIDOS-12 y 27). Con `prefers-reduced-motion` queda fijo con la cantidad.
   const originalTitle = useRef<string | null>(null);
+  const blinking = shouldBlink(count, reducedMotion);
+
+  useEffect(() => {
+    if (!blinking) return;
+
+    const id = setInterval(() => setBlinkPhase((phase) => !phase), BLINK_MS);
+    return () => clearInterval(id);
+  }, [blinking]);
+
   useEffect(() => {
     originalTitle.current ??= document.title;
-    document.title = tabTitle(originalTitle.current, pending);
-  }, [pending]);
+    document.title = blinking
+      ? blinkTitle(originalTitle.current, count, blinkPhase)
+      : tabTitle(originalTitle.current, count);
+  }, [count, blinking, blinkPhase]);
+
   useEffect(() => {
     return () => {
       if (originalTitle.current !== null) document.title = originalTitle.current;
     };
   }, []);
+
+  // El globito con la cantidad, en el favicon y en el ícono de la app instalada (ADMIN-PEDIDOS-28).
+  useEffect(() => {
+    updateFavicon(count);
+    void setAppBadgeSafe(count);
+  }, [count]);
+
+  useEffect(() => {
+    return () => {
+      restoreFavicon();
+      void clearAppBadgeSafe();
+    };
+  }, []);
+
+  // La tarjeta: el pedido sin atender más viejo que no se cerró con "Ver pedidos".
+  const byAge = [...unattended].sort(
+    (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+  );
+  const alertOrder = byAge.find((order) => !dismissedIds.has(order.id)) ?? null;
+
+  function viewOrders() {
+    setDismissedIds((current) => new Set([...current, ...unattended.map((order) => order.id)]));
+  }
 
   async function changeStatus(orderId: string, status: string, note?: string) {
     setError(null);
@@ -344,6 +431,16 @@ export default function OrdersClient({
               </p>
             ) : null}
           </div>
+
+          {alarmActive && alertOrder === null ? (
+            <button
+              type="button"
+              onClick={silence}
+              className="min-h-11 rounded-xl border border-line-strong bg-white px-5 py-3 text-sm font-semibold text-stone-700 transition hover:bg-cream"
+            >
+              🔕 Silenciar 5 min
+            </button>
+          ) : null}
 
           <button
             type="button"
@@ -449,6 +546,19 @@ export default function OrdersClient({
         onClose={() => setReceivingId(null)}
         loading={busyId === receivingId && receivingId !== null}
       />
+
+      {alertOrder ? (
+        <NewOrderAlert
+          order={alertOrder}
+          moreCount={count - 1}
+          busy={busyId === alertOrder.id}
+          canSilence={soundOn && audioReady}
+          silenced={mutedUntil !== null}
+          onAccept={() => changeStatus(alertOrder.id, "confirmed")}
+          onView={viewOrders}
+          onSilence={silence}
+        />
+      ) : null}
 
       <ManualOrderDialog
         open={manualOpen}

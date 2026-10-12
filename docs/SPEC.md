@@ -313,6 +313,20 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   pasando por `escapeHtml` o `textContent`.
 - **PUBLICO-61** La vista previa avisa al panel que está lista (`preview-ready`) y, tras cada dibujo o cambio de
   tamaño, el rectángulo de la cabecera (`headerRect`, `preview-header`) solo al origen que le escribió.
+- **PUBLICO-62** Cada producto del pedido puede llevar una nota del cliente (`order_items.note`): texto libre de hasta
+  140 caracteres. La base la limpia (`clean_item_note`: caracteres de control y espacios, saltos de línea incluidos,
+  pasan a un solo espacio), la recorta a 140 y la deja nula si queda vacía; un valor que no es texto se ignora. La nota
+  no cambia el precio ni el total, y el navegador sigue mandando solo ids y cantidades.
+- **PUBLICO-63** Dos líneas con el mismo producto y las mismas opciones pero distinta nota son líneas distintas; con la
+  misma nota (ya limpia), es una repetida y la base la rechaza como cualquier línea repetida.
+- **PUBLICO-64** `business_settings.allow_item_notes` (por defecto `true`) lo decide el negocio. Con el interruptor
+  apagado, `create_public_order` ignora las notas sin error y `config.notasPorItem` es `false`.
+- **PUBLICO-65** En el menú interactivo, en la hoja de opciones del producto y en cada línea del carrito, el campo "Nota
+  para este producto (opcional)" (140 caracteres, contador, ejemplo "Sin cheddar, con mostaza") solo aparece si
+  `config.notasPorItem`. Dice que es un pedido al local, no una promesa. Textos en es, en y pt. La nota entra en la
+  firma del ítem del carrito (misma nota, suman cantidad); un carrito viejo de `localStorage` sigue funcionando.
+- **PUBLICO-66** `buildOrderItems` manda `{id, kind, quantity, options, note}`, y el mensaje de WhatsApp lista la nota
+  bajo cada ítem (`  📝 sin cheddar`). Cualquier texto del cliente se muestra con `textContent` o `escapeHtml`.
 
 ## BUSQUEDA — Buscador
 
@@ -445,6 +459,8 @@ llegando al negocio por WhatsApp.
   cliente al seguimiento; el pedido anticipado sin pago online conserva el panel "Pedido registrado".
 - **SEGUIMIENTO-35** `public_order_tracking` entrega `pedido.entrega` (`retiro` o `delivery`): la línea de pasos dice "Listo para
   retirar" y "Retirado" solo en un pedido para retirar.
+- **SEGUIMIENTO-36** `public_order_tracking` entrega `nota` en cada ítem que la tiene; el seguimiento la muestra bajo el
+  ítem con `textContent`, como lo que el cliente pidió.
 
 ## PWA — Instalar el menú en el celular
 
@@ -1054,6 +1070,9 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
 - **ADMIN-CONFIG-47** La vista previa muestra su estado: "Cargando vista previa…" mientras llega el menú o el
   `iframe` dibuja; si no se pudo leer el menú, o el menú no responde en 12 segundos, dice que no pudo
   conectar y deja reintentar; un menú sin productos avisa que solo se ve la cabecera.
+- **ADMIN-CONFIG-48** Configuración tiene el interruptor "Permitir notas en cada producto" (`allow_item_notes`, activo
+  por defecto), en Entrega y pago; se guarda con "Guardar cambios" y `save_business_settings` lo recibe en
+  `p_allow_item_notes`.
 
 ## ADMIN-PEDIDOS — Pedidos
 
@@ -1078,17 +1097,21 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   Pendiente no cuenta.
 - **ADMIN-PEDIDOS-7** Los pedidos pendientes se cuentan por estado "pending"; los
   demás estados, conocidos o no, no suman.
-- **ADMIN-PEDIDOS-8** Si tras actualizarse el tablero aparecen pedidos Pendientes nuevos,
-  suena un aviso una sola vez; los que ya estaban al abrir el tablero no suenan.
+- **ADMIN-PEDIDOS-8** Si tras actualizarse el tablero aparecen pedidos sin atender nuevos
+  mientras la alarma ya suena, suena enseguida, una sola vez; los que ya estaban al abrir el
+  tablero no suenan hasta que la persona activa el sonido (ver ADMIN-PEDIDOS-26).
 - **ADMIN-PEDIDOS-9** El aviso solo suena si el negocio activó el sonido con un botón
   (el navegador lo exige); la preferencia se recuerda, pero tras recargar el botón
   pide tocar de nuevo para volver a permitirlo.
 - **ADMIN-PEDIDOS-10** Con el sonido activado, el tablero sigue consultando pedidos cada
   20 segundos aunque la pestaña esté oculta; sin sonido, solo con la pestaña a la vista.
-- **ADMIN-PEDIDOS-11** Con el sonido activado y pedidos Pendientes sin atender, el aviso
-  se repite cada 30 segundos hasta que no quede ninguno.
-- **ADMIN-PEDIDOS-12** Mientras haya N pedidos Pendientes, el título de la pestaña es
-  "(N) Nuevo pedido · <título original>"; cuando no queda ninguno, vuelve al original.
+- **ADMIN-PEDIDOS-11** Con el sonido activado y pedidos sin atender, el aviso suena en
+  bucle (alarma, ver ADMIN-PEDIDOS-26) hasta que no quede ninguno; ya no espera 30 segundos
+  entre vueltas.
+- **ADMIN-PEDIDOS-12** Mientras haya N pedidos sin atender, el título de la pestaña lleva la
+  cantidad ("(N) NUEVO PEDIDO", parpadeando con el título original, ver ADMIN-PEDIDOS-27; con
+  `prefers-reduced-motion`, fijo en "(N) Nuevo pedido · <título original>"); cuando no queda
+  ninguno, vuelve al original.
 - **ADMIN-PEDIDOS-13** Con el sonido activado, el tablero pide mantener la pantalla
   encendida, lo vuelve a pedir cada vez que la pestaña vuelve a estar visible y lo
   libera al desactivar el sonido o al salir; si el navegador no lo soporta, no pasa
@@ -1115,6 +1138,39 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   tabla no lista ítems) muestran las opciones elegidas bajo cada ítem (`+ Queso`, `+ Frutilla ×2`).
 - **ADMIN-PEDIDOS-21** El pedido manual (`create_manual_order`) no exige ni valida opciones en esta
   versión: sus ítems nunca las llevan.
+- **ADMIN-PEDIDOS-22** El tablero, el detalle y el historial de pedidos muestran la nota de cada ítem destacada (en un
+  recuadro) bajo el ítem, para que no pase desapercibida; también el panel del repartidor si lista el detalle.
+- **ADMIN-PEDIDOS-23** `create_manual_order` acepta `note` por ítem (la limpia y recorta igual, y no depende del
+  interruptor: la escribe el propio local). Las notas no cambian el RLS: el local lee las de sus pedidos y no las de
+  otro negocio.
+
+**Aviso fuerte de pedido nuevo** (`src/lib/orders/urgent-alert.ts`, `badge.ts`, `speech.ts`, `sound-pref.ts`,
+`app/dashboard/orders/components/NewOrderAlert.tsx`, `src/components/dashboard/OrderAlertsBar.tsx`; los
+recordatorios push son ADMIN-PWA-33 a 37)
+
+- **ADMIN-PEDIDOS-24** Un pedido está sin atender si está Pendiente, no es manual (`source = 'manual'`) y,
+  si es de Mercado Pago, no está esperando ni falló el pago. Mientras haya alguno, el tablero muestra una
+  tarjeta a pantalla completa "NUEVO PEDIDO #N" con cliente, entrega, ítems y total, y los botones
+  "Aceptar" (lo pasa a Confirmado, como "Confirmar") y "Ver pedidos" (la cierra hasta que llegue otro
+  pedido nuevo); con varios muestra el más viejo y cuántos más hay. Desaparece sola si el pedido se atiende.
+- **ADMIN-PEDIDOS-25** "Silenciar" calla la alarma y la voz durante 5 minutos y después vuelven solas; el
+  título, el globito, la barra y la tarjeta siguen.
+- **ADMIN-PEDIDOS-26** Con el sonido activado, mientras haya pedidos sin atender suena una alarma en bucle,
+  distinta del aviso de prueba, que sube de volumen cuando el pedido más viejo lleva 60 segundos sin
+  atender. Nada suena antes de que la persona active el sonido (política de autoplay del navegador).
+- **ADMIN-PEDIDOS-27** Mientras suena la alarma, la voz del navegador dice "Nuevo pedido" en es-AR, ahora y
+  cada 30 segundos; sin `speechSynthesis` no hace nada. El título de la pestaña parpadea entre
+  "(N) NUEVO PEDIDO" y el título normal, salvo con `prefers-reduced-motion`.
+- **ADMIN-PEDIDOS-28** La cantidad de pedidos sin atender se dibuja en el favicon (canvas) y, en la app
+  instalada, en el ícono con `navigator.setAppBadge`/`clearAppBadge`; si el navegador no las tiene, no rompe.
+  Al atenderlos o salir del tablero, el ícono vuelve al original y el globito se borra.
+- **ADMIN-PEDIDOS-29** Activar el sonido desde la barra deja listo el mismo contexto de audio que usa el
+  tablero: al abrir Pedidos no hay que tocar de nuevo.
+- **ADMIN-PEDIDOS-30** Los negocios con pedidos por menú ven, fija arriba de cualquier pantalla del panel, una
+  barra roja "No vas a oír los pedidos nuevos" mientras el sonido esté apagado (o sin habilitar tras recargar)
+  o los avisos push no estén activados, con los botones "Activar el sonido" (lo guarda y lleva a Pedidos) y
+  "Activar los avisos"; con los avisos bloqueados o por instalar lo dice sin botón, y sin nada que arreglar
+  no se ve.
 
 ## MP — Cobro con Mercado Pago (Checkout Pro)
 
@@ -1612,6 +1668,27 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
 - **ENVIO-127** Los textos del superadmin y del tablero ya no nombran a un solo repartidor: "Envío con repartidores"
   (habilitado y deshabilitado) y "Rendiciones de repartidores". Si el resumen de rendiciones junta pedidos de más de un
   repartidor, muestra un renglón por cada uno con su nombre ("Repartidor" si no se lo puede leer).
+- **ENVIO-128** Cuando un negocio pasa a `courier_delivery = true` (o nace con eso) y no tiene ninguna fila en
+  `business_delivery_zones`, la base le carga todas las zonas activas (trigger en `businesses`: vale para la pantalla
+  del superadmin, para SQL o para lo que venga). Si ya tenía zonas tildadas, no las toca.
+- **ENVIO-129** La migración `*_envio_listo_al_activar.sql` carga todas las zonas activas a los negocios que ya tenían
+  `courier_delivery = true` y cero zonas.
+- **ENVIO-130** `default_courier_id()` es el único lugar con el id de Repartos al Toque.
+  `effective_favorite_courier(negocio)` devuelve `business_settings.favorite_courier_id` y, si es nulo (o el negocio
+  no tiene fila de ajustes), Repartos al Toque mientras esté activo; si no, nulo. No escribe en `favorite_courier_id`.
+- **ENVIO-131** En `public_order_delivery` y `business_order_offers` la marca `favorito` y el orden usan el favorito
+  efectivo: sin favorito elegido, la oferta de Repartos al Toque sale primera y marcada "Recomendado por el local".
+- **ENVIO-132** El desempate a igual precio de `settle_courier_offers` (y por lo tanto el de `run_order_timers`) usa el
+  favorito efectivo.
+- **ENVIO-133** Con otro favorito elegido vale el del local. Con Repartos al Toque inactivo y sin favorito elegido, no
+  hay favorito.
+- **ENVIO-134** `business_delivery_options` entrega `default_courier` (`{id, name}` de Repartos al Toque si está
+  activo, o nulo). Configuración → Envíos muestra, sin favorito elegido, "Sin elegir: se recomienda {nombre}" (sin
+  nombre, "Sin elegir"); el nombre sale de ese dato.
+- **ENVIO-135** Si el local tiene el envío activo y ninguna zona tildada, Configuración → Envíos muestra arriba de la
+  sección: "Todavía no elegiste a qué zonas enviás: tus clientes no ven el envío".
+- **ENVIO-136** El detalle del negocio en el superadmin, junto a "Envío con repartidores", dice cuántas zonas tiene
+  tildadas el local ("39 zonas", "1 zona", "Sin zonas").
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 
@@ -1873,6 +1950,24 @@ precios en 0; no existe "incluye N y el resto cuesta X".
   que el comodín `/admin/:path*` no cubre) hacia el panel.
 - **ADMIN-PWA-32** Una dirección inexistente bajo `/admin` muestra la 404 del panel (`app/not-found.tsx`):
   con la marca, "No encontramos esta página" y un botón "Volver al panel" que lleva a la raíz del panel.
+
+**Recordatorios de pedido nuevo sin atender** (migración `20261030000000_recordatorios_pedido_nuevo.sql`)
+
+- **ADMIN-PWA-33** `run_order_timers()` suma un recordatorio (`orders.new_order_reminders`, con la hora en
+  `new_order_reminded_at`) a cada pedido por menú que sigue Pendiente, cada 2 minutos desde que llegó o desde
+  el último, hasta 5. Ese UPDATE dispara el evento `local_new_order_reminder`, que avisa a los miembros del
+  negocio "Pedido #N sin atender hace X min" → `/admin/dashboard/orders`; el aviso lleva el mismo `tag` que el
+  del pedido nuevo, así lo reemplaza en vez de apilarse.
+- **ADMIN-PWA-34** Un pedido que sale de Pendiente (confirmado, cancelado…) deja de recibir recordatorios, y
+  si el contador sube cuando ya no está Pendiente no sale ningún aviso.
+- **ADMIN-PWA-35** No se recuerdan los pedidos cargados por el local (`manual`) ni los de Mercado Pago con el
+  pago esperando o fallido; los recordatorios no tocan `courier_status` ni `no_offers_alerted_at`.
+- **ADMIN-PWA-36** El service worker muestra el pedido nuevo y su recordatorio con `requireInteraction`,
+  vibración `[300, 150, 300, 150, 300]`, `renotify`, `silent: false` y un `tag` por pedido (siempre lleva
+  uno, porque `renotify` lo exige), con el total en el cuerpo; el resto de los avisos se muestran igual que
+  antes.
+- **ADMIN-PWA-37** El payload push lleva `kind` y `urgent` (y `number` y `total` en los urgentes); los
+  urgentes salen con urgencia alta y TTL de 60 s, y los demás avisos conservan sus 10 minutos.
 
 ---
 

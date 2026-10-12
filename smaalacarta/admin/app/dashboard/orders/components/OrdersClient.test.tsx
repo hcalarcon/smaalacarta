@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import OrdersClient from "./OrdersClient";
+import { setOrderStatusAction } from "../actions";
 import type { Order } from "@/lib/db/orders";
 
 const mocks = vi.hoisted(() => ({ refresh: vi.fn() }));
@@ -13,6 +14,12 @@ vi.mock("../actions", () => ({
   selfDeliveryAction: vi.fn(),
   confirmSettlementAction: vi.fn(),
 }));
+vi.mock("@/lib/orders/badge", () => ({
+  setAppBadgeSafe: vi.fn(async () => undefined),
+  clearAppBadgeSafe: vi.fn(async () => undefined),
+  updateFavicon: vi.fn(),
+  restoreFavicon: vi.fn(),
+}));
 vi.mock("./ManualOrderDialog", () => ({ default: () => null }));
 vi.mock("./OrderDetailDialog", () => ({ default: () => null }));
 vi.mock("./OrdersHistory", () => ({ default: () => null }));
@@ -23,6 +30,8 @@ vi.mock("./OrderCard", () => ({
 const PREF_KEY = "sma-orders-sound";
 
 let oscillatorsStarted: number;
+// Los volúmenes de cada tono: la alarma sube de volumen con la espera (ADMIN-PEDIDOS-26).
+let rampVolumes: number[];
 let contextState: "running" | "suspended";
 
 class FakeAudioContext {
@@ -37,7 +46,9 @@ class FakeAudioContext {
   createGain = () => ({
     gain: {
       setValueAtTime: vi.fn(),
-      linearRampToValueAtTime: vi.fn(),
+      linearRampToValueAtTime: vi.fn((volume: number) => {
+        rampVolumes.push(volume);
+      }),
       exponentialRampToValueAtTime: vi.fn(),
     },
     connect: vi.fn(),
@@ -73,6 +84,7 @@ beforeEach(() => {
   mocks.refresh.mockClear();
   document.title = "Pedidos";
   oscillatorsStarted = 0;
+  rampVolumes = [];
   contextState = "suspended";
   localStorage.clear();
   vi.stubGlobal("AudioContext", FakeAudioContext);
@@ -85,13 +97,13 @@ afterEach(() => {
 });
 
 describe("aviso de pedidos nuevos — ADMIN-PEDIDOS-8 y 9", () => {
-  it("no suena por los pedidos que ya estaban al abrir el tablero", async () => {
+  it("los pedidos que ya estaban al abrir no suenan hasta que la persona activa el sonido (autoplay)", async () => {
     render(board([order("1")]));
-    await act(async () => fireEvent.click(soundButton()));
-    oscillatorsStarted = 0; // descarta el sonido de prueba
-
     await act(async () => {});
     expect(oscillatorsStarted).toBe(0);
+
+    await act(async () => fireEvent.click(soundButton()));
+    expect(oscillatorsStarted).toBeGreaterThan(0);
   });
 
   it("suena una sola vez cuando aparecen pedidos pendientes nuevos", async () => {
@@ -199,18 +211,18 @@ describe("consulta con la pestaña oculta — ADMIN-PEDIDOS-10", () => {
 });
 
 describe("repetir el aviso — ADMIN-PEDIDOS-11", () => {
-  it("con pendientes sin atender repite el sonido cada 30 s", async () => {
+  it("con pendientes sin atender la alarma suena en bucle, sin esperar 30 s", async () => {
     vi.useFakeTimers();
     render(board([order("1")]));
     await act(async () => fireEvent.click(soundButton()));
-    const perSound = oscillatorsStarted; // sonido de prueba
     oscillatorsStarted = 0;
 
-    await act(async () => vi.advanceTimersByTime(29_000));
-    expect(oscillatorsStarted).toBe(0);
+    await act(async () => vi.advanceTimersByTime(10_000));
+    const first = oscillatorsStarted;
+    expect(first).toBeGreaterThan(0);
 
-    await act(async () => vi.advanceTimersByTime(6_000));
-    expect(oscillatorsStarted).toBe(perSound);
+    await act(async () => vi.advanceTimersByTime(10_000));
+    expect(oscillatorsStarted).toBeGreaterThan(first);
   });
 
   it("deja de repetir cuando no queda ningún pendiente", async () => {
@@ -233,13 +245,37 @@ describe("repetir el aviso — ADMIN-PEDIDOS-11", () => {
   });
 });
 
-describe("título de la pestaña — ADMIN-PEDIDOS-12", () => {
-  it("con pendientes lleva la cantidad y, sin ninguno, vuelve al original", () => {
+describe("título de la pestaña — ADMIN-PEDIDOS-12 y 27", () => {
+  it("con pendientes parpadea entre el aviso y el título original y, sin ninguno, vuelve al original", async () => {
+    vi.useFakeTimers();
     const { rerender } = render(board([order("1"), order("2")]));
-    expect(document.title).toBe("(2) Nuevo pedido · Pedidos");
+    expect(document.title).toBe("(2) NUEVO PEDIDO");
+
+    await act(async () => vi.advanceTimersByTime(1_000));
+    expect(document.title).toBe("Pedidos");
+
+    await act(async () => vi.advanceTimersByTime(1_000));
+    expect(document.title).toBe("(2) NUEVO PEDIDO");
 
     rerender(board([order("1", "confirmed"), order("2", "confirmed")]));
     expect(document.title).toBe("Pedidos");
+
+    await act(async () => vi.advanceTimersByTime(5_000));
+    expect(document.title).toBe("Pedidos");
+  });
+
+  it("con prefers-reduced-motion no parpadea: queda fijo con la cantidad", async () => {
+    vi.useFakeTimers();
+    vi.stubGlobal("matchMedia", (query: string) => ({
+      matches: query.includes("prefers-reduced-motion"),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+    }));
+    render(board([order("1"), order("2")]));
+    expect(document.title).toBe("(2) Nuevo pedido · Pedidos");
+
+    await act(async () => vi.advanceTimersByTime(3_000));
+    expect(document.title).toBe("(2) Nuevo pedido · Pedidos");
   });
 
   it("al salir del tablero restaura el título original", () => {
@@ -367,5 +403,206 @@ describe("estados de envío en el tablero — ENVIO-27", () => {
       expect(columnOf(title).textContent).not.toContain("pedido 1");
     }
     expect(columnOf("Listos").textContent).toContain("pedido 2");
+  });
+});
+
+// --- Aviso fuerte de pedido nuevo -------------------------------------------------------------------
+
+const full = (id: string, extra: Record<string, unknown> = {}) =>
+  ({
+    id,
+    status: "pending",
+    source: "web",
+    payment_status: "not_required",
+    order_number: `00${id}`,
+    customer_name: "Lucía",
+    delivery: "retiro",
+    total: 12500,
+    created_at: "2026-09-30T10:00:00Z",
+    order_items: [
+      { name: "Milanesa", quantity: 2, unit_price: 5000, sort_order: 0, options: null },
+      { name: "Flan", quantity: 1, unit_price: 2500, sort_order: 1, options: null },
+    ],
+    ...extra,
+  }) as unknown as Order;
+
+const modal = () => screen.queryByRole("alertdialog");
+
+describe("tarjeta de pedido nuevo — ADMIN-PEDIDOS-24", () => {
+  it("muestra el pedido sin atender a pantalla completa, con su resumen y los dos botones", () => {
+    render(board([full("1")]));
+
+    const card = modal()!;
+    expect(card).toBeTruthy();
+    expect(card.textContent).toContain("NUEVO PEDIDO #001");
+    expect(card.textContent).toContain("Lucía");
+    expect(card.textContent).toContain("2 × Milanesa");
+    expect(card.textContent).toContain("1 × Flan");
+    expect(card.textContent).toMatch(/12.500/);
+    expect(screen.getByRole("button", { name: "Aceptar" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Ver pedidos" })).toBeTruthy();
+  });
+
+  it("no aparece sin pedidos sin atender: confirmados, manuales o de Mercado Pago sin pagar", () => {
+    render(
+      board([
+        full("1", { status: "confirmed" }),
+        full("2", { source: "manual" }),
+        full("3", { payment_status: "awaiting" }),
+      ]),
+    );
+
+    expect(modal()).toBeNull();
+  });
+
+  it("'Aceptar' lleva el pedido a confirmado, como el botón Confirmar del tablero", async () => {
+    vi.mocked(setOrderStatusAction).mockResolvedValue({ ok: true } as never);
+    render(board([full("1")]));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
+
+    expect(setOrderStatusAction).toHaveBeenCalledWith("1", "confirmed", undefined);
+  });
+
+  it("con varios pendientes muestra el más viejo y cuántos más hay", () => {
+    render(
+      board([
+        full("2", { created_at: "2026-09-30T10:05:00Z" }),
+        full("1", { created_at: "2026-09-30T10:00:00Z" }),
+        full("3", { created_at: "2026-09-30T10:09:00Z" }),
+      ]),
+    );
+
+    expect(modal()!.textContent).toContain("NUEVO PEDIDO #001");
+    expect(modal()!.textContent).toContain("2 pedidos más");
+  });
+
+  it("'Ver pedidos' la cierra y vuelve cuando llega otro pedido nuevo", async () => {
+    const { rerender } = render(board([full("1")]));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Ver pedidos" })));
+    expect(modal()).toBeNull();
+
+    rerender(board([full("1"), full("2", { created_at: "2026-09-30T10:03:00Z" })]));
+    expect(modal()!.textContent).toContain("NUEVO PEDIDO #002");
+  });
+
+  it("desaparece sola cuando el pedido se atiende desde otro lado", () => {
+    const { rerender } = render(board([full("1")]));
+    expect(modal()).not.toBeNull();
+
+    rerender(board([full("1", { status: "confirmed" })]));
+    expect(modal()).toBeNull();
+  });
+
+  it("tiene nombre accesible y el foco queda en 'Aceptar'", () => {
+    render(board([full("1")]));
+
+    expect(modal()!.getAttribute("aria-modal")).toBe("true");
+    expect(modal()!.getAttribute("aria-labelledby")).toBeTruthy();
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Aceptar" }));
+  });
+});
+
+describe("alarma, silenciar y voz — ADMIN-PEDIDOS-25 a 27", () => {
+  let spoken: string[];
+
+  beforeEach(() => {
+    spoken = [];
+    class Utterance {
+      lang = "";
+      constructor(public text: string) {}
+    }
+    vi.stubGlobal("SpeechSynthesisUtterance", Utterance);
+    vi.stubGlobal("speechSynthesis", {
+      speak: (utterance: { text: string }) => spoken.push(utterance.text),
+      cancel: vi.fn(),
+    });
+  });
+
+  it("no suena ni habla mientras la persona no activó el sonido (autoplay)", async () => {
+    vi.useFakeTimers();
+    render(board([full("1")]));
+
+    await act(async () => vi.advanceTimersByTime(120_000));
+    expect(oscillatorsStarted).toBe(0);
+    expect(spoken).toEqual([]);
+  });
+
+  it("al activar el sonido dice 'Nuevo pedido' y lo repite cada 30 s mientras haya pendientes", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-30T10:00:10Z"));
+    render(board([full("1")]));
+    await act(async () => fireEvent.click(soundButton()));
+    expect(spoken).toEqual(["Nuevo pedido"]);
+
+    await act(async () => vi.advanceTimersByTime(29_000));
+    expect(spoken).toHaveLength(1);
+
+    await act(async () => vi.advanceTimersByTime(2_000));
+    expect(spoken).toHaveLength(2);
+  });
+
+  it("sin la API de voz el sonido sigue andando", async () => {
+    vi.unstubAllGlobals();
+    vi.stubGlobal("AudioContext", FakeAudioContext);
+    render(board([full("1")]));
+
+    await act(async () => fireEvent.click(soundButton()));
+    expect(oscillatorsStarted).toBeGreaterThan(0);
+  });
+
+  it("la alarma sube de volumen a los 60 s sin atender", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-30T10:00:30Z"));
+    render(board([full("1", { created_at: "2026-09-30T10:00:00Z" })]));
+    await act(async () => fireEvent.click(soundButton()));
+
+    const early = Math.max(...rampVolumes);
+    rampVolumes = [];
+
+    await act(async () => vi.advanceTimersByTime(35_000));
+    expect(rampVolumes.length).toBeGreaterThan(0);
+    expect(Math.max(...rampVolumes)).toBeGreaterThan(early);
+  });
+
+  it("'Silenciar' calla el sonido y la voz 5 minutos, pero deja el título y la tarjeta", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-30T10:00:10Z"));
+    render(board([full("1")]));
+    await act(async () => fireEvent.click(soundButton()));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: /Silenciar/ })));
+    oscillatorsStarted = 0;
+    spoken = [];
+
+    await act(async () => vi.advanceTimersByTime(4 * 60_000 + 50_000));
+    expect(oscillatorsStarted).toBe(0);
+    expect(spoken).toEqual([]);
+    expect(document.title).toMatch(/NUEVO PEDIDO|^Pedidos$/);
+    expect(modal()).not.toBeNull();
+    expect(screen.getByRole("button", { name: /Silenciado/ })).toBeTruthy();
+
+    await act(async () => vi.advanceTimersByTime(15_000));
+    expect(oscillatorsStarted).toBeGreaterThan(0);
+    expect(screen.getByRole("button", { name: /Silenciar/ })).toBeTruthy();
+  });
+});
+
+describe("globito de pendientes — ADMIN-PEDIDOS-28", () => {
+  it("lleva la cantidad sin atender al favicon y a la app instalada, y lo saca al atenderlos", async () => {
+    const badge = await import("@/lib/orders/badge");
+    const { rerender, unmount } = render(board([full("1"), full("2"), full("3", { status: "confirmed" })]));
+
+    expect(badge.updateFavicon).toHaveBeenLastCalledWith(2);
+    expect(badge.setAppBadgeSafe).toHaveBeenLastCalledWith(2);
+
+    rerender(board([full("1", { status: "confirmed" }), full("2", { status: "confirmed" })]));
+    expect(badge.updateFavicon).toHaveBeenLastCalledWith(0);
+    expect(badge.setAppBadgeSafe).toHaveBeenLastCalledWith(0);
+
+    unmount();
+    expect(badge.clearAppBadgeSafe).toHaveBeenCalled();
+    expect(badge.restoreFavicon).toHaveBeenCalled();
   });
 });
