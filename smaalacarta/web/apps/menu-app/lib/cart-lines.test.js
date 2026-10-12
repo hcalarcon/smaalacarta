@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { addLine, cartTotal, lineSubtotal, whatsappDetail } from "./cart-lines.js";
+import { addLine, cartTotal, lineSubtotal, setLineNote, stripNotes, whatsappDetail } from "./cart-lines.js";
 import { chosenOptions } from "./options.js";
 import { formatPrice } from "./price.js";
 
@@ -117,5 +117,75 @@ describe("whatsappDetail — PUBLICO-48", () => {
   it("usa el nombre en español si el menú está traducido", () => {
     const { text } = whatsappDetail([{ nombre: "Coffee", nombreEs: "Café", precio: 1, cantidad: 1 }], formatPrice);
     expect(text).toContain("• Café x1");
+  });
+});
+
+describe("nota por producto — PUBLICO-65 y 66", () => {
+  it("la misma nota suma cantidad; otra nota es otra línea", () => {
+    let cart = addLine([], hamb, elegir({ "o-queso": 1 }), "sin cheddar");
+    cart = addLine(cart, hamb, elegir({ "o-queso": 1 }), "  sin   cheddar ");
+    cart = addLine(cart, hamb, elegir({ "o-queso": 1 }), "con mostaza");
+    cart = addLine(cart, hamb, elegir({ "o-queso": 1 }));
+
+    expect(cart.map((l) => [l.nota, l.cantidad])).toEqual([
+      ["sin cheddar", 2],
+      ["con mostaza", 1],
+      [undefined, 1],
+    ]);
+  });
+
+  it("una línea sin nota no lleva la clave, y un carrito viejo sigue sumando", () => {
+    const viejo = [{ id: "p-gas", nombre: "Gaseosa", precio: 500, cantidad: 1 }];
+    const cart = addLine(viejo, gaseosa);
+
+    expect(cart).toEqual([{ id: "p-gas", nombre: "Gaseosa", precio: 500, cantidad: 2 }]);
+    expect(cart[0]).not.toHaveProperty("nota");
+  });
+
+  it("los menús de JSON también distinguen por nota", () => {
+    const m = { nombre: "Milanesa", precio: 5000 };
+    const cart = addLine(addLine([], m, [], "sin sal"), m);
+
+    expect(cart).toHaveLength(2);
+  });
+
+  it("setLineNote cambia la nota, sin tocar el carrito original", () => {
+    const cart = addLine([], gaseosa);
+    const next = setLineNote(cart, 0, "sin hielo");
+
+    expect(next[0].nota).toBe("sin hielo");
+    expect(cart[0]).not.toHaveProperty("nota");
+  });
+
+  it("setLineNote junta la línea con otra igual y suma cantidad", () => {
+    let cart = addLine([], gaseosa, [], "sin hielo");
+    cart = addLine(cart, gaseosa);
+    cart = addLine(cart, gaseosa);
+
+    const next = setLineNote(cart, 1, "sin hielo");
+
+    expect(next).toHaveLength(1);
+    expect(next[0]).toMatchObject({ nota: "sin hielo", cantidad: 3 });
+  });
+
+  it("setLineNote con texto vacío quita la nota", () => {
+    const cart = addLine([], gaseosa, [], "sin hielo");
+
+    expect(setLineNote(cart, 0, " \n ")[0]).not.toHaveProperty("nota");
+  });
+
+  it("stripNotes saca las notas y junta lo que queda igual", () => {
+    let cart = addLine([], gaseosa, [], "sin hielo");
+    cart = addLine(cart, gaseosa);
+
+    expect(stripNotes(cart)).toEqual([{ id: "p-gas", nombre: "Gaseosa", precio: 500, cantidad: 2 }]);
+  });
+
+  it("el mensaje de WhatsApp lista la nota bajo el ítem", () => {
+    const cart = addLine(addLine([], gaseosa, [], "sin hielo"), hamb, elegir({ "o-queso": 1 }), "sin cheddar");
+    const { text } = whatsappDetail(cart, formatPrice);
+
+    expect(text).toContain("• Gaseosa x1\n  📝 sin hielo\n");
+    expect(text).toContain("  + Queso x1\n  📝 sin cheddar\n");
   });
 });

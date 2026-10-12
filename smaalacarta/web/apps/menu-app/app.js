@@ -25,6 +25,7 @@ let MERCADOPAGO = null;
 let OPTIONS = null;
 let OPTIONS_SHEET = null;
 let CART_LINES = null;
+let NOTES = null;
 // Envío con repartidor (ENVIO-20): los barrios del negocio, o null si no tiene o falló.
 let DZ = null;
 let COURIER_ZONES = null;
@@ -209,6 +210,8 @@ async function init() {
       import("/apps/menu-app/lib/cart-lines.js"),
       import("/apps/menu-app/lib/delivery-zones.js"),
     ]);
+    // Nota por producto (PUBLICO-65): la limpieza y las reglas puras viven en lib/item-notes.js.
+    NOTES = await import("/apps/menu-app/lib/item-notes.js");
     DZ = deliveryZonesLib;
     OPTIONS = optionsLib;
     OPTIONS_SHEET = optionsSheetLib;
@@ -716,8 +719,10 @@ function renderMenu(menu) {
             item: p,
             t: tr,
             formatPrice: PRICE.formatPrice,
-            onAdd: (chosen) => {
-              addToCart(p, chosen);
+            // El campo de nota solo aparece si el negocio lo permite (PUBLICO-65).
+            notesEnabled: notesOn(),
+            onAdd: (chosen, note) => {
+              addToCart(p, chosen, note);
               confirmAdded();
             },
           });
@@ -786,13 +791,24 @@ function initSearch() {
 // CARRITO
 // `chosen` son las opciones elegidas (PUBLICO-46): la misma elección suma cantidad y otra elección
 // es otra línea; sin opciones se agrupa como siempre (por id, o por nombre en los menús de JSON).
-function addToCart(p, chosen = []) {
+function addToCart(p, chosen = [], note = "") {
   if (!p) return;
 
-  cart = CART_LINES.addLine(cart, p, chosen);
+  cart = CART_LINES.addLine(cart, p, chosen, note);
 
   saveCart();
   updateCart();
+}
+
+// ¿El negocio permite una nota por producto? (`config.notasPorItem`, PUBLICO-65)
+function notesOn() {
+  return Boolean(NOTES?.notesEnabled(window.CONFIG));
+}
+
+// El carrito que se manda: si el negocio desactivó las notas después de que el cliente las escribió,
+// no viajan ni se listan en el mensaje.
+function cartForOrder() {
+  return notesOn() || !CART_LINES ? cart : CART_LINES.stripNotes(cart);
 }
 
 function updateCart() {
@@ -854,6 +870,40 @@ function updateCart() {
       }
     }
 
+    // Nota del cliente para esta línea (PUBLICO-65). Todo con textContent y `value`: nunca HTML.
+    if (notesOn()) {
+      const wrap = document.createElement("div");
+      wrap.className = "item-nota-campo";
+
+      const label = document.createElement("label");
+      label.className = "item-nota-etiqueta";
+      label.textContent = tr("note.label");
+
+      const input = document.createElement("input");
+      input.type = "text";
+      input.id = `nota-linea-${idx}`;
+      input.maxLength = NOTES.NOTE_MAX;
+      input.placeholder = tr("note.placeholder");
+      input.autocomplete = "off";
+      input.value = typeof i.nota === "string" ? i.nota : "";
+      label.htmlFor = input.id;
+
+      const counter = document.createElement("span");
+      counter.className = "item-nota-contador";
+      counter.textContent = NOTES.noteCounter(input.value);
+
+      input.addEventListener("input", () => {
+        counter.textContent = NOTES.noteCounter(input.value);
+      });
+      input.addEventListener("change", () => {
+        cart = CART_LINES.setLineNote(cart, idx, input.value);
+        updateCart();
+      });
+
+      wrap.append(label, input, counter);
+      d.querySelector(".item-info")?.appendChild(wrap);
+    }
+
     const btnMinus = d.querySelector(".btn-minus");
     const btnPlus = d.querySelector(".btn-plus");
     const btnRemove = d.querySelector(".btn-remove");
@@ -879,6 +929,13 @@ function updateCart() {
 
     itemsContainer.appendChild(d);
   });
+
+  if (notesOn() && cart.length > 0) {
+    const aviso = document.createElement("p");
+    aviso.className = "carrito-nota-aviso";
+    aviso.textContent = tr("note.hint");
+    itemsContainer.appendChild(aviso);
+  }
 
   totalEl.textContent = `$${total}`;
   countEl.textContent = count;
@@ -1069,7 +1126,7 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
   msg += `\n🧾 *Detalle del pedido:*\n\n`;
 
   // Cada ítem con sus opciones debajo; el precio por unidad y el subtotal ya incluyen los extras.
-  const detail = CART_LINES.whatsappDetail(cart, PRICE.formatPrice);
+  const detail = CART_LINES.whatsappDetail(cartForOrder(), PRICE.formatPrice);
   msg += detail.text;
   total += detail.total;
 
@@ -1079,7 +1136,7 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
 
   // Si el menú viene de Supabase, el pedido se guarda primero en el sistema para poder
   // seguirlo. Si no se puede (menú de JSON, sin conexión…), sigue por WhatsApp como siempre.
-  const items = MENU_SOURCE && ORDERS ? ORDERS.buildOrderItems(cart) : null;
+  const items = MENU_SOURCE && ORDERS ? ORDERS.buildOrderItems(cartForOrder()) : null;
   let saved = null;
 
   if (items) {

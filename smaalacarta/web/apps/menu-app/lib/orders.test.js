@@ -437,3 +437,24 @@ describe("createOrder con envío — ENVIO-21", () => {
     expect(r).toEqual({ ok: false, reason: "invalid_phone" });
   });
 });
+
+describe("buildOrderItems con nota — PUBLICO-66", () => {
+  it("manda la nota limpia de cada línea, y nada si no hay", () => {
+    const items = buildOrderItems([
+      { id: ID_CAFE, nombre: "Café", precio: 1000, cantidad: 1, nota: "  sin\nazúcar " },
+      { id: ID_COMBO, nombre: "Combo", precio: 1500, cantidad: 1 },
+      { id: ID_COMBO, nombre: "Combo", precio: 1500, cantidad: 1, nota: "   " },
+    ]);
+
+    expect(items[0]).toEqual({ id: ID_CAFE, kind: "product", quantity: 1, note: "sin azúcar" });
+    expect(items[1]).not.toHaveProperty("note");
+    expect(items[2]).not.toHaveProperty("note");
+  });
+
+  it("la nota se recorta a 140 y nunca viaja un precio", () => {
+    const [item] = buildOrderItems([{ id: ID_CAFE, nombre: "Café", precio: 1000, cantidad: 1, nota: "x".repeat(300) }]);
+
+    expect(item.note).toHaveLength(140);
+    expect(Object.keys(item).sort().join()).toBe("id,kind,note,quantity");
+  });
+});

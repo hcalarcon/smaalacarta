@@ -2,6 +2,7 @@
 // con `textContent`: los nombres de grupos y opciones los escribe el negocio y nunca se interpolan
 // en HTML (PUBLICO-9). La lógica de la elección vive en `options.js`; acá solo se pinta y se escucha.
 
+import { NOTE_MAX, cleanNote, noteCounter } from "./item-notes.js";
 import { chosenOptions, groupCount, unitPrice, validateSelection } from "./options.js";
 
 // "Obligatorio" u "Opcional, hasta N" (con el rango si el grupo pide más de una opción).
@@ -27,10 +28,11 @@ function el(doc, tag, className, text) {
 
 /**
  * Abre la hoja sobre `doc.body`. `item` es el producto del menú (con `opciones`). `onAdd(chosen)` se
- * llama con la lista de `chosenOptions` cuando el cliente toca "Agregar" con una elección válida.
+ * llama con la lista de `chosenOptions` y la nota ya limpia (o "") cuando el cliente toca "Agregar" con una
+ * elección válida. Con `notesEnabled` (config.notasPorItem) la hoja ofrece el campo de nota (PUBLICO-65).
  * Devuelve `{ close }`.
  */
-export function openOptionsSheet({ doc = document, item, t, formatPrice, onAdd, onClose }) {
+export function openOptionsSheet({ doc = document, item, t, formatPrice, onAdd, onClose, notesEnabled = false }) {
   const groups = item.opciones ?? [];
   const selection = {};
 
@@ -161,6 +163,32 @@ export function openOptionsSheet({ doc = document, item, t, formatPrice, onAdd, 
     body.appendChild(fieldset);
   });
 
+  // La nota del cliente para este producto: texto libre, una línea, hasta 140. Todo con textContent y
+  // `value`: lo que escribe el cliente nunca se interpola en HTML.
+  let noteInput = null;
+
+  if (notesEnabled) {
+    const wrap = el(doc, "div", "opciones-nota");
+    const label = el(doc, "label", "opciones-nota-etiqueta", t("note.label"));
+    noteInput = doc.createElement("input");
+    noteInput.type = "text";
+    noteInput.className = "opciones-nota-campo";
+    noteInput.maxLength = NOTE_MAX;
+    noteInput.placeholder = t("note.placeholder");
+    noteInput.autocomplete = "off";
+    noteInput.id = "opciones-nota-campo";
+    label.htmlFor = noteInput.id;
+
+    const counter = el(doc, "span", "opciones-nota-contador", noteCounter(""));
+    noteInput.addEventListener("input", () => {
+      counter.textContent = noteCounter(noteInput.value);
+    });
+
+    const hint = el(doc, "p", "opciones-nota-aviso", t("note.hint"));
+    wrap.append(label, noteInput, counter, hint);
+    body.appendChild(wrap);
+  }
+
   sheet.append(header, body, footer);
   overlay.appendChild(sheet);
 
@@ -182,8 +210,9 @@ export function openOptionsSheet({ doc = document, item, t, formatPrice, onAdd, 
   addBtn.addEventListener("click", () => {
     if (addBtn.disabled) return;
     const chosen = chosenOptions(groups, selection);
+    const note = noteInput ? cleanNote(noteInput.value) : "";
     close();
-    onAdd(chosen);
+    onAdd(chosen, note);
   });
   doc.addEventListener("keydown", onKey);
 

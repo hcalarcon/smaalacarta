@@ -175,7 +175,7 @@ describe("la hoja — PUBLICO-45", () => {
     expect(onAdd).toHaveBeenCalledWith([
       { id: "o-cocido", grupo: "Punto", nombre: "Cocido", cantidad: 1, precio: 0 },
       { id: "o-queso", grupo: "Extras", nombre: "Queso", cantidad: 1, precio: 500 },
-    ]);
+    ], "");
     expect(q(".opciones-overlay")).toBeNull();
   });
 
@@ -221,7 +221,7 @@ describe("grupos que permiten repetir — PUBLICO-45", () => {
     click(more("o-frutilla"));
     click(add());
 
-    expect(onAdd).toHaveBeenCalledWith([{ id: "o-frutilla", grupo: "Sabores", nombre: "Frutilla", cantidad: 2, precio: 0 }]);
+    expect(onAdd).toHaveBeenCalledWith([{ id: "o-frutilla", grupo: "Sabores", nombre: "Frutilla", cantidad: 2, precio: 0 }], "");
   });
 
   it("el botón + de una opción agotada está apagado", () => {
@@ -304,5 +304,49 @@ describe("textos — PUBLICO-49", () => {
       expect(DICTIONARY[lang]["options.more"]).toContain("{name}");
       expect(DICTIONARY[lang]["options.less"]).toContain("{name}");
     }
+  });
+});
+
+describe("nota para este producto — PUBLICO-65", () => {
+  const field = () => document.querySelector(".opciones-nota-campo");
+
+  it("sin notasPorItem no hay campo", () => {
+    open(hamburguesa);
+
+    expect(field()).toBeNull();
+  });
+
+  it("con notasPorItem muestra el campo con contador, ejemplo y aclaración", () => {
+    open(hamburguesa, { notesEnabled: true });
+
+    expect(field().maxLength).toBe(140);
+    expect(field().placeholder).toBe("Sin cheddar, con mostaza");
+    expect(document.querySelector(".opciones-nota-contador").textContent).toBe("0/140");
+    expect(document.querySelector(".opciones-nota").textContent).toContain("no una promesa");
+
+    field().value = "sin cheddar";
+    field().dispatchEvent(new Event("input"));
+    expect(document.querySelector(".opciones-nota-contador").textContent).toBe("11/140");
+  });
+
+  it("al agregar entrega la nota limpia junto con la elección", () => {
+    const { onAdd } = open(helado, { notesEnabled: true });
+
+    document.querySelector("[data-opcion='o-frutilla'] .opcion-mas").click();
+    field().value = "  con   mucha frutilla ";
+    field().dispatchEvent(new Event("input"));
+    document.querySelector(".opciones-agregar").click();
+
+    expect(onAdd).toHaveBeenCalledTimes(1);
+    expect(onAdd.mock.calls[0][1]).toBe("con mucha frutilla");
+  });
+
+  it("sin escribir nada, la nota es vacía", () => {
+    const { onAdd } = open(helado, { notesEnabled: true });
+
+    document.querySelector("[data-opcion='o-frutilla'] .opcion-mas").click();
+    document.querySelector(".opciones-agregar").click();
+
+    expect(onAdd.mock.calls[0][1]).toBe("");
   });
 });

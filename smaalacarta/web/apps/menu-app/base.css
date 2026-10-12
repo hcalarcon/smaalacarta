@@ -904,3 +904,43 @@ body.no-scroll-opciones {
   line-height: 1;
   cursor: pointer;
 }
+
+/* Nota para este producto (PUBLICO-65): en la hoja de opciones y en cada línea del carrito. */
+.opciones-nota,
+.item-nota-campo {
+  display: grid;
+  gap: 0.3rem;
+  margin-top: 0.75rem;
+}
+
+.opciones-nota-etiqueta,
+.item-nota-etiqueta {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.opciones-nota-campo,
+.item-nota-campo input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid var(--border, #ddd);
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.9rem;
+  background: var(--card, #fff);
+  color: var(--text, #111);
+}
+
+.opciones-nota-contador,
+.item-nota-contador {
+  justify-self: end;
+  font-size: 0.75rem;
+  color: var(--muted, #6b7280);
+}
+
+.opciones-nota-aviso,
+.carrito-nota-aviso {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--muted, #6b7280);
+}

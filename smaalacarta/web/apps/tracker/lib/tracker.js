@@ -215,6 +215,16 @@ export function itemRow(doc, item, money) {
     li.appendChild(list);
   }
 
+  // Lo que el cliente pidió para este producto (SEGUIMIENTO-36): texto suyo, siempre con textContent.
+  const note = typeof item.nota === "string" ? item.nota.trim() : "";
+
+  if (note !== "") {
+    const p = doc.createElement("p");
+    p.className = "item-nota";
+    p.textContent = `📝 ${note}`;
+    li.appendChild(p);
+  }
+
   return li;
 }
 

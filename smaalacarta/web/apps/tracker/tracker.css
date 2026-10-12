@@ -207,6 +207,15 @@ body {
   border: 0;
 }
 
+/* La nota del cliente para un producto (SEGUIMIENTO-36). */
+.item-nota {
+  flex: 0 0 100%;
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  color: var(--muted, #6b7280);
+  overflow-wrap: anywhere;
+}
+
 .total {
   display: flex;
   justify-content: space-between;
