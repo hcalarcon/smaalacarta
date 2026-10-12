@@ -15,6 +15,13 @@ export const PAYMENT_OPTIONS = [
   { key: "mercadopago", label: "Mercado Pago" },
 ] as const;
 
+// El texto de ayuda bajo "Mercado Pago" (MP-23): la opción solo le aparece al cliente si el negocio tiene con
+// qué cobrar (conexión conectada o credenciales habilitadas); tildarla sin eso no rompe nada, pero no se ve.
+export const mercadoPagoHint = (ready: boolean) =>
+  ready
+    ? "Tu cuenta de Mercado Pago está lista: les aparece a tus clientes como medio de pago."
+    : "Mercado Pago le aparece a tus clientes solo cuando tu cuenta de Mercado Pago está conectada.";
+
 export const ALL_DELIVERY = DELIVERY_OPTIONS.map((o) => o.key) as string[];
 export const ALL_PAYMENT = PAYMENT_OPTIONS.map((o) => o.key) as string[];
 

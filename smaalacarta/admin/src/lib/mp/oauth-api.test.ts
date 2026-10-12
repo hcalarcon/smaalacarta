@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { MpApiError } from "./api";
 import { MP_ME_URL, MP_TOKEN_URL } from "./oauth";
-import { createOAuthApi } from "./oauth-api";
+import { createOAuthApi, createTokenRefresher } from "./oauth-api";
 
 // El cliente de OAuth de Mercado Pago (MP-11, MP-16): qué manda y qué hace con los fallos.
 const input = {
@@ -72,5 +72,81 @@ describe("getMe", () => {
     const [url, init] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
     expect(url).toBe(MP_ME_URL);
     expect((init.headers as Record<string, string>).Authorization).toBe("Bearer APP_USR-1");
+  });
+});
+
+describe("el código de error seguro — MP-21", () => {
+  const refresh = { clientId: "123", clientSecret: "SECRETO", refreshToken: "TG-REFRESH" };
+  const fail = (body: unknown, status = 400) =>
+    createTokenRefresher((async () => json(body, status)) as unknown as typeof fetch)(refresh).catch((e) => e);
+
+  it.each(["invalid_grant", "invalid_client", "invalid_request", "unauthorized_client", "invalid_scope"])(
+    "conserva %s, que está en la lista fija",
+    async (code) => {
+      const error = await fail({ error: code, message: "TG-REFRESH SECRETO", status: 400 });
+
+      expect(error).toBeInstanceOf(MpApiError);
+      expect(error.status).toBe(400);
+      expect(error.code).toBe(code);
+      expect(String(error.message)).not.toMatch(/TG-REFRESH|SECRETO/);
+    },
+  );
+
+  it.each([
+    ["un valor fuera de la lista", { error: "TG-REFRESH-SECRETO" }],
+    ["un error que no es texto", { error: { x: 1 } }],
+    ["sin el campo error", { message: "algo" }],
+    ["un cuerpo que no es un objeto", "texto"],
+    ["una lista", ["invalid_grant"]],
+  ])("descarta el código con %s", async (_name, body) => {
+    const error = await fail(body);
+
+    expect(error.status).toBe(400);
+    expect(error.code).toBeNull();
+    expect(JSON.stringify(error)).not.toMatch(/TG-REFRESH|SECRETO/);
+  });
+
+  it("un cuerpo que no es JSON no rompe: queda sin código", async () => {
+    const html = (async () => new Response("<html>", { status: 502 })) as unknown as typeof fetch;
+    const error = await createTokenRefresher(html)(refresh).catch((e) => e);
+
+    expect(error.status).toBe(502);
+    expect(error.code).toBeNull();
+  });
+
+  it("el canje del código también lleva el código seguro", async () => {
+    const api = createOAuthApi((async () => json({ error: "invalid_grant" }, 400)) as unknown as typeof fetch);
+
+    const exchange = await api.exchangeCode(input).catch((e) => e);
+    expect(exchange.code).toBe("invalid_grant");
+  });
+});
+
+describe("createTokenRefresher — MP-19", () => {
+  const refresh = { clientId: "123", clientSecret: "SECRETO", refreshToken: "TG-REFRESH" };
+
+  it("manda grant_type=refresh_token con las credenciales de la aplicación y el refresh_token", async () => {
+    const fetcher = vi.fn(async () => json({ access_token: "a", refresh_token: "r", expires_in: 1 }));
+    const r = await createTokenRefresher(fetcher as unknown as typeof fetch)(refresh);
+
+    expect(r).toEqual({ access_token: "a", refresh_token: "r", expires_in: 1 });
+    const [url, init] = fetcher.mock.calls[0] as unknown as [string, RequestInit];
+    expect(url).toBe(MP_TOKEN_URL);
+    expect(init.method).toBe("POST");
+    expect(JSON.parse(init.body as string)).toEqual({
+      grant_type: "refresh_token",
+      client_id: "123",
+      client_secret: "SECRETO",
+      refresh_token: "TG-REFRESH",
+    });
+  });
+
+  it("un error lleva solo el código HTTP, sin el cuerpo ni los secretos", async () => {
+    const fetcher = vi.fn(async () => json({ error: "invalid_grant", detail: "TG-REFRESH SECRETO" }, 400));
+
+    const error = await createTokenRefresher(fetcher as unknown as typeof fetch)(refresh).catch((e) => e);
+    expect(error).toBeInstanceOf(MpApiError);
+    expect(error.status).toBe(400);
+    expect(String(error.message)).not.toMatch(/TG-REFRESH|SECRETO|invalid_grant/);
   });
 });

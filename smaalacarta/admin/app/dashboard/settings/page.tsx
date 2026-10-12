@@ -12,7 +12,7 @@ import Section from "@/components/ui/Section";
 import { getDeliveryOptions } from "@/lib/db/delivery-zones";
 import { getSettings } from "@/lib/db/settings";
 import { requireBusiness } from "@/lib/get-current-business";
-import { getMpConnectionStatus, mpOauthAvailable } from "@/lib/mp/oauth-status";
+import { getMpConnectionStatus, hasMercadoPago, mpOauthAvailable } from "@/lib/mp/oauth-status";
 import { hasDigitalMenu, hasPdf } from "@/lib/plan-access";
 import { settingsSections } from "@/lib/settings/sections";
 
@@ -31,6 +31,8 @@ export default async function SettingsPage({
   // "Mercado Pago" solo con los dos interruptores prendidos: el global y el del negocio (MP-15).
   const mercadoPago = mpOauthAvailable(business);
   const mpStatus = mercadoPago ? await getMpConnectionStatus(business.id) : "none";
+  // Para el texto de ayuda del medio de pago: sirve también sin la tarjeta de conexión (MP-23).
+  const mercadoPagoReady = await hasMercadoPago(business.id);
   const plan = {
     planPdf: business.plan_pdf,
     planWeb: business.plan_web,
@@ -75,6 +77,7 @@ export default async function SettingsPage({
             initial={settings}
             digitalMenu={digitalMenu}
             pdfService={pdfService}
+            mercadoPagoReady={mercadoPagoReady}
           />
 
           {deliveryOptions ? <DeliverySection options={deliveryOptions} /> : null}

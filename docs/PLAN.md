@@ -580,9 +580,14 @@ paso a paso (cuenta, aplicación, credenciales, webhook y pruebas), está en [ME
         escribieron a mano)
   - [ ] [por asignar] Switch de `businesses.mp_oauth_enabled` por negocio en /superadmin (hoy se prende con un
         UPDATE desde el SQL editor)
-  - [ ] [herni] PR 2 — cobrar con la conexión: `getCredentials` usa primero OAuth y cae a las credenciales
-        manuales; renovación con bloqueo de fila (el `refresh_token` rota) y cron de respaldo; webhook con la clave
-        de la aplicación y `collector_id` igual al `mp_user_id` del negocio; `needs_reconnect` oculta Mercado Pago
+  - [x] [herni] PR 2 — cobrar con la conexión: `getCredentials` usa primero OAuth y cae a las credenciales
+        manuales; renovación al usarlo con arriendo atómico (el `refresh_token` rota); webhook con la clave de la
+        aplicación y `collector_id` igual al `mp_user_id` del negocio; `needs_reconnect` oculta Mercado Pago
+        (`business_has_mp`, requisitos `MP-18` a `MP-26`)
+  - [ ] [herni] Después de mergear el PR 2: aplicar `20261027000000_mercadopago_oauth_cobro.sql` a tu base y
+        correr `npm run db:types` (`refreshing_until` y `business_has_mp` se escribieron a mano en los tipos)
+  - [ ] [por asignar] Renovación de respaldo por cron (hoy el token solo se renueva al cobrar) y avisar al dueño
+        cuando falten pocos días; comprobar con un pago real que `collector_id` es el campo que se supuso
   - [ ] [herni] PR 3 — panel: tarjeta de Mercado Pago en Configuración (estado, vencimiento, reconectar,
         desconectar) y aviso cuando hay que reconectar
   - [ ] [herni] Prueba con usuarios de prueba (conectar, pagar, vencer y renovar, revocar desde MP) y alta de los

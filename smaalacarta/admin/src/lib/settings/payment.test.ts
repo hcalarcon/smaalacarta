@@ -4,6 +4,7 @@ import {
   normalizeAlias,
   normalizeCbu,
   normalizeDeliveryPayment,
+  mercadoPagoHint,
   PAYMENT_OPTIONS,
   validateDeliveryPayment,
 } from "./payment";
@@ -151,5 +152,16 @@ describe("normalizeSettingsText con entrega y pago — ADMIN-CONFIG-12", () => {
 
     expect(r.transferAlias).toBe("");
     expect(r.transferCbu).toBe("");
+  });
+});
+
+describe("mercadoPagoHint — MP-23", () => {
+  it("dice que está lista cuando el negocio tiene con qué cobrar", () => {
+    expect(mercadoPagoHint(true)).toMatch(/está lista/);
+  });
+
+  it("explica que hace falta conectar la cuenta cuando no la tiene", () => {
+    expect(mercadoPagoHint(false)).toMatch(/solo cuando tu cuenta de Mercado Pago está conectada/);
+    expect(mercadoPagoHint(false)).not.toBe(mercadoPagoHint(true));
   });
 });

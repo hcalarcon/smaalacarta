@@ -46,8 +46,8 @@ Recomendado: esperar la conexión por OAuth (una sola aplicación de SMA a la Ca
 ## Conexión por OAuth (en construcción)
 
 Una sola aplicación de Mercado Pago para OAuth; cada negocio conecta su cuenta desde Configuración. Esta
-parte (PR 1) solo conecta y desconecta: todavía **no se cobra** con la conexión (eso es el PR 2). Requisitos
-`MP-9` a `MP-16` en [SPEC.md](SPEC.md).
+parte (PR 1) conecta y desconecta; el cobro con la conexión es el PR 2 (sección siguiente). Requisitos `MP-9` a
+`MP-17` en [SPEC.md](SPEC.md).
 
 Flujo
 
@@ -66,7 +66,8 @@ Variables de servidor (nunca `NEXT_PUBLIC_`; valores solo en Vercel, nunca en el
 - `MP_TOKEN_ENCRYPTION_KEY`: 32 bytes en base64 (AES-256-GCM de los tokens).
 - `MP_OAUTH_ENABLED`: `"true"` o `"false"`; interruptor global.
 - `MP_OAUTH_TEST_MODE`: opcional; con `"true"` el canje manda `test_token=true`. Si falta, vale `"false"`.
-- `MP_OAUTH_WEBHOOK_SECRET`: lo usa el PR 2.
+- `MP_OAUTH_WEBHOOK_SECRET`: la clave secreta de las notificaciones de la aplicación de OAuth (PR 2). Se lee al
+  llamar; sin ella, el webhook de un negocio conectado solo valida con la clave manual del negocio, si la tiene.
 
 Puesta en marcha de un negocio (a mano hasta que haya control en /superadmin)
 
@@ -75,3 +76,57 @@ Puesta en marcha de un negocio (a mano hasta que haya control en /superadmin)
 - [ ] URL de redirección de la aplicación: `https://www.smaalacarta.com.ar/admin/api/mp/oauth/callback`.
 - [ ] Habilitar el negocio: `update businesses set mp_oauth_enabled = true where id = '<business_id>';`
 - [ ] El dueño entra a Configuración → Mercado Pago y conecta con una cuenta de prueba (vendedor).
+
+### Cobro con la conexión (PR 2)
+
+Requisitos `MP-18` a `MP-26` en [SPEC.md](SPEC.md). Con la cuenta del negocio en `connected`:
+
+- **Qué token se usa.** `/create`, `/verify` y `/webhook` usan primero la conexión; si no hay una `connected`, siguen
+  con `payment_credentials` como siempre. Cobrar no depende de `MP_OAUTH_ENABLED` ni de `mp_oauth_enabled`: esos solo
+  gobiernan conectar.
+- **Renovación.** El token dura 180 días. Cuando le quedan menos de 30 (o ya venció), se renueva al usarlo, con
+  `grant_type=refresh_token`. Mercado Pago devuelve un token y un `refresh_token` NUEVOS (el viejo deja de servir),
+  así que la renovación la hace un solo pedido a la vez (arriendo de 30 segundos en `refreshing_until`); los demás
+  usan el token vigente o esperan unos segundos. No hay cron: un negocio que no cobra no renueva, y su token
+  vence a los 180 días (la renovación necesita que haya sido autorizada con `offline_access`).
+- **`needs_reconnect`.** Solo lo marca un `invalid_grant` de Mercado Pago al renovar (rechazó ese refresh_token).
+  Un `invalid_client` (client_secret equivocado o rotado), un `invalid_request`, un 400 o 401 sin código, un error de
+  red, un 5xx o perder la carrera no lo marcan: es un problema de configuración o pasajero y se ve en los logs como
+  `mp/credentials: no se pudo renovar el token <HTTP> <código>`. Si aparece `invalid_client`, revisá
+  `MP_OAUTH_CLIENT_ID` y `MP_OAUTH_CLIENT_SECRET` en Vercel. Con la conexión en `needs_reconnect` y sin credenciales manuales habilitadas: la opción
+  desaparece del menú, `/create` responde 409 `not_configured` y el webhook responde 200 sin consultar a Mercado Pago.
+  El dueño reconecta desde Configuración (la tarjeta con el aviso es el PR 3).
+- **Webhook.** Se valida con `MP_OAUTH_WEBHOOK_SECRET` (o con la clave manual del negocio, para un aviso viejo) y el
+  `collector_id` del pago tiene que ser el `mp_user_id` de la conexión. Mercado Pago tiene que notificar a
+  `https://www.smaalacarta.com.ar/admin/api/mp/webhook?b=<business_id>`: la preferencia ya lo manda en `notification_url`,
+  y el evento "Pagos" y la clave secreta se configuran una sola vez en la aplicación de OAuth.
+
+Procedimiento de emergencia (parar el cobro de UN negocio). En el SQL editor de Supabase; oculta Mercado Pago del menú
+y del pedido y deja de cobrar, sin tocar nada más (las credenciales manuales, si las hay, siguen):
+
+```sql
+-- Parar:
+update payment_connections set status = 'needs_reconnect' where business_id = '<business_id>';
+-- Quitar la conexión del todo (borra los tokens; el negocio puede volver a conectar):
+update payment_connections set status = 'revoked', access_token_enc = null, refresh_token_enc = null,
+  expires_at = null where business_id = '<business_id>';
+```
+
+Para volver a cobrar después de un `needs_reconnect` puesto a mano: `update payment_connections set status =
+'connected' where business_id = '<business_id>';` (los tokens siguen guardados).
+
+Cómo probarlo con usuarios de prueba (vendedor y comprador)
+
+- [ ] Aplicar `20261027000000_mercadopago_oauth_cobro.sql` a tu base y correr `npm run db:types` (los tipos de
+  `refreshing_until` y `business_has_mp` se escribieron a mano).
+- [ ] Conectar el negocio de prueba con la cuenta de vendedor (sección anterior); con `MP_OAUTH_TEST_MODE=true` si
+  se usan credenciales de sandbox.
+- [ ] Hacer un pedido con Mercado Pago, pagar con el comprador de prueba y ver que pasa a "Pagado". En
+  `notifications_history` de la aplicación de OAuth tiene que figurar el aviso entregado (200).
+- [ ] Confirmar en los logs de Vercel que no hay "collector distinto"; si aparece con un pago real, el campo
+  `collector_id` no es el que se supuso.
+- [ ] Probar la renovación: `update payment_connections set expires_at = now() + interval '5 days' where business_id =
+  '<business_id>';`, hacer un pedido y pagarlo; `expires_at` tiene que volver a unos 180 días y el pago tiene que
+  entrar. Repetirlo con dos pedidos a la vez.
+- [ ] Revocar el acceso desde la cuenta de Mercado Pago del vendedor y hacer otro pedido: el siguiente intento de
+  renovar tiene que dejar la conexión en `needs_reconnect`.
