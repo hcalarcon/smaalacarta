@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Página no encontrada | SMA a la Carta</title>
+    <meta name="robots" content="noindex" />
+    <link rel="icon" href="/assets/favicon.ico" sizes="any" />
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Rutas absolutas: Vercel sirve este archivo en cualquier dirección que no existe. -->
+    <link rel="stylesheet" href="/landing.css" />
+    <style>
+      .notfound {
+        min-height: 100vh;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 1.25rem;
+        padding: 2rem 1rem;
+        text-align: center;
+      }
+      .notfound h1 {
+        font-family: var(--font-display);
+        font-weight: 800;
+        font-size: clamp(1.75rem, 6vw, 2.5rem);
+        color: var(--bark-deep);
+      }
+      .notfound p {
+        max-width: 28rem;
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main class="notfound">
+      <div class="logo">
+        <div class="logo-icon">
+          <img src="/assets/logo.png" alt="" width="32" height="32" />
+        </div>
+        <span class="logo-text">SMA a la Carta</span>
+      </div>
+
+      <h1>No encontramos esta página</h1>
+      <p>Puede que la dirección esté mal escrita o que la página ya no exista.</p>
+      <a class="btn primary btn-lg" href="/">Ir al inicio</a>
+    </main>
+  </body>
+</html>

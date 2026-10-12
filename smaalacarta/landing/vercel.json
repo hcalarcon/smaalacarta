@@ -11,6 +11,11 @@
     },
 
     {
+      "source": "/admin/",
+      "destination": "https://smaalacarta-admin.vercel.app/admin"
+    },
+
+    {
       "source": "/admin/:path*",
       "destination": "https://smaalacarta-admin.vercel.app/admin/:path*"
     },
