@@ -42,3 +42,36 @@ Recomendado: esperar la conexión por OAuth (una sola aplicación de SMA a la Ca
 - [ ] Tiene el plan "Pedidos Online" y "Mercado Pago" tildado en Configuración.
 - [ ] Prueba con credenciales de prueba y un pago real chico.
 - [ ] Se le avisa que la comisión de Mercado Pago la paga el vendedor y que el dinero se acredita según la configuración de su cuenta.
+
+## Conexión por OAuth (en construcción)
+
+Una sola aplicación de Mercado Pago para OAuth; cada negocio conecta su cuenta desde Configuración. Esta
+parte (PR 1) solo conecta y desconecta: todavía **no se cobra** con la conexión (eso es el PR 2). Requisitos
+`MP-9` a `MP-16` en [SPEC.md](SPEC.md).
+
+Flujo
+
+1. El dueño toca "Conectar Mercado Pago" → `POST /admin/api/mp/oauth/start`: guarda un `state` (solo su
+   hash) y el `code_verifier` de PKCE cifrado, y devuelve la URL de `auth.mercadopago.com`.
+2. Mercado Pago vuelve a `GET /admin/api/mp/oauth/callback` con `code` y `state`. El servidor consume el
+   `state` (un solo uso, 10 minutos, mismo usuario y negocio), canjea el código, confirma con `users/me` que
+   la cuenta es la del token y es de Argentina, y guarda los tokens cifrados.
+3. Siempre se vuelve a Configuración con un mensaje genérico (`?mp=connected` o `?mp=error`).
+4. "Desconectar" → `POST /admin/api/mp/oauth/disconnect`: borra los tokens y deja la conexión en `revoked`.
+   No llama a Mercado Pago; el negocio puede revocar el acceso desde su cuenta.
+
+Variables de servidor (nunca `NEXT_PUBLIC_`; valores solo en Vercel, nunca en el repo ni en el chat)
+
+- `MP_OAUTH_CLIENT_ID` y `MP_OAUTH_CLIENT_SECRET`: credenciales de la aplicación de OAuth.
+- `MP_TOKEN_ENCRYPTION_KEY`: 32 bytes en base64 (AES-256-GCM de los tokens).
+- `MP_OAUTH_ENABLED`: `"true"` o `"false"`; interruptor global.
+- `MP_OAUTH_TEST_MODE`: opcional; con `"true"` el canje manda `test_token=true`. Si falta, vale `"false"`.
+- `MP_OAUTH_WEBHOOK_SECRET`: lo usa el PR 2.
+
+Puesta en marcha de un negocio (a mano hasta que haya control en /superadmin)
+
+- [ ] Aplicar la migración `20261026000000_mercadopago_oauth.sql` a tu base y correr `npm run db:types`.
+- [ ] Variables cargadas en Vercel (Production y Preview) y `MP_OAUTH_ENABLED = true`.
+- [ ] URL de redirección de la aplicación: `https://www.smaalacarta.com.ar/admin/api/mp/oauth/callback`.
+- [ ] Habilitar el negocio: `update businesses set mp_oauth_enabled = true where id = '<business_id>';`
+- [ ] El dueño entra a Configuración → Mercado Pago y conecta con una cuenta de prueba (vendedor).

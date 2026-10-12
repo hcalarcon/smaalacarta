@@ -44,4 +44,13 @@ describe("settingsSections (ADMIN-CONFIG-22)", () => {
     expect(withCourier.slice(-2)).toEqual(["envios", "contrasena"]);
     expect(ids(true, true)).not.toContain("envios");
   });
+
+  it("MP-15: Mercado Pago solo aparece con la conexión habilitada, antes de la contraseña", () => {
+    const withMp = settingsSections({ digitalMenu: true, pdfService: false, mercadoPago: true }).map(
+      (section) => section.id,
+    );
+
+    expect(withMp.slice(-2)).toEqual(["mercadopago", "contrasena"]);
+    expect(ids(true, true)).not.toContain("mercadopago");
+  });
 });
