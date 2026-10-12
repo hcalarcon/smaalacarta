@@ -11,6 +11,11 @@ export const MP_AUTH_URL = "https://auth.mercadopago.com/authorization";
 export const MP_TOKEN_URL = "https://api.mercadopago.com/oauth/token";
 export const MP_ME_URL = "https://api.mercadopago.com/users/me";
 
+// El origen público del panel (donde vive /admin, por el rewrite de landing/). Es el dominio registrado en la
+// aplicación de Mercado Pago y al que vuelve el callback: nunca se deduce de la request, que detrás del rewrite
+// llega con el host del deploy directo de admin/ (MP-17).
+export const SITE_ORIGIN = "https://www.smaalacarta.com.ar";
+
 // La URL registrada en la aplicación de Mercado Pago: tiene que coincidir exacto con la que se manda.
 export const CALLBACK_PATH = "/admin/api/mp/oauth/callback";
 const SETTINGS_PATH = "/dashboard/settings";

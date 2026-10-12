@@ -8,7 +8,7 @@ import { withOAuthCallback } from "@/lib/mp/oauth-http";
 export async function GET(request: NextRequest) {
   const params = request.nextUrl.searchParams;
 
-  return withOAuthCallback(request, (deps, actor) =>
+  return withOAuthCallback((deps, actor) =>
     completeOAuth(deps, actor, {
       code: params.get("code"),
       state: params.get("state"),

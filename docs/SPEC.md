@@ -1182,6 +1182,9 @@ PR 2. Guía: [MERCADOPAGO.md](MERCADOPAGO.md).*
   su negocio (solo un superadmin o la clave de servicio).
 - **MP-16** Ningún secreto (`code`, tokens, `client_secret`, `state`, `code_verifier`) aparece en una URL, un
   log, una respuesta ni un mensaje de error; de un fallo de Mercado Pago solo se registra el código HTTP.
+- **MP-17** La vuelta del callback siempre es al origen público fijo (`https://www.smaalacarta.com.ar`) más
+  `/admin`, nunca al host ni al `basePath` de la request: detrás del rewrite de `landing/` la request llega
+  con el host del deploy directo de `admin/` y con el `basePath` vacío. Vale también para el redirect de error.
 
 ## ENVIO — Envío con Repartos al Toque
 

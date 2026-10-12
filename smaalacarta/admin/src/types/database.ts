@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5"
+    PostgrestVersion: "14.17"
   }
   graphql_public: {
     Tables: {
@@ -1453,11 +1453,11 @@ export type Database = {
           product_count: number
         }[]
       }
+      delete_delivery_zone: { Args: { p_zone_id: string }; Returns: string }
       delete_push_subscription: {
         Args: { p_endpoint: string }
         Returns: undefined
       }
-      delete_delivery_zone: { Args: { p_zone_id: string }; Returns: string }
       is_open_now: {
         Args: { p_at: string; p_schedule: Json }
         Returns: boolean
@@ -1479,6 +1479,7 @@ export type Database = {
       my_courier_id: { Args: never; Returns: string }
       new_tracking_code: { Args: never; Returns: string }
       next_order_number: { Args: { p_business_id: string }; Returns: number }
+      no_offers_alert_window: { Args: never; Returns: string }
       normalize_words: { Args: { p_text: string }; Returns: string[] }
       preorder_window: {
         Args: { p_cutoffs: Json; p_now: string; p_schedule: Json }
@@ -1511,17 +1512,7 @@ export type Database = {
         Args: { p_business_id: string; p_options: Json; p_product_id: string }
         Returns: Json
       }
-      no_offers_alert_window: { Args: never; Returns: string }
       run_order_timers: { Args: never; Returns: undefined }
-      save_push_subscription: {
-        Args: {
-          p_auth: string
-          p_endpoint: string
-          p_p256dh: string
-          p_user_agent?: string
-        }
-        Returns: undefined
-      }
       save_business_settings: {
         Args: {
           p_address: string
@@ -1586,6 +1577,15 @@ export type Database = {
           p_type: string
         }
         Returns: string
+      }
+      save_push_subscription: {
+        Args: {
+          p_auth: string
+          p_endpoint: string
+          p_p256dh: string
+          p_user_agent?: string
+        }
+        Returns: undefined
       }
       set_courier_preferences: {
         Args: { p_favorite: string }
