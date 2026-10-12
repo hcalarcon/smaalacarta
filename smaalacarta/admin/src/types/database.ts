@@ -77,6 +77,7 @@ export type Database = {
           business_id: string
           closed_message: string | null
           created_at: string
+          default_prep_minutes: number
           delivery_options: string[]
           facebook_url: string | null
           favorite_courier_id: string | null
@@ -96,6 +97,7 @@ export type Database = {
           scheduled_lead_minutes: number
           secondary_color: string
           show_default_images: boolean
+          show_prep_time: boolean
           tagline: string | null
           template: string
           temporarily_closed: boolean
@@ -111,6 +113,7 @@ export type Database = {
           business_id: string
           closed_message?: string | null
           created_at?: string
+          default_prep_minutes?: number
           delivery_options?: string[]
           facebook_url?: string | null
           favorite_courier_id?: string | null
@@ -130,6 +133,7 @@ export type Database = {
           scheduled_lead_minutes?: number
           secondary_color?: string
           show_default_images?: boolean
+          show_prep_time?: boolean
           tagline?: string | null
           template?: string
           temporarily_closed?: boolean
@@ -145,6 +149,7 @@ export type Database = {
           business_id?: string
           closed_message?: string | null
           created_at?: string
+          default_prep_minutes?: number
           delivery_options?: string[]
           facebook_url?: string | null
           favorite_courier_id?: string | null
@@ -164,6 +169,7 @@ export type Database = {
           scheduled_lead_minutes?: number
           secondary_color?: string
           show_default_images?: boolean
+          show_prep_time?: boolean
           tagline?: string | null
           template?: string
           temporarily_closed?: boolean
@@ -852,6 +858,9 @@ export type Database = {
           order_number: string
           payment: string | null
           payment_status: string
+          prep_reason: string | null
+          prep_ready_at: string | null
+          prep_updated_at: string | null
           preorder: boolean
           scheduled_for: string | null
           settled_at: string | null
@@ -894,6 +903,9 @@ export type Database = {
           order_number: string
           payment?: string | null
           payment_status?: string
+          prep_reason?: string | null
+          prep_ready_at?: string | null
+          prep_updated_at?: string | null
           preorder?: boolean
           scheduled_for?: string | null
           settled_at?: string | null
@@ -936,6 +948,9 @@ export type Database = {
           order_number?: string
           payment?: string | null
           payment_status?: string
+          prep_reason?: string | null
+          prep_ready_at?: string | null
+          prep_updated_at?: string | null
           preorder?: boolean
           scheduled_for?: string | null
           settled_at?: string | null
@@ -1542,6 +1557,7 @@ export type Database = {
           p_allow_scheduled_orders: boolean
           p_business_id: string
           p_closed_message: string
+          p_default_prep_minutes?: number
           p_delivery_options: string[]
           p_facebook_url: string
           p_header_image_url: string
@@ -1560,6 +1576,7 @@ export type Database = {
           p_scheduled_lead_minutes: number
           p_secondary_color: string
           p_show_default_images?: boolean
+          p_show_prep_time?: boolean
           p_tagline: string
           p_template: string
           p_temporarily_closed: boolean
@@ -1614,6 +1631,10 @@ export type Database = {
         Args: { p_favorite: string }
         Returns: undefined
       }
+      set_order_prep: {
+        Args: { p_order_id: string; p_ready_in_minutes: number; p_reason?: string }
+        Returns: string
+      }
       set_order_status: {
         Args: { p_note?: string; p_order_id: string; p_status: string }
         Returns: undefined
@@ -1631,6 +1652,10 @@ export type Database = {
         Returns: undefined
       }
       settle_due_courier_offers: { Args: never; Returns: undefined }
+      suggested_prep_minutes: {
+        Args: { p_business_id: string }
+        Returns: number
+      }
       suggest_default_image: {
         Args: { p_category?: string; p_name: string }
         Returns: {

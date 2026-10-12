@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import type { Order } from "@/lib/db/orders";
 import { timeAgo } from "@/lib/orders/format";
 import CustomerPhone from "./CustomerPhone";
@@ -17,6 +19,7 @@ import {
   type OrderOffers,
 } from "@/lib/orders/courier";
 import { isPaymentPending, PAYMENT_BLOCK_REASON } from "@/lib/orders/payment";
+import { acceptsPrepTime, PREP_REASON_LABELS, PREP_REASONS, prepBadge } from "@/lib/orders/prep";
 import { orderBadge } from "@/lib/orders/scheduled";
 import { isFinal, primaryAction, STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
@@ -33,6 +36,8 @@ export default function OrderCard({
   onConfirmSettlement,
   couriers = [],
   offers,
+  onSetPrep,
+  onDelay,
 }: {
   order: Order;
   now: Date;
@@ -44,7 +49,12 @@ export default function OrderCard({
   couriers?: OrderCourier[];
   // Las ofertas abiertas del pedido si está buscando repartidor (ENVIO-117).
   offers?: OrderOffers;
+  // Tiempo estimado (ADMIN-PEDIDOS-34 y 35): cargarlo en un pedido aceptado sin tiempo, o demorarlo con
+  // un motivo opcional (nulo = sin motivo).
+  onSetPrep?: () => void;
+  onDelay?: (reason: string | null) => void;
 }) {
+  const [choosingReason, setChoosingReason] = useState(false);
   const withDelivery = hasDelivery(order);
   const action = primaryAction(order.status, deliveryContext(order));
   const extra = order.order_items.length - SHOWN_ITEMS;
@@ -55,12 +65,20 @@ export default function OrderCard({
   const fee = withDelivery ? feeSummary(order) : null;
   const searching = withDelivery && order.courier_status === "searching" && !isFinal(order.status);
   const warning = withDelivery ? searchWarning(order, now, offers?.ofertas.length ?? 0) : null;
+  // El tiempo solo cuenta en un pedido aceptado y en preparación, sin hora propia.
+  const inKitchen =
+    (order.status === "confirmed" || order.status === "preparing") && acceptsPrepTime(order);
+  const prep = prepBadge(order, now);
   const courierName = order.courier_id
     ? couriers.find((courier) => courier.id === order.courier_id)?.name
     : undefined;
 
   return (
-    <article className="rounded-xl border border-line bg-white p-3 shadow-sm">
+    <article
+      className={`rounded-xl border p-3 shadow-sm ${
+        prep?.late ? "border-red-300 bg-red-50" : "border-line bg-white"
+      }`}
+    >
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <p className="text-sm font-semibold text-brand">
@@ -80,6 +98,15 @@ export default function OrderCard({
       {scheduled ? (
         <p className="mt-2 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
           🕒 {scheduled}
+        </p>
+      ) : null}
+
+      {prep ? (
+        <p
+          className={`mt-2 text-sm font-semibold ${prep.late ? "text-red-700" : "text-brand"}`}
+          role={prep.late ? "alert" : undefined}
+        >
+          ⏱ {prep.text}
         </p>
       ) : null}
 
@@ -181,6 +208,68 @@ export default function OrderCard({
           Detalle
         </button>
       </div>
+
+      {inKitchen && onDelay && order.prep_ready_at ? (
+        choosingReason ? (
+          <div className="mt-2 rounded-lg bg-stone-50 p-2">
+            <p className="text-[11px] font-medium text-stone-600">¿Por qué se demora? (opcional)</p>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {PREP_REASONS.map((reason) => (
+                <button
+                  key={reason}
+                  type="button"
+                  disabled={busy}
+                  onClick={() => {
+                    setChoosingReason(false);
+                    onDelay(reason);
+                  }}
+                  className="rounded-lg border border-line-strong bg-white px-2 py-1 text-xs font-medium text-brand transition hover:bg-brand-soft disabled:opacity-60"
+                >
+                  {PREP_REASON_LABELS[reason]}
+                </button>
+              ))}
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => {
+                  setChoosingReason(false);
+                  onDelay(null);
+                }}
+                className="rounded-lg border border-line-strong bg-white px-2 py-1 text-xs font-medium text-stone-600 transition hover:bg-brand-soft disabled:opacity-60"
+              >
+                Sin motivo
+              </button>
+              <button
+                type="button"
+                onClick={() => setChoosingReason(false)}
+                className="px-2 py-1 text-xs text-stone-500"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setChoosingReason(true)}
+            className="mt-2 w-full rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-medium text-brand transition hover:bg-brand-soft disabled:opacity-60"
+          >
+            Demorar +10
+          </button>
+        )
+      ) : null}
+
+      {inKitchen && onSetPrep && !order.prep_ready_at ? (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={onSetPrep}
+          className="mt-2 w-full rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-medium text-brand transition hover:bg-brand-soft disabled:opacity-60"
+        >
+          Poner tiempo
+        </button>
+      ) : null}
 
       {blocked ? <p className="mt-1.5 text-[11px] text-stone-500">{blockReason}</p> : null}
     </article>

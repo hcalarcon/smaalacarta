@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import OrdersClient from "./OrdersClient";
-import { setOrderStatusAction } from "../actions";
+import { acceptOrderAction, delayPrepAction, setOrderStatusAction, setPrepAction } from "../actions";
 import type { Order } from "@/lib/db/orders";
 
 const mocks = vi.hoisted(() => ({ refresh: vi.fn() }));
@@ -10,6 +10,9 @@ const mocks = vi.hoisted(() => ({ refresh: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: mocks.refresh }) }));
 vi.mock("../actions", () => ({
   setOrderStatusAction: vi.fn(),
+  acceptOrderAction: vi.fn(),
+  setPrepAction: vi.fn(),
+  delayPrepAction: vi.fn(),
   assignCourierAction: vi.fn(),
   selfDeliveryAction: vi.fn(),
   confirmSettlementAction: vi.fn(),
@@ -24,7 +27,25 @@ vi.mock("./ManualOrderDialog", () => ({ default: () => null }));
 vi.mock("./OrderDetailDialog", () => ({ default: () => null }));
 vi.mock("./OrdersHistory", () => ({ default: () => null }));
 vi.mock("./OrderCard", () => ({
-  default: ({ order }: { order: Order }) => <div>pedido {order.id}</div>,
+  default: ({
+    order,
+    onAdvance,
+    onSetPrep,
+    onDelay,
+  }: {
+    order: Order;
+    onAdvance: (status: string) => void;
+    onSetPrep: () => void;
+    onDelay: (reason: string | null) => void;
+  }) => (
+    <div>
+      pedido {order.id}
+      <button onClick={() => onAdvance("confirmed")}>avanzar {order.id}</button>
+      <button onClick={() => onAdvance("preparing")}>preparar {order.id}</button>
+      <button onClick={onSetPrep}>poner tiempo {order.id}</button>
+      <button onClick={() => onDelay("busy")}>demorar {order.id}</button>
+    </div>
+  ),
 }));
 
 const PREF_KEY = "sma-orders-sound";
@@ -455,13 +476,14 @@ describe("tarjeta de pedido nuevo — ADMIN-PEDIDOS-24", () => {
     expect(modal()).toBeNull();
   });
 
-  it("'Aceptar' lleva el pedido a confirmado, como el botón Confirmar del tablero", async () => {
-    vi.mocked(setOrderStatusAction).mockResolvedValue({ ok: true } as never);
+  it("'Aceptar' abre el selector de tiempo en vez de confirmar de golpe — ADMIN-PEDIDOS-31", async () => {
     render(board([full("1")]));
 
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
 
-    expect(setOrderStatusAction).toHaveBeenCalledWith("1", "confirmed", undefined);
+    expect(screen.getByRole("dialog", { name: /Aceptar pedido #001/ })).toBeTruthy();
+    expect(acceptOrderAction).not.toHaveBeenCalled();
+    expect(setOrderStatusAction).not.toHaveBeenCalled();
   });
 
   it("con varios pendientes muestra el más viejo y cuántos más hay", () => {
@@ -501,6 +523,134 @@ describe("tarjeta de pedido nuevo — ADMIN-PEDIDOS-24", () => {
     expect(modal()!.getAttribute("aria-modal")).toBe("true");
     expect(modal()!.getAttribute("aria-labelledby")).toBeTruthy();
     expect(document.activeElement).toBe(screen.getByRole("button", { name: "Aceptar" }));
+  });
+});
+
+describe("tiempo de preparación al aceptar — ADMIN-PEDIDOS-31 a 33", () => {
+  const accept = vi.mocked(acceptOrderAction);
+
+  beforeEach(() => {
+    vi.mocked(acceptOrderAction).mockReset().mockResolvedValue({ ok: true } as never);
+    vi.mocked(setPrepAction).mockReset().mockResolvedValue({ ok: true } as never);
+    vi.mocked(delayPrepAction).mockReset().mockResolvedValue({ ok: true } as never);
+    vi.mocked(setOrderStatusAction).mockReset().mockResolvedValue({ ok: true } as never);
+  });
+
+  const picker = () => screen.queryByRole("dialog", { name: /pedido #/i });
+
+  function withPrep(orders: Order[], extra: { suggested?: number | null; defaultMinutes?: number } = {}) {
+    return (
+      <OrdersClient
+        slug="demo"
+        orders={orders}
+        products={[]}
+        serverNow="2026-09-30T10:00:00Z"
+        suggestedPrepMinutes={extra.suggested ?? null}
+        defaultPrepMinutes={extra.defaultMinutes ?? 20}
+      />
+    );
+  }
+
+  it("el modal de pedido nuevo abre el selector con la sugerencia y acepta de un toque", async () => {
+    render(withPrep([full("1")], { suggested: 22 }));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
+    expect(screen.getByText("Sugerido: 22 min según tus últimos pedidos")).toBeTruthy();
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar con 22 min" })));
+
+    expect(accept).toHaveBeenCalledWith("1", 22);
+    expect(picker()).toBeNull();
+  });
+
+  it("sin sugerencia ofrece el tiempo por defecto del negocio", async () => {
+    render(withPrep([full("1")], { defaultMinutes: 35 }));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar con 35 min" })));
+
+    expect(accept).toHaveBeenCalledWith("1", 35);
+  });
+
+  it("'Aceptar sin tiempo' confirma sin minutos", async () => {
+    render(withPrep([full("1")]));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar sin tiempo" })));
+
+    expect(accept).toHaveBeenCalledWith("1", null);
+  });
+
+  it("el botón de la tarjeta del tablero abre el mismo selector", async () => {
+    render(withPrep([full("1", { created_at: "2026-09-30T10:00:00Z" })]));
+    fireEvent.click(screen.getByRole("button", { name: "Ver pedidos" }));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "avanzar 1" })));
+
+    expect(picker()).toBeTruthy();
+    expect(setOrderStatusAction).not.toHaveBeenCalled();
+  });
+
+  it("un pedido programado o anticipado se confirma directo, sin selector", async () => {
+    render(withPrep([full("1", { scheduled_for: "2026-09-30T23:00:00Z" })]));
+    fireEvent.click(screen.queryByRole("button", { name: "Ver pedidos" }) ?? document.body);
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "avanzar 1" })));
+
+    expect(picker()).toBeNull();
+    expect(setOrderStatusAction).toHaveBeenCalledWith("1", "confirmed", undefined);
+  });
+
+  it("otros pasos de estado no pasan por el selector", async () => {
+    render(withPrep([full("1", { status: "confirmed" })]));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "preparar 1" })));
+
+    expect(picker()).toBeNull();
+    expect(setOrderStatusAction).toHaveBeenCalledWith("1", "preparing", undefined);
+  });
+
+  it("un pedido aceptado sin tiempo lo carga después, sin 'Aceptar sin tiempo'", async () => {
+    render(withPrep([full("1", { status: "confirmed" })], { defaultMinutes: 20 }));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "poner tiempo 1" })));
+    expect(screen.queryByRole("button", { name: "Aceptar sin tiempo" })).toBeNull();
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Guardar 20 min" })));
+
+    expect(setPrepAction).toHaveBeenCalledWith("1", 20, null);
+    expect(accept).not.toHaveBeenCalled();
+  });
+
+  it("'Demorar +10' llama a la acción con el motivo", async () => {
+    render(withPrep([full("1", { status: "confirmed" })]));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "demorar 1" })));
+
+    expect(delayPrepAction).toHaveBeenCalledWith("1", "busy");
+  });
+
+  it("si falla, el selector sigue abierto y dice por qué", async () => {
+    accept.mockResolvedValue({ ok: false, error: "Tu cuenta está suspendida." } as never);
+    render(withPrep([full("1")]));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar con 20 min" })));
+
+    expect(picker()).toBeTruthy();
+    expect(screen.getAllByRole("alert").some((node) => /suspendida/.test(node.textContent ?? ""))).toBe(true);
+  });
+
+  it("si el pedido ya quedó confirmado, el selector se cierra y el aviso queda en pantalla", async () => {
+    accept.mockResolvedValue({ ok: false, error: "El pedido se aceptó, pero no pudimos guardar el tiempo." } as never);
+    const { rerender } = render(withPrep([full("1")]));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar con 20 min" })));
+    rerender(withPrep([full("1", { status: "confirmed" })]));
+
+    expect(picker()).toBeNull();
+    expect(screen.getByText(/se aceptó, pero no pudimos guardar el tiempo/)).toBeTruthy();
   });
 });
 

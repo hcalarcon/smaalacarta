@@ -40,6 +40,8 @@ export async function getSettings(
     headerImageY: data.header_image_y,
     showDefaultImages: data.show_default_images,
     allowItemNotes: data.allow_item_notes,
+    showPrepTime: data.show_prep_time,
+    defaultPrepMinutes: data.default_prep_minutes,
     logoUrl: data.logo_url ?? "",
     menuPdfUrl: data.menu_pdf_url ?? "",
     schedule: (data.schedule ?? {}) as Schedule,
@@ -84,6 +86,29 @@ export async function getDefaultImageSettings(
   };
 }
 
+// El tiempo de preparación por defecto del negocio, para preseleccionar el selector de Aceptar
+// (ADMIN-PEDIDOS-32). Un negocio que todavía no guardó su configuración tiene el valor por defecto.
+export async function getPrepSettings(
+  businessId: string,
+): Promise<{ defaultPrepMinutes: number; showPrepTime: boolean }> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("business_settings")
+    .select("default_prep_minutes, show_prep_time")
+    .eq("business_id", businessId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return {
+    defaultPrepMinutes: data?.default_prep_minutes ?? DEFAULT_SETTINGS.defaultPrepMinutes,
+    showPrepTime: data?.show_prep_time ?? DEFAULT_SETTINGS.showPrepTime,
+  };
+}
+
 // Guarda la configuración y el WhatsApp en un solo paso (ADMIN-CONFIG-3).
 export async function saveSettings(
   businessId: string,
@@ -123,6 +148,8 @@ export async function saveSettings(
     p_header_image_y: input.headerImageY,
     p_show_default_images: input.showDefaultImages,
     p_allow_item_notes: input.allowItemNotes,
+    p_show_prep_time: input.showPrepTime,
+    p_default_prep_minutes: input.defaultPrepMinutes,
   });
 
   return error ? { error: { code: error.code, message: error.message } } : {};

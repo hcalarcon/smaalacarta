@@ -615,3 +615,90 @@ describe("nota por ítem — ADMIN-PEDIDOS-22", () => {
     expect(screen.queryByText(/Nota del cliente/)).toBeNull();
   });
 });
+
+describe("tiempo estimado en la tarjeta — ADMIN-PEDIDOS-34 y 35", () => {
+  // 21:00 en Argentina.
+  const at21 = new Date("2026-10-12T00:00:00Z");
+  const inMinutes = (minutes: number) => new Date(at21.getTime() + minutes * 60_000).toISOString();
+
+  const timed = (extra: Partial<Order> = {}) =>
+    order({
+      status: "confirmed",
+      payment: "efectivo",
+      payment_status: "not_required",
+      prep_ready_at: inMinutes(35),
+      ...extra,
+    });
+
+  const prepCard = (o: Order, at = at21) => {
+    const handlers = { onSetPrep: vi.fn(), onDelay: vi.fn() };
+    render(<OrderCard order={o} now={at} busy={false} onAdvance={vi.fn()} onOpen={vi.fn()} {...handlers} />);
+    return handlers;
+  };
+
+  it("dice a qué hora estará listo y en cuánto, en hora de Argentina", () => {
+    prepCard(timed());
+
+    expect(screen.getByText(/Listo 21:35 \(en 35 min\)/)).toBeTruthy();
+  });
+
+  it("pasada la hora queda en alerta con el atraso", () => {
+    prepCard(timed(), new Date(at21.getTime() + 39 * 60_000));
+
+    const text = screen.getByText(/Listo 21:35 \(atrasado 4 min\)/);
+    expect(text.className).toMatch(/red/);
+  });
+
+  it("'Demorar +10' pide el motivo y lo manda con un toque", () => {
+    const { onDelay } = prepCard(timed());
+
+    fireEvent.click(screen.getByRole("button", { name: "Demorar +10" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mucho movimiento" }));
+
+    expect(onDelay).toHaveBeenCalledWith("busy");
+  });
+
+  it("el motivo es opcional: 'Sin motivo' demora igual", () => {
+    const { onDelay } = prepCard(timed());
+
+    fireEvent.click(screen.getByRole("button", { name: "Demorar +10" }));
+    fireEvent.click(screen.getByRole("button", { name: "Sin motivo" }));
+
+    expect(onDelay).toHaveBeenCalledWith(null);
+  });
+
+  it("ofrece los cuatro motivos", () => {
+    prepCard(timed());
+
+    fireEvent.click(screen.getByRole("button", { name: "Demorar +10" }));
+
+    for (const name of ["Mucho movimiento", "Clima", "Falta de insumo", "Otro"]) {
+      expect(screen.getByRole("button", { name })).toBeTruthy();
+    }
+  });
+
+  it("un pedido aceptado sin tiempo ofrece ponerlo", () => {
+    const { onSetPrep } = prepCard(timed({ prep_ready_at: null }));
+
+    expect(screen.queryByText(/Listo 21:/)).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Poner tiempo" }));
+
+    expect(onSetPrep).toHaveBeenCalledTimes(1);
+  });
+
+  it("un pedido pendiente, listo o programado no muestra nada de esto", () => {
+    for (const extra of [
+      { status: "pending" },
+      { status: "ready" },
+      { scheduled_for: inMinutes(120) },
+      { preorder: true, scheduled_for: inMinutes(2000) },
+    ]) {
+      cleanup();
+      prepCard(timed(extra));
+
+      expect(screen.queryByText(/Listo 21:/), JSON.stringify(extra)).toBeNull();
+      expect(screen.queryByRole("button", { name: "Demorar +10" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Poner tiempo" })).toBeNull();
+    }
+  });
+});

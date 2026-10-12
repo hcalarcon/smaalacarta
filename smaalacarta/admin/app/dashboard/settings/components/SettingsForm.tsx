@@ -154,6 +154,9 @@ export default function SettingsForm({
   const [headerFocus, setHeaderFocus] = useState({ x: initial.headerImageX, y: initial.headerImageY });
   const [showDefaultImages, setShowDefaultImages] = useState(initial.showDefaultImages);
   const [allowItemNotes, setAllowItemNotes] = useState(initial.allowItemNotes);
+  const [showPrepTime, setShowPrepTime] = useState(initial.showPrepTime);
+  // Texto, para poder borrar y escribir; se convierte a número al guardar.
+  const [defaultPrepMinutes, setDefaultPrepMinutes] = useState(String(initial.defaultPrepMinutes));
   const [logoUrl, setLogoUrl] = useState(initial.logoUrl);
   const [menuPdfUrl, setMenuPdfUrl] = useState(initial.menuPdfUrl);
   const [whatsapp, setWhatsapp] = useState(initial.whatsapp);
@@ -229,6 +232,8 @@ export default function SettingsForm({
         headerImageY: headerFocus.y,
         showDefaultImages,
         allowItemNotes,
+        showPrepTime,
+        defaultPrepMinutes: defaultPrepMinutes.trim() === "" ? Number.NaN : Number(defaultPrepMinutes),
         logoUrl,
         menuPdfUrl,
         schedule: toSchedule(days, scheduleEnabled),
@@ -868,6 +873,39 @@ export default function SettingsForm({
             maxLength={3}
           />
         ) : null}
+      </Section>
+
+      <Section
+        id="preparacion"
+        title="Tiempos de preparación"
+        description="Cuánto tarda tu cocina. Lo cargás al aceptar cada pedido y lo podés demorar si hace falta."
+      >
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={showPrepTime}
+            onChange={(event) => setShowPrepTime(event.target.checked)}
+            className="mt-1 h-5 w-5"
+          />
+          <span>
+            <span className="block font-medium text-stone-900">Mostrar el tiempo estimado a mis clientes</span>
+            <span className="block text-sm text-stone-500">
+              Es siempre aproximado: el cliente ve una ventana de 10 minutos («listo entre las 21:30 y las 21:40»),
+              no una promesa. Apagado, vos igual cargás el tiempo pero el cliente no lo ve.
+            </span>
+          </span>
+        </label>
+
+        <Field
+          label="Tiempo de preparación por defecto"
+          value={defaultPrepMinutes}
+          onChange={(event) => setDefaultPrepMinutes(event.target.value)}
+          inputMode="numeric"
+          placeholder="20"
+          hint="Los minutos que te ofrecemos al aceptar un pedido cuando todavía no tenemos suficientes pedidos tuyos para sugerirte uno (de 5 a 180)."
+          error={fieldErrors.defaultPrepMinutes}
+          maxLength={3}
+        />
       </Section>
 
       <Section
