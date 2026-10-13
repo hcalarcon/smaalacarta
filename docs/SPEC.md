@@ -1167,8 +1167,8 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   `not_required`.
 - **ADMIN-PEDIDOS-20** El tablero y el detalle del pedido (que también se abre desde el historial, cuya
   tabla no lista ítems) muestran las opciones elegidas bajo cada ítem (`+ Queso`, `+ Frutilla ×2`).
-- **ADMIN-PEDIDOS-21** El pedido manual (`create_manual_order`) no exige ni valida opciones en esta
-  versión: sus ítems nunca las llevan.
+- **ADMIN-PEDIDOS-21** *Reemplazado por ADMIN-PEDIDOS-40 y 41: el pedido manual ahora elige productos del menú con
+  sus opciones, y la base las valida como en el menú.*
 - **ADMIN-PEDIDOS-22** El tablero, el detalle y el historial de pedidos muestran la nota de cada ítem destacada (en un
   recuadro) bajo el ítem, para que no pase desapercibida; también el panel del repartidor si lista el detalle.
 - **ADMIN-PEDIDOS-23** `create_manual_order` acepta `note` por ítem (la limpia y recorta igual, y no depende del
@@ -1224,6 +1224,32 @@ recordatorios push son ADMIN-PWA-33 a 37)
 - **ADMIN-PEDIDOS-38** `suggested_prep_minutes(negocio)` es la mediana de lo que tardó el negocio entre Confirmado y
   Listo en sus últimos 20 pedidos que llegaron a Listo, sin contar los de más de 3 horas ni los que no pasaron tiempo; con menos
   de 5 muestras (o sin ser miembro) devuelve nulo y el selector usa el tiempo por defecto.
+
+**Pedido manual en el circuito** (`*_pedido_manual_en_el_circuito.sql`; reemplaza a ADMIN-PEDIDOS-3 en lo que
+contradiga: ahora entra a los envíos, lleva opciones y nace confirmado)
+
+- **ADMIN-PEDIDOS-39** `create_manual_order` deja el pedido `confirmed` (no `pending`), con `source = 'manual'`,
+  `payment_status = 'not_required'` y los eventos `pending` y `confirmed` en ese orden, como un pedido del menú recién
+  aceptado. No le avisa al local (ADMIN-PEDIDOS-24); a los repartidores sí, si busca repartidor (ENVIO-138).
+- **ADMIN-PEDIDOS-40** Los ítems del menú llegan como `{id, kind, quantity, options, note}` y el precio lo calcula la base
+  con `resolve_order_lines()`, la misma que usa `create_public_order_base`: precio del producto o la promoción, extras
+  de las opciones, stock (P0009), producto de otro negocio o inactivo (P0001) y opciones obligatorias (P0014). Un
+  `unit_price` que mande el navegador junto a un `id` se ignora.
+- **ADMIN-PEDIDOS-41** La cantidad del pedido manual va de 1 a 99 (la del menú sigue de 1 a 20) y la nota por ítem la
+  escribe el propio local: no depende de `allow_item_notes`.
+- **ADMIN-PEDIDOS-42** Un producto libre es `{name, unit_price, quantity, note}` sin `id` (nombre de 1 a 100
+  caracteres, precio de 0 a 9.999.999,99). Se guarda con `order_items.free = true`, sin producto ni promoción; el
+  menú nunca acepta ítems libres. La migración marca como libres los ítems tipeados de los pedidos manuales anteriores.
+- **ADMIN-PEDIDOS-43** La entrega del pedido manual es `retiro`, `delivery` o `local` (consumo en el local, solo
+  manual): `retiro` y `delivery` tienen que estar en `delivery_options` del negocio (P0007) y `local` siempre vale.
+  Es obligatoria; ya no hay texto libre.
+- **ADMIN-PEDIDOS-44** El pago del pedido manual es uno de `payment_options` del negocio, sin `mercadopago`, o `qr`
+  ("QR / billetera virtual", solo manual: el menú lo rechaza con P0008 y `business_settings` no lo admite). Otro valor
+  da P0008. Es obligatorio. `qr` solo registra cómo pagó: no genera ningún código.
+- **ADMIN-PEDIDOS-45** El teléfono es obligatorio con `delivery` (de 8 a 15 dígitos, P0018), con o sin repartidores en el
+  negocio; en `retiro` y `local` es opcional, y si se carga tiene que ser válido. Se guarda solo con dígitos.
+- **ADMIN-PEDIDOS-46** Solo un miembro del negocio puede cargarlo (42501, también sin sesión) y un pedido rechazado no deja
+  nada guardado.
 
 ## MP — Cobro con Mercado Pago (Checkout Pro)
 
@@ -1743,6 +1769,21 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   sección: "Todavía no elegiste a qué zonas enviás: tus clientes no ven el envío".
 - **ENVIO-136** El detalle del negocio en el superadmin, junto a "Envío con repartidores", dice cuántas zonas tiene
   tildadas el local ("39 zonas", "1 zona", "Sin zonas").
+- **ENVIO-137** El pedido manual con `delivery` en un negocio con `courier_delivery` lleva barrio (`p_delivery_zone`: activo,
+  tildado por el local y cubierto por algún repartidor activo; si no, P0016), dirección de 5 a 200 caracteres y modo
+  (`p_courier_mode`: `favorite`, `offers` o `self`; sin él, 22023). Guarda el barrio, el precio de lista y el precio del
+  envío igual que el menú.
+- **ENVIO-138** Con `offers` el pedido nace `confirmed` y `searching` con `offered_at = now()`: lo ven los repartidores que
+  cubren el barrio, ofertan y el cliente elige desde el seguimiento (o a los 5 minutos se elige sola la más barata), como
+  cualquier pedido. El webhook de avisos lo trata como un pedido ofertable nuevo.
+- **ENVIO-139** Con `favorite` el pedido va directo al favorito efectivo (`effective_favorite_courier`, ENVIO-130): nace
+  `accepted` con ese `courier_id` y `courier_responded_at`, sin ofertas, y deja el evento de envío "Envío asignado a
+  {nombre}, HH:MM". Si el favorito no está activo o no cubre el barrio, P0016.
+- **ENVIO-140** Con `self` el pedido nace `self` (lo lleva el local, sin repartidor) y deja el evento "Lo lleva el local,
+  HH:MM". No se ofrece a nadie.
+- **ENVIO-141** `delivery` en un negocio sin `courier_delivery` no lleva barrio (P0016 si lo manda) ni circuito: el
+  pedido queda sin `courier_status`, con teléfono obligatorio y la dirección si la cargaron.
+
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 

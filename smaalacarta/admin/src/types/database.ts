@@ -765,6 +765,7 @@ export type Database = {
       order_items: {
         Row: {
           business_id: string
+          free: boolean
           id: string
           name: string
           note: string | null
@@ -778,6 +779,7 @@ export type Database = {
         }
         Insert: {
           business_id: string
+          free?: boolean
           id?: string
           name: string
           note?: string | null
@@ -791,6 +793,7 @@ export type Database = {
         }
         Update: {
           business_id?: string
+          free?: boolean
           id?: string
           name?: string
           note?: string | null
@@ -1438,8 +1441,12 @@ export type Database = {
       create_manual_order: {
         Args: {
           p_business_id: string
+          p_courier_mode?: string
           p_customer_name: string
+          p_customer_phone?: string
           p_delivery: string
+          p_delivery_address?: string
+          p_delivery_zone?: string
           p_items: Json
           p_notes: string
           p_payment: string
@@ -1547,6 +1554,16 @@ export type Database = {
       }
       public_order_delivery: { Args: { p_code: string }; Returns: Json }
       public_order_tracking: { Args: { p_code: string }; Returns: Json }
+      resolve_order_lines: {
+        Args: {
+          p_allow_free: boolean
+          p_allow_notes: boolean
+          p_business_id: string
+          p_items: Json
+          p_max_quantity: number
+        }
+        Returns: Json
+      }
       resolve_order_options: {
         Args: { p_business_id: string; p_options: Json; p_product_id: string }
         Returns: Json
