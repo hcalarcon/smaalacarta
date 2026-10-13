@@ -70,7 +70,11 @@ export default function CoverageClient({ zones }: { zones: CoverageZone[] }) {
         {items.length === 0 ? (
           <p className="mt-4 text-sm text-stone-400">Todavía no hay zonas cargadas.</p>
         ) : (
-          <ul className="mt-3 divide-y divide-line">
+          <>
+            <p className="mt-1 text-sm text-stone-500">
+              <span className="font-medium text-stone-700">Precio de referencia</span>: se puede cambiar al aceptar un pedido.
+            </p>
+            <ul className="mt-3 divide-y divide-line">
             {items.map((zone) => (
               <li key={zone.id}>
                 <label className="flex min-h-11 cursor-pointer items-center gap-3 py-2">
@@ -87,7 +91,8 @@ export default function CoverageClient({ zones }: { zones: CoverageZone[] }) {
                 </label>
               </li>
             ))}
-          </ul>
+            </ul>
+          </>
         )}
       </section>
     </div>

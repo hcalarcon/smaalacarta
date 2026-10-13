@@ -1501,7 +1501,8 @@ sigue naciendo con un repartidor asignado (la TRANSICIÓN de ENVIO-54; la etapa 
   con confirmación y ordenar arrastrando. Una zona que ya usan pedidos no se borra: se desactiva y la pantalla lo
   avisa. Las validaciones son las de `src/lib/courier/zones.ts`.
 - **ENVIO-57** `/repartidor/zonas` ("Mis zonas") lista las zonas activas con su precio de referencia y una casilla
-  "La llevo" que guarda al tocar sobre `courier_zone_coverage`. No se editan nombres ni precios.
+  "La llevo" que guarda al tocar sobre `courier_zone_coverage`. No se editan nombres ni precios. El precio se
+  rotula "Precio de referencia" y aclara que se puede cambiar al aceptar un pedido.
 - **ENVIO-58** Configuración → Envíos (solo con `courier_delivery`): casillas de las zonas a las que envía el local
   (una zona sin repartidor muestra "Sin repartidor por ahora"), repartidor favorito (solo entre los que cubren alguna
   zona marcada, o "Sin favorito") y minutos para el favorito (5 por defecto, visibles solo con favorito). Se guarda
