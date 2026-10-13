@@ -684,6 +684,9 @@ ADMIN-CONFIG-48, ADMIN-PEDIDOS-22 y 23). Migración `20261029000000_notas_por_it
 - [x] [herni] Panel: la nota destacada en el tablero, el detalle, el historial y el panel del repartidor;
       interruptor "Permitir notas en cada producto" en Entrega y pago
 - [x] [herni] Seguimiento del cliente: la nota bajo cada ítem, con `textContent`
+- [x] [herni] La nota se escribe al seleccionar el producto (PUBLICO-65 y 65b): la tarjeta abre una hoja de
+      producto con foto, cantidad, opciones, nota y "Agregar $total"; el carrito muestra la nota de solo
+      lectura con un lápiz que reabre la hoja. Solo `web/apps/menu-app`, sin migración
 - [ ] [herni] **Después de mergear**: `db:push` de la migración y `db:types`; probar a mano un pedido con
       notas (menú → tablero → seguimiento → repartidor) y con el interruptor apagado
 

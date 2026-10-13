@@ -145,7 +145,15 @@ describe("plantillas — opciones y extras (PUBLICO-45, 46 y 49)", () => {
 
   function clasesDeLaHoja() {
     document.body.innerHTML = "";
-    const sheet = openOptionsSheet({ item: producto, t: (k) => k, formatPrice: String, onAdd() {} });
+    // Con notas activas: foto, cantidad y nota, para que también se compruebe su estilo (PUBLICO-65).
+    const sheet = openOptionsSheet({
+      item: producto,
+      t: (k) => k,
+      formatPrice: String,
+      onAdd() {},
+      notesEnabled: true,
+      image: { kind: "illustration", src: "https://cdn.example.com/x.png" },
+    });
     const classes = new Set();
     document.querySelectorAll(".opciones-overlay, .opciones-overlay *").forEach((node) => {
       node.classList.forEach((c) => classes.add(c));
@@ -172,6 +180,19 @@ describe("plantillas — opciones y extras (PUBLICO-45, 46 y 49)", () => {
     expect(templateCss[name]).toMatch(/\.opciones-hoja\s*\{/);
     expect(templateCss[name]).toMatch(/\.opciones-agregar\s*\{/);
     expect(templateCss[name]).toMatch(/:root\[data-tema="oscuro"\][^{]*\.opciones-hoja/);
+  });
+
+  it.each(TEMPLATES)("%s: la tarjeta que abre la hoja y la nota del carrito tienen estilo", (name) => {
+    const css = [base, templateCss[name]].join("\n");
+
+    expect(css).toMatch(/\.producto-abrir\b/);
+    expect(css).toMatch(/\.abre-hoja\b/);
+    expect(css).toMatch(/\.btn-nota\b/);
+    expect(css).toMatch(/\.item-nota\b/);
+  });
+
+  it("la foto de una tarjeta que abre la hoja no se amplía (el visor la ignora)", () => {
+    expect(read("../lightbox.js")).toContain("abre-hoja");
   });
 
   it("la hoja usa los colores de la plantilla (claro y oscuro), no colores fijos de fondo o texto", () => {

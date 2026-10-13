@@ -321,10 +321,22 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   misma nota (ya limpia), es una repetida y la base la rechaza como cualquier línea repetida.
 - **PUBLICO-64** `business_settings.allow_item_notes` (por defecto `true`) lo decide el negocio. Con el interruptor
   apagado, `create_public_order` ignora las notas sin error y `config.notasPorItem` es `false`.
-- **PUBLICO-65** En el menú interactivo, en la hoja de opciones del producto y en cada línea del carrito, el campo "Nota
-  para este producto (opcional)" (140 caracteres, contador, ejemplo "Sin cheddar, con mostaza") solo aparece si
-  `config.notasPorItem`. Dice que es un pedido al local, no una promesa. Textos en es, en y pt. La nota entra en la
-  firma del ítem del carrito (misma nota, suman cantidad); un carrito viejo de `localStorage` sigue funcionando.
+- **PUBLICO-65** En el menú interactivo la nota se escribe **al seleccionar el producto**, en la hoja del
+  producto, y no en el carrito. Solo con `config.notasPorItem`: tocar la foto o el nombre de la tarjeta (no el
+  "+") abre la hoja con nombre y foto, cantidad (− / +, de 1 a 99), los grupos de opciones si los tiene, el campo
+  "Nota para este producto (opcional)" (`textarea` de 2 líneas, 140 caracteres, contador, ejemplo "Sin cheddar,
+  con mostaza", sin salto de línea) y el botón "Agregar $total" con el precio en vivo
+  (producto + extras) × cantidad. Un producto sin grupos también abre la hoja. El "+" sigue siendo el agregado
+  rápido de un toque en un producto sin grupos (sin nota); en uno con grupos abre la hoja. Con el interruptor
+  apagado nada de esto aparece: el toque en la tarjeta no abre nada y la hoja de opciones es la de siempre. La
+  foto de una tarjeta que abre la hoja no se amplía (el visor del menú estático no cambia). La hoja dice que la
+  nota es un pedido al local, no una promesa; es un diálogo con el foco atrapado, se cierra con Esc y devuelve el
+  foco a la tarjeta. Textos en es, en y pt. La nota entra en la firma del ítem del carrito (misma nota, suman
+  cantidad); un carrito viejo de `localStorage` sigue funcionando.
+- **PUBLICO-65b** En el carrito la nota de una línea se ve de solo lectura bajo el ítem (`📝 texto`, con
+  `textContent`), sin campo de edición. Un botón lápiz ("Editar nota", o "Agregar nota" si no tiene) reabre la
+  hoja precargada con las opciones, la cantidad y la nota de esa línea; al confirmar reemplaza la línea
+  (`replaceLine`): si su firma coincide con otra línea, se juntan y suman cantidad.
 - **PUBLICO-66** `buildOrderItems` manda `{id, kind, quantity, options, note}`, y el mensaje de WhatsApp lista la nota
   bajo cada ítem (`  📝 sin cheddar`). Cualquier texto del cliente se muestra con `textContent` o `escapeHtml`.
 

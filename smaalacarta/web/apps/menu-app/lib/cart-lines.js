@@ -2,66 +2,65 @@
 // mensaje de WhatsApp. `app.js` solo guarda el resultado y pinta.
 
 import { cleanNote } from "./item-notes.js";
-import { lineSignature, unitPrice } from "./options.js";
+import { clampQuantity, lineSignature, unitPrice } from "./options.js";
 
-// Agrega una unidad de `product` con la elección `chosen` (lista de `chosenOptions`) y devuelve el
-// carrito nuevo. La misma elección del mismo producto suma cantidad; otra elección es otra línea. Con
-// id (menú de Supabase) se agrupa por id y elección; los menús de JSON, por nombre. Sin opciones la
-// línea es igual a la de siempre, así los carritos viejos de localStorage siguen funcionando.
-//
-// La nota del cliente (PUBLICO-65) entra en la firma: mismo producto y mismas opciones con distinta nota
-// son líneas distintas; con la misma nota, suman cantidad. Una línea sin `nota` (carritos viejos) es la
-// de nota vacía.
-export function addLine(cart, product, chosen = [], note = "") {
-  if (!product) return cart;
+// ¿Son la misma línea? Mismo producto (por id, o por nombre en los menús de JSON), mismas opciones y
+// misma nota. Una línea sin `nota` (carritos viejos) es la de nota vacía.
+function sameLine(a, b) {
+  const sameProduct = a.id ? lineSignature(a.id, a.elegidas) === lineSignature(b.id, b.elegidas) : a.nombre === b.nombre;
+  return sameProduct && cleanNote(a.nota) === cleanNote(b.nota);
+}
 
+// La línea nueva de `product` con la elección `chosen`, la nota y la cantidad. La definición de los
+// grupos no se guarda en el carrito: solo lo elegido. Sin opciones la línea es igual a la de siempre, así
+// los carritos viejos de localStorage siguen funcionando; sin nota no lleva la clave `nota`.
+function buildLine(product, chosen, note, quantity) {
   const nota = cleanNote(note);
-  const signature = product.id ? lineSignature(product.id, chosen) : null;
-
-  const index = cart.findIndex((line) =>
-    product.id
-      ? lineSignature(line.id, line.elegidas) === signature && cleanNote(line.nota) === nota
-      : line.nombre === product.nombre && cleanNote(line.nota) === nota,
-  );
-
-  if (index !== -1) {
-    return cart.map((line, i) => (i === index ? { ...line, cantidad: line.cantidad + 1 } : line));
-  }
-
-  // La definición de los grupos no se guarda en el carrito: solo lo elegido.
   const { opciones: _definition, ...rest } = product;
 
   const line =
     chosen.length > 0
-      ? { ...rest, precio: unitPrice(product.precio, chosen), precioBase: product.precio, elegidas: chosen, cantidad: 1 }
-      : { ...rest, cantidad: 1 };
+      ? { ...rest, precio: unitPrice(product.precio, chosen), precioBase: product.precio, elegidas: chosen, cantidad: quantity }
+      : { ...rest, cantidad: quantity };
 
-  return [...cart, nota ? { ...line, nota } : line];
+  return nota ? { ...line, nota } : line;
 }
 
-// Cambia la nota de la línea `index`. Si queda igual a otra línea (mismo producto, opciones y nota), se
-// juntan y suman cantidad. Devuelve un carrito nuevo; el original no se toca.
-export function setLineNote(cart, index, note) {
-  const target = cart[index];
-  if (!target) return cart;
+// Agrega `quantity` unidades (1 por defecto) de `product` con la elección `chosen` (lista de
+// `chosenOptions`) y devuelve el carrito nuevo. La misma elección del mismo producto suma cantidad; otra
+// elección es otra línea.
+//
+// La nota del cliente (PUBLICO-65) entra en la firma: mismo producto y mismas opciones con distinta nota
+// son líneas distintas; con la misma nota, suman cantidad.
+export function addLine(cart, product, chosen = [], note = "", quantity = 1) {
+  if (!product) return cart;
 
-  const nota = cleanNote(note);
-  if (nota === cleanNote(target.nota)) return cart;
+  const units = clampQuantity(quantity);
+  const line = buildLine(product, chosen, note, units);
+  const index = cart.findIndex((other) => sameLine(other, line));
 
-  const { nota: _old, ...base } = target;
-  const next = nota ? { ...base, nota } : base;
+  if (index !== -1) {
+    return cart.map((other, i) => (i === index ? { ...other, cantidad: other.cantidad + units } : other));
+  }
 
-  const sameLine = (a, b) =>
-    (a.id ? lineSignature(a.id, a.elegidas) === lineSignature(b.id, b.elegidas) : a.nombre === b.nombre) &&
-    cleanNote(a.nota) === cleanNote(b.nota);
+  return [...cart, line];
+}
 
-  const twin = cart.findIndex((line, i) => i !== index && sameLine(line, next));
+// Reemplaza la línea `index` por la que sale de editarla en la hoja (PUBLICO-65): otras opciones, otra
+// nota u otra cantidad. Si queda igual a otra línea del carrito, se juntan y suman cantidad; si no, ocupa
+// el lugar de la editada. Devuelve un carrito nuevo; el original no se toca.
+export function replaceLine(cart, index, product, chosen = [], note = "", quantity = 1) {
+  if (!product || !cart[index]) return cart;
 
-  if (twin === -1) return cart.map((line, i) => (i === index ? next : line));
+  const line = buildLine(product, chosen, note, clampQuantity(quantity));
+  const rest = cart.filter((_, i) => i !== index);
+  const twin = rest.findIndex((other) => sameLine(other, line));
 
-  return cart
-    .map((line, i) => (i === twin ? { ...line, cantidad: line.cantidad + target.cantidad } : line))
-    .filter((_, i) => i !== index);
+  if (twin !== -1) {
+    return rest.map((other, i) => (i === twin ? { ...other, cantidad: other.cantidad + line.cantidad } : other));
+  }
+
+  return [...rest.slice(0, index), line, ...rest.slice(index)];
 }
 
 // El carrito sin notas, para cuando el negocio las desactivó: las líneas que quedan iguales se juntan.

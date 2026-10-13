@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { addLine, cartTotal, lineSubtotal, setLineNote, stripNotes, whatsappDetail } from "./cart-lines.js";
-import { chosenOptions } from "./options.js";
+import { addLine, cartTotal, lineSubtotal, replaceLine, stripNotes, whatsappDetail } from "./cart-lines.js";
+import { MAX_QUANTITY, chosenOptions, clampQuantity, sheetTotal } from "./options.js";
 import { formatPrice } from "./price.js";
 
 const grupos = [
@@ -149,29 +149,11 @@ describe("nota por producto — PUBLICO-65 y 66", () => {
     expect(cart).toHaveLength(2);
   });
 
-  it("setLineNote cambia la nota, sin tocar el carrito original", () => {
-    const cart = addLine([], gaseosa);
-    const next = setLineNote(cart, 0, "sin hielo");
+  it("agregar con cantidad suma esa cantidad a la línea igual", () => {
+    let cart = addLine([], gaseosa, [], "sin hielo", 2);
+    cart = addLine(cart, gaseosa, [], "sin hielo", 3);
 
-    expect(next[0].nota).toBe("sin hielo");
-    expect(cart[0]).not.toHaveProperty("nota");
-  });
-
-  it("setLineNote junta la línea con otra igual y suma cantidad", () => {
-    let cart = addLine([], gaseosa, [], "sin hielo");
-    cart = addLine(cart, gaseosa);
-    cart = addLine(cart, gaseosa);
-
-    const next = setLineNote(cart, 1, "sin hielo");
-
-    expect(next).toHaveLength(1);
-    expect(next[0]).toMatchObject({ nota: "sin hielo", cantidad: 3 });
-  });
-
-  it("setLineNote con texto vacío quita la nota", () => {
-    const cart = addLine([], gaseosa, [], "sin hielo");
-
-    expect(setLineNote(cart, 0, " \n ")[0]).not.toHaveProperty("nota");
+    expect(cart).toEqual([{ id: "p-gas", nombre: "Gaseosa", precio: 500, cantidad: 5, nota: "sin hielo" }]);
   });
 
   it("stripNotes saca las notas y junta lo que queda igual", () => {
@@ -187,5 +169,71 @@ describe("nota por producto — PUBLICO-65 y 66", () => {
 
     expect(text).toContain("• Gaseosa x1\n  📝 sin hielo\n");
     expect(text).toContain("  + Queso x1\n  📝 sin cheddar\n");
+  });
+});
+
+describe("hoja de producto: cantidad y precio — PUBLICO-65", () => {
+  it("el precio del botón es (producto + extras) × cantidad", () => {
+    expect(sheetTotal(1000, elegir({ "o-queso": 2 }), 3)).toBe(6000);
+    expect(sheetTotal(500, [], 1)).toBe(500);
+  });
+
+  it("la cantidad es entera, de 1 a ${MAX_QUANTITY}; lo demás da 1", () => {
+    expect(clampQuantity(0)).toBe(1);
+    expect(clampQuantity(-4)).toBe(1);
+    expect(clampQuantity("x")).toBe(1);
+    expect(clampQuantity(2.9)).toBe(2);
+    expect(clampQuantity(1000)).toBe(MAX_QUANTITY);
+    expect(sheetTotal(100, [], 0)).toBe(100);
+  });
+});
+
+describe("replaceLine (editar desde el carrito) — PUBLICO-65", () => {
+  it("cambia nota, opciones y cantidad en el mismo lugar, sin tocar el carrito original", () => {
+    let cart = addLine([], gaseosa);
+    cart = addLine(cart, hamb, elegir({ "o-queso": 1 }), "sin cheddar");
+    const before = JSON.stringify(cart);
+
+    const next = replaceLine(cart, 1, hamb, elegir({ "o-queso": 2 }), " con  mostaza ", 3);
+
+    expect(next).toHaveLength(2);
+    expect(next[1]).toMatchObject({ id: "p-hamb", precio: 2000, cantidad: 3, nota: "con mostaza" });
+    expect(next[1].elegidas).toEqual(elegir({ "o-queso": 2 }));
+    expect(next[0]).toEqual(cart[0]);
+    expect(JSON.stringify(cart)).toBe(before);
+  });
+
+  it("la firma cambia con la nota: se puede quitar y la línea no lleva la clave", () => {
+    const cart = addLine([], gaseosa, [], "sin hielo", 2);
+    const next = replaceLine(cart, 0, gaseosa, [], " \n ", 2);
+
+    expect(next).toEqual([{ id: "p-gas", nombre: "Gaseosa", precio: 500, cantidad: 2 }]);
+  });
+
+  it("si queda igual a otra línea, se juntan y suman cantidad", () => {
+    let cart = addLine([], hamb, elegir({ "o-queso": 1 }), "sin cheddar", 2);
+    cart = addLine(cart, hamb, elegir({ "o-queso": 1 }), "con mostaza", 1);
+
+    const next = replaceLine(cart, 1, hamb, elegir({ "o-queso": 1 }), "sin cheddar", 4);
+
+    expect(next).toHaveLength(1);
+    expect(next[0]).toMatchObject({ nota: "sin cheddar", cantidad: 6 });
+  });
+
+  it("un índice o un producto que no existe deja el carrito igual", () => {
+    const cart = addLine([], gaseosa);
+
+    expect(replaceLine(cart, 5, gaseosa, [], "x", 1)).toBe(cart);
+    expect(replaceLine(cart, 0, null, [], "x", 1)).toBe(cart);
+  });
+
+  it("los menús de JSON (sin id) se juntan por nombre", () => {
+    const m = { nombre: "Milanesa", precio: 5000 };
+    let cart = addLine([], m, [], "sin sal");
+    cart = addLine(cart, m);
+
+    const next = replaceLine(cart, 0, m, [], "", 2);
+
+    expect(next).toEqual([{ nombre: "Milanesa", precio: 5000, cantidad: 3 }]);
   });
 });

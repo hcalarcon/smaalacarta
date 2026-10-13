@@ -905,42 +905,129 @@ body.no-scroll-opciones {
   cursor: pointer;
 }
 
-/* Nota para este producto (PUBLICO-65): en la hoja de opciones y en cada línea del carrito. */
-.opciones-nota,
-.item-nota-campo {
+/* Hoja de producto con notas (PUBLICO-65): la tarjeta abre la hoja al tocar la foto o el nombre. */
+.producto.abre-hoja > img:not(.imagen-ilustrativa):not(.imagen-logo),
+.producto.abre-hoja > img.imagen-ilustrativa,
+.producto.abre-hoja > img.imagen-logo {
+  cursor: pointer;
+}
+
+.producto-abrir {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: inherit;
+  cursor: pointer;
+}
+
+/* Foto del producto, arriba de la hoja. Las ilustraciones y el logo se ven enteros. */
+.opciones-foto {
+  display: block;
+  width: 100%;
+  height: 180px;
+  margin: 0.75rem 0 0;
+  border-radius: 14px;
+  object-fit: cover;
+}
+
+.opciones-foto.ilustrativa {
+  object-fit: contain;
+  padding: 6px;
+  box-sizing: border-box;
+  background: var(--bg, #f4f4f8);
+  border: 1px solid var(--border, rgba(127, 127, 127, 0.25));
+}
+
+/* Cantidad de unidades, en el pie de la hoja, junto al botón "Agregar $total". */
+.opciones-unidades {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.opciones-unidades button {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border, #ddd);
+  border-radius: 50%;
+  font-size: 1.3rem;
+  line-height: 1;
+  color: var(--text, #111);
+}
+
+.opciones-unidades-menos,
+.opciones-unidades-mas {
+  flex: none;
+}
+
+.opciones-unidades button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.opciones-unidades-valor {
+  min-width: 1.8rem;
+  text-align: center;
+  font-weight: 700;
+}
+
+.opciones-pie .opciones-unidades + .opciones-agregar {
+  flex: 1;
+}
+
+/* Nota para este producto (PUBLICO-65): se escribe en la hoja y en el carrito se lee. */
+.opciones-nota {
   display: grid;
   gap: 0.3rem;
   margin-top: 0.75rem;
 }
 
-.opciones-nota-etiqueta,
-.item-nota-etiqueta {
+.opciones-nota-etiqueta {
   font-size: 0.85rem;
   font-weight: 600;
 }
 
-.opciones-nota-campo,
-.item-nota-campo input {
+.opciones-nota-campo {
   width: 100%;
   padding: 0.6rem 0.75rem;
   border: 1px solid var(--border, #ddd);
   border-radius: 10px;
   font: inherit;
   font-size: 0.9rem;
+  resize: none;
   background: var(--card, #fff);
   color: var(--text, #111);
 }
 
-.opciones-nota-contador,
-.item-nota-contador {
+.opciones-nota-contador {
   justify-self: end;
   font-size: 0.75rem;
   color: var(--muted, #6b7280);
 }
 
-.opciones-nota-aviso,
-.carrito-nota-aviso {
+.opciones-nota-aviso {
   margin: 0;
   font-size: 0.75rem;
   color: var(--muted, #6b7280);
+}
+
+/* La nota de una línea del carrito, de solo lectura, y el lápiz que reabre la hoja. */
+.carrito-item .item-nota {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  color: var(--muted, #6b7280);
+  overflow-wrap: anywhere;
+}
+
+.btn-nota {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted, #6b7280);
+  cursor: pointer;
 }

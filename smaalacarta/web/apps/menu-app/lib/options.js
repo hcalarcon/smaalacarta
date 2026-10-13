@@ -80,6 +80,21 @@ export function unitPrice(basePrice, chosen) {
   return (Number(basePrice) || 0) + extrasTotal(chosen);
 }
 
+// Cantidad máxima de unidades de un producto que se elige desde la hoja.
+export const MAX_QUANTITY = 99;
+
+// La cantidad de la hoja: entera, de 1 a MAX_QUANTITY; cualquier otra cosa da 1.
+export function clampQuantity(quantity) {
+  const n = Math.floor(Number(quantity));
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.min(n, MAX_QUANTITY);
+}
+
+// Lo que dice el botón "Agregar $total" de la hoja: (producto + extras) × cantidad.
+export function sheetTotal(basePrice, chosen, quantity) {
+  return unitPrice(basePrice, chosen) * clampQuantity(quantity);
+}
+
 // Identifica una línea del carrito: el mismo producto con la misma elección da la misma firma, sin
 // importar el orden en que se eligió; otra elección, otra firma (PUBLICO-46).
 export function lineSignature(id, chosen) {
