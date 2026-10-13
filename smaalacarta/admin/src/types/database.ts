@@ -1561,6 +1561,16 @@ export type Database = {
         Returns: boolean
       }
       product_in_promotion: { Args: { p_product_id: string }; Returns: boolean }
+      promotion_remaining: { Args: { p_promotion_id: string }; Returns: number }
+      promotion_sold: { Args: { p_promotion_id: string }; Returns: number }
+      promotion_stock_stats: {
+        Args: { p_business_id: string }
+        Returns: {
+          promotion_id: string
+          remaining: number
+          sold: number
+        }[]
+      }
       public_business_pdf: {
         Args: { p_slug: string; p_via_path?: boolean }
         Returns: Json
@@ -1575,12 +1585,6 @@ export type Database = {
         Returns: Json
       }
       public_order_delivery: { Args: { p_code: string }; Returns: Json }
-      promotion_remaining: { Args: { p_promotion_id: string }; Returns: number }
-      promotion_sold: { Args: { p_promotion_id: string }; Returns: number }
-      promotion_stock_stats: {
-        Args: { p_business_id: string }
-        Returns: { promotion_id: string; remaining: number; sold: number }[]
-      }
       public_order_tracking: { Args: { p_code: string }; Returns: Json }
       resolve_order_lines: {
         Args: {
