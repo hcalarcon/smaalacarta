@@ -74,6 +74,8 @@ export function detectEvents(payload: WebhookPayload): PushEvent[] {
 
   if (payload.type === "INSERT") {
     if (isOfferable(order)) add("offer_new");
+    // El pedido manual que el local asigna a su favorito al cargarlo nace con repartidor (ENVIO-142).
+    if (order.courier_status === "accepted" && order.courier_id) add("courier_chosen");
     // Lo que carga el propio local no se le avisa a sí mismo.
     if (order.source === "web") add("local_new_order");
     return events;

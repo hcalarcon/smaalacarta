@@ -1783,6 +1783,9 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   HH:MM". No se ofrece a nadie.
 - **ENVIO-141** `delivery` en un negocio sin `courier_delivery` no lleva barrio (P0016 si lo manda) ni circuito: el
   pedido queda sin `courier_status`, con teléfono obligatorio y la dirección si la cargaron.
+- **ENVIO-142** El aviso `courier_chosen` también sale cuando el pedido nace ya asignado (INSERT con `courier_status =
+  'accepted'` y `courier_id`): el favorito al que el local asignó un pedido manual recibe "te asignó un envío". Un
+  pedido manual `self` no avisa a nadie.
 
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel

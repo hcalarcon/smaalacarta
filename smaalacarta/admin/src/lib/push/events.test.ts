@@ -47,6 +47,16 @@ describe("elección del repartidor — ADMIN-PWA-19, 20 y 23", () => {
     expect(kinds(chosen).sort()).toEqual(["courier_chosen", "courier_not_chosen", "local_courier_chosen"]);
   });
 
+  it("un pedido manual que nace asignado al favorito avisa solo a ese repartidor (ENVIO-142)", () => {
+    expect(kinds(insert({ source: "manual", courier_status: "accepted", courier_id: "c1", status: "confirmed" }))).toEqual([
+      "courier_chosen",
+    ]);
+  });
+
+  it("un pedido manual con 'lo llevo yo' no avisa a nadie", () => {
+    expect(kinds(insert({ source: "manual", courier_status: "self", status: "confirmed" }))).toEqual([]);
+  });
+
   it("'lo llevo yo' del local avisa solo a los que ofertaron", () => {
     expect(kinds(update({ courier_status: "searching" }, { courier_status: "self" }))).toEqual(["courier_not_chosen"]);
   });
