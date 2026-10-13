@@ -11,7 +11,7 @@ export function promotionErrorMessage(error: DbError) {
     case "23514":
       return "Revisá el descuento (1 a 100 %) o el precio del combo (mayor a 0).";
     case "22023":
-      return "Agregá al menos un producto a la promoción.";
+      return "Revisá los datos de la promoción: productos, imagen, fecha de fin y unidades disponibles.";
     case "P0002":
       return "La promoción ya no existe.";
     case "P0010":
