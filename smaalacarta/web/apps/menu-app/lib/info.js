@@ -105,7 +105,11 @@ export const DEFAULT_LOGO = "https://www.smaalacarta.com.ar/assets/logo.png";
 // eligió la base por el nombre, "illustration"; y sin imagen, el logo del negocio o el de SMA a la
 // Carta. Las promociones de Ofertas no llevan imagen. Solo direcciones http(s).
 export function productImage(item, config) {
-  if (item?.esPromo === true) return null;
+  // Una promoción lleva su imagen si el servidor la resolvió (PUBLICO-67); sin ella, no lleva ninguna.
+  if (item?.esPromo === true) {
+    const promoImage = safeHttpUrl(item.imagen);
+    return promoImage ? { kind: item.imagenIlustrativa === true ? "illustration" : "photo", src: promoImage } : null;
+  }
 
   const own = safeHttpUrl(item?.imagen);
   if (own) return { kind: item.imagenIlustrativa === true ? "illustration" : "photo", src: own };

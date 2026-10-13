@@ -7,6 +7,7 @@ import { normalizeLang } from "../apps/menu-app/lib/i18n.js";
 import { getDemoMenu } from "../apps/menu-app/lib/demo-menu.js";
 import { fetchPublicMenu, isSupabaseConfigured } from "../apps/menu-app/lib/public-menu.js";
 import { resolveTarget } from "../apps/menu-app/lib/hostname.js";
+import { staticCacheControl } from "../apps/menu-app/lib/static-cache.js";
 import { renderStaticMenuPage } from "../apps/menu-app/lib/static-page.js";
 import { SUPABASE } from "../apps/menu-app/supabase-config.js";
 
@@ -41,7 +42,8 @@ export default async function handler(req, res) {
   }
 
   res.setHeader("Content-Type", "text/html; charset=utf-8");
-  // Poco tiempo en el borde: un cambio en Configuración se ve rápido.
-  res.setHeader("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
+  // Poco tiempo en el borde: un cambio en Configuración se ve rápido. Con una promoción por vencer, hasta su
+  // fin y sin servir uno viejo (ESTATICO-13).
+  res.setHeader("Cache-Control", staticCacheControl(remote));
   res.status(200).send(renderStaticMenuPage({ ...remote, lang: normalizeLang(url.searchParams.get("lang")) }));
 }

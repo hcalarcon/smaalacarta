@@ -528,3 +528,45 @@ describe("imagen de cada producto — ESTATICO-11", () => {
     expect(card(html, "Combo")).not.toContain("<img");
   });
 });
+
+describe("promociones con imagen, vigencia y últimas unidades — ESTATICO-12", () => {
+  const card = (html, nombre) => html.split("<article").find((chunk) => chunk.includes(nombre)) ?? "";
+
+  const withPromo = (extra) =>
+    renderStaticMenuPage({
+      config: base.config,
+      menu: {
+        categorias: [
+          { nombre: "Ofertas", tipo: "ofertas", items: [{ id: "x", nombre: "Combo", esPromo: true, precio: 1, ...extra }] },
+        ],
+      },
+    });
+
+  it("dibuja la imagen de la promoción, y la etiqueta si es ilustrativa", () => {
+    const foto = withPromo({ imagen: "https://cdn.example.com/combo.jpg" });
+    expect(card(foto, "Combo")).toContain('src="https://cdn.example.com/combo.jpg"');
+    expect(card(foto, "Combo")).not.toContain("etiqueta-ilustrativa");
+
+    const ilustrada = withPromo({ imagen: "https://cdn.example.com/combo.svg", imagenIlustrativa: true });
+    expect(card(ilustrada, "Combo")).toContain("etiqueta-ilustrativa");
+  });
+
+  it("muestra hasta cuándo vale, sin ocultarla, en hora de Argentina", () => {
+    const html = withPromo({ validaHasta: "2026-10-21T02:59:00Z" });
+    expect(card(html, "Combo")).toContain('<span class="etiqueta-vigencia">Válida hasta el 20/10</span>');
+  });
+
+  it("muestra las últimas unidades solo cuando llega 'quedan'", () => {
+    expect(card(withPromo({ quedan: 2 }), "Combo")).toContain('<span class="etiqueta-quedan">¡Últimas 2!</span>');
+    expect(card(withPromo({}), "Combo")).not.toContain("etiqueta-quedan");
+  });
+
+  it("escapa los textos y no marca nada en un producto que no es promoción", () => {
+    const html = renderStaticMenuPage({
+      config: base.config,
+      menu: { categorias: [{ nombre: "Comidas", items: [{ nombre: "Plato", precio: 1, validaHasta: "2026-10-21T02:59:00Z", quedan: 1 }] }] },
+    });
+    expect(card(html, "Plato")).not.toContain("etiqueta-vigencia");
+    expect(card(html, "Plato")).not.toContain("etiqueta-quedan");
+  });
+});

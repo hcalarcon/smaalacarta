@@ -45,6 +45,23 @@ const completo = {
           { nombre: "Flan", precio: 2500, agotado: true },
         ],
       },
+      {
+        nombre: "Ofertas",
+        tipo: "ofertas",
+        items: [
+          {
+            id: "promo-1",
+            esPromo: true,
+            nombre: "Combo",
+            precio: 4500,
+            promo: "Combo",
+            imagen: "https://cdn.example.com/combo.jpg",
+            imagenIlustrativa: true,
+            validaHasta: "2026-10-21T02:59:00Z",
+            quedan: 3,
+          },
+        ],
+      },
     ],
   },
 };

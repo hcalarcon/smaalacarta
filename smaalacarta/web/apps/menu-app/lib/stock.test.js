@@ -47,6 +47,25 @@ describe("reconcileCart — PUBLICO-26", () => {
     expect(r.removed).toEqual(["Desayuno"]);
   });
 
+  it("quita una promoción que pasó su hora de fin aunque el menú abierto todavía la traiga (PUBLICO-70)", () => {
+    const vencible = {
+      categorias: [
+        {
+          nombre: "Ofertas",
+          tipo: "ofertas",
+          items: [{ id: "promo-9", esPromo: true, nombre: "Hoy", precio: 1, validaHasta: "2026-10-21T02:59:00Z" }],
+        },
+      ],
+    };
+    const cart = [line("promo-9", "Hoy", { esPromo: true })];
+
+    expect(reconcileCart(cart, vencible, new Date("2026-10-21T02:58:00Z")).cart).toEqual(cart);
+
+    const r = reconcileCart(cart, vencible, new Date("2026-10-21T03:00:00Z"));
+    expect(r.cart).toEqual([]);
+    expect(r.removed).toEqual(["Hoy"]);
+  });
+
   it("deja lo que sigue disponible, con sus cantidades", () => {
     const cart = [line("p-cafe", "Café", { cantidad: 3 }), line("promo-1", "Combo", { esPromo: true })];
     const r = reconcileCart(cart, menu);

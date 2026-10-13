@@ -1,4 +1,5 @@
 import { chosenOptions, hasOptions, selectionFromChosen, unitPrice, validateSelection } from "./options.js";
+import { isExpired } from "./promo-info.js";
 
 // Productos sin stock (PUBLICO-26): el menú los muestra con `agotado: true` pero no se pueden
 // pedir. Lógica pura: `app.js` solo pinta y avisa.
@@ -12,7 +13,7 @@ export const isSoldOut = (item) => item?.agotado === true;
 // exige opciones y no las tiene (PUBLICO-47); las que siguen valiendo se vuelven a precificar con el
 // menú actual. Un ítem sin id (menú de JSON) no se toca. Devuelve el carrito nuevo y los nombres de
 // lo quitado, para avisarle al cliente.
-export function reconcileCart(cart, menu) {
+export function reconcileCart(cart, menu, now = new Date()) {
   if (!Array.isArray(cart)) return { cart: [], removed: [] };
 
   const offered = new Map();
@@ -27,7 +28,9 @@ export function reconcileCart(cart, menu) {
 
   for (const line of cart) {
     const current = line?.id ? offered.get(line.id) : null;
-    let gone = line?.id && (current ? isSoldOut(current) : Boolean(line.esPromo));
+    // Una promoción que pasó su hora de fin ya no se puede pedir (PUBLICO-70), aunque el menú abierto la siga
+    // trayendo.
+    let gone = line?.id && (current ? isSoldOut(current) || isExpired(current, now) : Boolean(line.esPromo));
     let next = line;
 
     if (!gone && current && !line.esPromo) {
