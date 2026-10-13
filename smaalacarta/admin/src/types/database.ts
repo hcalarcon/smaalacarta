@@ -858,10 +858,10 @@ export type Database = {
           order_number: string
           payment: string | null
           payment_status: string
-          prep_reason: string | null
-          prep_ready_at: string | null
-          prep_updated_at: string | null
           preorder: boolean
+          prep_ready_at: string | null
+          prep_reason: string | null
+          prep_updated_at: string | null
           scheduled_for: string | null
           settled_at: string | null
           settled_by: string | null
@@ -903,10 +903,10 @@ export type Database = {
           order_number: string
           payment?: string | null
           payment_status?: string
-          prep_reason?: string | null
-          prep_ready_at?: string | null
-          prep_updated_at?: string | null
           preorder?: boolean
+          prep_ready_at?: string | null
+          prep_reason?: string | null
+          prep_updated_at?: string | null
           scheduled_for?: string | null
           settled_at?: string | null
           settled_by?: string | null
@@ -948,10 +948,10 @@ export type Database = {
           order_number?: string
           payment?: string | null
           payment_status?: string
-          prep_reason?: string | null
-          prep_ready_at?: string | null
-          prep_updated_at?: string | null
           preorder?: boolean
+          prep_ready_at?: string | null
+          prep_reason?: string | null
+          prep_updated_at?: string | null
           scheduled_for?: string | null
           settled_at?: string | null
           settled_by?: string | null
@@ -1514,6 +1514,8 @@ export type Database = {
       menu_preview: { Args: { p_business_id: string }; Returns: Json }
       my_courier_business_id: { Args: never; Returns: string }
       my_courier_id: { Args: never; Returns: string }
+      new_order_reminder_interval: { Args: never; Returns: string }
+      new_order_reminder_max: { Args: never; Returns: number }
       new_tracking_code: { Args: never; Returns: string }
       next_order_number: { Args: { p_business_id: string }; Returns: number }
       no_offers_alert_window: { Args: never; Returns: string }
@@ -1632,7 +1634,11 @@ export type Database = {
         Returns: undefined
       }
       set_order_prep: {
-        Args: { p_order_id: string; p_ready_in_minutes: number; p_reason?: string }
+        Args: {
+          p_order_id: string
+          p_ready_in_minutes: number
+          p_reason?: string
+        }
         Returns: string
       }
       set_order_status: {
@@ -1652,10 +1658,6 @@ export type Database = {
         Returns: undefined
       }
       settle_due_courier_offers: { Args: never; Returns: undefined }
-      suggested_prep_minutes: {
-        Args: { p_business_id: string }
-        Returns: number
-      }
       suggest_default_image: {
         Args: { p_category?: string; p_name: string }
         Returns: {
@@ -1665,6 +1667,10 @@ export type Database = {
           keyword: string
           name: string
         }[]
+      }
+      suggested_prep_minutes: {
+        Args: { p_business_id: string }
+        Returns: number
       }
     }
     Enums: {
