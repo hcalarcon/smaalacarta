@@ -339,6 +339,18 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   (`replaceLine`): si su firma coincide con otra línea, se juntan y suman cantidad.
 - **PUBLICO-66** `buildOrderItems` manda `{id, kind, quantity, options, note}`, y el mensaje de WhatsApp lista la nota
   bajo cada ítem (`  📝 sin cheddar`). Cualquier texto del cliente se muestra con `textContent` o `escapeHtml`.
+- **PUBLICO-67** En el menú interactivo, una promoción de Ofertas muestra la `imagen` que le resolvió el servidor
+  (ADMIN-PROMO-1), con la etiqueta "Imagen ilustrativa" si `imagenIlustrativa` es verdadera. Sin `imagen`, no lleva ninguna
+  (como hasta ahora, no cae al logo). Solo direcciones http(s).
+- **PUBLICO-68** Una promoción con `validaHasta` muestra "Válida hasta el dd/mm" (día de Argentina, `TIME_ZONE` de
+  `lib/schedule.js`).
+- **PUBLICO-69** Una promoción con `quedan` muestra "¡Últimas N!" ("¡Última unidad!" con una).
+- **PUBLICO-70** `reconcileCart` quita del carrito una promoción que el menú ya no ofrece (vencida o agotada) y la que pasó
+  su `validaHasta` aunque el menú abierto todavía la traiga, y avisa cuál.
+- **PUBLICO-71** Si el servidor rechaza el pedido con `unavailable`, se muestra el aviso de siempre y el menú se vuelve a
+  pedir (como con `out_of_stock`), así el carrito se limpia solo.
+- **PUBLICO-72** Los textos están en es, en y pt (`promo.validUntil`, `promo.lastUnits`, `promo.lastOne`) y se ven bien en
+  tema claro y oscuro en las tres plantillas.
 
 ## BUSQUEDA — Buscador
 
@@ -577,6 +589,11 @@ en JS puro.*
 - **ESTATICO-11** El menú estático muestra lo mismo que el interactivo (PUBLICO-51 a 56): ilustración con su
   etiqueta "Imagen ilustrativa", o el logo, con las mismas clases y sin la lupa. Todo dato del negocio pasa por
   `escapeHtml`.
+- **ESTATICO-12** El menú estático muestra en cada promoción lo mismo que el interactivo: su imagen (con la etiqueta
+  si es ilustrativa), "Válida hasta el dd/mm" y "¡Últimas N!" (PUBLICO-67 a 69), con los textos escapados.
+- **ESTATICO-13** El menú estático (`api/static-menu.js`) pone `Cache-Control` con `staticCacheControl`: el de siempre
+  (`s-maxage=60, stale-while-revalidate=300`) y, si una promoción vence en menos de 6 minutos, `s-maxage` hasta su fin
+  (entre 1 y 60 segundos) y sin `stale-while-revalidate`, para no servir una vencida.
 
 ## IDIOMA — Menú público en español, inglés y portugués
 
@@ -1887,6 +1904,46 @@ Cubierto por: `src/lib/db/promotions.test.ts` (ADMIN-PROMOS-2, 3, 5 y 6) y
   promoción no borra sus productos.
 
 ---
+
+### Imagen y vigencia (`*_promociones_imagen_y_vigencia.sql`)
+
+- **ADMIN-PROMO-1** Una promoción puede llevar `image_url` (imagen propia) o `image_product_id` (la imagen de uno de sus
+  productos: una referencia, no una copia). El menú público resuelve en este orden: la propia, la del producto elegido
+  (su imagen o, si no tiene, la ilustrativa que ya resuelve `public_menu`, con `imagenIlustrativa`), la primera de un
+  producto de la promoción (una foto del negocio gana a una ilustrativa) y, si no hay, ninguna. Cada promo del menú lleva
+  `imagen` e `imagenIlustrativa`.
+- **ADMIN-PROMO-2** La imagen propia y la de un producto son excluyentes: lo exige un check de la tabla y
+  `save_promotion` (22023). La imagen elegida tiene que ser de un producto de la promoción. Si se borra ese producto,
+  la referencia queda nula (`ON DELETE SET NULL (image_product_id)`) y la promoción no se borra.
+- **ADMIN-PROMO-3** En el editor, la sección "Imagen" tiene el cargador de imagen y, debajo, "o usar la foto de" con los
+  productos de la promoción (con su miniatura y la elegida marcada). Elegir una descarta la otra. Sin ninguna, el menú usa
+  la del primer producto con foto.
+- **ADMIN-PROMO-4** La sección "Vigencia" tiene "Válida hasta" (fecha y hora opcional, con atajos "Hoy" y "Este fin de
+  semana", y "Sin fecha de fin") y "Unidades disponibles" (vacío es sin límite).
+- **ADMIN-PROMO-5** La fecha y la hora son de Argentina (UTC-3): sin hora vale hasta las 23:59 de ese día, y la base guarda
+  un instante (`valid_until`). Una fecha de fin nueva tiene que ser futura (`validatePromotion` y 22023 en
+  `save_promotion`); guardar otra cosa de una promoción ya vencida, sin tocar la fecha, no se bloquea.
+- **ADMIN-PROMO-6** Una promoción vencida (`now() > valid_until`) no se devuelve en `public_menu` ni en `menu_preview`, y
+  `create_public_order` y `create_manual_order` la rechazan con `P0001` ("ya no está disponible"). Hasta la hora exacta
+  sigue vigente. Cada promo con fin lleva `validaHasta` (ISO UTC).
+- **ADMIN-PROMO-7** `stock` (entero de 1 en adelante, o nulo) son las unidades disponibles. Lo que queda es `stock` menos
+  la suma de `order_items.quantity` de esa promoción en pedidos no cancelados creados desde `stock_set_at`
+  (`promotion_remaining`, nulo sin stock). Con 0 restantes la promoción está agotada: no se entrega y se rechaza (`P0001`).
+  El menú trae `quedan` solo cuando quedan 5 o menos.
+- **ADMIN-PROMO-8** La validación es del servidor, en `resolve_order_lines` (la usan el menú y el pedido manual): bloquea la
+  fila de la promoción (`SELECT … FOR UPDATE`) y cuenta las unidades de las líneas del propio pedido, así dos pedidos a la
+  vez, o dos líneas de la misma promo, no venden más de lo que queda. Un pedido que se pasa se rechaza entero.
+- **ADMIN-PROMO-9** No se descuenta ni se restituye nada: un pedido cancelado libera la unidad solo (`set_order_status` no
+  cambia). `save_promotion` mueve `stock_set_at` a `now()` cada vez que cambia el valor del stock (lo vendido antes ya no
+  cuenta); guardar el mismo valor no reinicia el conteo y sacar el stock lo deja sin tope.
+- **ADMIN-PROMO-10** El editor y la lista muestran cuántas quedan y cuántas se vendieron (`promotion_stock_stats`). Las
+  funciones `promotion_sold`, `promotion_remaining` y `promotion_stock_stats` corren con los permisos de quien llama: un
+  miembro solo ve las de su negocio.
+- **ADMIN-PROMO-11** La lista de promociones muestra su miniatura (propia, la del producto elegido o la del primero con
+  foto) y su estado: Vigente, Vence hoy, Vence mañana (por día de Argentina), Vencida o Agotada, con "Hasta dd/mm a las
+  hh:mm" y "Quedan N de M · K vendidas".
+- **ADMIN-PROMO-12** Las columnas nuevas siguen el RLS de `promotions` (un negocio no lee ni escribe las de otro) y el
+  trigger de suspensión (`P0010`) las cubre. Una promoción sin imagen, vigencia ni stock no cambia.
 
 ## ADMIN-OPCIONES — Opciones y extras de producto
 

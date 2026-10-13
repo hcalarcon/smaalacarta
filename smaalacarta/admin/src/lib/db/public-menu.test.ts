@@ -229,6 +229,8 @@ describe("promociones — PUBLICO-3", () => {
       precio: 1440,
       precioAnterior: 1800,
       promo: "20% OFF",
+      // La imagen del primer producto de la promoción que tiene una (ADMIN-PROMO-1).
+      imagen: "https://ejemplo.com/cafe.jpg",
     });
   });
 
@@ -244,6 +246,7 @@ describe("promociones — PUBLICO-3", () => {
       precio: 1500,
       precioAnterior: 6000,
       promo: "Combo",
+      imagen: "https://ejemplo.com/cafe.jpg",
     });
   });
 

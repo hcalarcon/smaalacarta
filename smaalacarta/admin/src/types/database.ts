@@ -1250,11 +1250,16 @@ export type Database = {
           description: string | null
           discount_percent: number
           id: string
+          image_product_id: string | null
+          image_url: string | null
           name: string
           price: number | null
           slug: string | null
+          stock: number | null
+          stock_set_at: string | null
           type: string
           updated_at: string
+          valid_until: string | null
         }
         Insert: {
           active?: boolean
@@ -1263,11 +1268,16 @@ export type Database = {
           description?: string | null
           discount_percent?: number
           id?: string
+          image_product_id?: string | null
+          image_url?: string | null
           name: string
           price?: number | null
           slug?: string | null
+          stock?: number | null
+          stock_set_at?: string | null
           type?: string
           updated_at?: string
+          valid_until?: string | null
         }
         Update: {
           active?: boolean
@@ -1276,11 +1286,16 @@ export type Database = {
           description?: string | null
           discount_percent?: number
           id?: string
+          image_product_id?: string | null
+          image_url?: string | null
           name?: string
           price?: number | null
           slug?: string | null
+          stock?: number | null
+          stock_set_at?: string | null
           type?: string
           updated_at?: string
+          valid_until?: string | null
         }
         Relationships: [
           {
@@ -1289,6 +1304,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "businesses"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotions_image_product_fkey"
+            columns: ["image_product_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id", "business_id"]
           },
         ]
       }
@@ -1553,6 +1575,12 @@ export type Database = {
         Returns: Json
       }
       public_order_delivery: { Args: { p_code: string }; Returns: Json }
+      promotion_remaining: { Args: { p_promotion_id: string }; Returns: number }
+      promotion_sold: { Args: { p_promotion_id: string }; Returns: number }
+      promotion_stock_stats: {
+        Args: { p_business_id: string }
+        Returns: { promotion_id: string; remaining: number; sold: number }[]
+      }
       public_order_tracking: { Args: { p_code: string }; Returns: Json }
       resolve_order_lines: {
         Args: {
@@ -1630,10 +1658,14 @@ export type Database = {
           p_description: string
           p_discount_percent: number
           p_id: string
+          p_image_product_id?: string
+          p_image_url?: string
           p_name: string
           p_price: number
           p_product_ids: string[]
+          p_stock?: number
           p_type: string
+          p_valid_until?: string
         }
         Returns: string
       }
