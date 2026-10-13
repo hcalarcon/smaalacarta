@@ -1,5 +1,6 @@
 "use client";
 
+import { deliveryLabel } from "@/lib/orders/labels";
 import { useEffect, useRef } from "react";
 
 import type { Order } from "@/lib/db/orders";
@@ -45,8 +46,7 @@ export default function NewOrderAlert({
 
   const items = order.order_items ?? [];
   const total = Number(order.total);
-  const delivery =
-    order.delivery === "delivery" ? "Envío a domicilio" : order.delivery === "retiro" ? "Retiro en el local" : null;
+  const delivery = deliveryLabel(order.delivery) || null;
 
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center overflow-y-auto bg-red-800/95 p-4">

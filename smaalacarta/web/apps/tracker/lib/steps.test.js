@@ -11,6 +11,8 @@ describe("deliveryMode — SEGUIMIENTO-25", () => {
     expect(deliveryMode({ entrega: "delivery", estado: "pending" }, { state: "searching" })).toBe("courier");
     expect(deliveryMode({ entrega: "delivery", estado: "ready" }, { state: "self" })).toBe("local");
     expect(deliveryMode({ entrega: "delivery", estado: "ready" }, null)).toBe("local");
+    // Consumo en el local (pedido manual, SEGUIMIENTO-43): sin envío, recibido, aceptado, listo y entregado.
+    expect(deliveryMode({ entrega: "local", estado: "confirmed" }, null)).toBe("local");
   });
 
   it("un estado del repartidor implica el camino del envío aunque no llegue el envío", () => {

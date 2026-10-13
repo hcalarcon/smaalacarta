@@ -486,6 +486,9 @@ llegando al negocio por WhatsApp.
   mucho movimiento"); `other` y los desconocidos no agregan nada.
 - **SEGUIMIENTO-42** Las horas del tiempo estimado salen siempre en hora de Argentina (`TIME_ZONE`), los textos están en es,
   en y pt y se pintan con `textContent`. Sin `prep` la página no muestra nada nuevo.
+- **SEGUIMIENTO-43** Un pedido manual de consumo en el local (`entrega = 'local'`, sin envío) se sigue con el camino sin
+  repartidor: recibido, aceptado, listo y entregado. Un pedido manual nace confirmado, así que el cliente que abre el
+  link ya lo ve aceptado.
 
 ## PWA — Instalar el menú en el celular
 
@@ -1250,6 +1253,23 @@ contradiga: ahora entra a los envíos, lleva opciones y nace confirmado)
   negocio; en `retiro` y `local` es opcional, y si se carga tiene que ser válido. Se guarda solo con dígitos.
 - **ADMIN-PEDIDOS-46** Solo un miembro del negocio puede cargarlo (42501, también sin sesión) y un pedido rechazado no deja
   nada guardado.
+- **ADMIN-PEDIDOS-47** El diálogo "Pedido manual" va por pasos, en pantalla completa en el celular: Productos, Entrega,
+  Cliente y Pago. El menú sale de `menu_preview` (productos y promociones activos con sus grupos de opciones, el mismo
+  formato del menú público), con buscador sin tildes ni mayúsculas. Cada producto abre una hoja con sus opciones
+  (obligatorias, máximos, repetidas y agotadas como en el menú), la nota y la cantidad; "Producto libre" pide nombre y
+  precio. El mismo producto con la misma elección y nota es una sola línea. Lo que viaja a la base son ids, opciones
+  y cantidades: nunca precios (`toRpcItems`).
+- **ADMIN-PEDIDOS-48** Al crearlo, el diálogo muestra el número y "Mandar seguimiento por WhatsApp": abre
+  `api.whatsapp.com/send` al teléfono del cliente con el link `https://<slug>.smaalacarta.com.ar/pedido/<código>`. Con
+  "Buscar repartidor" el texto le dice que entre para elegir quién se lo lleva. Sin teléfono se muestra el link para
+  copiar. El tablero se actualiza al crearlo y el diálogo sigue abierto con el seguimiento hasta "Listo".
+- **ADMIN-PEDIDOS-49** El detalle del pedido (tablero e historial), el panel del repartidor, el aviso de pedido sin atender
+  y los avisos push muestran la entrega y el pago con su nombre (`src/lib/orders/labels.ts`): "Consumo en el local", "QR
+  / billetera virtual", etc.; un valor que no se conoce (texto libre de un pedido manual anterior) se muestra tal cual.
+- **ADMIN-PEDIDOS-50** Las reglas puras viven en `src/lib/orders/`: `manual-order.ts` (validación, total, líneas),
+  `manual-menu.ts` (menú, buscador y reglas de opciones), `manual-context.ts` (barrios y favorito) y
+  `manual-followup.ts` (mensaje y link de WhatsApp). La acción toma el negocio de `requireBusiness()` y vuelve a
+  validar con `courier = business.courier_delivery`.
 
 ## MP — Cobro con Mercado Pago (Checkout Pro)
 
@@ -1786,6 +1806,10 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
 - **ENVIO-142** El aviso `courier_chosen` también sale cuando el pedido nace ya asignado (INSERT con `courier_status =
   'accepted'` y `courier_id`): el favorito al que el local asignó un pedido manual recibe "te asignó un envío". Un
   pedido manual `self` no avisa a nadie.
+- **ENVIO-143** El diálogo del pedido manual ofrece los barrios que el local tildó y algún repartidor cubre, con su precio
+  de referencia (aparte del total), y "Asignar a {favorito}" solo si el favorito efectivo (`manualDeliveryContext`)
+  cubre el barrio elegido; "Buscar repartidor" y "Lo llevo yo" siempre. Al cambiar de barrio se desmarca un favorito
+  que ya no lo cubre. El modo se elige explícitamente: no hay uno por defecto.
 
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel

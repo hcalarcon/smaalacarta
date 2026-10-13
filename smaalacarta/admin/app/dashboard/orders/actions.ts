@@ -14,7 +14,7 @@ import {
 import { requireBusiness } from "@/lib/get-current-business";
 import { validateAssignNote } from "@/lib/orders/courier";
 import { validateManualOrder, type ManualOrderInput } from "@/lib/orders/manual-order";
-import { orderErrorMessage, settlementErrorMessage } from "@/lib/orders/messages";
+import { manualOrderErrorMessage, orderErrorMessage, settlementErrorMessage } from "@/lib/orders/messages";
 import { acceptsPrepTime, delayMinutes, isPrepReason, validatePrepMinutes } from "@/lib/orders/prep";
 import { STATUSES } from "@/lib/orders/status";
 
@@ -128,23 +128,28 @@ export async function delayPrepAction(orderId: string, reason: string | null): P
   return { ok: true };
 }
 
-export async function createManualOrderAction(
-  input: ManualOrderInput,
-): Promise<OrderActionResult> {
-  const { business } = await requireBusiness();
+export type ManualOrderActionResult =
+  | { ok: true; code: string; number: number; total: number }
+  | { ok: false; error: string; fieldErrors?: Partial<Record<string, string>> };
 
-  const validation = validateManualOrder(input);
+// Carga un pedido a mano (ADMIN-PEDIDOS-39 a 46). El negocio sale de la sesión; la base vuelve a validar
+// todo (entrega y pago contra lo habilitado, barrio, teléfono) y calcula los precios.
+export async function createManualOrderAction(input: ManualOrderInput): Promise<ManualOrderActionResult> {
+  const { business } = await requireBusiness();
+  const courier = business.courier_delivery === true;
+
+  const validation = validateManualOrder(input, { courier });
   if (!validation.ok) {
     return { ok: false, error: "Revisá los datos marcados.", fieldErrors: validation.errors };
   }
 
-  const result = await createManualOrder(business.id, input);
+  const result = await createManualOrder(business.id, input, courier);
   if ("error" in result) {
-    return { ok: false, error: orderErrorMessage(result.error) };
+    return { ok: false, error: manualOrderErrorMessage(result.error) };
   }
 
   revalidatePath("/dashboard/orders");
-  return { ok: true };
+  return { ok: true, code: result.code, number: result.number, total: result.total };
 }
 
 const ID = /^[0-9a-f-]{36}$/i;

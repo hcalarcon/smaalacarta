@@ -129,7 +129,7 @@ describe("pedido que ya tomó, en el panel del repartidor — ENVIO-31", () => {
     expect(screen.getByText("3644277105")).toBeTruthy();
     expect(screen.getByText("Cantera")).toBeTruthy();
     expect(screen.getAllByText(/\$\s?8\.200/).length).toBeGreaterThan(0);
-    expect(screen.getByText("efectivo")).toBeTruthy();
+    expect(screen.getByText("Efectivo")).toBeTruthy();
     expect(screen.getByText("2 × Helado")).toBeTruthy();
     expect(screen.getByText("+ Frutilla ×2")).toBeTruthy();
   });
@@ -188,7 +188,7 @@ describe("pedido disponible — ENVIO-71 y 113 a 115", () => {
     expect(screen.getByText("San Martín 100")).toBeTruthy();
     expect(screen.getByText("Cantera")).toBeTruthy();
     expect(screen.getAllByText(/\$\s?8\.200/).length).toBeGreaterThan(0);
-    expect(screen.getByText("efectivo")).toBeTruthy();
+    expect(screen.getByText("Efectivo")).toBeTruthy();
     expect(screen.getByText("2 ofertas")).toBeTruthy();
     expect(screen.getByText(/Pedido de las/)).toBeTruthy();
     expect(screen.getByText(/cuando te eligen/i)).toBeTruthy();

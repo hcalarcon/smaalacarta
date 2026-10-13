@@ -1,5 +1,6 @@
 "use client";
 
+import { paymentLabel } from "@/lib/orders/labels";
 import { useState } from "react";
 
 import {
@@ -184,7 +185,7 @@ export default function CourierOrderCard({
         </div>
         <div className="flex gap-2">
           <dt className="text-stone-500">Pago:</dt>
-          <dd>{order.pago || "-"}</dd>
+          <dd>{paymentLabel(order.pago) || "-"}</dd>
         </div>
         <div className="flex gap-2">
           <dt className="text-stone-500">Envío:</dt>

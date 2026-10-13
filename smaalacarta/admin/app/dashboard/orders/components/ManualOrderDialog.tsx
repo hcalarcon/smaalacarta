@@ -2,76 +2,317 @@
 
 import { useState } from "react";
 
+import ManualProductsStep from "./ManualProductsStep";
 import { createManualOrderAction } from "../actions";
 import FormAlert from "@/components/ui/FormAlert";
-import { orderTotal, type ManualOrderItem } from "@/lib/orders/manual-order";
+import { deliveryLabel, paymentLabel } from "@/lib/orders/labels";
+import type { ManualOrderSetup } from "@/lib/orders/manual-context";
+import { followupMessage, followupWhatsappUrl } from "@/lib/orders/manual-followup";
+import {
+  LIMITS,
+  MANUAL_PAYMENTS,
+  orderTotal,
+  validateManualOrder,
+  type ManualCourierMode,
+  type ManualOrderInput,
+  type ManualOrderItem,
+} from "@/lib/orders/manual-order";
+import { trackingUrl } from "@/lib/orders/format";
 import { formatMoney } from "@/lib/promotions/pricing";
 
-type Row = { name: string; price: string; quantity: string };
-
-const EMPTY_ROW: Row = { name: "", price: "", quantity: "1" };
-
 const inputClass =
-  "rounded-xl border border-line-strong bg-white px-3 py-2 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30";
+  "w-full rounded-xl border border-line-strong bg-white px-3 py-2.5 text-base focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 sm:text-sm";
+
+const STEPS = ["Productos", "Entrega", "Cliente", "Pago"] as const;
+
+// En qué paso se corrige cada campo con error.
+const STEP_OF_FIELD: Record<string, number> = {
+  items: 0,
+  delivery: 1,
+  zoneId: 1,
+  courierMode: 1,
+  customerName: 2,
+  phone: 2,
+  address: 2,
+  scheduledFor: 2,
+  notes: 2,
+  payment: 3,
+};
+
+type Created = { code: string; number: number; total: number };
+
+function FieldError({ message }: { message?: string }) {
+  return message ? (
+    <p role="alert" className="mt-1 text-sm text-red-600">
+      {message}
+    </p>
+  ) : null;
+}
+
+// Una opción para tocar (entrega, pago, modo del envío): tarjeta grande con título y ayuda.
+function Choice({
+  checked,
+  onSelect,
+  title,
+  hint,
+  name,
+}: {
+  checked: boolean;
+  onSelect: () => void;
+  title: string;
+  hint?: string;
+  name: string;
+}) {
+  return (
+    <label
+      className={`flex cursor-pointer items-start gap-3 rounded-xl border px-3 py-3 transition ${
+        checked ? "border-accent bg-accent/5" : "border-line hover:bg-brand-soft"
+      }`}
+    >
+      <input type="radio" name={name} checked={checked} onChange={onSelect} className="mt-1 h-5 w-5 accent-[var(--color-accent,#c2410c)]" />
+      <span className="min-w-0">
+        <span className="block text-base font-medium text-brand sm:text-sm">{title}</span>
+        {hint ? <span className="block text-sm text-stone-500 sm:text-xs">{hint}</span> : null}
+      </span>
+    </label>
+  );
+}
+
+function Confirmation({
+  created,
+  input,
+  setup,
+  onClose,
+}: {
+  created: Created;
+  input: ManualOrderInput;
+  setup: ManualOrderSetup;
+  onClose: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const link = trackingUrl(setup.slug, created.code);
+  const chooseCourier = input.delivery === "delivery" && setup.courier && input.courierMode === "offers";
+  const message = followupMessage({
+    customerName: input.customerName,
+    businessName: setup.businessName,
+    number: created.number,
+    link,
+    chooseCourier,
+  });
+  const whatsapp = followupWhatsappUrl(input.phone, message);
+
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(link);
+      setCopied(true);
+    } catch {
+      // Sin permiso del navegador, el link queda a la vista para copiarlo a mano.
+    }
+  }
+
+  const courierNote =
+    input.delivery === "delivery" && setup.courier
+      ? input.courierMode === "favorite"
+        ? "El envío quedó asignado a tu favorito."
+        : input.courierMode === "offers"
+          ? "Se está ofreciendo a los repartidores: el cliente elige desde el seguimiento."
+          : "El envío lo llevás vos."
+      : null;
+
+  return (
+    <div className="flex flex-1 flex-col">
+      <div className="flex-1 space-y-4 overflow-y-auto px-4 py-5 sm:px-6">
+        <FormAlert tone="success">
+          Pedido <strong>#{created.number}</strong> cargado y confirmado · {formatMoney(created.total)}
+        </FormAlert>
+
+        {courierNote ? <p className="text-sm text-stone-600">{courierNote}</p> : null}
+
+        <div className="space-y-3">
+          <h3 className="text-sm font-semibold text-brand">Seguimiento para el cliente</h3>
+
+          {whatsapp ? (
+            <a
+              href={whatsapp}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block rounded-xl bg-emerald-600 px-4 py-3 text-center text-base font-semibold text-white transition hover:bg-emerald-700 sm:text-sm"
+            >
+              Mandar seguimiento por WhatsApp
+            </a>
+          ) : (
+            <p className="text-sm text-stone-600">
+              No cargaste un teléfono: copiá el link y mandáselo al cliente por donde hablen.
+            </p>
+          )}
+
+          <div className="flex items-center gap-2">
+            <input readOnly value={link} aria-label="Link de seguimiento" onFocus={(e) => e.currentTarget.select()} className={inputClass} />
+            <button
+              type="button"
+              onClick={() => void copy()}
+              className="shrink-0 rounded-xl border border-line-strong px-4 py-2.5 text-sm font-medium text-stone-700 hover:bg-brand-soft"
+            >
+              {copied ? "Copiado" : "Copiar"}
+            </button>
+          </div>
+
+          {chooseCourier ? (
+            <p className="text-xs text-stone-500">
+              El mensaje le dice al cliente que entre al link para elegir quién se lo lleva.
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      <div className="border-t border-line px-4 py-3 sm:px-6">
+        <button
+          type="button"
+          onClick={onClose}
+          className="w-full rounded-xl bg-brand px-5 py-3 text-base font-semibold text-white transition hover:bg-brand-hover sm:text-sm"
+        >
+          Listo
+        </button>
+      </div>
+    </div>
+  );
+}
 
 function Form({
-  products,
+  setup,
   onClose,
   onCreated,
 }: {
-  products: { name: string; price: number }[];
+  setup: ManualOrderSetup;
   onClose: () => void;
   onCreated: () => void;
 }) {
-  const [customerName, setCustomerName] = useState("");
+  const [step, setStep] = useState(0);
+  const [items, setItems] = useState<ManualOrderItem[]>([]);
   const [delivery, setDelivery] = useState("");
-  const [payment, setPayment] = useState("");
-  const [notes, setNotes] = useState("");
+  const [zoneId, setZoneId] = useState("");
+  const [courierMode, setCourierMode] = useState("");
+  const [customerName, setCustomerName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
   const [scheduledFor, setScheduledFor] = useState("");
-  const [rows, setRows] = useState<Row[]>([{ ...EMPTY_ROW }]);
+  const [notes, setNotes] = useState("");
+  const [payment, setPayment] = useState("");
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Partial<Record<string, string>>>({});
+  const [created, setCreated] = useState<Created | null>(null);
 
-  const items: ManualOrderItem[] = rows.map((row) => ({
-    name: row.name,
-    unitPrice: row.price.trim() === "" ? Number.NaN : Number(row.price),
-    quantity: Number(row.quantity),
-  }));
+  // Lo que el negocio tiene habilitado, más el consumo en el local y el QR, que son solo del pedido manual.
+  const enabledDelivery = setup.menu.delivery.length > 0 ? setup.menu.delivery : ["retiro", "delivery"];
+  const deliveries = [
+    ...(enabledDelivery.includes("retiro") ? ["retiro"] : []),
+    ...(enabledDelivery.includes("delivery") ? ["delivery"] : []),
+    "local",
+  ];
 
-  function updateRow(index: number, change: Partial<Row>) {
-    setRows((prev) => prev.map((row, i) => (i === index ? { ...row, ...change } : row)));
+  const enabledPayments = setup.menu.payments.filter((p) => p !== "qr");
+  const payments = [
+    ...(enabledPayments.length > 0 ? enabledPayments : ["efectivo", "transferencia", "tarjeta"]).filter((p) =>
+      (MANUAL_PAYMENTS as readonly string[]).includes(p),
+    ),
+    "qr",
+  ];
+
+  const withCourier = delivery === "delivery" && setup.courier;
+  const zone = setup.delivery.zones.find((z) => z.id === zoneId) ?? null;
+  const favoriteAvailable = !!zone?.favoriteCovers && !!setup.delivery.favorite;
+
+  const input: ManualOrderInput = {
+    customerName,
+    delivery,
+    payment,
+    notes,
+    items,
+    scheduledFor,
+    phone,
+    zoneId: withCourier ? zoneId : "",
+    address,
+    courierMode: withCourier ? courierMode : "",
+  };
+
+  const subtotal = orderTotal(items);
+  const shipping = withCourier && zone ? zone.price : null;
+
+  // Los errores de los campos del paso actual (o de todos, al guardar).
+  function stepErrors(upTo: number) {
+    const result = validateManualOrder(input, { courier: setup.courier });
+    if (result.ok) return {};
+
+    return Object.fromEntries(
+      Object.entries(result.errors).filter(([field]) => (STEP_OF_FIELD[field] ?? 0) <= upTo),
+    ) as Partial<Record<string, string>>;
   }
 
-  // Si el nombre coincide con un producto del menú, se completa su precio.
-  function handleName(index: number, name: string) {
-    const match = products.find((p) => p.name.toLowerCase() === name.trim().toLowerCase());
-    updateRow(index, match && !rows[index].price ? { name, price: String(match.price) } : { name });
+  function selectDelivery(value: string) {
+    setDelivery(value);
+    if (value !== "delivery") {
+      setZoneId("");
+      setCourierMode("");
+    }
   }
 
-  async function handleSubmit(event: React.FormEvent) {
-    event.preventDefault();
+  function selectZone(value: string) {
+    setZoneId(value);
+    // El favorito puede no cubrir el barrio nuevo: no se deja elegido algo que la base rechazaría.
+    const next = setup.delivery.zones.find((z) => z.id === value);
+    if (courierMode === "favorite" && !next?.favoriteCovers) setCourierMode("");
+  }
+
+  function goNext() {
+    const errors = stepErrors(step);
+    const here = Object.fromEntries(Object.entries(errors).filter(([field]) => STEP_OF_FIELD[field] === step));
+
+    if (Object.keys(here).length > 0) {
+      setFieldErrors(here);
+      return;
+    }
+
+    setFieldErrors({});
+    setError(null);
+    setStep((current) => Math.min(STEPS.length - 1, current + 1));
+  }
+
+  function goBack() {
+    setFieldErrors({});
+    setError(null);
+    setStep((current) => Math.max(0, current - 1));
+  }
+
+  async function handleSubmit() {
+    const errors = stepErrors(STEPS.length - 1);
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      // Lleva al primer paso con algo para corregir.
+      const first = Math.min(...Object.keys(errors).map((field) => STEP_OF_FIELD[field] ?? 0));
+      setStep(first);
+      return;
+    }
+
     setSaving(true);
     setError(null);
     setFieldErrors({});
 
     try {
-      const result = await createManualOrderAction({
-        customerName,
-        delivery,
-        payment,
-        notes,
-        items,
-        scheduledFor,
-      });
+      const result = await createManualOrderAction(input);
 
       if (!result.ok) {
         setError(result.error);
-        setFieldErrors(result.fieldErrors ?? {});
+        const fields = result.fieldErrors ?? {};
+        setFieldErrors(fields);
+        const steps = Object.keys(fields).map((field) => STEP_OF_FIELD[field] ?? 0);
+        if (steps.length > 0) setStep(Math.min(...steps));
         return;
       }
 
+      setCreated({ code: result.code, number: result.number, total: result.total });
       onCreated();
     } catch {
       setError("No pudimos crear el pedido. Probá de nuevo.");
@@ -80,146 +321,286 @@ function Form({
     }
   }
 
+  const last = step === STEPS.length - 1;
+
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      onClick={onClose}
-    >
-      <form
-        onSubmit={handleSubmit}
+    <div className="fixed inset-0 z-50 flex items-stretch justify-center bg-black/40 sm:items-center sm:p-4" onClick={created ? undefined : onClose}>
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="mo-title"
         onClick={(event) => event.stopPropagation()}
-        noValidate
-        className="max-h-[90vh] supports-[height:1dvh]:max-h-[90dvh] w-full max-w-xl space-y-4 overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"
+        className="relative flex h-full w-full max-w-xl flex-col overflow-hidden bg-white shadow-2xl sm:h-auto sm:max-h-[90dvh] sm:rounded-3xl"
       >
-        <div>
-          <h2 className="text-xl font-semibold text-brand">Pedido manual</h2>
-          <p className="mt-1 text-sm text-stone-500">
-            Para un pedido que llegó por fuera del menú. Se numera y se puede seguir como cualquier otro.
-          </p>
-        </div>
-
-        {error ? <FormAlert tone="error">{error}</FormAlert> : null}
-
-        <div>
-          <label htmlFor="mo-name" className="mb-1.5 block text-sm font-medium text-brand">Cliente</label>
-          <input
-            id="mo-name"
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            className={`${inputClass} w-full`}
-            placeholder="Nombre y apellido"
-            maxLength={90}
-          />
-          {fieldErrors.customerName ? <p className="mt-1 text-sm text-red-600">{fieldErrors.customerName}</p> : null}
-        </div>
-
-        <div className="grid gap-3 sm:grid-cols-2">
-          <input value={delivery} onChange={(e) => setDelivery(e.target.value)} className={inputClass} placeholder="Entrega (retiro, delivery…)" aria-label="Entrega" maxLength={35} />
-          <input value={payment} onChange={(e) => setPayment(e.target.value)} className={inputClass} placeholder="Pago (efectivo, transferencia…)" aria-label="Pago" maxLength={35} />
-        </div>
-
-        <div>
-          <label htmlFor="mo-time" className="mb-1.5 block text-sm font-medium text-brand">
-            Para las (opcional)
-          </label>
-          <input
-            id="mo-time"
-            type="time"
-            value={scheduledFor}
-            onChange={(e) => setScheduledFor(e.target.value)}
-            className={inputClass}
-          />
-          <p className="mt-1 text-xs text-stone-500">Una hora de hoy. Vacío es lo antes posible.</p>
-          {fieldErrors.scheduledFor ? <p className="mt-1 text-sm text-red-600">{fieldErrors.scheduledFor}</p> : null}
-        </div>
-
-        <div>
-          <span className="mb-1.5 block text-sm font-medium text-brand">Productos</span>
-
-          <datalist id="mo-products">
-            {products.map((p) => (
-              <option key={p.name} value={p.name} />
-            ))}
-          </datalist>
-
-          <div className="space-y-2">
-            {rows.map((row, index) => (
-              <div key={index} className="flex items-center gap-2">
-                <input
-                  list="mo-products"
-                  value={row.name}
-                  onChange={(e) => handleName(index, e.target.value)}
-                  className={`${inputClass} min-w-0 flex-1`}
-                  placeholder="Producto"
-                  aria-label={`Producto ${index + 1}`}
-                />
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={row.price}
-                  onChange={(e) => updateRow(index, { price: e.target.value })}
-                  className={`${inputClass} w-24`}
-                  placeholder="Precio"
-                  aria-label={`Precio ${index + 1}`}
-                />
-                <input
-                  type="number"
-                  min="1"
-                  max="99"
-                  step="1"
-                  value={row.quantity}
-                  onChange={(e) => updateRow(index, { quantity: e.target.value })}
-                  className={`${inputClass} w-16`}
-                  aria-label={`Cantidad ${index + 1}`}
-                />
-                <button
-                  type="button"
-                  onClick={() => setRows((prev) => (prev.length > 1 ? prev.filter((_, i) => i !== index) : prev))}
-                  aria-label={`Quitar producto ${index + 1}`}
-                  className="rounded-lg px-2 py-1 text-red-600 hover:bg-red-50"
-                >
-                  ✕
-                </button>
-              </div>
-            ))}
+        <div className="border-b border-line px-4 py-3 sm:px-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 id="mo-title" className="text-xl font-semibold text-brand">Pedido manual</h2>
+              {!created ? (
+                <p className="mt-0.5 text-sm text-stone-500">Para un pedido que llegó por fuera del menú. Nace confirmado.</p>
+              ) : null}
+            </div>
+            {!created ? (
+              <button type="button" onClick={onClose} aria-label="Cerrar" className="rounded-xl px-3 py-2 text-stone-500 hover:bg-brand-soft">
+                ✕
+              </button>
+            ) : null}
           </div>
 
-          <button
-            type="button"
-            onClick={() => setRows((prev) => [...prev, { ...EMPTY_ROW }])}
-            className="mt-2 text-sm font-medium text-accent hover:text-accent-hover"
-          >
-            + Agregar producto
-          </button>
-
-          {fieldErrors.items ? <p className="mt-1 text-sm text-red-600">{fieldErrors.items}</p> : null}
+          {!created ? (
+            <ol className="mt-3 flex gap-1" aria-label="Pasos">
+              {STEPS.map((title, index) => (
+                <li
+                  key={title}
+                  aria-current={index === step ? "step" : undefined}
+                  className={`flex-1 rounded-lg px-1 py-1.5 text-center text-xs font-medium ${
+                    index === step ? "bg-brand text-white" : index < step ? "bg-brand-soft text-brand" : "bg-stone-100 text-stone-500"
+                  }`}
+                >
+                  {index + 1}. {title}
+                </li>
+              ))}
+            </ol>
+          ) : null}
         </div>
 
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          rows={2}
-          className={`${inputClass} w-full`}
-          placeholder="Notas (opcional)"
-          aria-label="Notas"
-        />
-        {fieldErrors.notes ? <p className="text-sm text-red-600">{fieldErrors.notes}</p> : null}
+        {created ? (
+          <Confirmation created={created} input={input} setup={setup} onClose={onClose} />
+        ) : (
+          <>
+            <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4 sm:px-6">
+              {error ? <FormAlert tone="error">{error}</FormAlert> : null}
 
-        <p className="flex items-baseline justify-between border-t border-line pt-3">
-          <span className="font-medium text-stone-700">Total</span>
-          <span className="text-xl font-bold text-brand">{formatMoney(orderTotal(items))}</span>
-        </p>
+              {step === 0 ? (
+                <ManualProductsStep menu={setup.menu} items={items} onChange={setItems} error={fieldErrors.items} />
+              ) : null}
 
-        <div className="flex justify-end gap-3">
-          <button type="button" onClick={onClose} className="rounded-xl border border-line-strong px-4 py-2 text-sm font-medium text-stone-700 hover:bg-brand-soft">
-            Cancelar
-          </button>
-          <button type="submit" disabled={saving} className="rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60">
-            {saving ? "Creando…" : "Crear pedido"}
-          </button>
-        </div>
-      </form>
+              {step === 1 ? (
+                <div className="space-y-4">
+                  <fieldset className="space-y-2">
+                    <legend className="mb-1 text-sm font-semibold text-brand">¿Cómo se entrega?</legend>
+                    {deliveries.map((value) => (
+                      <Choice
+                        key={value}
+                        name="mo-delivery"
+                        checked={delivery === value}
+                        onSelect={() => selectDelivery(value)}
+                        title={value === "delivery" && setup.courier ? "Envío con repartidor" : deliveryLabel(value)}
+                        hint={value === "local" ? "Lo consume en el local: no pasa por ningún envío." : undefined}
+                      />
+                    ))}
+                    <FieldError message={fieldErrors.delivery} />
+                  </fieldset>
+
+                  {withCourier ? (
+                    <>
+                      <div>
+                        <label htmlFor="mo-zone" className="mb-1.5 block text-sm font-semibold text-brand">Barrio</label>
+                        <select id="mo-zone" value={zoneId} onChange={(e) => selectZone(e.target.value)} className={inputClass}>
+                          <option value="">Elegí el barrio…</option>
+                          {setup.delivery.zones.map((z) => (
+                            <option key={z.id} value={z.id}>
+                              {z.name} · {formatMoney(z.price)}
+                            </option>
+                          ))}
+                        </select>
+                        {zone ? (
+                          <p className="mt-1 text-xs text-stone-500">
+                            Precio de referencia del envío: {formatMoney(zone.price)}. El repartidor puede cambiarlo al ofertar.
+                          </p>
+                        ) : null}
+                        <FieldError message={fieldErrors.zoneId} />
+                        {setup.delivery.zones.length === 0 ? (
+                          <p className="mt-1 text-sm text-red-600">
+                            No hay barrios disponibles: revisá Configuración → Envíos.
+                          </p>
+                        ) : null}
+                      </div>
+
+                      <fieldset className="space-y-2">
+                        <legend className="mb-1 text-sm font-semibold text-brand">¿Quién lo lleva?</legend>
+                        {favoriteAvailable && setup.delivery.favorite ? (
+                          <Choice
+                            name="mo-mode"
+                            checked={courierMode === "favorite"}
+                            onSelect={() => setCourierMode("favorite" satisfies ManualCourierMode)}
+                            title={`Asignar a ${setup.delivery.favorite.name}`}
+                            hint="Va directo a tu favorito, sin ofertas."
+                          />
+                        ) : null}
+                        <Choice
+                          name="mo-mode"
+                          checked={courierMode === "offers"}
+                          onSelect={() => setCourierMode("offers" satisfies ManualCourierMode)}
+                          title="Buscar repartidor"
+                          hint="Les llega a los repartidores y el cliente elige desde el seguimiento; si no elige, se elige sola."
+                        />
+                        <Choice
+                          name="mo-mode"
+                          checked={courierMode === "self"}
+                          onSelect={() => setCourierMode("self" satisfies ManualCourierMode)}
+                          title="Lo llevo yo"
+                          hint="El envío queda a tu cargo, sin repartidor."
+                        />
+                        <FieldError message={fieldErrors.courierMode} />
+                      </fieldset>
+                    </>
+                  ) : null}
+                </div>
+              ) : null}
+
+              {step === 2 ? (
+                <div className="space-y-4">
+                  <div>
+                    <label htmlFor="mo-name" className="mb-1.5 block text-sm font-semibold text-brand">Cliente</label>
+                    <input
+                      id="mo-name"
+                      value={customerName}
+                      onChange={(e) => setCustomerName(e.target.value)}
+                      className={inputClass}
+                      placeholder="Nombre y apellido"
+                      maxLength={LIMITS.customerName + 10}
+                      autoComplete="off"
+                    />
+                    <FieldError message={fieldErrors.customerName} />
+                  </div>
+
+                  <div>
+                    <label htmlFor="mo-phone" className="mb-1.5 block text-sm font-semibold text-brand">
+                      Teléfono {delivery === "delivery" ? "" : "(opcional)"}
+                    </label>
+                    <input
+                      id="mo-phone"
+                      type="tel"
+                      inputMode="tel"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      className={inputClass}
+                      placeholder="351 555-1234"
+                      autoComplete="off"
+                    />
+                    <p className="mt-1 text-xs text-stone-500">
+                      {delivery === "delivery"
+                        ? "Hace falta para el envío. Con él también le mandás el seguimiento por WhatsApp."
+                        : "Con el teléfono le mandás el seguimiento por WhatsApp."}
+                    </p>
+                    <FieldError message={fieldErrors.phone} />
+                  </div>
+
+                  {delivery === "delivery" ? (
+                    <div>
+                      <label htmlFor="mo-address" className="mb-1.5 block text-sm font-semibold text-brand">Dirección</label>
+                      <input
+                        id="mo-address"
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        className={inputClass}
+                        placeholder="Calle, número, piso, referencias"
+                        autoComplete="off"
+                      />
+                      <FieldError message={fieldErrors.address} />
+                    </div>
+                  ) : null}
+
+                  <div>
+                    <label htmlFor="mo-time" className="mb-1.5 block text-sm font-semibold text-brand">Para las (opcional)</label>
+                    <input
+                      id="mo-time"
+                      type="time"
+                      value={scheduledFor}
+                      onChange={(e) => setScheduledFor(e.target.value)}
+                      className={inputClass}
+                    />
+                    <p className="mt-1 text-xs text-stone-500">Una hora de hoy. Vacío es lo antes posible.</p>
+                    <FieldError message={fieldErrors.scheduledFor} />
+                  </div>
+
+                  <div>
+                    <label htmlFor="mo-notes" className="mb-1.5 block text-sm font-semibold text-brand">Notas del pedido (opcional)</label>
+                    <textarea
+                      id="mo-notes"
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      rows={2}
+                      className={inputClass}
+                    />
+                    <FieldError message={fieldErrors.notes} />
+                  </div>
+                </div>
+              ) : null}
+
+              {step === 3 ? (
+                <div className="space-y-4">
+                  <fieldset className="space-y-2">
+                    <legend className="mb-1 text-sm font-semibold text-brand">¿Cómo paga?</legend>
+                    {payments.map((value) => (
+                      <Choice
+                        key={value}
+                        name="mo-payment"
+                        checked={payment === value}
+                        onSelect={() => setPayment(value)}
+                        title={paymentLabel(value)}
+                        hint={value === "qr" ? "Solo registra cómo pagó: no genera ningún código." : undefined}
+                      />
+                    ))}
+                    <FieldError message={fieldErrors.payment} />
+                  </fieldset>
+
+                  <div className="space-y-1 rounded-xl bg-brand-soft px-4 py-3 text-sm text-stone-700">
+                    <p className="font-semibold text-brand">Resumen</p>
+                    <p>
+                      {items.length} {items.length === 1 ? "producto" : "productos"} · {deliveryLabel(delivery)}
+                      {zone ? ` · ${zone.name}` : ""}
+                    </p>
+                    <p>{customerName.trim() || "Sin nombre"}</p>
+                    {shipping !== null ? (
+                      <p className="text-xs text-stone-500">
+                        Envío (precio de referencia): {formatMoney(shipping)}, aparte del total.
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="border-t border-line px-4 py-3 sm:px-6">
+              <p className="mb-3 flex items-baseline justify-between">
+                <span className="font-medium text-stone-700">Total</span>
+                <span className="text-xl font-bold text-brand">{formatMoney(subtotal)}</span>
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={step === 0 ? onClose : goBack}
+                  className="rounded-xl border border-line-strong px-4 py-3 text-base font-medium text-stone-700 hover:bg-brand-soft sm:text-sm"
+                >
+                  {step === 0 ? "Cancelar" : "Atrás"}
+                </button>
+
+                {last ? (
+                  <button
+                    type="button"
+                    disabled={saving}
+                    onClick={() => void handleSubmit()}
+                    className="flex-1 rounded-xl bg-brand px-5 py-3 text-base font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60 sm:text-sm"
+                  >
+                    {saving ? "Creando…" : "Crear pedido"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={goNext}
+                    className="flex-1 rounded-xl bg-brand px-5 py-3 text-base font-semibold text-white transition hover:bg-brand-hover sm:text-sm"
+                  >
+                    Siguiente
+                  </button>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
@@ -230,8 +611,9 @@ export default function ManualOrderDialog({
   ...props
 }: {
   open: boolean;
-  products: { name: string; price: number }[];
+  setup: ManualOrderSetup;
   onClose: () => void;
+  // El pedido ya se creó (el tablero se actualiza); el diálogo sigue abierto con el seguimiento.
   onCreated: () => void;
 }) {
   return open ? <Form {...props} /> : null;

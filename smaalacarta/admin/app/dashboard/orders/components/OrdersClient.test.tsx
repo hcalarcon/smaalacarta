@@ -7,6 +7,14 @@ import type { Order } from "@/lib/db/orders";
 
 const mocks = vi.hoisted(() => ({ refresh: vi.fn() }));
 
+const manualSetup = {
+  businessName: "Ana Resto",
+  slug: "ana",
+  courier: false,
+  menu: { items: [], delivery: [], payments: [] },
+  delivery: { zones: [], favorite: null },
+};
+
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: mocks.refresh }) }));
 vi.mock("../actions", () => ({
   setOrderStatusAction: vi.fn(),
@@ -93,7 +101,7 @@ function board(orders: Order[]) {
     <OrdersClient
       slug="demo"
       orders={orders}
-      products={[]}
+      manualSetup={manualSetup}
       serverNow="2026-09-30T10:00:00Z"
     />
   );
@@ -543,7 +551,7 @@ describe("tiempo de preparación al aceptar — ADMIN-PEDIDOS-31 a 33", () => {
       <OrdersClient
         slug="demo"
         orders={orders}
-        products={[]}
+        manualSetup={manualSetup}
         serverNow="2026-09-30T10:00:00Z"
         suggestedPrepMinutes={extra.suggested ?? null}
         defaultPrepMinutes={extra.defaultMinutes ?? 20}

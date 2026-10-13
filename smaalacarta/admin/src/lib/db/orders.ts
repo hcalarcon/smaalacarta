@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase-server";
 import type { OrderOffers } from "@/lib/orders/courier";
 import type { OrderItemOption } from "@/lib/orders/item-options";
-import type { ManualOrderInput } from "@/lib/orders/manual-order";
+import { parseManualMenu, type ManualMenu } from "@/lib/orders/manual-menu";
+import { phoneDigits, toRpcItems, type ManualOrderInput } from "@/lib/orders/manual-order";
 import { todayAtIso } from "@/lib/orders/scheduled";
 
 export type OrderItem = {
@@ -228,11 +229,19 @@ export async function confirmSettlement(orderId: string): Promise<{ ok: true } |
   return error ? { error: { code: error.code, message: error.message } } : { ok: true };
 }
 
+export type CreatedManualOrder = { ok: true; id: string; code: string; number: number; total: number };
+
 export async function createManualOrder(
   businessId: string,
   input: ManualOrderInput,
-): Promise<{ ok: true; code: string; number: number } | DbFailure> {
+  courier: boolean,
+): Promise<CreatedManualOrder | DbFailure> {
   const supabase = await createClient();
+
+  // El barrio, la dirección y el modo solo viajan con envío con repartidor: así la base no los rechaza
+  // (P0016) cuando el diálogo los dejó cargados y el pedido pasó a retiro.
+  const withCourier = courier && input.delivery.trim() === "delivery";
+  const address = (input.address ?? "").trim();
 
   const { data, error } = await supabase.rpc("create_manual_order", {
     p_business_id: businessId,
@@ -241,17 +250,30 @@ export async function createManualOrder(
     p_payment: input.payment.trim(),
     p_notes: input.notes.trim(),
     p_scheduled_for: (input.scheduledFor ? todayAtIso(input.scheduledFor) : null) as string,
-    p_items: input.items.map((item) => ({
-      name: item.name.trim(),
-      unit_price: item.unitPrice,
-      quantity: item.quantity,
-    })),
+    p_items: toRpcItems(input.items),
+    // Las funciones aceptan nulo; los tipos generados no lo reflejan.
+    p_customer_phone: (phoneDigits(input.phone) || null) as string,
+    p_delivery_zone: (withCourier ? input.zoneId?.trim() || null : null) as string,
+    p_delivery_address: (input.delivery.trim() === "delivery" && address ? address : null) as string,
+    p_courier_mode: (withCourier ? input.courierMode?.trim() || null : null) as string,
   });
 
   if (error) {
     return { error: { code: error.code, message: error.message } };
   }
 
-  const result = data as unknown as { code: string; number: number };
-  return { ok: true, code: result.code, number: result.number };
+  const result = data as unknown as { id: string; code: string; number: number; total: number };
+  return { ok: true, id: result.id, code: result.code, number: result.number, total: Number(result.total) };
+}
+
+// El menú del negocio con las opciones de cada producto, para cargar un pedido a mano (ADMIN-PEDIDOS-47):
+// el mismo formato que el menú público, de `menu_preview`. Nunca lanza: sin menú, el diálogo queda vacío y
+// el local puede cargar productos libres.
+export async function getManualOrderMenu(businessId: string): Promise<ManualMenu> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("menu_preview", { p_business_id: businessId });
+  if (error) return parseManualMenu(null);
+
+  return parseManualMenu(data);
 }

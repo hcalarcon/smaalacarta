@@ -22,6 +22,7 @@ import {
 } from "../actions";
 import type { Order } from "@/lib/db/orders";
 import type { OrderCourier, OrderOffers } from "@/lib/orders/courier";
+import type { ManualOrderSetup } from "@/lib/orders/manual-context";
 import { newPendingIds, tabTitle } from "@/lib/orders/alerts";
 import { clearAppBadgeSafe, restoreFavicon, setAppBadgeSafe, updateFavicon } from "@/lib/orders/badge";
 import { ALARM_LOOP_MS, playAlarmSound, playNewOrderSound } from "@/lib/orders/sound";
@@ -80,7 +81,7 @@ function reducedMotionSnapshot() {
 export default function OrdersClient({
   slug,
   orders,
-  products,
+  manualSetup,
   serverNow,
   couriers = [],
   offers = [],
@@ -89,7 +90,8 @@ export default function OrdersClient({
 }: {
   slug: string;
   orders: Order[];
-  products: { name: string; price: number }[];
+  // Lo que el diálogo del pedido manual necesita: el menú con sus opciones, el envío y el negocio (ADMIN-PEDIDOS-47).
+  manualSetup: ManualOrderSetup;
   serverNow: string;
   // Solo con envío con repartidor habilitado (ENVIO-2): los repartidores activos que cubren zonas del
   // local y su favorito.
@@ -635,12 +637,9 @@ export default function OrdersClient({
 
       <ManualOrderDialog
         open={manualOpen}
-        products={products}
+        setup={manualSetup}
         onClose={() => setManualOpen(false)}
-        onCreated={() => {
-          setManualOpen(false);
-          router.refresh();
-        }}
+        onCreated={() => router.refresh()}
       />
     </div>
   );

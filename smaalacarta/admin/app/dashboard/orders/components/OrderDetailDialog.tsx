@@ -7,6 +7,7 @@ import CustomerPhone from "./CustomerPhone";
 import type { Order } from "@/lib/db/orders";
 import { deliveryContext, hasDelivery, type OrderCourier, type OrderOffers } from "@/lib/orders/courier";
 import { formatDateTime, trackingUrl } from "@/lib/orders/format";
+import { deliveryLabel, paymentLabel } from "@/lib/orders/labels";
 import PaymentBadge from "./PaymentBadge";
 import SettlementStatus from "./SettlementStatus";
 import { itemOptionLines } from "@/lib/orders/item-options";
@@ -156,10 +157,10 @@ export default function OrderDetailDialog({
 
         <dl className="mt-5 space-y-1 text-sm text-stone-600">
           {order.delivery ? (
-            <div className="flex gap-2"><dt className="text-stone-400">Entrega:</dt><dd>{order.delivery}</dd></div>
+            <div className="flex gap-2"><dt className="text-stone-400">Entrega:</dt><dd>{deliveryLabel(order.delivery)}</dd></div>
           ) : null}
           {order.payment ? (
-            <div className="flex gap-2"><dt className="text-stone-400">Pago:</dt><dd>{order.payment}</dd></div>
+            <div className="flex gap-2"><dt className="text-stone-400">Pago:</dt><dd>{paymentLabel(order.payment)}</dd></div>
           ) : null}
           {order.customer_phone ? (
             <div className="flex gap-2">
