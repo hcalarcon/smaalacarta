@@ -34,12 +34,19 @@ export async function savePromotionAction(input: {
   price: number | null;
   active: boolean;
   productIds: string[];
+  imageUrl?: string | null;
+  imageProductId?: string | null;
+  // Instante ISO en que termina (el panel lo arma con la hora de Argentina), o nulo.
+  validUntil?: string | null;
+  // La fecha que ya tenía guardada: guardar otra cosa de una promoción vencida no la bloquea.
+  initialValidUntil?: string | null;
+  stock?: number | null;
 }): Promise<SavePromotionResult> {
   const { business } = await requireBusiness();
 
   const promotion = normalizePromotion(input);
 
-  const validation = validatePromotion(promotion);
+  const validation = validatePromotion({ ...promotion, initialValidUntil: input.initialValidUntil });
   if (!validation.ok) {
     return {
       ok: false,

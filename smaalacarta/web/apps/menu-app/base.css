@@ -298,6 +298,27 @@ html[data-template] .checkout .checkout-header {
   filter: grayscale(1);
 }
 
+/* Vigencia y últimas unidades de una promoción (PUBLICO-68 y 69). Con las variables de cada plantilla, en
+   claro y oscuro. */
+.etiqueta-vigencia {
+  display: block;
+  margin-top: 0.3rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted, #6b7280);
+}
+
+.etiqueta-quedan {
+  display: inline-block;
+  margin-top: 0.35rem;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: var(--primary, #b91c1c);
+  color: var(--on-primary, #fff);
+}
+
 .etiqueta-agotado {
   display: inline-block;
   margin-top: 0.35rem;

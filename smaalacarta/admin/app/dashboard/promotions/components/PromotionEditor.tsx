@@ -26,10 +26,12 @@ import { useMemo, useState } from "react";
 import { savePromotionAction } from "../actions";
 import Field from "@/components/ui/Field";
 import FormAlert from "@/components/ui/FormAlert";
+import ImageUploader from "@/components/ui/ImageUploader";
 import { moveItem } from "@/lib/menu/ordering";
 import { formatMoney, promotionPricing } from "@/lib/promotions/pricing";
 import { REQUIRED_GROUP_PROMO_REASON } from "@/lib/menu/options";
 import type { PromotionType } from "@/lib/promotions/validation";
+import { argentinaDate, endShortcuts, endsAtIso, splitEnd } from "@/lib/promotions/validity";
 
 export type ProductOption = {
   id: string;
@@ -39,6 +41,8 @@ export type ProductOption = {
   categoryName: string;
   // Tiene un grupo de opciones obligatorio: no se puede agregar a una promoción.
   hasRequiredGroup?: boolean;
+  // Su foto, para elegirla como imagen de la promoción (ADMIN-PROMO-3).
+  imageUrl?: string | null;
 };
 
 export type PromotionInitial = {
@@ -50,6 +54,13 @@ export type PromotionInitial = {
   price: number | null;
   active: boolean;
   productIds: string[];
+  imageUrl: string | null;
+  imageProductId: string | null;
+  validUntil: string | null;
+  stock: number | null;
+  // Lo vendido y lo que queda desde que se fijó el stock (ADMIN-PROMO-10).
+  sold: number;
+  remaining: number | null;
 };
 
 // Los productos del panel izquierdo se identifican así para no chocar con los ids
@@ -194,9 +205,11 @@ function DropZone({ children, empty }: { children: React.ReactNode; empty: boole
 }
 
 export default function PromotionEditor({
+  businessId,
   products,
   initial,
 }: {
+  businessId: string;
   products: ProductOption[];
   initial?: PromotionInitial;
 }) {
@@ -210,6 +223,12 @@ export default function PromotionEditor({
   const [active, setActive] = useState(initial?.active ?? true);
   const [selectedIds, setSelectedIds] = useState<string[]>(initial?.productIds ?? []);
   const [search, setSearch] = useState("");
+  const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? "");
+  const [imageProductId, setImageProductId] = useState<string | null>(initial?.imageProductId ?? null);
+  const initialEnd = splitEnd(initial?.validUntil);
+  const [endDate, setEndDate] = useState(initialEnd.date);
+  const [endTime, setEndTime] = useState(initialEnd.time);
+  const [stockText, setStockText] = useState(initial?.stock != null ? String(initial.stock) : "");
 
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -298,6 +317,21 @@ export default function PromotionEditor({
     setError(null);
     setFieldErrors({});
 
+    // Fecha y hora de Argentina -> el instante que guarda la base. Si no se tocaron, se manda el que ya estaba.
+    let validUntil: string | null = null;
+    if (endDate.trim() !== "") {
+      const untouched = endDate === initialEnd.date && endTime === initialEnd.time && !!initial?.validUntil;
+      validUntil = untouched ? (initial?.validUntil ?? null) : endsAtIso(endDate, endTime);
+
+      if (validUntil === null) {
+        setFieldErrors({ validUntil: "Ingresá una fecha y una hora válidas." });
+        setSaving(false);
+        return;
+      }
+    }
+
+    const stock = stockText.trim() === "" ? null : Number(stockText);
+
     try {
       const result = await savePromotionAction({
         id: initial?.id ?? null,
@@ -308,6 +342,12 @@ export default function PromotionEditor({
         price: numericPrice,
         active,
         productIds: selectedIds,
+        imageUrl: imageUrl.trim() === "" ? null : imageUrl,
+        // Si el producto elegido salió de la promoción, ya no vale como imagen.
+        imageProductId: imageProductId && selectedIds.includes(imageProductId) ? imageProductId : null,
+        validUntil,
+        initialValidUntil: initial?.validUntil ?? null,
+        stock,
       });
 
       if (!result.ok) {
@@ -481,6 +521,168 @@ export default function PromotionEditor({
                 <p className="mt-1.5 text-sm text-red-600">{fieldErrors.products}</p>
               ) : null}
             </div>
+
+            <section aria-labelledby="promo-image" className="space-y-3 border-t border-line pt-5">
+              <h2 id="promo-image" className="text-sm font-semibold text-brand">Imagen</h2>
+
+              <ImageUploader
+                businessId={businessId}
+                label="Imagen de la promoción"
+                value={imageUrl}
+                onChange={(url) => {
+                  setImageUrl(url);
+                  if (url) setImageProductId(null);
+                }}
+              />
+
+              <fieldset>
+                <legend className="mb-1.5 text-sm font-medium text-brand">o usar la foto de</legend>
+
+                {selected.length === 0 ? (
+                  <p className="text-sm text-stone-500">Agregá productos a la promoción para elegir una de sus fotos.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {selected.map((product) => {
+                      const checked = imageProductId === product.id && !imageUrl;
+
+                      return (
+                        <li key={product.id}>
+                          <label
+                            className={`flex cursor-pointer items-center gap-3 rounded-xl border px-3 py-2 transition ${
+                              checked ? "border-accent bg-accent/5" : "border-line hover:bg-brand-soft"
+                            }`}
+                          >
+                            <input
+                              type="radio"
+                              name="promo-image-product"
+                              checked={checked}
+                              onChange={() => {
+                                setImageProductId(product.id);
+                                setImageUrl("");
+                              }}
+                            />
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-line bg-cream">
+                              {product.imageUrl ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={product.imageUrl} alt="" className="h-full w-full object-cover" />
+                              ) : (
+                                <span className="text-[10px] text-stone-400">Sin foto</span>
+                              )}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-sm text-stone-800">{product.name}</span>
+                          </label>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+
+                {imageProductId && !imageUrl ? (
+                  <button
+                    type="button"
+                    onClick={() => setImageProductId(null)}
+                    className="mt-2 text-sm font-medium text-stone-600 hover:text-brand"
+                  >
+                    No usar la foto de un producto
+                  </button>
+                ) : null}
+
+                <p className="mt-2 text-xs text-stone-500">
+                  Sin imagen, el menú usa la foto del primer producto de la promoción que tenga una.
+                </p>
+                {fieldErrors.image ? <p className="mt-1 text-sm text-red-600">{fieldErrors.image}</p> : null}
+              </fieldset>
+            </section>
+
+            <section aria-labelledby="promo-validity" className="space-y-3 border-t border-line pt-5">
+              <h2 id="promo-validity" className="text-sm font-semibold text-brand">Vigencia</h2>
+
+              <div>
+                <span className="mb-1.5 block text-sm font-medium text-brand">Válida hasta (opcional)</span>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <input
+                    type="date"
+                    aria-label="Fecha de fin"
+                    value={endDate}
+                    min={argentinaDate()}
+                    onChange={(event) => setEndDate(event.target.value)}
+                    className="rounded-xl border border-line-strong bg-white px-3 py-2.5 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
+                  />
+                  <input
+                    type="time"
+                    aria-label="Hora de fin"
+                    value={endTime}
+                    onChange={(event) => setEndTime(event.target.value)}
+                    disabled={endDate === ""}
+                    className="rounded-xl border border-line-strong bg-white px-3 py-2.5 text-sm focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30 disabled:opacity-50"
+                  />
+                </div>
+
+                <div className="mt-2 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEndDate(endShortcuts().today);
+                      setEndTime("");
+                    }}
+                    className="rounded-full border border-line-strong px-3 py-1 text-xs font-medium text-brand hover:bg-brand-soft"
+                  >
+                    Hoy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setEndDate(endShortcuts().weekend);
+                      setEndTime("");
+                    }}
+                    className="rounded-full border border-line-strong px-3 py-1 text-xs font-medium text-brand hover:bg-brand-soft"
+                  >
+                    Este fin de semana
+                  </button>
+                  {endDate ? (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEndDate("");
+                        setEndTime("");
+                      }}
+                      className="rounded-full px-3 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                    >
+                      Sin fecha de fin
+                    </button>
+                  ) : null}
+                </div>
+
+                <p className="mt-2 text-xs text-stone-500">
+                  Hora de Argentina. Sin hora, vale hasta las 23:59 de ese día. Después la promoción deja de verse y de
+                  poder pedirse.
+                </p>
+                {fieldErrors.validUntil ? <p className="mt-1 text-sm text-red-600">{fieldErrors.validUntil}</p> : null}
+              </div>
+
+              <Field
+                label="Unidades disponibles (opcional)"
+                type="number"
+                min="1"
+                step="1"
+                inputMode="numeric"
+                value={stockText}
+                onChange={(event) => setStockText(event.target.value)}
+                error={fieldErrors.stock}
+                hint="Vacío es sin límite. Cuando se agotan, la promoción deja de verse y de poder pedirse."
+              />
+
+              {initial && initial.stock != null ? (
+                <p className="text-sm text-stone-600" data-testid="promo-stock-stats">
+                  {initial.remaining === 0
+                    ? "Agotada"
+                    : `Quedan ${initial.remaining ?? initial.stock} de ${initial.stock}`}{" "}
+                  · se {initial.sold === 1 ? "vendió 1 unidad" : `vendieron ${initial.sold} unidades`}. Si cambiás las
+                  unidades, se cuenta de nuevo desde ahora.
+                </p>
+              ) : null}
+            </section>
 
             <dl className="space-y-1 rounded-2xl bg-cream p-4 text-sm">
               <div className="flex justify-between">

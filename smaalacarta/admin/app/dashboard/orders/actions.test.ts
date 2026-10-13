@@ -18,7 +18,7 @@ vi.mock("@/lib/get-current-business", () => ({ requireBusiness: () => requireBus
 vi.mock("@/lib/db/orders", () => ordersDb);
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-import { acceptOrderAction, delayPrepAction, setPrepAction } from "./actions";
+import { acceptOrderAction, createManualOrderAction, delayPrepAction, setPrepAction } from "./actions";
 
 const BUSINESS = "a1a1a1a1-0000-0000-0000-000000000001";
 const ORDER = "11111111-1111-1111-1111-111111111111";
@@ -182,5 +182,56 @@ describe("demorar — ADMIN-PEDIDOS-35", () => {
 
     expect((await delayPrepAction(ORDER, null)).ok).toBe(false);
     expect(ordersDb.setOrderPrep).not.toHaveBeenCalled();
+  });
+});
+
+describe("pedido manual — ADMIN-PEDIDOS-39 a 46", () => {
+  const input = {
+    customerName: "Lucía",
+    delivery: "retiro",
+    payment: "qr",
+    notes: "",
+    items: [{ kind: "free" as const, name: "Torta", unitPrice: 1000, quantity: 1 }],
+  };
+
+  it("sin sesión de un negocio no llega a la base", async () => {
+    requireBusiness.mockRejectedValue(new Error("NEXT_REDIRECT"));
+
+    await expect(createManualOrderAction(input)).rejects.toThrow("NEXT_REDIRECT");
+    expect(ordersDb.createManualOrder).not.toHaveBeenCalled();
+  });
+
+  it("un pedido inválido vuelve con los campos marcados y no llega a la base", async () => {
+    const r = await createManualOrderAction({ ...input, delivery: "delivery", phone: "" });
+
+    expect(r.ok).toBe(false);
+    expect(!r.ok && r.fieldErrors?.phone).toBeTruthy();
+    expect(ordersDb.createManualOrder).not.toHaveBeenCalled();
+  });
+
+  it("con envío con repartidor exige barrio, dirección y modo", async () => {
+    requireBusiness.mockResolvedValue({ business: { id: BUSINESS, courier_delivery: true }, user: { id: "u" } });
+
+    const r = await createManualOrderAction({ ...input, delivery: "delivery", phone: "3515551234" });
+
+    expect(!r.ok && Object.keys(r.fieldErrors ?? {}).sort()).toEqual(["address", "courierMode", "zoneId"]);
+    expect(ordersDb.createManualOrder).not.toHaveBeenCalled();
+  });
+
+  it("toma el negocio de la sesión y devuelve el número y el código", async () => {
+    ordersDb.createManualOrder.mockResolvedValue({ ok: true, id: "o1", code: "abc", number: 12, total: 1000 });
+
+    const r = await createManualOrderAction(input);
+
+    expect(r).toEqual({ ok: true, code: "abc", number: 12, total: 1000 });
+    expect(ordersDb.createManualOrder).toHaveBeenCalledWith(BUSINESS, input, false);
+  });
+
+  it("traduce el error de la base sin mostrar el texto técnico", async () => {
+    ordersDb.createManualOrder.mockResolvedValue({ error: { code: "P0009", message: "boom" } });
+
+    const r = await createManualOrderAction(input);
+
+    expect(r).toEqual({ ok: false, error: "Un producto está sin stock." });
   });
 });

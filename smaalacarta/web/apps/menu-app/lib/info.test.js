@@ -219,7 +219,24 @@ describe("productImage — PUBLICO-54", () => {
     expect(productImage({ imagenIlustrativa: true }, config).kind).toBe("logo");
   });
 
-  it("las promociones de la sección Ofertas no llevan imagen", () => {
+  it("una promoción sin imagen no lleva ninguna, ni siquiera el logo", () => {
     expect(productImage({ esPromo: true, nombre: "Combo" }, config)).toBeNull();
+  });
+
+  it("una promoción lleva la imagen que le resolvió el servidor, ilustrativa si corresponde (PUBLICO-67)", () => {
+    expect(productImage({ esPromo: true, imagen: "https://cdn.example.com/promo.jpg" }, config)).toEqual({
+      kind: "photo",
+      src: "https://cdn.example.com/promo.jpg",
+    });
+    expect(
+      productImage(
+        { esPromo: true, imagen: "https://www.smaalacarta.com.ar/assets/defaults/pizza.svg", imagenIlustrativa: true },
+        config,
+      ),
+    ).toEqual({ kind: "illustration", src: "https://www.smaalacarta.com.ar/assets/defaults/pizza.svg" });
+  });
+
+  it("una promoción solo toma direcciones http(s)", () => {
+    expect(productImage({ esPromo: true, imagen: "javascript:alert(1)" }, config)).toBeNull();
   });
 });

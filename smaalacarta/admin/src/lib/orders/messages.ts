@@ -29,6 +29,27 @@ export function orderErrorMessage(error: DbError) {
   }
 }
 
+// Errores de cargar un pedido manual (ADMIN-PEDIDOS-39 a 46): los de cualquier pedido y los que la base
+// devuelve al validar los productos, la entrega y el pago contra lo que el negocio tiene habilitado.
+export function manualOrderErrorMessage(error: DbError) {
+  switch (error.code) {
+    case "P0001":
+      return "Un producto ya no está disponible: actualizá la pantalla y volvé a elegirlo.";
+    case "P0007":
+      return "El negocio no tiene habilitada esa entrega.";
+    case "P0008":
+      return "El negocio no tiene habilitado ese medio de pago.";
+    case "P0009":
+      return "Un producto está sin stock.";
+    case "P0014":
+      return "Las opciones de un producto no son válidas: revisá lo que eligió.";
+    case "P0016":
+      return "El barrio no está disponible o tu repartidor favorito no lo cubre.";
+    default:
+      return orderErrorMessage(error);
+  }
+}
+
 // Errores de las rendiciones del efectivo (ENVIO-39), en español.
 export function settlementErrorMessage(error: DbError) {
   switch (error.code) {

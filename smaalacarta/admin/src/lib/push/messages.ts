@@ -1,3 +1,4 @@
+import { deliveryLabel } from "@/lib/orders/labels";
 import { BASE_PATH } from "@/lib/base-path";
 
 import type { OrderRecord, PushEventKind } from "./events";
@@ -73,10 +74,8 @@ export function formatPesos(amount: number | null | undefined): string {
   return `${amount < 0 ? "-" : ""}$${grouped}${cents}`;
 }
 
-function deliveryLabel(delivery: string | null): string {
-  if (delivery === "delivery") return "Envío a domicilio";
-  if (delivery === "retiro") return "Retiro en el local";
-  return "Pedido";
+function deliveryText(delivery: string | null): string {
+  return deliveryLabel(delivery) || "Pedido";
 }
 
 export function buildMessage(kind: PushEventKind, order: OrderRecord, ctx: MessageContext): PushMessage {
@@ -137,14 +136,14 @@ function compose(kind: PushEventKind, order: OrderRecord, ctx: MessageContext): 
     case "local_new_order":
       return {
         title: `Pedido nuevo ${number}`,
-        body: join(order.customer_name ?? "", deliveryLabel(order.delivery)),
+        body: join(order.customer_name ?? "", deliveryText(order.delivery)),
         url: ordersPanel,
         tag,
       };
     case "local_new_order_reminder":
       return {
         title: `Pedido ${number} sin atender hace ${waitingMinutes(order.created_at, ctx.now ?? new Date())} min`,
-        body: join(order.customer_name ?? "", deliveryLabel(order.delivery)),
+        body: join(order.customer_name ?? "", deliveryText(order.delivery)),
         url: ordersPanel,
         tag,
       };

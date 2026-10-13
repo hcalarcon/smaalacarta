@@ -247,7 +247,10 @@ negocio nuevo funciona apenas existe y está publicado, sin tocar código.
   `create_manual_order`. Los estados y sus transiciones están en
   `src/lib/orders/status.ts` y en la base, y un test compara la matriz completa. En
   `web/`: `apps/menu-app/lib/orders.js` (checkout) y `apps/tracker` (seguimiento, todo
-  con `textContent`). Al cancelar, el negocio puede dejar un motivo (`order_events.note`,
+  con `textContent`). El **pedido manual** (`create_manual_order`) entra al mismo circuito: nace `confirmed`, con
+  entrega fija (`retiro`, `delivery`, `local`) y pago fijo (el del negocio más `qr`, sin Mercado Pago), productos del
+  menú con opciones (el precio lo arma `resolve_order_lines()`, compartida con el menú) o libres (`order_items.free`),
+  y con envío con repartidor elige barrio y modo (`favorite`, `offers`, `self`). Al cancelar, el negocio puede dejar un motivo (`order_events.note`,
   tercer parámetro de `set_order_status`) que el cliente ve en el seguimiento. El tablero
   (`/dashboard/orders`) tiene tres columnas con scroll propio; los entregados y
   cancelados van a una tabla de historial con cuándo empezó y cuándo terminó.

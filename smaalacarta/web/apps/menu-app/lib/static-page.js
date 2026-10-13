@@ -21,6 +21,7 @@ import {
 } from "./info.js";
 import { DEFAULT_LANG, normalizeLang, t } from "./i18n.js";
 import { hasOptions } from "./options.js";
+import { lastUnitsLabel, validUntilLabel } from "./promo-info.js";
 import { buildEnhancedMenu } from "./menu.js";
 import { isOpenNow, nextOpening, openingText } from "./schedule.js";
 
@@ -93,6 +94,8 @@ function productCard(item, lang, config) {
       <div class="producto-precio">$${escapeHtml(formatPrice(item?.precio))}</div>
       ${optionsLines(item, lang)}
       ${image?.kind === "illustration" ? `<span class="etiqueta-ilustrativa">${escapeHtml(t("item.illustrative", lang))}</span>` : ""}
+      ${validUntilLabel(item, lang) ? `<span class="etiqueta-vigencia">${escapeHtml(validUntilLabel(item, lang))}</span>` : ""}
+      ${lastUnitsLabel(item, lang) ? `<span class="etiqueta-quedan">${escapeHtml(lastUnitsLabel(item, lang))}</span>` : ""}
       ${soldOut ? `<span class="etiqueta-agotado">${escapeHtml(t("item.soldOut", lang))}</span>` : ""}
     </div>
   </article>`;

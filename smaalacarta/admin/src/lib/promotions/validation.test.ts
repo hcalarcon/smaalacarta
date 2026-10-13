@@ -94,3 +94,83 @@ describe("normalizePromotion", () => {
     expect(normalizePromotion({ ...input, description: "   " }).description).toBe("");
   });
 });
+
+describe("imagen, vigencia y stock — ADMIN-PROMO-2, 5 y 7", () => {
+  const now = new Date("2026-10-20T15:00:00Z");
+  const check = (extra: Parameters<typeof validatePromotion>[0]) => validatePromotion({ ...extra, now });
+  const errorsOf = (extra: Partial<Parameters<typeof validatePromotion>[0]>) => {
+    const r = check({ ...base, ...extra });
+    return r.ok ? {} : r.errors;
+  };
+
+  it("una promoción sin nada de esto sigue siendo válida", () => {
+    expect(check({ ...base, imageUrl: "", imageProductId: null, validUntil: null, stock: null })).toEqual({ ok: true });
+  });
+
+  it("acepta la imagen propia o la de un producto de la promoción", () => {
+    expect(errorsOf({ imageUrl: "https://x/y.jpg" }).image).toBeUndefined();
+    expect(errorsOf({ imageProductId: "p1" }).image).toBeUndefined();
+  });
+
+  it("rechaza las dos a la vez y la de un producto que no está en la promoción", () => {
+    expect(errorsOf({ imageUrl: "https://x/y.jpg", imageProductId: "p1" }).image).toBeTruthy();
+    expect(errorsOf({ imageProductId: "p9" }).image).toBeTruthy();
+  });
+
+  it("la fecha de fin nueva tiene que ser futura", () => {
+    expect(errorsOf({ validUntil: "2026-10-21T02:59:00.000Z" }).validUntil).toBeUndefined();
+    expect(errorsOf({ validUntil: "2026-10-20T14:59:00.000Z" }).validUntil).toBeTruthy();
+    expect(errorsOf({ validUntil: "2026-10-20T15:00:00.000Z" }).validUntil).toBeTruthy();
+    expect(errorsOf({ validUntil: "mañana" }).validUntil).toBeTruthy();
+  });
+
+  it("una fecha ya vencida que no se tocó no bloquea guardar", () => {
+    const past = "2026-10-01T02:59:00.000Z";
+    expect(errorsOf({ validUntil: past, initialValidUntil: past }).validUntil).toBeUndefined();
+    expect(errorsOf({ validUntil: past, initialValidUntil: null }).validUntil).toBeTruthy();
+  });
+
+  it("el stock es un entero de 1 en adelante, o vacío", () => {
+    expect(errorsOf({ stock: 1 }).stock).toBeUndefined();
+    expect(errorsOf({ stock: 200 }).stock).toBeUndefined();
+    expect(errorsOf({ stock: null }).stock).toBeUndefined();
+    for (const stock of [0, -3, 2.5, Number.NaN]) {
+      expect(errorsOf({ stock }).stock).toBeTruthy();
+    }
+  });
+});
+
+describe("normalizePromotion con imagen y vigencia — ADMIN-PROMO-2", () => {
+  const input = {
+    name: " Combo ",
+    description: "",
+    type: "percent" as const,
+    discountPercent: 10,
+    price: null,
+    productIds: ["p1"],
+    active: true,
+  };
+
+  it("sin imagen ni vigencia deja todo en nulo", () => {
+    expect(normalizePromotion(input)).toMatchObject({
+      imageUrl: null,
+      imageProductId: null,
+      validUntil: null,
+      stock: null,
+    });
+  });
+
+  it("la imagen propia gana y descarta la del producto", () => {
+    expect(normalizePromotion({ ...input, imageUrl: " https://x/y.jpg ", imageProductId: "p1" })).toMatchObject({
+      imageUrl: "https://x/y.jpg",
+      imageProductId: null,
+    });
+  });
+
+  it("conserva la vigencia y el stock", () => {
+    expect(normalizePromotion({ ...input, validUntil: "2026-10-21T02:59:00.000Z", stock: 12 })).toMatchObject({
+      validUntil: "2026-10-21T02:59:00.000Z",
+      stock: 12,
+    });
+  });
+});

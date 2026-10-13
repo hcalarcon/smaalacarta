@@ -632,7 +632,7 @@ describe("pedidos manuales — ADMIN-PEDIDOS-3", () => {
     const o = await db.query<{ total: string; source: string; status: string; customer_name: string }>(
       `select total, source, status, customer_name from orders where id = '${c!.id}'`,
     );
-    expect(o.rows[0]).toEqual({ total: "13901.00", source: "manual", status: "pending", customer_name: "Cliente Manual" });
+    expect(o.rows[0]).toEqual({ total: "13901.00", source: "manual", status: "confirmed", customer_name: "Cliente Manual" });
   });
 
   it("también tiene su línea de tiempo y se puede seguir por código", async () => {
@@ -640,7 +640,11 @@ describe("pedidos manuales — ADMIN-PEDIDOS-3", () => {
     const c = r.ok ? (r.rows[0].result as { code: string }) : null;
 
     const t = await asUser(db, null, `select public.public_order_tracking('${c!.code}') as t`);
-    expect(t.ok && (t.rows[0].t as { eventos: unknown[] }).eventos).toHaveLength(1);
+    // Nace confirmado: entró (pendiente) y el local lo aceptó (ADMIN-PEDIDOS-39).
+    expect(t.ok && (t.rows[0].t as { eventos: { estado: string }[] }).eventos.map((e) => e.estado)).toEqual([
+      "pending",
+      "confirmed",
+    ]);
   });
 
   it.each([

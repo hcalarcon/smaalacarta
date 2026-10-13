@@ -36,7 +36,7 @@ export default async function NewPromotionPage() {
         <h1 className="mt-2 text-3xl font-bold text-brand">Nueva promoción</h1>
       </div>
 
-      <PromotionEditor products={products} />
+      <PromotionEditor businessId={business.id} products={products} />
     </div>
   );
 }

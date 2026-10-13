@@ -26,6 +26,7 @@ let OPTIONS = null;
 let OPTIONS_SHEET = null;
 let CART_LINES = null;
 let NOTES = null;
+let PROMO_INFO;
 // Envío con repartidor (ENVIO-20): los barrios del negocio, o null si no tiene o falló.
 let DZ = null;
 let COURIER_ZONES = null;
@@ -212,6 +213,8 @@ async function init() {
     ]);
     // Nota por producto (PUBLICO-65): la limpieza y las reglas puras viven en lib/item-notes.js.
     NOTES = await import("/apps/menu-app/lib/item-notes.js");
+    // Vigencia y últimas unidades de las promociones (PUBLICO-68 y 69).
+    PROMO_INFO = await import("/apps/menu-app/lib/promo-info.js");
     DZ = deliveryZonesLib;
     OPTIONS = optionsLib;
     OPTIONS_SHEET = optionsSheetLib;
@@ -695,6 +698,8 @@ function renderMenu(menu) {
           ${p.precioAnterior ? `<span class="precio-anterior">$${HTML.escapeHtml(PRICE.formatPrice(p.precioAnterior))}</span>` : ""}
           <div class="producto-precio">$${HTML.escapeHtml(PRICE.formatPrice(p.precio))}</div>
           ${imagen?.kind === "illustration" ? `<span class="etiqueta-ilustrativa">${HTML.escapeHtml(tr("item.illustrative"))}</span>` : ""}
+          ${PROMO_INFO.validUntilLabel(p, LANG) ? `<span class="etiqueta-vigencia">${HTML.escapeHtml(PROMO_INFO.validUntilLabel(p, LANG))}</span>` : ""}
+          ${PROMO_INFO.lastUnitsLabel(p, LANG) ? `<span class="etiqueta-quedan">${HTML.escapeHtml(PROMO_INFO.lastUnitsLabel(p, LANG))}</span>` : ""}
           ${soldOut ? `<span class="etiqueta-agotado">${HTML.escapeHtml(tr("item.soldOut"))}</span>` : ""}
         </div>
         ${soldOut ? "" : `<button class="btn-add">+</button>`}
@@ -1270,6 +1275,8 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     } else if (result.reason === "unavailable") {
       WA_WINDOW?.discardPlaceholder(placeholder);
       alert(tr("error.unavailable"));
+      // Una promoción pudo vencer o agotarse: se vuelve a pedir el menú y se limpia el carrito (PUBLICO-71).
+      await refreshMenu();
       return;
     }
     // "invalid" y "unknown": se manda solo por WhatsApp.

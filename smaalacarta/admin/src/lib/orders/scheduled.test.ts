@@ -81,10 +81,10 @@ describe("todayAtIso — ADMIN-PEDIDOS-14", () => {
 describe("validateManualOrder con 'Para las' — ADMIN-PEDIDOS-14", () => {
   const valid: ManualOrderInput = {
     customerName: "Ana",
-    delivery: "",
-    payment: "",
+    delivery: "retiro",
+    payment: "efectivo",
     notes: "",
-    items: [{ name: "Café", unitPrice: 1000, quantity: 1 }],
+    items: [{ kind: "free", name: "Café", unitPrice: 1000, quantity: 1 }],
   };
 
   it("es opcional", () => {

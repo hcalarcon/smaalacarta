@@ -765,6 +765,7 @@ export type Database = {
       order_items: {
         Row: {
           business_id: string
+          free: boolean
           id: string
           name: string
           note: string | null
@@ -778,6 +779,7 @@ export type Database = {
         }
         Insert: {
           business_id: string
+          free?: boolean
           id?: string
           name: string
           note?: string | null
@@ -791,6 +793,7 @@ export type Database = {
         }
         Update: {
           business_id?: string
+          free?: boolean
           id?: string
           name?: string
           note?: string | null
@@ -1247,11 +1250,16 @@ export type Database = {
           description: string | null
           discount_percent: number
           id: string
+          image_product_id: string | null
+          image_url: string | null
           name: string
           price: number | null
           slug: string | null
+          stock: number | null
+          stock_set_at: string | null
           type: string
           updated_at: string
+          valid_until: string | null
         }
         Insert: {
           active?: boolean
@@ -1260,11 +1268,16 @@ export type Database = {
           description?: string | null
           discount_percent?: number
           id?: string
+          image_product_id?: string | null
+          image_url?: string | null
           name: string
           price?: number | null
           slug?: string | null
+          stock?: number | null
+          stock_set_at?: string | null
           type?: string
           updated_at?: string
+          valid_until?: string | null
         }
         Update: {
           active?: boolean
@@ -1273,11 +1286,16 @@ export type Database = {
           description?: string | null
           discount_percent?: number
           id?: string
+          image_product_id?: string | null
+          image_url?: string | null
           name?: string
           price?: number | null
           slug?: string | null
+          stock?: number | null
+          stock_set_at?: string | null
           type?: string
           updated_at?: string
+          valid_until?: string | null
         }
         Relationships: [
           {
@@ -1286,6 +1304,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "businesses"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "promotions_image_product_fkey"
+            columns: ["image_product_id", "business_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id", "business_id"]
           },
         ]
       }
@@ -1438,8 +1463,12 @@ export type Database = {
       create_manual_order: {
         Args: {
           p_business_id: string
+          p_courier_mode?: string
           p_customer_name: string
+          p_customer_phone?: string
           p_delivery: string
+          p_delivery_address?: string
+          p_delivery_zone?: string
           p_items: Json
           p_notes: string
           p_payment: string
@@ -1532,6 +1561,16 @@ export type Database = {
         Returns: boolean
       }
       product_in_promotion: { Args: { p_product_id: string }; Returns: boolean }
+      promotion_remaining: { Args: { p_promotion_id: string }; Returns: number }
+      promotion_sold: { Args: { p_promotion_id: string }; Returns: number }
+      promotion_stock_stats: {
+        Args: { p_business_id: string }
+        Returns: {
+          promotion_id: string
+          remaining: number
+          sold: number
+        }[]
+      }
       public_business_pdf: {
         Args: { p_slug: string; p_via_path?: boolean }
         Returns: Json
@@ -1547,6 +1586,16 @@ export type Database = {
       }
       public_order_delivery: { Args: { p_code: string }; Returns: Json }
       public_order_tracking: { Args: { p_code: string }; Returns: Json }
+      resolve_order_lines: {
+        Args: {
+          p_allow_free: boolean
+          p_allow_notes: boolean
+          p_business_id: string
+          p_items: Json
+          p_max_quantity: number
+        }
+        Returns: Json
+      }
       resolve_order_options: {
         Args: { p_business_id: string; p_options: Json; p_product_id: string }
         Returns: Json
@@ -1613,10 +1662,14 @@ export type Database = {
           p_description: string
           p_discount_percent: number
           p_id: string
+          p_image_product_id?: string
+          p_image_url?: string
           p_name: string
           p_price: number
           p_product_ids: string[]
+          p_stock?: number
           p_type: string
+          p_valid_until?: string
         }
         Returns: string
       }

@@ -339,6 +339,18 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   (`replaceLine`): si su firma coincide con otra línea, se juntan y suman cantidad.
 - **PUBLICO-66** `buildOrderItems` manda `{id, kind, quantity, options, note}`, y el mensaje de WhatsApp lista la nota
   bajo cada ítem (`  📝 sin cheddar`). Cualquier texto del cliente se muestra con `textContent` o `escapeHtml`.
+- **PUBLICO-67** En el menú interactivo, una promoción de Ofertas muestra la `imagen` que le resolvió el servidor
+  (ADMIN-PROMO-1), con la etiqueta "Imagen ilustrativa" si `imagenIlustrativa` es verdadera. Sin `imagen`, no lleva ninguna
+  (como hasta ahora, no cae al logo). Solo direcciones http(s).
+- **PUBLICO-68** Una promoción con `validaHasta` muestra "Válida hasta el dd/mm" (día de Argentina, `TIME_ZONE` de
+  `lib/schedule.js`).
+- **PUBLICO-69** Una promoción con `quedan` muestra "¡Últimas N!" ("¡Última unidad!" con una).
+- **PUBLICO-70** `reconcileCart` quita del carrito una promoción que el menú ya no ofrece (vencida o agotada) y la que pasó
+  su `validaHasta` aunque el menú abierto todavía la traiga, y avisa cuál.
+- **PUBLICO-71** Si el servidor rechaza el pedido con `unavailable`, se muestra el aviso de siempre y el menú se vuelve a
+  pedir (como con `out_of_stock`), así el carrito se limpia solo.
+- **PUBLICO-72** Los textos están en es, en y pt (`promo.validUntil`, `promo.lastUnits`, `promo.lastOne`) y se ven bien en
+  tema claro y oscuro en las tres plantillas.
 
 ## BUSQUEDA — Buscador
 
@@ -486,6 +498,9 @@ llegando al negocio por WhatsApp.
   mucho movimiento"); `other` y los desconocidos no agregan nada.
 - **SEGUIMIENTO-42** Las horas del tiempo estimado salen siempre en hora de Argentina (`TIME_ZONE`), los textos están en es,
   en y pt y se pintan con `textContent`. Sin `prep` la página no muestra nada nuevo.
+- **SEGUIMIENTO-43** Un pedido manual de consumo en el local (`entrega = 'local'`, sin envío) se sigue con el camino sin
+  repartidor: recibido, aceptado, listo y entregado. Un pedido manual nace confirmado, así que el cliente que abre el
+  link ya lo ve aceptado.
 
 ## PWA — Instalar el menú en el celular
 
@@ -574,6 +589,11 @@ en JS puro.*
 - **ESTATICO-11** El menú estático muestra lo mismo que el interactivo (PUBLICO-51 a 56): ilustración con su
   etiqueta "Imagen ilustrativa", o el logo, con las mismas clases y sin la lupa. Todo dato del negocio pasa por
   `escapeHtml`.
+- **ESTATICO-12** El menú estático muestra en cada promoción lo mismo que el interactivo: su imagen (con la etiqueta
+  si es ilustrativa), "Válida hasta el dd/mm" y "¡Últimas N!" (PUBLICO-67 a 69), con los textos escapados.
+- **ESTATICO-13** El menú estático (`api/static-menu.js`) pone `Cache-Control` con `staticCacheControl`: el de siempre
+  (`s-maxage=60, stale-while-revalidate=300`) y, si una promoción vence en menos de 6 minutos, `s-maxage` hasta su fin
+  (entre 1 y 60 segundos) y sin `stale-while-revalidate`, para no servir una vencida.
 
 ## IDIOMA — Menú público en español, inglés y portugués
 
@@ -1167,8 +1187,8 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
   `not_required`.
 - **ADMIN-PEDIDOS-20** El tablero y el detalle del pedido (que también se abre desde el historial, cuya
   tabla no lista ítems) muestran las opciones elegidas bajo cada ítem (`+ Queso`, `+ Frutilla ×2`).
-- **ADMIN-PEDIDOS-21** El pedido manual (`create_manual_order`) no exige ni valida opciones en esta
-  versión: sus ítems nunca las llevan.
+- **ADMIN-PEDIDOS-21** *Reemplazado por ADMIN-PEDIDOS-40 y 41: el pedido manual ahora elige productos del menú con
+  sus opciones, y la base las valida como en el menú.*
 - **ADMIN-PEDIDOS-22** El tablero, el detalle y el historial de pedidos muestran la nota de cada ítem destacada (en un
   recuadro) bajo el ítem, para que no pase desapercibida; también el panel del repartidor si lista el detalle.
 - **ADMIN-PEDIDOS-23** `create_manual_order` acepta `note` por ítem (la limpia y recorta igual, y no depende del
@@ -1224,6 +1244,49 @@ recordatorios push son ADMIN-PWA-33 a 37)
 - **ADMIN-PEDIDOS-38** `suggested_prep_minutes(negocio)` es la mediana de lo que tardó el negocio entre Confirmado y
   Listo en sus últimos 20 pedidos que llegaron a Listo, sin contar los de más de 3 horas ni los que no pasaron tiempo; con menos
   de 5 muestras (o sin ser miembro) devuelve nulo y el selector usa el tiempo por defecto.
+
+**Pedido manual en el circuito** (`*_pedido_manual_en_el_circuito.sql`; reemplaza a ADMIN-PEDIDOS-3 en lo que
+contradiga: ahora entra a los envíos, lleva opciones y nace confirmado)
+
+- **ADMIN-PEDIDOS-39** `create_manual_order` deja el pedido `confirmed` (no `pending`), con `source = 'manual'`,
+  `payment_status = 'not_required'` y los eventos `pending` y `confirmed` en ese orden, como un pedido del menú recién
+  aceptado. No le avisa al local (ADMIN-PEDIDOS-24); a los repartidores sí, si busca repartidor (ENVIO-138).
+- **ADMIN-PEDIDOS-40** Los ítems del menú llegan como `{id, kind, quantity, options, note}` y el precio lo calcula la base
+  con `resolve_order_lines()`, la misma que usa `create_public_order_base`: precio del producto o la promoción, extras
+  de las opciones, stock (P0009), producto de otro negocio o inactivo (P0001) y opciones obligatorias (P0014). Un
+  `unit_price` que mande el navegador junto a un `id` se ignora.
+- **ADMIN-PEDIDOS-41** La cantidad del pedido manual va de 1 a 99 (la del menú sigue de 1 a 20) y la nota por ítem la
+  escribe el propio local: no depende de `allow_item_notes`.
+- **ADMIN-PEDIDOS-42** Un producto libre es `{name, unit_price, quantity, note}` sin `id` (nombre de 1 a 100
+  caracteres, precio de 0 a 9.999.999,99). Se guarda con `order_items.free = true`, sin producto ni promoción; el
+  menú nunca acepta ítems libres. La migración marca como libres los ítems tipeados de los pedidos manuales anteriores.
+- **ADMIN-PEDIDOS-43** La entrega del pedido manual es `retiro`, `delivery` o `local` (consumo en el local, solo
+  manual): `retiro` y `delivery` tienen que estar en `delivery_options` del negocio (P0007) y `local` siempre vale.
+  Es obligatoria; ya no hay texto libre.
+- **ADMIN-PEDIDOS-44** El pago del pedido manual es uno de `payment_options` del negocio, sin `mercadopago`, o `qr`
+  ("QR / billetera virtual", solo manual: el menú lo rechaza con P0008 y `business_settings` no lo admite). Otro valor
+  da P0008. Es obligatorio. `qr` solo registra cómo pagó: no genera ningún código.
+- **ADMIN-PEDIDOS-45** El teléfono es obligatorio con `delivery` (de 8 a 15 dígitos, P0018), con o sin repartidores en el
+  negocio; en `retiro` y `local` es opcional, y si se carga tiene que ser válido. Se guarda solo con dígitos.
+- **ADMIN-PEDIDOS-46** Solo un miembro del negocio puede cargarlo (42501, también sin sesión) y un pedido rechazado no deja
+  nada guardado.
+- **ADMIN-PEDIDOS-47** El diálogo "Pedido manual" va por pasos, en pantalla completa en el celular: Productos, Entrega,
+  Cliente y Pago. El menú sale de `menu_preview` (productos y promociones activos con sus grupos de opciones, el mismo
+  formato del menú público), con buscador sin tildes ni mayúsculas. Cada producto abre una hoja con sus opciones
+  (obligatorias, máximos, repetidas y agotadas como en el menú), la nota y la cantidad; "Producto libre" pide nombre y
+  precio. El mismo producto con la misma elección y nota es una sola línea. Lo que viaja a la base son ids, opciones
+  y cantidades: nunca precios (`toRpcItems`).
+- **ADMIN-PEDIDOS-48** Al crearlo, el diálogo muestra el número y "Mandar seguimiento por WhatsApp": abre
+  `api.whatsapp.com/send` al teléfono del cliente con el link `https://<slug>.smaalacarta.com.ar/pedido/<código>`. Con
+  "Buscar repartidor" el texto le dice que entre para elegir quién se lo lleva. Sin teléfono se muestra el link para
+  copiar. El tablero se actualiza al crearlo y el diálogo sigue abierto con el seguimiento hasta "Listo".
+- **ADMIN-PEDIDOS-49** El detalle del pedido (tablero e historial), el panel del repartidor, el aviso de pedido sin atender
+  y los avisos push muestran la entrega y el pago con su nombre (`src/lib/orders/labels.ts`): "Consumo en el local", "QR
+  / billetera virtual", etc.; un valor que no se conoce (texto libre de un pedido manual anterior) se muestra tal cual.
+- **ADMIN-PEDIDOS-50** Las reglas puras viven en `src/lib/orders/`: `manual-order.ts` (validación, total, líneas),
+  `manual-menu.ts` (menú, buscador y reglas de opciones), `manual-context.ts` (barrios y favorito) y
+  `manual-followup.ts` (mensaje y link de WhatsApp). La acción toma el negocio de `requireBusiness()` y vuelve a
+  validar con `courier = business.courier_delivery`.
 
 ## MP — Cobro con Mercado Pago (Checkout Pro)
 
@@ -1743,6 +1806,28 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   sección: "Todavía no elegiste a qué zonas enviás: tus clientes no ven el envío".
 - **ENVIO-136** El detalle del negocio en el superadmin, junto a "Envío con repartidores", dice cuántas zonas tiene
   tildadas el local ("39 zonas", "1 zona", "Sin zonas").
+- **ENVIO-137** El pedido manual con `delivery` en un negocio con `courier_delivery` lleva barrio (`p_delivery_zone`: activo,
+  tildado por el local y cubierto por algún repartidor activo; si no, P0016), dirección de 5 a 200 caracteres y modo
+  (`p_courier_mode`: `favorite`, `offers` o `self`; sin él, 22023). Guarda el barrio, el precio de lista y el precio del
+  envío igual que el menú.
+- **ENVIO-138** Con `offers` el pedido nace `confirmed` y `searching` con `offered_at = now()`: lo ven los repartidores que
+  cubren el barrio, ofertan y el cliente elige desde el seguimiento (o a los 5 minutos se elige sola la más barata), como
+  cualquier pedido. El webhook de avisos lo trata como un pedido ofertable nuevo.
+- **ENVIO-139** Con `favorite` el pedido va directo al favorito efectivo (`effective_favorite_courier`, ENVIO-130): nace
+  `accepted` con ese `courier_id` y `courier_responded_at`, sin ofertas, y deja el evento de envío "Envío asignado a
+  {nombre}, HH:MM". Si el favorito no está activo o no cubre el barrio, P0016.
+- **ENVIO-140** Con `self` el pedido nace `self` (lo lleva el local, sin repartidor) y deja el evento "Lo lleva el local,
+  HH:MM". No se ofrece a nadie.
+- **ENVIO-141** `delivery` en un negocio sin `courier_delivery` no lleva barrio (P0016 si lo manda) ni circuito: el
+  pedido queda sin `courier_status`, con teléfono obligatorio y la dirección si la cargaron.
+- **ENVIO-142** El aviso `courier_chosen` también sale cuando el pedido nace ya asignado (INSERT con `courier_status =
+  'accepted'` y `courier_id`): el favorito al que el local asignó un pedido manual recibe "te asignó un envío". Un
+  pedido manual `self` no avisa a nadie.
+- **ENVIO-143** El diálogo del pedido manual ofrece los barrios que el local tildó y algún repartidor cubre, con su precio
+  de referencia (aparte del total), y "Asignar a {favorito}" solo si el favorito efectivo (`manualDeliveryContext`)
+  cubre el barrio elegido; "Buscar repartidor" y "Lo llevo yo" siempre. Al cambiar de barrio se desmarca un favorito
+  que ya no lo cubre. El modo se elige explícitamente: no hay uno por defecto.
+
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 
@@ -1819,6 +1904,46 @@ Cubierto por: `src/lib/db/promotions.test.ts` (ADMIN-PROMOS-2, 3, 5 y 6) y
   promoción no borra sus productos.
 
 ---
+
+### Imagen y vigencia (`*_promociones_imagen_y_vigencia.sql`)
+
+- **ADMIN-PROMO-1** Una promoción puede llevar `image_url` (imagen propia) o `image_product_id` (la imagen de uno de sus
+  productos: una referencia, no una copia). El menú público resuelve en este orden: la propia, la del producto elegido
+  (su imagen o, si no tiene, la ilustrativa que ya resuelve `public_menu`, con `imagenIlustrativa`), la primera de un
+  producto de la promoción (una foto del negocio gana a una ilustrativa) y, si no hay, ninguna. Cada promo del menú lleva
+  `imagen` e `imagenIlustrativa`.
+- **ADMIN-PROMO-2** La imagen propia y la de un producto son excluyentes: lo exige un check de la tabla y
+  `save_promotion` (22023). La imagen elegida tiene que ser de un producto de la promoción. Si se borra ese producto,
+  la referencia queda nula (`ON DELETE SET NULL (image_product_id)`) y la promoción no se borra.
+- **ADMIN-PROMO-3** En el editor, la sección "Imagen" tiene el cargador de imagen y, debajo, "o usar la foto de" con los
+  productos de la promoción (con su miniatura y la elegida marcada). Elegir una descarta la otra. Sin ninguna, el menú usa
+  la del primer producto con foto.
+- **ADMIN-PROMO-4** La sección "Vigencia" tiene "Válida hasta" (fecha y hora opcional, con atajos "Hoy" y "Este fin de
+  semana", y "Sin fecha de fin") y "Unidades disponibles" (vacío es sin límite).
+- **ADMIN-PROMO-5** La fecha y la hora son de Argentina (UTC-3): sin hora vale hasta las 23:59 de ese día, y la base guarda
+  un instante (`valid_until`). Una fecha de fin nueva tiene que ser futura (`validatePromotion` y 22023 en
+  `save_promotion`); guardar otra cosa de una promoción ya vencida, sin tocar la fecha, no se bloquea.
+- **ADMIN-PROMO-6** Una promoción vencida (`now() > valid_until`) no se devuelve en `public_menu` ni en `menu_preview`, y
+  `create_public_order` y `create_manual_order` la rechazan con `P0001` ("ya no está disponible"). Hasta la hora exacta
+  sigue vigente. Cada promo con fin lleva `validaHasta` (ISO UTC).
+- **ADMIN-PROMO-7** `stock` (entero de 1 en adelante, o nulo) son las unidades disponibles. Lo que queda es `stock` menos
+  la suma de `order_items.quantity` de esa promoción en pedidos no cancelados creados desde `stock_set_at`
+  (`promotion_remaining`, nulo sin stock). Con 0 restantes la promoción está agotada: no se entrega y se rechaza (`P0001`).
+  El menú trae `quedan` solo cuando quedan 5 o menos.
+- **ADMIN-PROMO-8** La validación es del servidor, en `resolve_order_lines` (la usan el menú y el pedido manual): bloquea la
+  fila de la promoción (`SELECT … FOR UPDATE`) y cuenta las unidades de las líneas del propio pedido, así dos pedidos a la
+  vez, o dos líneas de la misma promo, no venden más de lo que queda. Un pedido que se pasa se rechaza entero.
+- **ADMIN-PROMO-9** No se descuenta ni se restituye nada: un pedido cancelado libera la unidad solo (`set_order_status` no
+  cambia). `save_promotion` mueve `stock_set_at` a `now()` cada vez que cambia el valor del stock (lo vendido antes ya no
+  cuenta); guardar el mismo valor no reinicia el conteo y sacar el stock lo deja sin tope.
+- **ADMIN-PROMO-10** El editor y la lista muestran cuántas quedan y cuántas se vendieron (`promotion_stock_stats`). Las
+  funciones `promotion_sold`, `promotion_remaining` y `promotion_stock_stats` corren con los permisos de quien llama: un
+  miembro solo ve las de su negocio.
+- **ADMIN-PROMO-11** La lista de promociones muestra su miniatura (propia, la del producto elegido o la del primero con
+  foto) y su estado: Vigente, Vence hoy, Vence mañana (por día de Argentina), Vencida o Agotada, con "Hasta dd/mm a las
+  hh:mm" y "Quedan N de M · K vendidas".
+- **ADMIN-PROMO-12** Las columnas nuevas siguen el RLS de `promotions` (un negocio no lee ni escribe las de otro) y el
+  trigger de suspensión (`P0010`) las cubre. Una promoción sin imagen, vigencia ni stock no cambia.
 
 ## ADMIN-OPCIONES — Opciones y extras de producto
 

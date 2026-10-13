@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { orderErrorMessage } from "./messages";
+import { manualOrderErrorMessage, orderErrorMessage } from "./messages";
 
 describe("orderErrorMessage", () => {
   it.each([
@@ -21,5 +21,26 @@ describe("orderErrorMessage", () => {
     const message = orderErrorMessage({ code: "XX000", message: "relation order_items exploded" });
     expect(message).not.toMatch(/exploded/);
     expect(message).toBe("No pudimos guardar el cambio. Probá de nuevo.");
+  });
+});
+
+describe("manualOrderErrorMessage — ADMIN-PEDIDOS-46", () => {
+  it.each([
+    ["P0001", /ya no está disponible/i],
+    ["P0007", /entrega/i],
+    ["P0008", /medio de pago/i],
+    ["P0009", /sin stock/i],
+    ["P0014", /opciones/i],
+    ["P0016", /barrio/i],
+    ["P0018", /teléfono/i],
+    ["42501", /permiso/i],
+  ])("%s", (code, esperado) => {
+    expect(manualOrderErrorMessage({ code })).toMatch(esperado);
+  });
+
+  it("un código desconocido da el mensaje genérico, sin el texto técnico", () => {
+    expect(manualOrderErrorMessage({ code: "XX000", message: "boom" })).toBe(
+      "No pudimos guardar el cambio. Probá de nuevo.",
+    );
   });
 });

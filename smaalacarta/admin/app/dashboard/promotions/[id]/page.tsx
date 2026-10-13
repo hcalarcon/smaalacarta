@@ -51,6 +51,7 @@ export default async function EditPromotionPage({
       </div>
 
       <PromotionEditor
+        businessId={business.id}
         products={products}
         initial={{
           id: promotion.id,
@@ -61,6 +62,12 @@ export default async function EditPromotionPage({
           price: promotion.price == null ? null : Number(promotion.price),
           active: promotion.active,
           productIds: promotion.promotion_items.map((item) => item.product_id),
+          imageUrl: promotion.image_url,
+          imageProductId: promotion.image_product_id,
+          validUntil: promotion.valid_until,
+          stock: promotion.stock,
+          sold: promotion.stats.sold,
+          remaining: promotion.stats.remaining,
         }}
       />
     </div>

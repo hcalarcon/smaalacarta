@@ -6,21 +6,32 @@ import { useState } from "react";
 
 import ConfirmDeleteDialog from "../../components/ConfirmDeleteDialog";
 import { deletePromotionAction, setPromotionActiveAction } from "../actions";
-import type { Promotion } from "@/lib/db/promotions";
+import type { PromotionWithStock } from "@/lib/db/promotions";
+import { promotionImage } from "@/lib/promotions/image";
 import { formatMoney, promotionPricing } from "@/lib/promotions/pricing";
+import { formatEnd, promotionStatus, type PromotionStatusKey } from "@/lib/promotions/validity";
+
+// El color de cada estado (ADMIN-PROMO-11): vigente en verde, por vencer en ámbar, fuera del menú en rojo.
+const STATUS_STYLES: Record<PromotionStatusKey, string> = {
+  vigente: "bg-emerald-100 text-emerald-700",
+  vence_hoy: "bg-amber-100 text-amber-800",
+  vence_manana: "bg-amber-100 text-amber-800",
+  vencida: "bg-red-100 text-red-700",
+  agotada: "bg-red-100 text-red-700",
+};
 
 export default function PromotionsClient({
   promotions,
 }: {
-  promotions: Promotion[];
+  promotions: PromotionWithStock[];
 }) {
   const router = useRouter();
 
-  const [toDelete, setToDelete] = useState<Promotion | null>(null);
+  const [toDelete, setToDelete] = useState<PromotionWithStock | null>(null);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function toggle(promotion: Promotion) {
+  async function toggle(promotion: PromotionWithStock) {
     setError(null);
 
     try {
@@ -82,6 +93,16 @@ export default function PromotionsClient({
             products.map((p) => Number(p.price)),
           );
 
+          const image = promotionImage({
+            imageUrl: promotion.image_url,
+            imageProductId: promotion.image_product_id,
+            products: products.map((p) => ({ id: p.id, imageUrl: p.image_url })),
+          });
+          const status = promotionStatus({
+            validUntil: promotion.valid_until,
+            remaining: promotion.stats.remaining,
+          });
+
           return (
             <li
               key={promotion.id}
@@ -90,7 +111,16 @@ export default function PromotionsClient({
               }`}
             >
               <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-line bg-cream">
+                    {image ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={image} alt="" className="h-full w-full object-cover" />
+                    ) : (
+                      <span className="text-[10px] text-stone-400">Sin foto</span>
+                    )}
+                  </span>
+                  <div className="min-w-0">
                   <h2 className="truncate text-lg font-semibold text-brand">
                     {promotion.name}
                   </h2>
@@ -99,6 +129,7 @@ export default function PromotionsClient({
                       ? "Combo a precio fijo"
                       : `${Number(promotion.discount_percent)} % de descuento`}
                   </p>
+                  </div>
                 </div>
 
                 <button
@@ -113,6 +144,22 @@ export default function PromotionsClient({
                 >
                   ● {promotion.active ? "Activa" : "Oculta"}
                 </button>
+              </div>
+
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500">
+                <span
+                  data-testid="promo-status"
+                  className={`rounded-full px-2.5 py-1 font-medium ${STATUS_STYLES[status.key]}`}
+                >
+                  {status.label}
+                </span>
+                {promotion.valid_until ? <span>Hasta {formatEnd(promotion.valid_until)}</span> : null}
+                {promotion.stock != null ? (
+                  <span>
+                    Quedan {promotion.stats.remaining ?? promotion.stock} de {promotion.stock} · {promotion.stats.sold}{" "}
+                    {promotion.stats.sold === 1 ? "vendida" : "vendidas"}
+                  </span>
+                ) : null}
               </div>
 
               <ul className="mt-4 flex-1 space-y-1 text-sm text-stone-600">

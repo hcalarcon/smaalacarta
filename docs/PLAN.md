@@ -735,6 +735,14 @@ ADMIN-CONFIG-49 y 50, SEGUIMIENTO-37 a 42). Migración `20261031000000_tiempo_de
 - [ ] [por asignar] **Etapa 3**: hora total combinada (cocina + viaje) y aprendizaje de los tiempos reales
 - [ ] [por asignar] Avisar al cliente (push o aviso del seguimiento) cuando cambia el tiempo estimado
 
+## Promociones con imagen y vigencia
+
+- [ ] [herni] Imagen propia o de un producto, "válida hasta" y unidades disponibles en las promociones: migración,
+      panel (editor y lista), menú interactivo y estático (ADMIN-PROMO-1 a 12, PUBLICO-67 a 72, ESTATICO-12 y 13)
+- [ ] [por asignar] "Válida desde": programar el inicio de una promoción
+- [ ] [por asignar] Días de la semana de una promoción (por ejemplo, happy hour)
+- [ ] [por asignar] Avisar al local cuando una promoción se agota
+
 ## Etapa 7 — Pendientes técnicos (backlog)
 
 - [ ] [por asignar] **Marketplace** ("un lugar donde encontrar de todo para

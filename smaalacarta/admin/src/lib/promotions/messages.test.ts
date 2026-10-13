@@ -6,7 +6,7 @@ describe("promotionErrorMessage", () => {
   it.each([
     ["23503", /producto/i],
     ["23514", /descuento|precio/i],
-    ["22023", /al menos un producto/i],
+    ["22023", /productos, imagen, fecha de fin/i],
     ["P0002", /ya no existe/i],
     ["42501", /permiso/i],
   ])("%s", (code, esperado) => {
