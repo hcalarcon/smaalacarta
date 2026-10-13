@@ -8,13 +8,17 @@ import NewOrderAlert from "./NewOrderAlert";
 import OrderCard from "./OrderCard";
 import OrderDetailDialog from "./OrderDetailDialog";
 import OrdersHistory from "./OrdersHistory";
+import PrepPicker from "./PrepPicker";
 import SettlementSummary from "./SettlementSummary";
 import ConfirmDeleteDialog from "../../components/ConfirmDeleteDialog";
 import {
+  acceptOrderAction,
   assignCourierAction,
   confirmSettlementAction,
+  delayPrepAction,
   selfDeliveryAction,
   setOrderStatusAction,
+  setPrepAction,
 } from "../actions";
 import type { Order } from "@/lib/db/orders";
 import type { OrderCourier, OrderOffers } from "@/lib/orders/courier";
@@ -40,6 +44,7 @@ import {
   shouldBlink,
   unattendedOrders,
 } from "@/lib/orders/urgent-alert";
+import { acceptsPrepTime } from "@/lib/orders/prep";
 import { compareForBoard } from "@/lib/orders/scheduled";
 import { boardColumn, type BoardColumn } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
@@ -79,6 +84,8 @@ export default function OrdersClient({
   serverNow,
   couriers = [],
   offers = [],
+  suggestedPrepMinutes = null,
+  defaultPrepMinutes = 20,
 }: {
   slug: string;
   orders: Order[];
@@ -89,6 +96,10 @@ export default function OrdersClient({
   couriers?: OrderCourier[];
   // Las ofertas abiertas de los pedidos que buscan repartidor (ENVIO-111).
   offers?: OrderOffers[];
+  // El tiempo estimado (ADMIN-PEDIDOS-32): la sugerencia de la base según los últimos pedidos y el tiempo por
+  // defecto del negocio, para preseleccionar el selector.
+  suggestedPrepMinutes?: number | null;
+  defaultPrepMinutes?: number;
 }) {
   const router = useRouter();
 
@@ -101,6 +112,8 @@ export default function OrdersClient({
   const [manualOpen, setManualOpen] = useState(false);
   // Pedido cuya rendición se está por confirmar como recibida (ENVIO-43).
   const [receivingId, setReceivingId] = useState<string | null>(null);
+  // El selector del tiempo estimado (ADMIN-PEDIDOS-31): al aceptar, o para cargarlo después.
+  const [prepPicker, setPrepPicker] = useState<{ orderId: string; mode: "accept" | "set" } | null>(null);
 
   // Sonido: la preferencia se lee en el navegador (no en el servidor) para que el primer
   // render coincida. `audioReady` dice si el navegador ya dejó sonar: tras recargar hay
@@ -338,6 +351,39 @@ export default function OrdersClient({
     setDismissedIds((current) => new Set([...current, ...unattended.map((order) => order.id)]));
   }
 
+  // Aceptar un pedido pendiente (con hora de entrega ya marcada o no) pasa por el selector del tiempo; lo
+  // programado y anticipado ya tiene su hora y se confirma directo (ADMIN-PEDIDOS-31).
+  function requestStatus(order: Order, status: string, note?: string) {
+    if (status === "confirmed" && order.status === "pending" && acceptsPrepTime(order)) {
+      setError(null);
+      setPrepPicker({ orderId: order.id, mode: "accept" });
+      return;
+    }
+
+    void changeStatus(order.id, status, note);
+  }
+
+  async function submitPrep(minutes: number | null) {
+    if (!prepPicker) return;
+
+    const { orderId, mode } = prepPicker;
+    setError(null);
+    setBusyId(orderId);
+
+    try {
+      const result =
+        mode === "accept" ? await acceptOrderAction(orderId, minutes) : await setPrepAction(orderId, minutes ?? 0, null);
+
+      if (result.ok) setPrepPicker(null);
+      else setError(result.error);
+    } catch {
+      setError("No pudimos guardar el cambio. Probá de nuevo.");
+    } finally {
+      setBusyId(null);
+      router.refresh();
+    }
+  }
+
   async function changeStatus(orderId: string, status: string, note?: string) {
     setError(null);
     setBusyId(orderId);
@@ -391,6 +437,11 @@ export default function OrdersClient({
   }
 
   const selected = orders.find((order) => order.id === selectedId) ?? null;
+  // El selector solo sigue abierto mientras tenga sentido: aceptar exige que el pedido siga pendiente (si ya se
+  // confirmó, el aviso del error queda en el tablero y no se vuelve a pedir).
+  const prepOrder = prepPicker ? orders.find((order) => order.id === prepPicker.orderId) ?? null : null;
+  const activePicker =
+    prepPicker && prepOrder && (prepPicker.mode === "set" || prepOrder.status === "pending") ? prepPicker : null;
   const receiving = orders.find((order) => order.id === receivingId) ?? null;
 
   const byColumn = (key: BoardColumn) => {
@@ -491,7 +542,14 @@ export default function OrdersClient({
                           order={order}
                           now={now}
                           busy={busyId === order.id}
-                          onAdvance={(status) => changeStatus(order.id, status)}
+                          onAdvance={(status) => requestStatus(order, status)}
+                          onSetPrep={() => {
+                            setError(null);
+                            setPrepPicker({ orderId: order.id, mode: "set" });
+                          }}
+                          onDelay={(reason) =>
+                            resolveDelivery(order.id, () => delayPrepAction(order.id, reason))
+                          }
                           onOpen={() => setSelectedId(order.id)}
                           onConfirmSettlement={() => setReceivingId(order.id)}
                           couriers={couriers}
@@ -520,7 +578,7 @@ export default function OrdersClient({
         slug={slug}
         busy={busyId === selected?.id}
         onClose={() => setSelectedId(null)}
-        onChangeStatus={(status, note) => selected && changeStatus(selected.id, status, note)}
+        onChangeStatus={(status, note) => selected && requestStatus(selected, status, note)}
         couriers={couriers}
         offers={selected ? offersByOrder.get(selected.id) : undefined}
         now={now}
@@ -554,9 +612,24 @@ export default function OrdersClient({
           busy={busyId === alertOrder.id}
           canSilence={soundOn && audioReady}
           silenced={mutedUntil !== null}
-          onAccept={() => changeStatus(alertOrder.id, "confirmed")}
+          onAccept={() => requestStatus(alertOrder, "confirmed")}
           onView={viewOrders}
           onSilence={silence}
+        />
+      ) : null}
+
+      {activePicker && prepOrder ? (
+        <PrepPicker
+          key={activePicker.orderId + activePicker.mode}
+          orderNumber={prepOrder.order_number}
+          mode={activePicker.mode}
+          suggested={suggestedPrepMinutes}
+          defaultMinutes={defaultPrepMinutes}
+          busy={busyId === activePicker.orderId}
+          error={error}
+          onConfirm={(minutes) => void submitPrep(minutes)}
+          onAcceptWithout={() => void submitPrep(null)}
+          onClose={() => setPrepPicker(null)}
         />
       ) : null}
 

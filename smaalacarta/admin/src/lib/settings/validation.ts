@@ -16,6 +16,7 @@ import {
   validateScheduledOrders,
 } from "./scheduled";
 import { normalizeFacebook, normalizeInstagram } from "./social";
+import { PREP_FALLBACK, PREP_MAX, PREP_MIN, validatePrepMinutes } from "@/lib/orders/prep";
 
 export const TEMPLATES = [
   { key: "moderno", label: "Moderno" },
@@ -49,6 +50,10 @@ export type SettingsInput = {
   showDefaultImages: boolean;
   // Campo de nota en cada producto del pedido (ADMIN-CONFIG-48).
   allowItemNotes: boolean;
+  // Tiempos de preparación (ADMIN-CONFIG-49 y 50): si el cliente ve el tiempo estimado (siempre aproximado)
+  // y cuántos minutos ofrece el selector de Aceptar cuando no hay sugerencia (5 a 180).
+  showPrepTime: boolean;
+  defaultPrepMinutes: number;
   logoUrl: string;
   // El PDF del menú (Etapa 6e): independiente de `published`, no se muestra en
   // el menú digital, solo se linkea aparte (QR).
@@ -92,6 +97,8 @@ export const DEFAULT_SETTINGS: SettingsInput = {
   headerImageY: CENTER,
   showDefaultImages: true,
   allowItemNotes: true,
+  showPrepTime: false,
+  defaultPrepMinutes: PREP_FALLBACK,
   logoUrl: "",
   menuPdfUrl: "",
   schedule: {},
@@ -136,6 +143,7 @@ type Field =
   | "transferAlias"
   | "transferCbu"
   | "scheduledLeadMinutes"
+  | "defaultPrepMinutes"
   | "preorderCutoffs";
 
 const COLOR = /^#[0-9a-fA-F]{6}$/;
@@ -245,6 +253,10 @@ export function validateSettings(input: SettingsInput): ValidationResult<Field> 
   const scheduledOrders = validateScheduledOrders(input);
   if (!scheduledOrders.ok) {
     Object.assign(errors, scheduledOrders.errors);
+  }
+
+  if (!validatePrepMinutes(input.defaultPrepMinutes).ok) {
+    errors.defaultPrepMinutes = `Ingresá un número entero de ${PREP_MIN} a ${PREP_MAX} minutos.`;
   }
 
   const preorders = validatePreorders(input);

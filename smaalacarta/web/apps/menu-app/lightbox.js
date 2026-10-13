@@ -46,6 +46,7 @@
 
   document.addEventListener("click", (e) => {
     const img = e.target instanceof Element ? e.target.closest(".producto > img:not(.imagen-ilustrativa):not(.imagen-logo)") : null;
-    if (img && img.src) open(img.src);
+    // Con las notas activas la tarjeta abre la hoja del producto (PUBLICO-65): la foto no se amplía.
+    if (img && img.src && !img.parentElement.classList.contains("abre-hoja")) open(img.src);
   });
 })();

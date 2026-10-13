@@ -32,6 +32,7 @@ export function settingsSections({
           { id: "cierre", label: "Cierre temporal" },
           { id: "entrega-pago", label: "Entrega y pago" },
           { id: "programados", label: "Pedidos programados" },
+          { id: "preparacion", label: "Tiempos de preparación" },
           { id: "contacto", label: "Contacto" },
         ]
       : []),

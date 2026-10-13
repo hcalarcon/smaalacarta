@@ -3,7 +3,16 @@
 // en HTML (PUBLICO-9). La lógica de la elección vive en `options.js`; acá solo se pinta y se escucha.
 
 import { NOTE_MAX, cleanNote, noteCounter } from "./item-notes.js";
-import { chosenOptions, groupCount, unitPrice, validateSelection } from "./options.js";
+import {
+  MAX_QUANTITY,
+  chosenOptions,
+  clampQuantity,
+  groupCount,
+  selectionFromChosen,
+  sheetTotal,
+  unitPrice,
+  validateSelection,
+} from "./options.js";
 
 // "Obligatorio" u "Opcional, hasta N" (con el rango si el grupo pide más de una opción).
 export function ruleText(group, t) {
@@ -26,15 +35,44 @@ function el(doc, tag, className, text) {
   return node;
 }
 
+const FOCUSABLE = 'button, input, textarea, select, [href], [tabindex]:not([tabindex="-1"])';
+
 /**
- * Abre la hoja sobre `doc.body`. `item` es el producto del menú (con `opciones`). `onAdd(chosen)` se
- * llama con la lista de `chosenOptions` y la nota ya limpia (o "") cuando el cliente toca "Agregar" con una
- * elección válida. Con `notesEnabled` (config.notasPorItem) la hoja ofrece el campo de nota (PUBLICO-65).
+ * Abre la hoja sobre `doc.body`. `item` es el producto del menú (con `opciones`, que puede no tener).
+ * `onAdd(chosen, note, quantity)` se llama con la lista de `chosenOptions`, la nota ya limpia (o "") y la
+ * cantidad cuando el cliente toca el botón con una elección válida.
+ *
+ * Con `notesEnabled` (config.notasPorItem) es la hoja de producto completa (PUBLICO-65): foto, cantidad,
+ * campo de nota y el botón con el total en vivo. Sin él, es la hoja de opciones de siempre (PUBLICO-45).
+ * `image` es `{ src, kind }` (la foto o ilustración del producto). `initial` (`{ chosen, quantity, note }`)
+ * precarga la hoja para editar una línea del carrito, y `confirmKey` cambia el texto del botón. El foco
+ * queda atrapado en la hoja y vuelve a `returnFocus` (por defecto, quien lo tenía al abrir) al cerrar.
  * Devuelve `{ close }`.
  */
-export function openOptionsSheet({ doc = document, item, t, formatPrice, onAdd, onClose, notesEnabled = false }) {
+export function openOptionsSheet({
+  doc = document,
+  item,
+  t,
+  formatPrice,
+  onAdd,
+  onClose,
+  notesEnabled = false,
+  image = null,
+  initial = null,
+  confirmKey = "options.add",
+  returnFocus = null,
+}) {
   const groups = item.opciones ?? [];
   const selection = {};
+  const opener = returnFocus ?? doc.activeElement;
+
+  // Lo precargado se limita a opciones que el producto todavía tiene (puede haber cambiado el menú).
+  const known = new Set(groups.flatMap((group) => (group.opciones ?? []).map((option) => option.id)));
+  for (const [id, count] of Object.entries(selectionFromChosen(initial?.chosen))) {
+    if (known.has(id)) selection[id] = count;
+  }
+
+  let quantity = clampQuantity(initial?.quantity);
 
   const overlay = el(doc, "div", "opciones-overlay");
   const sheet = el(doc, "div", "opciones-hoja");
@@ -52,10 +90,51 @@ export function openOptionsSheet({ doc = document, item, t, formatPrice, onAdd, 
 
   const body = el(doc, "div", "opciones-grupos");
   const footer = el(doc, "div", "opciones-pie");
-  const totalEl = el(doc, "div", "opciones-total");
-  const addBtn = el(doc, "button", "opciones-agregar", t("options.add"));
+  const addBtn = el(doc, "button", "opciones-agregar", t(confirmKey));
   addBtn.type = "button";
-  footer.append(totalEl, addBtn);
+
+  // La foto del producto, arriba de todo; se asigna por propiedad (nunca como HTML).
+  if (notesEnabled && image?.src) {
+    const photo = el(doc, "img", `opciones-foto${image.kind === "photo" ? "" : " ilustrativa"}`);
+    photo.src = image.src;
+    photo.alt = "";
+    body.appendChild(photo);
+  }
+
+  // La hoja completa lleva en el pie la cantidad y el botón "Agregar $total"; la de siempre, el total
+  // y "Agregar".
+  let totalEl = null;
+  let qtyValue = null;
+  let qtyLess = null;
+  let qtyMore = null;
+
+  if (notesEnabled) {
+    const units = el(doc, "div", "opciones-unidades");
+    units.setAttribute("role", "group");
+    units.setAttribute("aria-label", t("options.quantity"));
+    qtyLess = el(doc, "button", "opciones-unidades-menos", "−");
+    qtyMore = el(doc, "button", "opciones-unidades-mas", "+");
+    qtyLess.type = qtyMore.type = "button";
+    qtyLess.setAttribute("aria-label", t("options.quantityLess"));
+    qtyMore.setAttribute("aria-label", t("options.quantityMore"));
+    qtyValue = el(doc, "span", "opciones-unidades-valor", String(quantity));
+    qtyValue.setAttribute("aria-live", "polite");
+
+    qtyLess.addEventListener("click", () => {
+      quantity = clampQuantity(quantity - 1);
+      refresh();
+    });
+    qtyMore.addEventListener("click", () => {
+      quantity = clampQuantity(quantity + 1);
+      refresh();
+    });
+
+    units.append(qtyLess, qtyValue, qtyMore);
+    footer.append(units, addBtn);
+  } else {
+    totalEl = el(doc, "div", "opciones-total");
+    footer.append(totalEl, addBtn);
+  }
 
   const refreshers = [];
 
@@ -63,7 +142,15 @@ export function openOptionsSheet({ doc = document, item, t, formatPrice, onAdd, 
     const chosen = chosenOptions(groups, selection);
     const { ok } = validateSelection(groups, selection);
 
-    totalEl.textContent = `${t("options.total")} $${formatPrice(unitPrice(item.precio, chosen))}`;
+    if (notesEnabled) {
+      addBtn.textContent = `${t(confirmKey)} $${formatPrice(sheetTotal(item.precio, chosen, quantity))}`;
+      qtyValue.textContent = String(quantity);
+      qtyLess.disabled = quantity <= 1;
+      qtyMore.disabled = quantity >= MAX_QUANTITY;
+    } else {
+      totalEl.textContent = `${t("options.total")} $${formatPrice(unitPrice(item.precio, chosen))}`;
+    }
+
     addBtn.disabled = !ok;
     refreshers.forEach((fn) => fn());
   }
@@ -163,25 +250,29 @@ export function openOptionsSheet({ doc = document, item, t, formatPrice, onAdd, 
     body.appendChild(fieldset);
   });
 
-  // La nota del cliente para este producto: texto libre, una línea, hasta 140. Todo con textContent y
-  // `value`: lo que escribe el cliente nunca se interpola en HTML.
+  // La nota del cliente para este producto: texto libre de hasta 140 (el salto de línea no se escribe: la
+  // limpieza lo vuelve espacio). Todo con textContent y `value`: lo que escribe el cliente nunca es HTML.
   let noteInput = null;
 
   if (notesEnabled) {
     const wrap = el(doc, "div", "opciones-nota");
     const label = el(doc, "label", "opciones-nota-etiqueta", t("note.label"));
-    noteInput = doc.createElement("input");
-    noteInput.type = "text";
+    noteInput = doc.createElement("textarea");
+    noteInput.rows = 2;
     noteInput.className = "opciones-nota-campo";
     noteInput.maxLength = NOTE_MAX;
     noteInput.placeholder = t("note.placeholder");
     noteInput.autocomplete = "off";
     noteInput.id = "opciones-nota-campo";
+    noteInput.value = cleanNote(initial?.note);
     label.htmlFor = noteInput.id;
 
-    const counter = el(doc, "span", "opciones-nota-contador", noteCounter(""));
+    const counter = el(doc, "span", "opciones-nota-contador", noteCounter(noteInput.value));
     noteInput.addEventListener("input", () => {
       counter.textContent = noteCounter(noteInput.value);
+    });
+    noteInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") event.preventDefault();
     });
 
     const hint = el(doc, "p", "opciones-nota-aviso", t("note.hint"));
@@ -196,11 +287,40 @@ export function openOptionsSheet({ doc = document, item, t, formatPrice, onAdd, 
     doc.removeEventListener("keydown", onKey);
     overlay.remove();
     doc.body.classList.remove("no-scroll-opciones");
+    if (opener?.isConnected) opener.focus?.();
     onClose?.();
   }
 
   function onKey(event) {
-    if (event.key === "Escape") close();
+    if (event.key === "Escape") {
+      close();
+      return;
+    }
+
+    // Foco atrapado: Tab y Mayús+Tab dan la vuelta dentro de la hoja.
+    if (event.key !== "Tab") return;
+
+    const nodes = [...sheet.querySelectorAll(FOCUSABLE)].filter((node) => !node.disabled);
+    if (nodes.length === 0) {
+      event.preventDefault();
+      sheet.focus();
+      return;
+    }
+
+    const first = nodes[0];
+    const last = nodes[nodes.length - 1];
+    const active = doc.activeElement;
+
+    if (!sheet.contains(active) || active === sheet) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    } else if (event.shiftKey && active === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && active === last) {
+      event.preventDefault();
+      first.focus();
+    }
   }
 
   closeBtn.addEventListener("click", close);
@@ -211,8 +331,9 @@ export function openOptionsSheet({ doc = document, item, t, formatPrice, onAdd, 
     if (addBtn.disabled) return;
     const chosen = chosenOptions(groups, selection);
     const note = noteInput ? cleanNote(noteInput.value) : "";
+    const units = notesEnabled ? quantity : 1;
     close();
-    onAdd(chosen, note);
+    onAdd(chosen, note, units);
   });
   doc.addEventListener("keydown", onKey);
 

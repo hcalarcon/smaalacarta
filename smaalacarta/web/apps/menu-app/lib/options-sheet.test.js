@@ -175,7 +175,7 @@ describe("la hoja — PUBLICO-45", () => {
     expect(onAdd).toHaveBeenCalledWith([
       { id: "o-cocido", grupo: "Punto", nombre: "Cocido", cantidad: 1, precio: 0 },
       { id: "o-queso", grupo: "Extras", nombre: "Queso", cantidad: 1, precio: 500 },
-    ], "");
+    ], "", 1);
     expect(q(".opciones-overlay")).toBeNull();
   });
 
@@ -221,7 +221,7 @@ describe("grupos que permiten repetir — PUBLICO-45", () => {
     click(more("o-frutilla"));
     click(add());
 
-    expect(onAdd).toHaveBeenCalledWith([{ id: "o-frutilla", grupo: "Sabores", nombre: "Frutilla", cantidad: 2, precio: 0 }], "");
+    expect(onAdd).toHaveBeenCalledWith([{ id: "o-frutilla", grupo: "Sabores", nombre: "Frutilla", cantidad: 2, precio: 0 }], "", 1);
   });
 
   it("el botón + de una opción agotada está apagado", () => {
@@ -289,6 +289,7 @@ describe("textos — PUBLICO-49", () => {
   const keys = [
     "options.required", "options.requiredN", "options.requiredRange", "options.optionalUpTo",
     "options.add", "options.total", "options.close", "options.more", "options.less", "error.invalidOptions",
+    "options.save", "options.quantity", "options.quantityLess", "options.quantityMore", "note.edit", "note.add",
   ];
 
   it.each(keys)("%s está en los tres idiomas", (key) => {

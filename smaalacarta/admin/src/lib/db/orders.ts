@@ -44,7 +44,7 @@ export type OrderDelivery = {
   settlement_received_at: string | null;
 };
 
-export type Order = OrderDelivery & {
+export type Order = OrderDelivery & OrderPrep & {
   id: string;
   order_number: string;
   status: string;
@@ -66,9 +66,16 @@ export type Order = OrderDelivery & {
   delivery_events: OrderEvent[];
 };
 
+// El tiempo estimado que cargó el local (ADMIN-PEDIDOS-34); nulo si no lo cargó.
+export type OrderPrep = {
+  prep_ready_at: string | null;
+  prep_reason: string | null;
+  prep_updated_at: string | null;
+};
+
 const SELECT =
   "id, order_number, status, total, notes, customer_name, delivery, payment, payment_status, source, scheduled_for, preorder, code, created_at, updated_at, " +
-  "courier_id, delivery_zone_id, delivery_zone_name, delivery_fee_list, delivery_fee, delivery_fee_reason, delivery_fee_changed_at, customer_phone, delivery_address, courier_status, courier_note, courier_responded_at, offered_at, settled_at, settlement_received_at, " +
+  "courier_id, delivery_zone_id, delivery_zone_name, delivery_fee_list, delivery_fee, delivery_fee_reason, delivery_fee_changed_at, customer_phone, delivery_address, courier_status, courier_note, courier_responded_at, offered_at, settled_at, settlement_received_at, prep_ready_at, prep_reason, prep_updated_at, " +
   "order_items(name, quantity, unit_price, sort_order, options, note), order_events(kind, status, created_at, note)";
 
 // Los pedidos más recientes del negocio, con su detalle y su línea de tiempo. El RLS
@@ -130,6 +137,57 @@ export async function setOrderStatus(
   });
 
   return error ? { error: { code: error.code, message: error.message } } : { ok: true };
+}
+
+// Lo que hace falta saber de un pedido para decidir si se le carga tiempo (ADMIN-PEDIDOS-33). `order` es
+// nulo si el pedido no es del negocio: el filtro y el RLS lo dejan afuera.
+export type OrderPrepState = Pick<Order, "status" | "scheduled_for" | "preorder" | "prep_ready_at">;
+
+export async function getOrderPrepState(
+  businessId: string,
+  orderId: string,
+): Promise<{ ok: true; order: OrderPrepState | null } | DbFailure> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("orders")
+    .select("status, scheduled_for, preorder, prep_ready_at")
+    .eq("id", orderId)
+    .eq("business_id", businessId)
+    .maybeSingle();
+
+  if (error) return { error: { code: error.code, message: error.message } };
+
+  return { ok: true, order: (data as OrderPrepState | null) ?? null };
+}
+
+// Carga o demora el tiempo estimado: en `minutes` minutos desde ahora (ADMIN-PEDIDOS-37). La base valida el
+// rango, el motivo, el estado y que el pedido sea del negocio de quien llama.
+export async function setOrderPrep(
+  orderId: string,
+  minutes: number,
+  reason: string | null,
+): Promise<{ ok: true } | DbFailure> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("set_order_prep", {
+    p_order_id: orderId,
+    p_ready_in_minutes: minutes,
+    // La clave se omite sin motivo: la función usa su DEFAULT.
+    ...(reason ? { p_reason: reason } : {}),
+  });
+
+  return error ? { error: { code: error.code, message: error.message } } : { ok: true };
+}
+
+// La sugerencia de la base para el selector de Aceptar (ADMIN-PEDIDOS-32): nulo si no hay suficientes
+// pedidos o la llamada falla (el selector usa entonces el tiempo por defecto).
+export async function getSuggestedPrepMinutes(businessId: string): Promise<number | null> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.rpc("suggested_prep_minutes", { p_business_id: businessId });
+
+  return !error && typeof data === "number" ? data : null;
 }
 
 // Asigna a mano un repartidor a un pedido que está buscando (ENVIO-67). La base comprueba que quien

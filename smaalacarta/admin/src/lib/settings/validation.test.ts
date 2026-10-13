@@ -38,6 +38,25 @@ describe("allowItemNotes — ADMIN-CONFIG-48", () => {
   });
 });
 
+describe("tiempos de preparación — ADMIN-CONFIG-49 y 50", () => {
+  it("por defecto el tiempo no se muestra al cliente y el valor por defecto es 20", () => {
+    expect(DEFAULT_SETTINGS.showPrepTime).toBe(false);
+    expect(DEFAULT_SETTINGS.defaultPrepMinutes).toBe(20);
+  });
+
+  it("acepta de 5 a 180 minutos, con el interruptor prendido o apagado", () => {
+    for (const defaultPrepMinutes of [5, 20, 180]) {
+      expect(validateSettings({ ...valid, showPrepTime: true, defaultPrepMinutes })).toEqual({ ok: true });
+      expect(validateSettings({ ...valid, showPrepTime: false, defaultPrepMinutes })).toEqual({ ok: true });
+    }
+  });
+
+  it.each([4, 181, 0, -1, 12.5, Number.NaN])("rechaza %s minutos", (defaultPrepMinutes) => {
+    const r = validateSettings({ ...valid, defaultPrepMinutes });
+    expect(r.ok === false && r.errors.defaultPrepMinutes).toBeTruthy();
+  });
+});
+
 describe("validateSettings — ADMIN-CONFIG-2", () => {
   it("acepta una configuración válida", () => {
     expect(validateSettings(valid)).toEqual({ ok: true });

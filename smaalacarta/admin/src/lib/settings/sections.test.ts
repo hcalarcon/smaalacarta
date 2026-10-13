@@ -18,6 +18,7 @@ describe("settingsSections (ADMIN-CONFIG-22)", () => {
       "cierre",
       "entrega-pago",
       "programados",
+      "preparacion",
       "contacto",
       "contrasena",
     ]);

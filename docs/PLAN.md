@@ -684,6 +684,9 @@ ADMIN-CONFIG-48, ADMIN-PEDIDOS-22 y 23). Migración `20261029000000_notas_por_it
 - [x] [herni] Panel: la nota destacada en el tablero, el detalle, el historial y el panel del repartidor;
       interruptor "Permitir notas en cada producto" en Entrega y pago
 - [x] [herni] Seguimiento del cliente: la nota bajo cada ítem, con `textContent`
+- [x] [herni] La nota se escribe al seleccionar el producto (PUBLICO-65 y 65b): la tarjeta abre una hoja de
+      producto con foto, cantidad, opciones, nota y "Agregar $total"; el carrito muestra la nota de solo
+      lectura con un lápiz que reabre la hoja. Solo `web/apps/menu-app`, sin migración
 - [ ] [herni] **Después de mergear**: `db:push` de la migración y `db:types`; probar a mano un pedido con
       notas (menú → tablero → seguimiento → repartidor) y con el interruptor apagado
 
@@ -707,6 +710,30 @@ Que un pedido nuevo no pase desapercibido para el local, con el panel abierto o 
       independiente del navegador (hoy el aviso depende del permiso de notificaciones y de que el
       navegador no esté cerrado por el sistema). Pide decidir: vinculación (código de un solo uso),
       dónde se guarda el `chat_id` (por persona, como `push_subscriptions`) y quién crea y paga el bot
+
+## Etapa 6t — Tiempo de preparación estimado (etapa 1 de 3)
+
+Que el local diga cuánto tarda al aceptar el pedido, lo pueda demorar, y el cliente lo vea en el seguimiento
+solo si el negocio lo activó. Es una estimación: siempre "aprox.", una ventana de 10 minutos
+(`PREP_WINDOW_MINUTES`), sin promesas ni penalidades. Requisitos en `docs/SPEC.md` (ADMIN-PEDIDOS-31 a 38,
+ADMIN-CONFIG-49 y 50, SEGUIMIENTO-37 a 42). Migración `20261031000000_tiempo_de_preparacion.sql`.
+
+- [x] [herni] Base: `show_prep_time` y `default_prep_minutes` en `business_settings`; `prep_ready_at`,
+      `prep_reason` y `prep_updated_at` en `orders`; `set_order_prep`, `suggested_prep_minutes`, y
+      `save_business_settings` y `public_order_tracking` redefinidas
+- [x] [herni] Panel: selector al aceptar (10/15/20/30/45, otro valor, sugerencia o valor por defecto, "Aceptar sin
+      tiempo"), "Listo 21:35 (en 8 min)" en la tarjeta con alerta al pasarse, "Demorar +10" con motivo opcional
+      y "Poner tiempo" para el pedido aceptado sin tiempo
+- [x] [herni] Configuración: sección "Tiempos de preparación" (interruptor y tiempo por defecto)
+- [x] [herni] Seguimiento: "Listo entre 21:30 y 21:40 (aprox.)", "en unos N min", "Se está demorando un poco más
+      de lo previsto" y el motivo, en es, en y pt
+- [ ] [herni] **Después de mergear**: `db:push` de la migración y `db:types` (los tipos de este PR están
+      escritos a mano con el mismo formato); probar a mano aceptar con tiempo, demorar y el seguimiento con el
+      interruptor apagado y encendido
+- [ ] [por asignar] **Etapa 2**: el repartidor estima su llegada y el viaje (con "demora" y motivo), con la
+      misma ventana y las mismas reglas de "aprox."
+- [ ] [por asignar] **Etapa 3**: hora total combinada (cocina + viaje) y aprendizaje de los tiempos reales
+- [ ] [por asignar] Avisar al cliente (push o aviso del seguimiento) cuando cambia el tiempo estimado
 
 ## Etapa 7 — Pendientes técnicos (backlog)
 

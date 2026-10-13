@@ -527,6 +527,31 @@ body {
   height: 1.8rem;
 }
 
+/* Tiempo estimado de preparación (SEGUIMIENTO-39 a 42). */
+.status-prep {
+  margin: 0.9rem auto 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--accent) 14%, white);
+  text-align: center;
+}
+
+.status-prep-text {
+  font-weight: 700;
+  color: var(--brand);
+}
+
+.status-prep-hint,
+.status-prep-reason {
+  margin-top: 0.25rem;
+  font-size: 0.9rem;
+  color: #57534e;
+}
+
+.status-prep-late {
+  background: #fef3c7;
+}
+
 .cancel-reason {
   margin-top: 0.6rem;
   text-align: center;

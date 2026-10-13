@@ -30,6 +30,13 @@ describe("Mis zonas — ENVIO-57", () => {
     expect((screen.getByRole("checkbox", { name: /Oasis/ }) as HTMLInputElement).checked).toBe(false);
   });
 
+  it("rotula el precio como de referencia y dice que se puede cambiar al aceptar un pedido", () => {
+    render(<CoverageClient zones={zones} />);
+
+    expect(screen.getByText(/Precio de referencia/)).toBeTruthy();
+    expect(screen.getByText(/se puede cambiar al aceptar un pedido/)).toBeTruthy();
+  });
+
   it("no ofrece editar nombres ni precios", () => {
     render(<CoverageClient zones={zones} />);
 

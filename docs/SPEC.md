@@ -321,10 +321,22 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   misma nota (ya limpia), es una repetida y la base la rechaza como cualquier línea repetida.
 - **PUBLICO-64** `business_settings.allow_item_notes` (por defecto `true`) lo decide el negocio. Con el interruptor
   apagado, `create_public_order` ignora las notas sin error y `config.notasPorItem` es `false`.
-- **PUBLICO-65** En el menú interactivo, en la hoja de opciones del producto y en cada línea del carrito, el campo "Nota
-  para este producto (opcional)" (140 caracteres, contador, ejemplo "Sin cheddar, con mostaza") solo aparece si
-  `config.notasPorItem`. Dice que es un pedido al local, no una promesa. Textos en es, en y pt. La nota entra en la
-  firma del ítem del carrito (misma nota, suman cantidad); un carrito viejo de `localStorage` sigue funcionando.
+- **PUBLICO-65** En el menú interactivo la nota se escribe **al seleccionar el producto**, en la hoja del
+  producto, y no en el carrito. Solo con `config.notasPorItem`: tocar la foto o el nombre de la tarjeta (no el
+  "+") abre la hoja con nombre y foto, cantidad (− / +, de 1 a 99), los grupos de opciones si los tiene, el campo
+  "Nota para este producto (opcional)" (`textarea` de 2 líneas, 140 caracteres, contador, ejemplo "Sin cheddar,
+  con mostaza", sin salto de línea) y el botón "Agregar $total" con el precio en vivo
+  (producto + extras) × cantidad. Un producto sin grupos también abre la hoja. El "+" sigue siendo el agregado
+  rápido de un toque en un producto sin grupos (sin nota); en uno con grupos abre la hoja. Con el interruptor
+  apagado nada de esto aparece: el toque en la tarjeta no abre nada y la hoja de opciones es la de siempre. La
+  foto de una tarjeta que abre la hoja no se amplía (el visor del menú estático no cambia). La hoja dice que la
+  nota es un pedido al local, no una promesa; es un diálogo con el foco atrapado, se cierra con Esc y devuelve el
+  foco a la tarjeta. Textos en es, en y pt. La nota entra en la firma del ítem del carrito (misma nota, suman
+  cantidad); un carrito viejo de `localStorage` sigue funcionando.
+- **PUBLICO-65b** En el carrito la nota de una línea se ve de solo lectura bajo el ítem (`📝 texto`, con
+  `textContent`), sin campo de edición. Un botón lápiz ("Editar nota", o "Agregar nota" si no tiene) reabre la
+  hoja precargada con las opciones, la cantidad y la nota de esa línea; al confirmar reemplaza la línea
+  (`replaceLine`): si su firma coincide con otra línea, se juntan y suman cantidad.
 - **PUBLICO-66** `buildOrderItems` manda `{id, kind, quantity, options, note}`, y el mensaje de WhatsApp lista la nota
   bajo cada ítem (`  📝 sin cheddar`). Cualquier texto del cliente se muestra con `textContent` o `escapeHtml`.
 
@@ -461,6 +473,19 @@ llegando al negocio por WhatsApp.
   retirar" y "Retirado" solo en un pedido para retirar.
 - **SEGUIMIENTO-36** `public_order_tracking` entrega `nota` en cada ítem que la tiene; el seguimiento la muestra bajo el
   ítem con `textContent`, como lo que el cliente pidió.
+- **SEGUIMIENTO-37** `public_order_tracking` entrega `pedido.prep` (`desde`, `hasta`, `actualizado` y `motivo`) solo si el
+  negocio tiene `show_prep_time`, el pedido está en Confirmado o En preparación, no es programado ni anticipado y el
+  local cargó el tiempo; `desde` es `prep_ready_at` y `hasta` es `desde` + `PREP_WINDOW_MINUTES` (10). Sin eso no trae
+  la clave, y nunca trae datos de otro negocio.
+- **SEGUIMIENTO-38** `PREP_WINDOW_MINUTES` (10) es una sola constante: la de `admin/src/lib/orders/prep.ts` y la de
+  `web/apps/tracker/lib/prep.js` valen lo mismo, y un test las compara.
+- **SEGUIMIENTO-39** Con `prep`, el seguimiento dice "Listo entre 21:30 y 21:40 (aprox.)" y, antes de `hasta`, "en unos N min"
+  (se renueva con la página); nunca un número negativo. Para retirar dice "Podés pasar a retirar desde las 21:30".
+- **SEGUIMIENTO-40** Pasado `hasta` el seguimiento dice "Se está demorando un poco más de lo previsto", sin horas ni números.
+- **SEGUIMIENTO-41** Si el local dejó un motivo (`busy`, `weather`, `supply`, `other`), se muestra como texto amable ("por
+  mucho movimiento"); `other` y los desconocidos no agregan nada.
+- **SEGUIMIENTO-42** Las horas del tiempo estimado salen siempre en hora de Argentina (`TIME_ZONE`), los textos están en es,
+  en y pt y se pintan con `textContent`. Sin `prep` la página no muestra nada nuevo.
 
 ## PWA — Instalar el menú en el celular
 
@@ -1073,6 +1098,12 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
 - **ADMIN-CONFIG-48** Configuración tiene el interruptor "Permitir notas en cada producto" (`allow_item_notes`, activo
   por defecto), en Entrega y pago; se guarda con "Guardar cambios" y `save_business_settings` lo recibe en
   `p_allow_item_notes`.
+- **ADMIN-CONFIG-49** Configuración tiene la sección "Tiempos de preparación" con el interruptor "Mostrar el tiempo
+  estimado a mis clientes" (`show_prep_time`, apagado por defecto) y la aclaración de que siempre es aproximado; se
+  guarda con "Guardar cambios" y `save_business_settings` lo recibe en `p_show_prep_time`.
+- **ADMIN-CONFIG-50** La misma sección tiene "Tiempo de preparación por defecto" (`default_prep_minutes`, 20 por
+  defecto): un entero de 5 a 180, validado en `validateSettings` y en la base; es lo que el selector de Aceptar
+  ofrece si no hay sugerencia.
 
 ## ADMIN-PEDIDOS — Pedidos
 
@@ -1171,6 +1202,28 @@ recordatorios push son ADMIN-PWA-33 a 37)
   o los avisos push no estén activados, con los botones "Activar el sonido" (lo guarda y lleva a Pedidos) y
   "Activar los avisos"; con los avisos bloqueados o por instalar lo dice sin botón, y sin nada que arreglar
   no se ve.
+- **ADMIN-PEDIDOS-31** Aceptar un pedido pendiente que no es programado ni anticipado abre un selector con los botones
+  10, 15, 20, 30 y 45 min, un campo para otro valor y "Aceptar con N min" de un solo toque, más "Aceptar sin tiempo"
+  que confirma como siempre. El modal de pedido nuevo abre ese mismo selector; los pedidos programados y anticipados
+  se confirman directo.
+- **ADMIN-PEDIDOS-32** El valor preseleccionado es `suggested_prep_minutes` con el texto "Sugerido: N min según tus
+  últimos pedidos"; sin sugerencia, el tiempo por defecto del negocio. La sugerencia se calcula en la base y se lee al
+  abrir el selector.
+- **ADMIN-PEDIDOS-33** Aceptar con tiempo es una sola Server Action que toma el negocio de `requireBusiness()`: confirma
+  el pedido y fija el tiempo; si el pedido se confirmó pero el tiempo falló, lo dice en vez de dejarlo a medias sin aviso.
+- **ADMIN-PEDIDOS-34** La tarjeta de un pedido Confirmado o En preparación con tiempo dice "Listo 21:35 (en 8 min)" en hora
+  de Argentina y, pasada la hora, "Listo 21:35 (atrasado 4 min)" en alerta. Sin tiempo, la tarjeta no muestra nada nuevo.
+- **ADMIN-PEDIDOS-35** "Demorar +10" fija el tiempo en lo que falta (nada si ya pasó) más 10 minutos, hasta un máximo de
+  180, con motivo opcional (mucho movimiento, clima, falta de insumo, otro).
+- **ADMIN-PEDIDOS-36** Las reglas puras (`src/lib/orders/prep.ts`) validan el rango de 5 a 180, calculan los minutos que
+  faltan y el atraso, el tiempo de una demora y la mediana para la vista previa.
+- **ADMIN-PEDIDOS-37** `set_order_prep(pedido, minutos, motivo)` solo la puede llamar un miembro del negocio del pedido,
+  exige de 5 a 180 minutos, un motivo conocido o nulo y un pedido Confirmado o En preparación que no es programado ni
+  anticipado; fija `prep_ready_at` en ahora + minutos, `prep_updated_at` y `prep_reason`, deja un evento
+  `kind = 'prep'` (que no es un paso de la línea de tiempo) y, con el negocio suspendido, falla como todo cambio.
+- **ADMIN-PEDIDOS-38** `suggested_prep_minutes(negocio)` es la mediana de lo que tardó el negocio entre Confirmado y
+  Listo en sus últimos 20 pedidos que llegaron a Listo, sin contar los de más de 3 horas ni los que no pasaron tiempo; con menos
+  de 5 muestras (o sin ser miembro) devuelve nulo y el selector usa el tiempo por defecto.
 
 ## MP — Cobro con Mercado Pago (Checkout Pro)
 
@@ -1460,7 +1513,8 @@ sigue naciendo con un repartidor asignado (la TRANSICIÓN de ENVIO-54; la etapa 
   con confirmación y ordenar arrastrando. Una zona que ya usan pedidos no se borra: se desactiva y la pantalla lo
   avisa. Las validaciones son las de `src/lib/courier/zones.ts`.
 - **ENVIO-57** `/repartidor/zonas` ("Mis zonas") lista las zonas activas con su precio de referencia y una casilla
-  "La llevo" que guarda al tocar sobre `courier_zone_coverage`. No se editan nombres ni precios.
+  "La llevo" que guarda al tocar sobre `courier_zone_coverage`. No se editan nombres ni precios. El precio se
+  rotula "Precio de referencia" y aclara que se puede cambiar al aceptar un pedido.
 - **ENVIO-58** Configuración → Envíos (solo con `courier_delivery`): casillas de las zonas a las que envía el local
   (una zona sin repartidor muestra "Sin repartidor por ahora"), repartidor favorito (solo entre los que cubren alguna
   zona marcada, o "Sin favorito") y minutos para el favorito (5 por defecto, visibles solo con favorito). Se guarda

@@ -77,6 +77,7 @@ export type Database = {
           business_id: string
           closed_message: string | null
           created_at: string
+          default_prep_minutes: number
           delivery_options: string[]
           facebook_url: string | null
           favorite_courier_id: string | null
@@ -96,6 +97,7 @@ export type Database = {
           scheduled_lead_minutes: number
           secondary_color: string
           show_default_images: boolean
+          show_prep_time: boolean
           tagline: string | null
           template: string
           temporarily_closed: boolean
@@ -111,6 +113,7 @@ export type Database = {
           business_id: string
           closed_message?: string | null
           created_at?: string
+          default_prep_minutes?: number
           delivery_options?: string[]
           facebook_url?: string | null
           favorite_courier_id?: string | null
@@ -130,6 +133,7 @@ export type Database = {
           scheduled_lead_minutes?: number
           secondary_color?: string
           show_default_images?: boolean
+          show_prep_time?: boolean
           tagline?: string | null
           template?: string
           temporarily_closed?: boolean
@@ -145,6 +149,7 @@ export type Database = {
           business_id?: string
           closed_message?: string | null
           created_at?: string
+          default_prep_minutes?: number
           delivery_options?: string[]
           facebook_url?: string | null
           favorite_courier_id?: string | null
@@ -164,6 +169,7 @@ export type Database = {
           scheduled_lead_minutes?: number
           secondary_color?: string
           show_default_images?: boolean
+          show_prep_time?: boolean
           tagline?: string | null
           template?: string
           temporarily_closed?: boolean
@@ -853,6 +859,9 @@ export type Database = {
           payment: string | null
           payment_status: string
           preorder: boolean
+          prep_ready_at: string | null
+          prep_reason: string | null
+          prep_updated_at: string | null
           scheduled_for: string | null
           settled_at: string | null
           settled_by: string | null
@@ -895,6 +904,9 @@ export type Database = {
           payment?: string | null
           payment_status?: string
           preorder?: boolean
+          prep_ready_at?: string | null
+          prep_reason?: string | null
+          prep_updated_at?: string | null
           scheduled_for?: string | null
           settled_at?: string | null
           settled_by?: string | null
@@ -937,6 +949,9 @@ export type Database = {
           payment?: string | null
           payment_status?: string
           preorder?: boolean
+          prep_ready_at?: string | null
+          prep_reason?: string | null
+          prep_updated_at?: string | null
           scheduled_for?: string | null
           settled_at?: string | null
           settled_by?: string | null
@@ -1499,6 +1514,8 @@ export type Database = {
       menu_preview: { Args: { p_business_id: string }; Returns: Json }
       my_courier_business_id: { Args: never; Returns: string }
       my_courier_id: { Args: never; Returns: string }
+      new_order_reminder_interval: { Args: never; Returns: string }
+      new_order_reminder_max: { Args: never; Returns: number }
       new_tracking_code: { Args: never; Returns: string }
       next_order_number: { Args: { p_business_id: string }; Returns: number }
       no_offers_alert_window: { Args: never; Returns: string }
@@ -1542,6 +1559,7 @@ export type Database = {
           p_allow_scheduled_orders: boolean
           p_business_id: string
           p_closed_message: string
+          p_default_prep_minutes?: number
           p_delivery_options: string[]
           p_facebook_url: string
           p_header_image_url: string
@@ -1560,6 +1578,7 @@ export type Database = {
           p_scheduled_lead_minutes: number
           p_secondary_color: string
           p_show_default_images?: boolean
+          p_show_prep_time?: boolean
           p_tagline: string
           p_template: string
           p_temporarily_closed: boolean
@@ -1614,6 +1633,14 @@ export type Database = {
         Args: { p_favorite: string }
         Returns: undefined
       }
+      set_order_prep: {
+        Args: {
+          p_order_id: string
+          p_ready_in_minutes: number
+          p_reason?: string
+        }
+        Returns: string
+      }
       set_order_status: {
         Args: { p_note?: string; p_order_id: string; p_status: string }
         Returns: undefined
@@ -1640,6 +1667,10 @@ export type Database = {
           keyword: string
           name: string
         }[]
+      }
+      suggested_prep_minutes: {
+        Args: { p_business_id: string }
+        Returns: number
       }
     }
     Enums: {

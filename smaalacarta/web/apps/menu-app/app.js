@@ -682,10 +682,15 @@ function renderMenu(menu) {
       const imagen = INFO.productImage(p, window.CONFIG);
       const imagenClase = { illustration: "imagen-ilustrativa", logo: "imagen-logo" }[imagen?.kind];
 
+      // Con las notas activas, tocar la foto o el nombre abre la hoja del producto (PUBLICO-65). El
+      // nombre es un botón, para que también se llegue con el teclado.
+      const abreHoja = !soldOut && notesOn();
+      if (abreHoja) d.classList.add("abre-hoja");
+
       d.innerHTML = `
         ${imagen ? `<img${imagenClase ? ` class="${imagenClase}"` : ""} src="${HTML.escapeHtml(imagen.src)}" alt="">` : ""}
         <div class="producto-info">
-          <h3>${HTML.escapeHtml(p.nombre)}</h3>
+          <h3>${abreHoja ? `<button type="button" class="producto-abrir">${HTML.escapeHtml(p.nombre)}</button>` : HTML.escapeHtml(p.nombre)}</h3>
           <p>${HTML.escapeHtml(p.descripcion || "")}</p>
           ${p.precioAnterior ? `<span class="precio-anterior">$${HTML.escapeHtml(PRICE.formatPrice(p.precioAnterior))}</span>` : ""}
           <div class="producto-precio">$${HTML.escapeHtml(PRICE.formatPrice(p.precio))}</div>
@@ -711,27 +716,33 @@ function renderMenu(menu) {
         }, 600);
       };
 
+      const openSheet = (returnFocus) =>
+        openProductSheet(p, {
+          imagen,
+          returnFocus,
+          onAdd: (chosen, note, quantity) => {
+            addToCart(p, chosen, note, quantity);
+            confirmAdded();
+          },
+        });
+
       if (btn) btn.onclick = () => {
         // Un producto con grupos de opciones abre la hoja para elegir (PUBLICO-45); uno sin grupos
-        // se agrega directo, como siempre.
+        // se agrega directo, de un toque y sin nota, como siempre.
         if (OPTIONS.hasOptions(p)) {
-          OPTIONS_SHEET.openOptionsSheet({
-            item: p,
-            t: tr,
-            formatPrice: PRICE.formatPrice,
-            // El campo de nota solo aparece si el negocio lo permite (PUBLICO-65).
-            notesEnabled: notesOn(),
-            onAdd: (chosen, note) => {
-              addToCart(p, chosen, note);
-              confirmAdded();
-            },
-          });
+          openSheet(btn);
           return;
         }
 
         addToCart(p);
         confirmAdded();
       };
+
+      if (abreHoja) {
+        const abrir = d.querySelector(".producto-abrir");
+        abrir.addEventListener("click", () => openSheet(abrir));
+        d.querySelector(":scope > img")?.addEventListener("click", () => openSheet(abrir));
+      }
 
       grid.appendChild(d); // 👈 clave
     });
@@ -788,13 +799,59 @@ function initSearch() {
   });
 }
 
+// La hoja del producto (PUBLICO-45 y 65). Con las notas activas lleva foto, cantidad y nota; sin ellas es
+// la hoja de opciones de siempre. `initial` y `confirmKey` la usan para editar una línea del carrito.
+function openProductSheet(p, { imagen, returnFocus, onAdd, initial, confirmKey }) {
+  OPTIONS_SHEET.openOptionsSheet({
+    item: p,
+    t: tr,
+    formatPrice: PRICE.formatPrice,
+    notesEnabled: notesOn(),
+    image: imagen,
+    returnFocus,
+    initial,
+    confirmKey,
+    onAdd,
+  });
+}
+
+// El producto del menú al que corresponde una línea del carrito (por id, o por nombre en los menús de
+// JSON), para reabrir su hoja con las opciones vigentes. `null` si ya no está.
+function menuProductFor(line) {
+  for (const cat of MENU_GLOBAL?.categorias ?? []) {
+    for (const p of cat.items || []) {
+      if (line.id ? p.id === line.id : !p.id && p.nombre === line.nombre) return p;
+    }
+  }
+  return null;
+}
+
+// Edita la línea `idx` del carrito en la hoja: opciones, cantidad y nota precargadas (PUBLICO-65).
+function editCartLine(idx, opener) {
+  const line = cart[idx];
+  const product = line && menuProductFor(line);
+  if (!product || STOCK.isSoldOut(product)) return;
+
+  openProductSheet(product, {
+    imagen: INFO.productImage(product, window.CONFIG),
+    returnFocus: opener,
+    confirmKey: "options.save",
+    initial: { chosen: line.elegidas, quantity: line.cantidad, note: line.nota },
+    onAdd: (chosen, note, quantity) => {
+      cart = CART_LINES.replaceLine(cart, idx, product, chosen, note, quantity);
+      saveCart();
+      updateCart();
+    },
+  });
+}
+
 // CARRITO
 // `chosen` son las opciones elegidas (PUBLICO-46): la misma elección suma cantidad y otra elección
 // es otra línea; sin opciones se agrupa como siempre (por id, o por nombre en los menús de JSON).
-function addToCart(p, chosen = [], note = "") {
+function addToCart(p, chosen = [], note = "", quantity = 1) {
   if (!p) return;
 
-  cart = CART_LINES.addLine(cart, p, chosen, note);
+  cart = CART_LINES.addLine(cart, p, chosen, note, quantity);
 
   saveCart();
   updateCart();
@@ -870,38 +927,30 @@ function updateCart() {
       }
     }
 
-    // Nota del cliente para esta línea (PUBLICO-65). Todo con textContent y `value`: nunca HTML.
+    // La nota del cliente, de solo lectura (PUBLICO-65): se escribe y se edita en la hoja del producto.
+    // Todo con textContent: nunca HTML.
     if (notesOn()) {
-      const wrap = document.createElement("div");
-      wrap.className = "item-nota-campo";
+      const nota = typeof i.nota === "string" ? NOTES.cleanNote(i.nota) : "";
 
-      const label = document.createElement("label");
-      label.className = "item-nota-etiqueta";
-      label.textContent = tr("note.label");
+      if (nota) {
+        const p = document.createElement("p");
+        p.className = "item-nota";
+        p.textContent = `📝 ${nota}`;
+        d.querySelector(".item-info")?.appendChild(p);
+      }
 
-      const input = document.createElement("input");
-      input.type = "text";
-      input.id = `nota-linea-${idx}`;
-      input.maxLength = NOTES.NOTE_MAX;
-      input.placeholder = tr("note.placeholder");
-      input.autocomplete = "off";
-      input.value = typeof i.nota === "string" ? i.nota : "";
-      label.htmlFor = input.id;
-
-      const counter = document.createElement("span");
-      counter.className = "item-nota-contador";
-      counter.textContent = NOTES.noteCounter(input.value);
-
-      input.addEventListener("input", () => {
-        counter.textContent = NOTES.noteCounter(input.value);
-      });
-      input.addEventListener("change", () => {
-        cart = CART_LINES.setLineNote(cart, idx, input.value);
-        updateCart();
-      });
-
-      wrap.append(label, input, counter);
-      d.querySelector(".item-info")?.appendChild(wrap);
+      const producto = menuProductFor(i);
+      if (producto && !STOCK.isSoldOut(producto)) {
+        const edit = document.createElement("button");
+        edit.type = "button";
+        edit.className = "btn-nota";
+        edit.setAttribute("aria-label", tr(nota ? "note.edit" : "note.add"));
+        edit.title = tr(nota ? "note.edit" : "note.add");
+        edit.innerHTML =
+          '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>';
+        edit.addEventListener("click", () => editCartLine(idx, edit));
+        d.querySelector(".item-controls")?.prepend(edit);
+      }
     }
 
     const btnMinus = d.querySelector(".btn-minus");
@@ -929,13 +978,6 @@ function updateCart() {
 
     itemsContainer.appendChild(d);
   });
-
-  if (notesOn() && cart.length > 0) {
-    const aviso = document.createElement("p");
-    aviso.className = "carrito-nota-aviso";
-    aviso.textContent = tr("note.hint");
-    itemsContainer.appendChild(aviso);
-  }
 
   totalEl.textContent = `$${total}`;
   countEl.textContent = count;

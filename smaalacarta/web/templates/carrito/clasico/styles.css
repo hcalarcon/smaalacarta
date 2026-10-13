@@ -728,3 +728,27 @@ body {
 .producto > img.imagen-logo {
   border-color: var(--border);
 }
+
+/* NOTA POR PRODUCTO (PUBLICO-65): lápiz del carrito, cantidad de la hoja y campo de nota. */
+.btn-nota {
+  width: 28px;
+  height: 28px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--text);
+}
+
+.opciones-unidades button {
+  border-radius: 4px;
+  background: var(--card);
+}
+
+.opciones-nota-campo {
+  border-radius: 4px;
+}
+
+.opciones-nota-campo:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
+}
