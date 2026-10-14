@@ -292,7 +292,7 @@ export default function CourierOrderCard({
               type="button"
               disabled={busy}
               onClick={() => setSettling(true)}
-              className="mt-2 min-h-11 rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60"
+              className="mt-2 min-h-11 rounded-xl bg-action px-5 py-2 text-sm font-semibold text-white transition hover:bg-action-hover disabled:opacity-60"
             >
               Rendido
             </button>
@@ -306,7 +306,7 @@ export default function CourierOrderCard({
             type="button"
             disabled={busy}
             onClick={() => onAdvance(actions.onTheWay ? "on_the_way" : "delivered")}
-            className="min-h-11 w-full rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60 sm:w-auto"
+            className="min-h-11 w-full rounded-xl bg-action px-5 py-2 text-sm font-semibold text-white transition hover:bg-action-hover disabled:opacity-60 sm:w-auto"
           >
             {busy ? "Guardando…" : actions.onTheWay ? "En camino" : "Entregado"}
           </button>

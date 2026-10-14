@@ -229,7 +229,7 @@ export default function AvailableOrderCard({
               type="button"
               disabled={busy}
               onClick={() => submit({ price, reason })}
-              className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60"
+              className="rounded-xl bg-action px-4 py-2 text-sm font-semibold text-white transition hover:bg-action-hover disabled:opacity-60"
             >
               Confirmar oferta
             </button>
@@ -241,7 +241,7 @@ export default function AvailableOrderCard({
             type="button"
             disabled={busy}
             onClick={() => submit({ price: String(listPrice), reason: "" })}
-            className="min-h-11 rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60"
+            className="min-h-11 rounded-xl bg-action px-5 py-2 text-sm font-semibold text-white transition hover:bg-action-hover disabled:opacity-60"
           >
             Ofertar {formatMoney(listPrice)}
           </button>

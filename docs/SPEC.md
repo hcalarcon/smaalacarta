@@ -2172,6 +2172,8 @@ precios en 0; no existe "incluye N y el resto cuesta X".
 - **ADMIN-MOVIL-9** Sin scroll horizontal en la página: las rendiciones del repartidor (menores a `sm`) y el
   historial de pedidos del negocio (menores a `md`, porque tiene más columnas) se ven como tarjetas apiladas;
   desde ahí siguen siendo tabla.
+- **ADMIN-MOVIL-10** El panel usa Instrument Sans para el texto y Bricolage Grotesque para los títulos, y los
+  colores de la marca (`--color-action` verde para la acción principal) están en los tokens de `globals.css`.
 
 ---
 

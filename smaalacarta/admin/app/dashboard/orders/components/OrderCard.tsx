@@ -185,7 +185,7 @@ export default function OrderCard({
             onClick={() => onAdvance(action.status)}
             disabled={busy || blocked}
             title={blocked ? blockReason : undefined}
-            className="flex-1 rounded-lg bg-brand px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60"
+            className="flex-1 rounded-lg bg-action px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-action-hover disabled:opacity-60"
           >
             {busy ? "Guardando…" : action.label}
           </button>
