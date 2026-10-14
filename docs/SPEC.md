@@ -1851,6 +1851,32 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   rendido, En camino y Entregado) usan el botón con espera de ADMIN-PEDIDOS-51: grises, con spinner y en gerundio
   ("Ofertando…", "Retirando…", "Rechazando…", "Devolviendo…"), y no se pueden tocar dos veces. Los diálogos de
   confirmación quedan abiertos hasta que vuelve la respuesta.
+- **ENVIO-145** El superadmin elige para toda la plataforma el **modo de envíos**: `fixed` (precio fijo: toma el primero
+  que llega) u `offers` (ofertas, como ENVIO-95 en adelante). Vive en `platform_settings` (una fila, arranca en
+  `fixed`); lo cambia solo `is_super_admin()`. Todo el código lee el modo por `effective_delivery_mode(negocio)`, que
+  hoy devuelve el de la plataforma, para poder volverlo por local sin tocar nada más.
+- **ENVIO-146** Cada pedido con circuito de repartidor copia el modo al nacer (`orders.delivery_mode`) y lo conserva:
+  mover el interruptor no cambia los pedidos en curso. Los que estaban abiertos al migrar quedan en `offers`. El
+  navegador no puede escribir la columna.
+- **ENVIO-147** En `fixed`, `courier_take_order(pedido)` lo toma al precio de lista de la zona, sin cambiar precio ni
+  poner motivo: un solo UPDATE condicional, así que de dos que tocan a la vez gana uno y al otro le da P0019 ("Ya lo
+  tomó otro repartidor"). Deja el evento de envío. En un pedido `offers` da P0023.
+- **ENVIO-148** Ofertar, retirar la oferta, elegir una oferta (`public_choose_courier`) y la elección automática solo
+  valen en pedidos `offers`: en uno `fixed` dan P0023 ("este pedido no acepta ofertas"), y la elección automática no
+  lo toca.
+- **ENVIO-149** `courier_available_orders()` trae `modo` en cada pedido, y `public_order_delivery()` trae `modo`; en
+  `fixed` esta última no manda lista de ofertas ni cuenta regresiva.
+- **ENVIO-150** Devolver un pedido `fixed` lo vuelve a `searching` para todos menos para quien lo devolvió, sin
+  ofertas. En `offers` queda como en ENVIO-95 en adelante.
+- **ENVIO-151** Igual en los dos modos: sin repartidor a los 10 minutos el local ve el aviso y puede asignar a mano o
+  llevarlo él; cancelar cierra la búsqueda; el repartidor ve los datos del cliente solo cuando el pedido es suyo.
+- **ENVIO-152** `/superadmin/zonas` muestra el selector "Modo de envíos" con una línea por modo, cuántos pedidos están
+  buscando repartidor, y pide confirmar: "Los pedidos en curso siguen con el modo anterior. Los nuevos usan {modo}."
+- **ENVIO-153** `/repartidor`: un pedido `fixed` muestra barrio, local, precio y **Tomar** (botón con espera); si lo
+  tomó otro, "Ya lo tomó otro repartidor" y sale de la lista. Un pedido `offers` queda como hoy. Rechazar vale en los dos.
+- **ENVIO-154** Panel del local, pedido `fixed` buscando: "Buscando repartidor desde las HH:MM" (sin conteo de ofertas)
+  y, a los 10 minutos, "Nadie lo tomó todavía". Seguimiento `fixed`: "Buscando repartidor" y después quien lo tomó,
+  con el precio de lista, sin lista de ofertas ni cuenta regresiva (es/en/pt).
 
 
 
