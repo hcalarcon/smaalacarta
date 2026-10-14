@@ -809,3 +809,39 @@ body {
     animation: none;
   }
 }
+
+/* El local cambió la demora (SEGUIMIENTO-44): se ve hasta que el cliente lo cierra o cambia el estado. */
+.status-prep-updated {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+  padding: 0.6rem 0.75rem;
+  border-radius: 0.75rem;
+  background: #fff7e0;
+  border: 1px solid #f0d58a;
+  text-align: left;
+}
+
+.status-prep-updated-title {
+  margin: 0;
+  font-weight: 700;
+}
+
+.status-prep-updated-body {
+  margin: 0.15rem 0 0;
+  font-size: 0.9rem;
+}
+
+.status-prep-updated-close {
+  flex: none;
+  min-width: 2.75rem;
+  min-height: 2.75rem;
+  margin: -0.4rem -0.5rem 0 0;
+  border: 0;
+  background: transparent;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}

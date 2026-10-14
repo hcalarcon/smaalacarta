@@ -10,8 +10,22 @@ describe("snapshotOf — SEGUIMIENTO-31", () => {
   it("resume el pedido y el envío", () => {
     expect(
       snapshotOf({ estado: "ready" }, { state: "accepted", courier: "Damián", offers: [] }),
-    ).toEqual({ status: "ready", delivery: "accepted", courier: "Damián", offers: 0 });
-    expect(snapshotOf({ estado: "pending" }, null)).toEqual({ status: "pending", delivery: null, courier: "", offers: 0 });
+    ).toEqual({
+      status: "ready",
+      delivery: "accepted",
+      courier: "Damián",
+      offers: 0,
+      prep: null,
+      pickup: false,
+    });
+    expect(snapshotOf({ estado: "pending" }, null)).toEqual({
+      status: "pending",
+      delivery: null,
+      courier: "",
+      offers: 0,
+      prep: null,
+      pickup: false,
+    });
   });
 });
 
@@ -125,5 +139,59 @@ describe("pollInterval — SEGUIMIENTO-32", () => {
 
   it("un pedido terminado no consulta más", () => {
     expect(pollInterval({ final: true, visible: true, alertsOn: true, offersOpen: false })).toBeNull();
+  });
+});
+
+describe("cambio de demora — SEGUIMIENTO-44", () => {
+  const prep = (desde, hasta) => ({ desde, hasta });
+  const A = prep("2026-10-09T22:30:00Z", "2026-10-09T22:40:00Z");
+  const B = prep("2026-10-09T22:45:00Z", "2026-10-09T22:55:00Z");
+
+  it("avisa 'El local actualizó la demora' con la hora nueva (hora de Argentina)", () => {
+    const { notices } = nextAlerts(
+      snap({ status: "confirmed", prep: A }),
+      snap({ status: "confirmed", prep: B }),
+      ctx(),
+    );
+
+    expect(notices).toEqual([
+      {
+        kind: "prep",
+        title: "El local actualizó la demora",
+        body: "Listo entre 19:45 y 19:55 (aprox.)",
+      },
+    ]);
+  });
+
+  it("también cuando baja", () => {
+    const { notices } = nextAlerts(snap({ status: "confirmed", prep: B }), snap({ status: "confirmed", prep: A }), ctx());
+
+    expect(notices.map((notice) => notice.kind)).toEqual(["prep"]);
+  });
+
+  it("no avisa si la hora es la misma, si es la primera vez que hay hora o si la página recién abre", () => {
+    expect(nextAlerts(snap({ prep: A }), snap({ prep: A }), ctx()).notices).toEqual([]);
+    expect(nextAlerts(snap({ prep: null }), snap({ prep: A }), ctx()).notices).toEqual([]);
+    expect(nextAlerts(null, snap({ prep: A }), ctx()).notices).toEqual([]);
+  });
+
+  it("si a la vez cambió el estado, avisa solo el estado", () => {
+    const { notices } = nextAlerts(
+      snap({ status: "confirmed", prep: A }),
+      snap({ status: "preparing", prep: B }),
+      ctx(),
+    );
+
+    expect(notices.map((notice) => notice.kind)).toEqual(["status"]);
+  });
+
+  it("para retirar, la hora nueva dice desde cuándo pasar", () => {
+    const { notices } = nextAlerts(
+      snap({ status: "confirmed", prep: A, pickup: true }),
+      snap({ status: "confirmed", prep: B, pickup: true }),
+      ctx(),
+    );
+
+    expect(notices[0].body).toBe("Podés pasar a retirar desde las 19:45 (aprox.)");
   });
 });

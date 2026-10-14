@@ -501,6 +501,11 @@ llegando al negocio por WhatsApp.
 - **SEGUIMIENTO-43** Un pedido manual de consumo en el local (`entrega = 'local'`, sin envío) se sigue con el camino sin
   repartidor: recibido, aceptado, listo y entregado. Un pedido manual nace confirmado, así que el cliente que abre el
   link ya lo ve aceptado.
+- **SEGUIMIENTO-44** Si con la página abierta cambia la hora marcada (`pedido.prep.desde`) sin que cambie el estado, el
+  seguimiento muestra "El local actualizó la demora" con la hora nueva, en es, en y pt, hasta que el cliente lo cierra o
+  cambia el estado. Se detecta comparando con la última lectura de la página (no hay nada guardado): la primera lectura
+  y la primera vez que aparece la hora no avisan. Con los avisos activados suena y vibra igual que un cambio de estado.
+
 
 ## PWA — Instalar el menú en el celular
 
@@ -1288,6 +1293,21 @@ contradiga: ahora entra a los envíos, lleva opciones y nace confirmado)
   `manual-followup.ts` (mensaje y link de WhatsApp). La acción toma el negocio de `requireBusiness()` y vuelve a
   validar con `courier = business.courier_delivery`.
 
+**Aceptar una sola vez y cambiar la demora** (sin migración; reemplaza a ADMIN-PEDIDOS-35 en lo que contradiga)
+
+- **ADMIN-PEDIDOS-51** Todo botón que espera a la base (`PendingButton`, usado en el panel del local y en el del
+  repartidor) queda gris, con spinner y su texto en gerundio ("Aceptando…", "Retirando…") hasta que vuelve la respuesta,
+  y un segundo toque no hace nada; si falla, vuelve a estar activo y el error se muestra. El pedido pasa de `pending` a
+  `confirmed` una sola vez: `acceptOrderAction` sobre un pedido que ya no está pendiente devuelve `ok` sin confirmar
+  ni fijar el tiempo de nuevo, también si dos pedidos de aceptar llegan juntos (el segundo recibe P0004 de la base y
+  vuelve a leer el estado). El tablero tampoco lanza dos cambios a la vez.
+- **ADMIN-PEDIDOS-52** En un pedido aceptado, "Cambiar demora" reemplaza a "Demorar +10": botones −5, +5, +10, +15 y +30
+  que suman o restan a lo que falta (`adjustPrepAction`, con la hora que guarda la base; el resultado queda entre 5 y 180
+  minutos, bajar de más deja 5), un "Otro valor…" que abre el selector para escribir los minutos y un motivo opcional.
+  Un salto que no es de la lista se rechaza. El selector de Aceptar arranca con el último tiempo que usó el local en ese
+  navegador ("Último que usaste: N min"), después con la sugerencia de la base y, si no, con el tiempo por defecto.
+
+
 ## MP — Cobro con Mercado Pago (Checkout Pro)
 
 *Aplicado por `supabase/migrations/*_mercadopago.sql`, `src/lib/mp/`, `app/api/mp/` y, en `web/`,
@@ -1827,6 +1847,11 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   de referencia (aparte del total), y "Asignar a {favorito}" solo si el favorito efectivo (`manualDeliveryContext`)
   cubre el barrio elegido; "Buscar repartidor" y "Lo llevo yo" siempre. Al cambiar de barrio se desmarca un favorito
   que ya no lo cubre. El modo se elige explícitamente: no hay uno por defecto.
+- **ENVIO-144** Las acciones del repartidor que cambian algo (ofertar, cambiar la oferta, retirar, rechazar, devolver,
+  rendido, En camino y Entregado) usan el botón con espera de ADMIN-PEDIDOS-51: grises, con spinner y en gerundio
+  ("Ofertando…", "Retirando…", "Rechazando…", "Devolviendo…"), y no se pueden tocar dos veces. Los diálogos de
+  confirmación quedan abiertos hasta que vuelve la respuesta.
+
 
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
