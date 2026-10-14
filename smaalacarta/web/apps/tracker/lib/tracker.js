@@ -283,11 +283,13 @@ function normalizeDelivery(data) {
     price: Number.isFinite(price) ? price : null,
     reason: typeof data.motivo_cambio === "string" && data.motivo_cambio ? data.motivo_cambio : null,
     state: data.estado,
+    // Precio fijo (`fixed`) u ofertas (ENVIO-149): en precio fijo no hay ofertas ni cuenta regresiva.
+    mode: data.modo === "fixed" ? "fixed" : "offers",
     note: typeof data.nota === "string" && data.nota ? data.nota : null,
     // Las ofertas abiertas y cuándo se elige sola (ENVIO-110): solo mientras busca.
-    offers: data.estado === "searching" ? normalizeOffers(data.ofertas) : [],
+    offers: data.estado === "searching" && data.modo !== "fixed" ? normalizeOffers(data.ofertas) : [],
     closesAt:
-      data.estado === "searching" && typeof data.cierra_en === "string" && !Number.isNaN(Date.parse(data.cierra_en))
+      data.estado === "searching" && data.modo !== "fixed" && typeof data.cierra_en === "string" && !Number.isNaN(Date.parse(data.cierra_en))
         ? Date.parse(data.cierra_en)
         : null,
   };
@@ -336,7 +338,8 @@ function courierContact(delivery, lang) {
 }
 
 // La tarjeta del envío (SEGUIMIENTO-27, ENVIO-91 y 92): qué pasa con el envío, según `state`.
-// - `searching` sin ofertas: "Buscando repartidor" (la moto que se mueve);
+// - `searching` sin ofertas: "Buscando repartidor" (la moto que se mueve); en precio fijo siempre es esta,
+//   con "El primero que lo tome te lo lleva";
 // - `searching` con ofertas: "Elegí tu repartidor" (las ofertas las pinta la página);
 // - `accepted`: "Lo lleva {repartidor}", con su teléfono y el botón de WhatsApp;
 // - `self`: "Lo lleva el local".
@@ -355,7 +358,9 @@ export function deliveryCard(delivery, lang, money) {
             kind: "searching",
             icon: "searching",
             title: t("tracker.delivery.searching", lang),
-            lines: [t("tracker.delivery.searchingText", lang)],
+            lines: [
+              t(delivery.mode === "fixed" ? "tracker.delivery.searchingFixedText" : "tracker.delivery.searchingText", lang),
+            ],
           };
     case "self":
       return {
