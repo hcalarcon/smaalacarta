@@ -8,7 +8,7 @@ import {
   PREP_QUICK_MINUTES,
   PREP_WINDOW_MINUTES,
   acceptsPrepTime,
-  delayMinutes,
+  adjustMinutes,
   prepBadge,
   prepSelectorDefault,
   validatePrepMinutes,
@@ -104,20 +104,26 @@ describe("la tarjeta — ADMIN-PEDIDOS-34", () => {
 
 describe("demorar — ADMIN-PEDIDOS-35", () => {
   it("suma 10 minutos a lo que falta", () => {
-    expect(delayMinutes(at(8), AT_21)).toBe(18);
+    expect(adjustMinutes(at(8), AT_21, 10)).toBe(18);
   });
 
   it("si ya pasó la hora, son 10 desde ahora y nunca un número negativo", () => {
-    expect(delayMinutes(at(-12), AT_21)).toBe(10);
-    expect(delayMinutes(at(0), AT_21)).toBe(10);
+    expect(adjustMinutes(at(-12), AT_21, 10)).toBe(10);
+    expect(adjustMinutes(at(0), AT_21, 10)).toBe(10);
   });
 
   it("sin hora cargada, 10 desde ahora", () => {
-    expect(delayMinutes(null, AT_21)).toBe(10);
+    expect(adjustMinutes(null, AT_21, 10)).toBe(10);
   });
 
   it("no pasa del máximo", () => {
-    expect(delayMinutes(at(175), AT_21)).toBe(PREP_MAX);
+    expect(adjustMinutes(at(175), AT_21, 10)).toBe(PREP_MAX);
+  });
+
+  it("también baja: resta a lo que falta, sin irse del mínimo", () => {
+    expect(adjustMinutes(at(20), AT_21, -5)).toBe(15);
+    expect(adjustMinutes(at(8), AT_21, -5)).toBe(5);
+    expect(adjustMinutes(at(-3), AT_21, -5)).toBe(5);
   });
 });
 

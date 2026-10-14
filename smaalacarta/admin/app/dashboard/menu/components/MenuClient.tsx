@@ -391,7 +391,7 @@ export default function MenuClient({
       <div className="space-y-6">
         {/* En escritorio ya está el nombre de la sección en el sidebar. */}
         <section className="lg:hidden">
-          <h1 className="text-3xl font-bold text-brand">Menú</h1>
+          <h1 className="text-2xl font-bold text-brand sm:text-3xl">Menú</h1>
 
           <p className="mt-2 text-stone-500">
             Administrá productos y categorías. Arrastrá el asa ⠿ para cambiar

@@ -16,6 +16,45 @@ function finishedAt(order: Order): string {
     : order.updated_at;
 }
 
+// Estado del pedido y, si hay efectivo para rendir, su rendición: lo mismo en la tabla y en la tarjeta.
+function StatusBlock({
+  order,
+  onConfirmSettlement,
+}: {
+  order: Order;
+  onConfirmSettlement?: (orderId: string) => void;
+}) {
+  const state = localOrderState(order);
+
+  return (
+    <>
+      <span
+        className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+          order.status === "cancelled"
+            ? "bg-red-50 text-red-700"
+            : "bg-emerald-100 text-emerald-700"
+        }`}
+      >
+        {STATUS_LABELS[order.status as OrderStatus] ?? order.status}
+      </span>
+      {state !== "none" ? (
+        <span className="mt-1 block text-[11px] text-stone-500">
+          💵 {settlementLabel(state, Number(order.total))}
+          {canConfirmReceived(state) && onConfirmSettlement ? (
+            <button
+              type="button"
+              onClick={() => onConfirmSettlement(order.id)}
+              className="ml-2 rounded-lg bg-brand px-2 py-0.5 text-[11px] font-semibold text-white transition hover:bg-brand-hover"
+            >
+              Recibido
+            </button>
+          ) : null}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
 export default function OrdersHistory({
   orders,
   onOpen,
@@ -40,7 +79,61 @@ export default function OrdersHistory({
           Todavía no hay pedidos terminados.
         </p>
       ) : (
-        <div className="mt-4 overflow-x-auto">
+        <>
+          {/* Celular (ADMIN-MOVIL-9): una tarjeta por pedido, sin scroll horizontal. */}
+          <ul aria-label="Pedidos terminados" className="mt-4 space-y-3 md:hidden">
+            {orders.map((order) => (
+              <li
+                key={order.id}
+                className="rounded-2xl border border-line p-3 text-sm text-stone-700"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 break-words font-semibold text-brand">
+                    #{order.order_number}
+                    {order.source === "manual" ? (
+                      <span className="ml-2 rounded-full bg-brand-soft px-2 py-0.5 text-[11px] font-medium text-brand">
+                        Manual
+                      </span>
+                    ) : null}
+                  </p>
+                  <p className="shrink-0 font-semibold text-brand">
+                    {formatMoney(Number(order.total))}
+                  </p>
+                </div>
+
+                <p className="mt-1 break-words">{order.customer_name || "Sin nombre"}</p>
+
+                <div className="mt-2">
+                  <StatusBlock order={order} onConfirmSettlement={onConfirmSettlement} />
+                </div>
+
+                <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-stone-500">
+                  <div>
+                    <dt className="font-medium">Para</dt>
+                    <dd>{scheduledShort(order)}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-medium">Empezó</dt>
+                    <dd>{formatDateTime(order.created_at)}</dd>
+                  </div>
+                  <div>
+                    <dt className="font-medium">Terminó</dt>
+                    <dd>{formatDateTime(finishedAt(order))}</dd>
+                  </div>
+                </dl>
+
+                <button
+                  type="button"
+                  onClick={() => onOpen(order.id)}
+                  className="mt-3 min-h-11 w-full rounded-xl border border-line-strong px-3 py-2 text-sm font-medium text-brand transition hover:bg-brand-soft"
+                >
+                  Detalle
+                </button>
+              </li>
+            ))}
+          </ul>
+
+        <div className="mt-4 hidden overflow-x-auto md:block">
           <table className="w-full min-w-[720px] text-left text-sm">
             <thead>
               <tr className="border-b border-line text-xs uppercase tracking-wide text-stone-400">
@@ -69,29 +162,7 @@ export default function OrdersHistory({
                     {order.customer_name || "Sin nombre"}
                   </td>
                   <td className="py-2.5 pr-3">
-                    <span
-                      className={`rounded-full px-2 py-0.5 text-xs font-medium ${
-                        order.status === "cancelled"
-                          ? "bg-red-50 text-red-700"
-                          : "bg-emerald-100 text-emerald-700"
-                      }`}
-                    >
-                      {STATUS_LABELS[order.status as OrderStatus] ?? order.status}
-                    </span>
-                    {localOrderState(order) !== "none" ? (
-                      <span className="mt-1 block text-[11px] text-stone-500">
-                        💵 {settlementLabel(localOrderState(order), Number(order.total))}
-                        {canConfirmReceived(localOrderState(order)) && onConfirmSettlement ? (
-                          <button
-                            type="button"
-                            onClick={() => onConfirmSettlement(order.id)}
-                            className="ml-2 rounded-lg bg-brand px-2 py-0.5 text-[11px] font-semibold text-white transition hover:bg-brand-hover"
-                          >
-                            Recibido
-                          </button>
-                        ) : null}
-                      </span>
-                    ) : null}
+                    <StatusBlock order={order} onConfirmSettlement={onConfirmSettlement} />
                   </td>
                   <td className="py-2.5 pr-3 font-semibold text-brand">
                     {formatMoney(Number(order.total))}
@@ -119,6 +190,7 @@ export default function OrdersHistory({
             </tbody>
           </table>
         </div>
+        </>
       )}
     </section>
   );

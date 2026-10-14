@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import OrdersClient from "./OrdersClient";
-import { acceptOrderAction, delayPrepAction, setOrderStatusAction, setPrepAction } from "../actions";
+import { acceptOrderAction, adjustPrepAction, setOrderStatusAction, setPrepAction } from "../actions";
 import type { Order } from "@/lib/db/orders";
 
 const mocks = vi.hoisted(() => ({ refresh: vi.fn() }));
@@ -20,7 +20,7 @@ vi.mock("../actions", () => ({
   setOrderStatusAction: vi.fn(),
   acceptOrderAction: vi.fn(),
   setPrepAction: vi.fn(),
-  delayPrepAction: vi.fn(),
+  adjustPrepAction: vi.fn(),
   assignCourierAction: vi.fn(),
   selfDeliveryAction: vi.fn(),
   confirmSettlementAction: vi.fn(),
@@ -39,19 +39,19 @@ vi.mock("./OrderCard", () => ({
     order,
     onAdvance,
     onSetPrep,
-    onDelay,
+    onAdjust,
   }: {
     order: Order;
     onAdvance: (status: string) => void;
     onSetPrep: () => void;
-    onDelay: (reason: string | null) => void;
+    onAdjust: (delta: number, reason: string | null) => void;
   }) => (
     <div>
       pedido {order.id}
       <button onClick={() => onAdvance("confirmed")}>avanzar {order.id}</button>
       <button onClick={() => onAdvance("preparing")}>preparar {order.id}</button>
       <button onClick={onSetPrep}>poner tiempo {order.id}</button>
-      <button onClick={() => onDelay("busy")}>demorar {order.id}</button>
+      <button onClick={() => onAdjust(-5, "busy")}>demorar {order.id}</button>
     </div>
   ),
 }));
@@ -540,7 +540,7 @@ describe("tiempo de preparación al aceptar — ADMIN-PEDIDOS-31 a 33", () => {
   beforeEach(() => {
     vi.mocked(acceptOrderAction).mockReset().mockResolvedValue({ ok: true } as never);
     vi.mocked(setPrepAction).mockReset().mockResolvedValue({ ok: true } as never);
-    vi.mocked(delayPrepAction).mockReset().mockResolvedValue({ ok: true } as never);
+    vi.mocked(adjustPrepAction).mockReset().mockResolvedValue({ ok: true } as never);
     vi.mocked(setOrderStatusAction).mockReset().mockResolvedValue({ ok: true } as never);
   });
 
@@ -630,12 +630,48 @@ describe("tiempo de preparación al aceptar — ADMIN-PEDIDOS-31 a 33", () => {
     expect(accept).not.toHaveBeenCalled();
   });
 
-  it("'Demorar +10' llama a la acción con el motivo", async () => {
+  it("cambiar la demora llama a la acción con el salto y el motivo", async () => {
     render(withPrep([full("1", { status: "confirmed" })]));
 
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "demorar 1" })));
 
-    expect(delayPrepAction).toHaveBeenCalledWith("1", "busy");
+    expect(adjustPrepAction).toHaveBeenCalledWith("1", -5, "busy");
+  });
+
+  it("arranca con el último tiempo que usó el local, y lo guarda al aceptar — ADMIN-PEDIDOS-52", async () => {
+    window.localStorage.removeItem("sma:prep-last:demo");
+    const { unmount } = render(withPrep([full("1")], { suggested: 22 }));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
+    fireEvent.click(screen.getByRole("button", { name: "45 min" }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar con 45 min" })));
+    expect(window.localStorage.getItem("sma:prep-last:demo")).toBe("45");
+    unmount();
+
+    render(withPrep([full("2")], { suggested: 22 }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
+
+    expect(screen.getByRole("button", { name: "Aceptar con 45 min" })).toBeTruthy();
+    expect(screen.getByText("Último que usaste: 45 min")).toBeTruthy();
+    window.localStorage.removeItem("sma:prep-last:demo");
+  });
+
+  it("dos toques seguidos en Aceptar piden aceptar una sola vez y muestran 'Aceptando…' — ADMIN-PEDIDOS-51", async () => {
+    let finish!: (value: { ok: true }) => void;
+    accept.mockReturnValue(new Promise((resolve) => (finish = resolve)) as never);
+    render(withPrep([full("1")]));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
+    const button = screen.getByRole("button", { name: /Aceptar con/ });
+    await act(async () => {
+      fireEvent.click(button);
+      fireEvent.click(button);
+    });
+
+    expect(accept).toHaveBeenCalledTimes(1);
+    expect((screen.getByRole("button", { name: /Aceptando/ }) as HTMLButtonElement).disabled).toBe(true);
+
+    await act(async () => finish({ ok: true }));
   });
 
   it("si falla, el selector sigue abierto y dice por qué", async () => {

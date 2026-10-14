@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AvailableOrderCard from "./AvailableOrderCard";
@@ -16,7 +16,10 @@ const mocks = vi.hoisted(() => ({
   settle: vi.fn(),
 }));
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: mocks.refresh }) }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: mocks.refresh }),
+  useSearchParams: () => new URLSearchParams(window.location.search),
+}));
 vi.mock("../actions", () => ({
   makeOfferAction: mocks.offer,
   withdrawOfferAction: mocks.withdraw,
@@ -26,6 +29,8 @@ vi.mock("../actions", () => ({
   markSettledAction: mocks.settle,
 }));
 beforeEach(() => {
+  // Las pestañas dejan la URL al día (ADMIN-MOVIL-8): que un test no herede la del anterior.
+  window.history.replaceState(null, "", "/");
   vi.clearAllMocks();
   for (const fn of [mocks.offer, mocks.withdraw, mocks.decline, mocks.giveBack, mocks.advance, mocks.settle]) {
     fn.mockResolvedValue({ ok: true });
@@ -510,6 +515,41 @@ describe("cuánto cobrar y rendiciones — ENVIO-41 y 42", () => {
     expect(row).toContain("$ 2.000");
     expect(row).toContain("$ 1.000");
     expect(plain(region.textContent)).not.toContain("9.999");
+  });
+
+  it("con ?tab=rendiciones en la URL abre Rendiciones directo (ADMIN-MOVIL-8)", () => {
+    window.history.replaceState(null, "", "/?tab=rendiciones");
+    render(<CourierOrdersClient serverNow="2026-10-09T22:05:00Z" orders={[order("1", "pending", "waiting")]} />);
+
+    expect(screen.getByRole("region", { name: "Rendiciones" })).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "Disponibles" })).toBeNull();
+  });
+
+  it("sin ?tab abre Pedidos (ADMIN-MOVIL-8)", () => {
+    render(<CourierOrdersClient serverNow="2026-10-09T22:05:00Z" orders={[order("1", "pending", "waiting")]} />);
+
+    expect(screen.queryByRole("region", { name: "Rendiciones" })).toBeNull();
+  });
+
+  it("en el celular las rendiciones son una tarjeta por local más una de total; la tabla queda desde sm (ADMIN-MOVIL-9)", () => {
+    window.history.replaceState(null, "", "/?tab=rendiciones");
+    render(
+      <CourierOrdersClient
+        serverNow="2026-10-09T22:05:00Z"
+        orders={[order("1", "delivered", "accepted"), order("2", "delivered", "accepted", { total: 2000, rendicion: settled })]}
+      />,
+    );
+
+    const list = screen.getByRole("list", { name: "Rendiciones por local" });
+    expect(list.className).toContain("sm:hidden");
+    const cards = within(list).getAllByRole("listitem");
+    // Una por local y la de Total.
+    expect(cards).toHaveLength(2);
+    expect(plain(cards[0].textContent)).toContain("Ana Resto");
+    expect(plain(cards[0].textContent)).toContain("Pendiente de rendir");
+    expect(plain(cards[1].textContent)).toContain("Total");
+
+    expect(screen.getByRole("table").parentElement?.className).toContain("sm:block");
   });
 
   it("la pestaña Rendiciones avisa cuando no hay nada para rendir", () => {

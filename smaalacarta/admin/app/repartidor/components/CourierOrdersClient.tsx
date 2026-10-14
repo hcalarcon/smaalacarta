@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import AvailableOrderCard from "./AvailableOrderCard";
@@ -24,6 +24,7 @@ import {
   type CourierPanelOrder,
   type PanelGroup,
 } from "@/lib/courier/panel";
+import { courierTab, type CourierTab } from "@/lib/courier/nav";
 import { courierOrderState, grandTotals, totalsByBusiness } from "@/lib/courier/settlements";
 import { formatMoney } from "@/lib/promotions/pricing";
 
@@ -58,7 +59,15 @@ export default function CourierOrdersClient({
   // La hora arranca con la del servidor para que el primer render coincida en los dos lados.
   const [now, setNow] = useState(() => new Date(serverNow));
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [tab, setTab] = useState<"pedidos" | "rendiciones">("pedidos");
+  // La pestaña sale de la URL (ADMIN-MOVIL-8). Las pestañas de escritorio la cambian al toque y dejan la
+  // URL al día; si la URL cambia por otro lado (la barra de abajo), manda la URL.
+  const urlTab = courierTab(useSearchParams().get("tab"));
+  const [picked, setPicked] = useState<{ from: CourierTab; tab: CourierTab } | null>(null);
+  const tab = picked && picked.from === urlTab ? picked.tab : urlTab;
+  const pickTab = (next: CourierTab) => {
+    setPicked({ from: urlTab, tab: next });
+    window.history.replaceState(null, "", next === "rendiciones" ? "?tab=rendiciones" : window.location.pathname);
+  };
   const [error, setError] = useState<{ id: string; message: string } | null>(null);
   // Aviso general: "El pedido ya no recibe ofertas" (el pedido desaparece de la lista al refrescar).
   const [notice, setNotice] = useState<string | null>(null);
@@ -130,7 +139,7 @@ export default function CourierOrdersClient({
     <div className="space-y-6">
       <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-brand">Pedidos con envío</h1>
+          <h1 className="text-2xl font-bold text-brand sm:text-3xl">Pedidos con envío</h1>
           <p className="mt-2 text-stone-500">Se actualiza solo cada pocos segundos.</p>
         </div>
 
@@ -152,7 +161,8 @@ export default function CourierOrdersClient({
         </div>
       </section>
 
-      <div role="tablist" aria-label="Secciones" className="flex gap-2">
+      {/* En el celular las reemplaza la barra de abajo. */}
+      <div role="tablist" aria-label="Secciones" className="hidden gap-2 lg:flex">
         {(
           [
             ["pedidos", "Pedidos"],
@@ -164,7 +174,7 @@ export default function CourierOrdersClient({
             type="button"
             role="tab"
             aria-selected={tab === key}
-            onClick={() => setTab(key)}
+            onClick={() => pickTab(key)}
             className={`min-h-11 rounded-xl px-5 py-2 text-sm font-semibold transition ${
               tab === key
                 ? "bg-brand text-white"
@@ -207,7 +217,48 @@ export default function CourierOrdersClient({
               No hay efectivo para rendir.
             </p>
           ) : (
-            <div className="overflow-x-auto rounded-2xl border border-line bg-white">
+            <>
+              {/* Celular (ADMIN-MOVIL-9): una tarjeta por local y una de total, sin scroll horizontal. */}
+              <ul aria-label="Rendiciones por local" className="space-y-3 sm:hidden">
+                {settlements.map((row) => (
+                  <li key={row.business} className="rounded-2xl border border-line bg-white p-4">
+                    <p className="break-words font-semibold text-brand">{row.business}</p>
+                    <p className="mt-2 text-xs font-medium uppercase tracking-wide text-stone-400">
+                      Pendiente de rendir
+                    </p>
+                    <p className="text-2xl font-bold text-stone-900">{formatMoney(row.pending)}</p>
+                    <dl className="mt-2 grid grid-cols-2 gap-3 text-sm text-stone-700">
+                      <div>
+                        <dt className="text-xs text-stone-500">Rendido sin confirmar</dt>
+                        <dd className="font-medium">{formatMoney(row.settled)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs text-stone-500">Recibido</dt>
+                        <dd className="font-medium">{formatMoney(row.received)}</dd>
+                      </div>
+                    </dl>
+                  </li>
+                ))}
+                <li className="rounded-2xl border border-line-strong bg-brand-soft p-4">
+                  <p className="font-semibold text-stone-900">Total</p>
+                  <dl className="mt-2 grid grid-cols-3 gap-2 text-sm">
+                    <div>
+                      <dt className="text-xs text-stone-500">Pendiente</dt>
+                      <dd className="font-semibold">{formatMoney(settlementTotals.pending)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-stone-500">Sin confirmar</dt>
+                      <dd className="font-semibold">{formatMoney(settlementTotals.settled)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-stone-500">Recibido</dt>
+                      <dd className="font-semibold">{formatMoney(settlementTotals.received)}</dd>
+                    </div>
+                  </dl>
+                </li>
+              </ul>
+
+            <div className="hidden overflow-x-auto rounded-2xl border border-line bg-white sm:block">
               <table className="w-full min-w-[520px] text-left text-sm">
                 <thead>
                   <tr className="border-b border-line text-xs uppercase tracking-wide text-stone-400">
@@ -237,6 +288,7 @@ export default function CourierOrdersClient({
                 </tfoot>
               </table>
             </div>
+            </>
           )}
         </section>
       ) : null}

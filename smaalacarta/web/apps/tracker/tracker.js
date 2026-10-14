@@ -316,6 +316,9 @@ function alertsCard() {
 }
 
 // --- La línea de pasos (SEGUIMIENTO-25 y 26).
+// El último cambio de demora que vio esta página y el cliente todavía no cerró (SEGUIMIENTO-44).
+let prepNotice = false;
+
 function progressCard(data, mode, view) {
   const progress = progressSteps(data.pedido.estado, mode, lang);
 
@@ -348,6 +351,28 @@ function progressCard(data, mode, view) {
         el("p", { className: "status-prep-text", text: prep.text }),
         ...(prep.hint ? [el("p", { className: "status-prep-hint", text: prep.hint })] : []),
         ...(prep.reason ? [el("p", { className: "status-prep-reason", text: prep.reason })] : []),
+      ]),
+    );
+  }
+
+  if (prepNotice && prep) {
+    const dismiss = el("button", {
+      className: "status-prep-updated-close",
+      text: "×",
+      attrs: { type: "button", "aria-label": t("tracker.prep.dismiss", lang) },
+    });
+    dismiss.addEventListener("click", () => {
+      prepNotice = false;
+      paint();
+    });
+
+    card.appendChild(
+      el("div", { className: "status-prep-updated", attrs: { role: "status" } }, [
+        el("div", {}, [
+          el("p", { className: "status-prep-updated-title", text: t("tracker.prep.updated", lang) }),
+          el("p", { className: "status-prep-updated-body", text: prep.text }),
+        ]),
+        dismiss,
       ]),
     );
   }
@@ -691,6 +716,8 @@ async function start() {
 
   function alertsFor(next) {
     const snapshot = snapshotOf(next.pedido, next.envio);
+    // El aviso de demora se va con el próximo cambio de estado (SEGUIMIENTO-44).
+    if (previous && previous.status !== snapshot.status) prepNotice = false;
     const { notices, warnedFor: warned } = nextAlerts(previous, snapshot, {
       lang,
       now: Date.now(),
@@ -700,6 +727,10 @@ async function start() {
 
     warnedFor = warned;
     previous = snapshot;
+
+    // El aviso en la tarjeta no depende de los avisos del navegador; el sonido y la vibración, sí.
+    if (notices.some((notice) => notice.kind === "prep")) prepNotice = true;
+
     if (alertsOn) notices.forEach(fireNotice);
   }
 

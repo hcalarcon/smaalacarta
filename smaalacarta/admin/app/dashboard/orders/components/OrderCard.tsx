@@ -19,11 +19,19 @@ import {
   type OrderOffers,
 } from "@/lib/orders/courier";
 import { isPaymentPending, PAYMENT_BLOCK_REASON } from "@/lib/orders/payment";
-import { acceptsPrepTime, PREP_REASON_LABELS, PREP_REASONS, prepBadge } from "@/lib/orders/prep";
+import {
+  acceptsPrepTime,
+  PREP_ADJUST_STEPS,
+  PREP_REASON_LABELS,
+  PREP_REASONS,
+  prepBadge,
+  type PrepReason,
+} from "@/lib/orders/prep";
 import { orderBadge } from "@/lib/orders/scheduled";
 import { isFinal, primaryAction, STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
 import ItemNote from "@/components/ui/ItemNote";
+import PendingButton from "@/components/ui/PendingButton";
 
 const SHOWN_ITEMS = 3;
 
@@ -37,24 +45,26 @@ export default function OrderCard({
   couriers = [],
   offers,
   onSetPrep,
-  onDelay,
+  onAdjust,
 }: {
   order: Order;
   now: Date;
   busy: boolean;
-  onAdvance: (status: string) => void;
+  // Puede devolver una promesa: el botón espera lo que tarde y no deja tocar de nuevo (ADMIN-PEDIDOS-51).
+  onAdvance: (status: string) => void | Promise<void>;
   onOpen: () => void;
   onConfirmSettlement?: () => void;
   // Los repartidores del local: sirven para nombrar al que tomó el pedido y al favorito.
   couriers?: OrderCourier[];
   // Las ofertas abiertas del pedido si está buscando repartidor (ENVIO-117).
   offers?: OrderOffers;
-  // Tiempo estimado (ADMIN-PEDIDOS-34 y 35): cargarlo en un pedido aceptado sin tiempo, o demorarlo con
-  // un motivo opcional (nulo = sin motivo).
+  // Tiempo estimado (ADMIN-PEDIDOS-34, 35 y 52): cargarlo en un pedido aceptado sin tiempo, o subirlo o
+  // bajarlo `delta` minutos con un motivo opcional (nulo = sin motivo).
   onSetPrep?: () => void;
-  onDelay?: (reason: string | null) => void;
+  onAdjust?: (delta: number, reason: string | null) => void | Promise<void>;
 }) {
-  const [choosingReason, setChoosingReason] = useState(false);
+  const [adjusting, setAdjusting] = useState(false);
+  const [reason, setReason] = useState<PrepReason | null>(null);
   const withDelivery = hasDelivery(order);
   const action = primaryAction(order.status, deliveryContext(order));
   const extra = order.order_items.length - SHOWN_ITEMS;
@@ -178,24 +188,25 @@ export default function OrderCard({
         <span className="text-[11px] text-stone-500">{STATUS_LABELS[order.status as OrderStatus] ?? order.status}</span>
       </div>
 
-      <div className="mt-2 flex gap-1.5">
+      <div className="mt-2 flex flex-wrap gap-1.5">
         {action ? (
-          <button
-            type="button"
+          <PendingButton
             onClick={() => onAdvance(action.status)}
-            disabled={busy || blocked}
+            pending={busy}
+            pendingLabel={action.status === "confirmed" ? "Aceptando…" : "Guardando…"}
+            disabled={blocked}
             title={blocked ? blockReason : undefined}
-            className="flex-1 rounded-lg bg-brand px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60"
+            className="min-h-11 flex-1 rounded-lg bg-action px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-action-hover disabled:opacity-60"
           >
-            {busy ? "Guardando…" : action.label}
-          </button>
+            {action.label}
+          </PendingButton>
         ) : null}
         {warning ? (
           // Nadie lo tomó: asignarlo o llevarlo se hace desde el detalle.
           <button
             type="button"
             onClick={onOpen}
-            className="rounded-lg bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
+            className="min-h-11 rounded-lg bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
           >
             Resolver envío
           </button>
@@ -203,48 +214,70 @@ export default function OrderCard({
         <button
           type="button"
           onClick={onOpen}
-          className="rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-medium text-brand transition hover:bg-brand-soft"
+          className="min-h-11 rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-medium text-brand transition hover:bg-brand-soft"
         >
           Detalle
         </button>
       </div>
 
-      {inKitchen && onDelay && order.prep_ready_at ? (
-        choosingReason ? (
+      {inKitchen && onAdjust && order.prep_ready_at ? (
+        adjusting ? (
           <div className="mt-2 rounded-lg bg-stone-50 p-2">
-            <p className="text-[11px] font-medium text-stone-600">¿Por qué se demora? (opcional)</p>
+            <p className="text-[11px] font-medium text-stone-600">Cambiar la demora</p>
             <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {PREP_REASONS.map((reason) => (
+              {PREP_ADJUST_STEPS.map((step) => (
+                <PendingButton
+                  key={step}
+                  busy={busy}
+                  pendingLabel="Guardando…"
+                  onClick={() => onAdjust(step, reason)}
+                  className="min-h-11 min-w-14 rounded-lg border border-line-strong bg-white px-2 py-1 text-xs font-semibold text-brand transition hover:bg-brand-soft disabled:opacity-60"
+                >
+                  {step < 0 ? `−${-step}` : `+${step}`} min
+                </PendingButton>
+              ))}
+              {onSetPrep ? (
                 <button
-                  key={reason}
                   type="button"
                   disabled={busy}
                   onClick={() => {
-                    setChoosingReason(false);
-                    onDelay(reason);
+                    setAdjusting(false);
+                    onSetPrep();
                   }}
-                  className="rounded-lg border border-line-strong bg-white px-2 py-1 text-xs font-medium text-brand transition hover:bg-brand-soft disabled:opacity-60"
+                  className="min-h-11 rounded-lg border border-line-strong bg-white px-2 py-1 text-xs font-medium text-brand transition hover:bg-brand-soft disabled:opacity-60"
                 >
-                  {PREP_REASON_LABELS[reason]}
+                  Otro valor…
+                </button>
+              ) : null}
+            </div>
+
+            <p className="mt-2 text-[11px] font-medium text-stone-600">Motivo (opcional)</p>
+            <div className="mt-1 flex flex-wrap gap-1.5">
+              {PREP_REASONS.map((option) => (
+                <button
+                  key={option}
+                  type="button"
+                  aria-pressed={reason === option}
+                  disabled={busy}
+                  onClick={() => setReason(reason === option ? null : option)}
+                  className={`min-h-9 rounded-lg border px-2 py-1 text-xs font-medium transition disabled:opacity-60 ${
+                    reason === option
+                      ? "border-brand bg-brand text-white"
+                      : "border-line-strong bg-white text-brand hover:bg-brand-soft"
+                  }`}
+                >
+                  {PREP_REASON_LABELS[option]}
                 </button>
               ))}
               <button
                 type="button"
-                disabled={busy}
                 onClick={() => {
-                  setChoosingReason(false);
-                  onDelay(null);
+                  setAdjusting(false);
+                  setReason(null);
                 }}
-                className="rounded-lg border border-line-strong bg-white px-2 py-1 text-xs font-medium text-stone-600 transition hover:bg-brand-soft disabled:opacity-60"
-              >
-                Sin motivo
-              </button>
-              <button
-                type="button"
-                onClick={() => setChoosingReason(false)}
                 className="px-2 py-1 text-xs text-stone-500"
               >
-                Cancelar
+                Cerrar
               </button>
             </div>
           </div>
@@ -252,10 +285,10 @@ export default function OrderCard({
           <button
             type="button"
             disabled={busy}
-            onClick={() => setChoosingReason(true)}
-            className="mt-2 w-full rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-medium text-brand transition hover:bg-brand-soft disabled:opacity-60"
+            onClick={() => setAdjusting(true)}
+            className="mt-2 min-h-11 w-full rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-medium text-brand transition hover:bg-brand-soft disabled:opacity-60"
           >
-            Demorar +10
+            Cambiar demora
           </button>
         )
       ) : null}

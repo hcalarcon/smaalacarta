@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import DashboardNav from "./DashboardNav";
+import MobileMenu from "./MobileMenu";
 import type { NavLink } from "./nav-links";
 import Logo from "@/components/brand/Logo";
 import InstallAppButton from "@/components/pwa/InstallAppButton";
+import InstallPrompt from "@/components/pwa/InstallPrompt";
 import PushEndpointField from "@/components/pwa/PushEndpointField";
 import PushToggle from "@/components/pwa/PushToggle";
 import ServiceWorkerRegister from "@/components/pwa/ServiceWorkerRegister";
@@ -36,6 +38,9 @@ type DashboardShellProps = {
   // "Instalar app" y "Activar avisos" en el header, y el registro del service worker (ADMIN-PWA-16).
   // Los pasan el panel del negocio y el del repartidor; /superadmin no.
   showAppControls?: boolean;
+  // Barra fija de abajo en el celular (panel del repartidor, ADMIN-MOVIL-7): reemplaza al cajón, así que
+  // sin hamburguesa, y el contenido deja lugar para que no la tape.
+  bottomNav?: React.ReactNode;
   children: React.ReactNode;
 };
 
@@ -51,6 +56,7 @@ export default function DashboardShell({
   banner,
   alertBar,
   showAppControls = false,
+  bottomNav,
   children,
 }: DashboardShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -82,7 +88,7 @@ export default function DashboardShell({
       </aside>
 
       {/* Móvil: el mismo menú en un cajón. */}
-      {menuOpen ? (
+      {menuOpen && !bottomNav ? (
         <div className="fixed inset-0 z-40 lg:hidden">
           <button
             type="button"
@@ -124,7 +130,7 @@ export default function DashboardShell({
                 onClick={() => setMenuOpen(true)}
                 aria-label="Abrir menú"
                 aria-expanded={menuOpen}
-                className="rounded-lg p-2 text-brand hover:bg-brand-soft lg:hidden"
+                className={`rounded-lg p-2 text-brand hover:bg-brand-soft lg:hidden ${bottomNav ? "hidden" : ""}`}
               >
                 <svg
                   aria-hidden="true"
@@ -143,14 +149,24 @@ export default function DashboardShell({
                 <h2 className="truncate text-lg font-semibold text-brand">
                   {title}
                 </h2>
-                <p className="hidden text-sm text-stone-500 sm:block">
+                <p className="hidden text-sm text-stone-500 lg:block">
                   {subtitle}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <span className="hidden max-w-[16rem] truncate text-sm text-stone-600 md:block">
+            {/* Celular y tableta: un solo botón ⋯ con todo lo demás (ADMIN-MOVIL-1). */}
+            <div className="shrink-0 lg:hidden">
+              <MobileMenu
+                quickLinks={quickLinks}
+                switchLink={switchLink}
+                showChangePassword={showChangePassword}
+                showAppControls={showAppControls}
+              />
+            </div>
+
+            <div className="hidden items-center gap-3 lg:flex">
+              <span className="max-w-[16rem] truncate text-sm text-stone-600">
                 {userEmail}
               </span>
 
@@ -199,7 +215,7 @@ export default function DashboardShell({
               {showChangePassword ? (
                 <Link
                   href="/cambiar-contrasena"
-                  className="hidden text-sm font-medium text-stone-500 hover:text-brand sm:block"
+                  className="text-sm font-medium text-stone-500 hover:text-brand"
                 >
                   Cambiar contraseña
                 </Link>
@@ -220,9 +236,22 @@ export default function DashboardShell({
 
         {banner}
 
-        {showAppControls ? <ServiceWorkerRegister /> : null}
+        {showAppControls ? (
+          <>
+            <ServiceWorkerRegister />
+            <InstallPrompt />
+          </>
+        ) : null}
 
-        <main className="p-4 md:p-6 lg:p-8">{children}</main>
+        <main
+          className={`p-4 md:p-6 lg:p-8 ${
+            bottomNav ? "pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-8" : ""
+          }`}
+        >
+          {children}
+        </main>
+
+        {bottomNav}
       </div>
     </div>
   );

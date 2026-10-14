@@ -47,7 +47,7 @@ export default async function EditPromotionPage({
         >
           ← Promociones
         </Link>
-        <h1 className="mt-2 text-3xl font-bold text-brand">Editar promoción</h1>
+        <h1 className="mt-2 text-2xl font-bold text-brand sm:text-3xl">Editar promoción</h1>
       </div>
 
       <PromotionEditor

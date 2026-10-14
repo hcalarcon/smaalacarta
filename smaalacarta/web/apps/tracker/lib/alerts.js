@@ -4,6 +4,7 @@
 
 import { t } from "../../menu-app/lib/i18n.js";
 import { WARN_BEFORE_MS } from "./offers.js";
+import { prepView } from "./prep.js";
 
 const KNOWN_STATUS = [
   "pending",
@@ -23,6 +24,9 @@ export function snapshotOf(pedido, envio) {
     delivery: envio?.state ?? null,
     courier: envio?.courier ?? "",
     offers: Array.isArray(envio?.offers) ? envio.offers.length : 0,
+    // La hora marcada por el local (SEGUIMIENTO-44): con ella se nota que la cambió.
+    prep: pedido?.prep && typeof pedido.prep === "object" ? pedido.prep : null,
+    pickup: pedido?.entrega === "retiro",
   };
 }
 
@@ -38,6 +42,23 @@ export function nextAlerts(prev, next, { lang, now, closesAt = null, warnedFor =
         kind: "status",
         title: t(`status.${next.status}.title`, lang),
         body: t(`status.${next.status}.text`, lang),
+      });
+    }
+
+    // El local cambió la demora (SEGUIMIENTO-44). Si cambió el estado, el aviso del estado ya dice lo que hay
+    // que saber y la hora nueva se ve igual en la tarjeta.
+    if (
+      prev.status === next.status &&
+      prev.prep?.desde &&
+      next.prep?.desde &&
+      prev.prep.desde !== next.prep.desde
+    ) {
+      const view = prepView(next.prep, { now: new Date(now), lang, pickup: next.pickup });
+
+      notices.push({
+        kind: "prep",
+        title: t("tracker.prep.updated", lang),
+        body: view ? view.text : "",
       });
     }
 

@@ -13,6 +13,7 @@ import { collectionInfo, validateOffer, type OfferInput } from "@/lib/orders/cou
 import { formatDateTime, timeAgo } from "@/lib/orders/format";
 import { preorderLabel, scheduledLabel } from "@/lib/orders/scheduled";
 import { formatMoney } from "@/lib/promotions/pricing";
+import PendingButton from "@/components/ui/PendingButton";
 import ConfirmDeleteDialog from "../../dashboard/components/ConfirmDeleteDialog";
 
 type Errors = Partial<Record<"price" | "reason", string>>;
@@ -33,9 +34,10 @@ export default function AvailableOrderCard({
   now: Date;
   busy: boolean;
   error: string | null;
-  onOffer: (input: OfferInput) => void;
-  onWithdraw: () => void;
-  onDecline: () => void;
+  // Pueden devolver una promesa: el botón espera lo que tarde y no deja tocar de nuevo (ENVIO-144).
+  onOffer: (input: OfferInput) => void | Promise<void>;
+  onWithdraw: () => void | Promise<void>;
+  onDecline: () => void | Promise<void>;
 }) {
   const [editing, setEditing] = useState(false);
   const [declining, setDeclining] = useState(false);
@@ -62,8 +64,8 @@ export default function AvailableOrderCard({
     }
 
     setErrors({});
-    setEditing(false);
-    onOffer(input);
+    // El formulario sigue a la vista mientras espera, para que se vea el "Ofertando…".
+    return Promise.resolve(onOffer(input)).finally(() => setEditing(false));
   }
 
   return (
@@ -104,7 +106,7 @@ export default function AvailableOrderCard({
           <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Retirar en</h3>
           <p className="mt-1 text-sm font-medium text-stone-900">{order.negocio.nombre}</p>
           {order.negocio.direccion ? (
-            <p className="text-sm text-stone-600">{order.negocio.direccion}</p>
+            <p className="break-words text-sm text-stone-600">{order.negocio.direccion}</p>
           ) : null}
         </section>
 
@@ -169,14 +171,14 @@ export default function AvailableOrderCard({
             >
               Cambiar
             </button>
-            <button
-              type="button"
-              disabled={busy}
+            <PendingButton
+              busy={busy}
+              pendingLabel="Retirando…"
               onClick={onWithdraw}
               className="min-h-11 rounded-xl border border-line-strong bg-white px-5 py-2 text-sm font-semibold text-stone-700 transition hover:bg-cream disabled:opacity-60"
             >
               Retirar
-            </button>
+            </PendingButton>
             <button
               type="button"
               disabled={busy}
@@ -214,37 +216,37 @@ export default function AvailableOrderCard({
             </label>
           ) : null}
 
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <button
               type="button"
               onClick={() => {
                 setEditing(false);
                 setErrors({});
               }}
-              className="rounded-xl border border-line-strong px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-brand-soft"
+              className="min-h-11 rounded-xl border border-line-strong px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-brand-soft"
             >
               Volver
             </button>
-            <button
-              type="button"
-              disabled={busy}
+            <PendingButton
+              busy={busy}
+              pendingLabel={mine ? "Cambiando…" : "Ofertando…"}
               onClick={() => submit({ price, reason })}
-              className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60"
+              className="min-h-11 rounded-xl bg-action px-4 py-2 text-sm font-semibold text-white transition hover:bg-action-hover disabled:opacity-60"
             >
               Confirmar oferta
-            </button>
+            </PendingButton>
           </div>
         </div>
       ) : (
         <div className="mt-3 flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={busy}
+          <PendingButton
+            busy={busy}
+            pendingLabel="Ofertando…"
             onClick={() => submit({ price: String(listPrice), reason: "" })}
-            className="min-h-11 rounded-xl bg-brand px-5 py-2 text-sm font-semibold text-white transition hover:bg-brand-hover disabled:opacity-60"
+            className="min-h-11 rounded-xl bg-action px-5 py-2 text-sm font-semibold text-white transition hover:bg-action-hover disabled:opacity-60"
           >
             Ofertar {formatMoney(listPrice)}
-          </button>
+          </PendingButton>
           <button
             type="button"
             disabled={busy}
@@ -271,11 +273,11 @@ export default function AvailableOrderCard({
           mine ? " y se retira tu oferta" : ""
         }; los demás repartidores lo siguen viendo.`}
         confirmLabel="Sí, rechazar"
-        loadingLabel="Guardando..."
+        loadingLabel="Rechazando…"
         loading={busy}
-        onConfirm={() => {
+        onConfirm={async () => {
+          await onDecline();
           setDeclining(false);
-          onDecline();
         }}
         onClose={() => setDeclining(false)}
       />

@@ -15,7 +15,7 @@ import {
   acceptOrderAction,
   assignCourierAction,
   confirmSettlementAction,
-  delayPrepAction,
+  adjustPrepAction,
   selfDeliveryAction,
   setOrderStatusAction,
   setPrepAction,
@@ -46,6 +46,7 @@ import {
   unattendedOrders,
 } from "@/lib/orders/urgent-alert";
 import { acceptsPrepTime } from "@/lib/orders/prep";
+import { readLastPrep, saveLastPrep } from "@/lib/orders/prep-last";
 import { compareForBoard } from "@/lib/orders/scheduled";
 import { boardColumn, type BoardColumn } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
@@ -115,7 +116,12 @@ export default function OrdersClient({
   // Pedido cuya rendición se está por confirmar como recibida (ENVIO-43).
   const [receivingId, setReceivingId] = useState<string | null>(null);
   // El selector del tiempo estimado (ADMIN-PEDIDOS-31): al aceptar, o para cargarlo después.
-  const [prepPicker, setPrepPicker] = useState<{ orderId: string; mode: "accept" | "set" } | null>(null);
+  const [prepPicker, setPrepPicker] = useState<{ orderId: string; mode: "accept" | "set"; last: number | null } | null>(
+    null,
+  );
+  // Un cambio a la vez: un segundo toque que llegue antes de que vuelva la respuesta no hace nada
+  // (ADMIN-PEDIDOS-51). El servidor es idempotente igual; esto evita ni siquiera pedirlo.
+  const inFlight = useRef(false);
 
   // Sonido: la preferencia se lee en el navegador (no en el servidor) para que el primer
   // render coincida. `audioReady` dice si el navegador ya dejó sonar: tras recargar hay
@@ -358,7 +364,8 @@ export default function OrdersClient({
   function requestStatus(order: Order, status: string, note?: string) {
     if (status === "confirmed" && order.status === "pending" && acceptsPrepTime(order)) {
       setError(null);
-      setPrepPicker({ orderId: order.id, mode: "accept" });
+      // `last`: el último tiempo que usó el local en este navegador (ADMIN-PEDIDOS-52), leído al abrir.
+      setPrepPicker({ orderId: order.id, mode: "accept", last: readLastPrep(slug) });
       return;
     }
 
@@ -366,9 +373,10 @@ export default function OrdersClient({
   }
 
   async function submitPrep(minutes: number | null) {
-    if (!prepPicker) return;
+    if (!prepPicker || inFlight.current) return;
 
     const { orderId, mode } = prepPicker;
+    inFlight.current = true;
     setError(null);
     setBusyId(orderId);
 
@@ -376,17 +384,23 @@ export default function OrdersClient({
       const result =
         mode === "accept" ? await acceptOrderAction(orderId, minutes) : await setPrepAction(orderId, minutes ?? 0, null);
 
-      if (result.ok) setPrepPicker(null);
-      else setError(result.error);
+      if (result.ok) {
+        setPrepPicker(null);
+        if (minutes !== null) saveLastPrep(slug, minutes);
+      } else setError(result.error);
     } catch {
       setError("No pudimos guardar el cambio. Probá de nuevo.");
     } finally {
+      inFlight.current = false;
       setBusyId(null);
       router.refresh();
     }
   }
 
   async function changeStatus(orderId: string, status: string, note?: string) {
+    if (inFlight.current) return;
+
+    inFlight.current = true;
     setError(null);
     setBusyId(orderId);
 
@@ -396,6 +410,7 @@ export default function OrdersClient({
     } catch {
       setError("No pudimos guardar el cambio. Probá de nuevo.");
     } finally {
+      inFlight.current = false;
       setBusyId(null);
       router.refresh();
     }
@@ -406,6 +421,9 @@ export default function OrdersClient({
     orderId: string,
     run: () => ReturnType<typeof selfDeliveryAction>,
   ) {
+    if (inFlight.current) return;
+
+    inFlight.current = true;
     setError(null);
     setBusyId(orderId);
 
@@ -415,6 +433,7 @@ export default function OrdersClient({
     } catch {
       setError("No pudimos guardar el cambio. Probá de nuevo.");
     } finally {
+      inFlight.current = false;
       setBusyId(null);
       router.refresh();
     }
@@ -459,7 +478,7 @@ export default function OrdersClient({
     <div className="space-y-6">
       <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-brand">Pedidos</h1>
+          <h1 className="text-2xl font-bold text-brand sm:text-3xl">Pedidos</h1>
           <p className="mt-2 text-stone-500">
             Se actualiza solo cada pocos segundos.
           </p>
@@ -547,10 +566,10 @@ export default function OrdersClient({
                           onAdvance={(status) => requestStatus(order, status)}
                           onSetPrep={() => {
                             setError(null);
-                            setPrepPicker({ orderId: order.id, mode: "set" });
+                            setPrepPicker({ orderId: order.id, mode: "set", last: readLastPrep(slug) });
                           }}
-                          onDelay={(reason) =>
-                            resolveDelivery(order.id, () => delayPrepAction(order.id, reason))
+                          onAdjust={(delta, reason) =>
+                            resolveDelivery(order.id, () => adjustPrepAction(order.id, delta, reason))
                           }
                           onOpen={() => setSelectedId(order.id)}
                           onConfirmSettlement={() => setReceivingId(order.id)}
@@ -627,10 +646,11 @@ export default function OrdersClient({
           mode={activePicker.mode}
           suggested={suggestedPrepMinutes}
           defaultMinutes={defaultPrepMinutes}
+          lastUsed={activePicker.last}
           busy={busyId === activePicker.orderId}
           error={error}
-          onConfirm={(minutes) => void submitPrep(minutes)}
-          onAcceptWithout={() => void submitPrep(null)}
+          onConfirm={(minutes) => submitPrep(minutes)}
+          onAcceptWithout={() => submitPrep(null)}
           onClose={() => setPrepPicker(null)}
         />
       ) : null}

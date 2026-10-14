@@ -32,7 +32,7 @@ export default async function DashboardPage() {
   return (
     <div className="space-y-8">
       <section>
-        <h1 className="text-3xl font-bold text-brand">Resumen</h1>
+        <h1 className="text-2xl font-bold text-brand sm:text-3xl">Resumen</h1>
 
         <p className="mt-2 text-stone-500">
           Así está {business.name} en este momento.

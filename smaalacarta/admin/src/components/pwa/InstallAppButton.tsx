@@ -2,12 +2,13 @@
 
 import { useEffect, useState } from "react";
 
+import InstallStepsDialog from "./InstallStepsDialog";
 import { promptInstall, start, usePwa } from "./pwa-store";
 
 // "Instalar app" (ADMIN-PWA-12). Chrome, Edge y Android ofrecen instalar con un toque; iPhone y iPad no:
 // ahí se explica el camino por Compartir. Una vez instalada, deja de verse. Solo pinta: qué mostrar lo decide
-// `installControl()` en `src/lib/push/install.ts`.
-export default function InstallAppButton() {
+// `installControl()` en `src/lib/push/install.ts`. `variant="menu"` es el ítem del menú ⋯ del celular.
+export default function InstallAppButton({ variant = "header" }: { variant?: "header" | "menu" }) {
   const { installControl } = usePwa();
   const [stepsOpen, setStepsOpen] = useState(false);
 
@@ -15,25 +16,20 @@ export default function InstallAppButton() {
     start();
   }, []);
 
-  useEffect(() => {
-    if (!stepsOpen) return;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setStepsOpen(false);
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [stepsOpen]);
-
   if (installControl === "hidden") return null;
+
+  const className =
+    variant === "menu"
+      ? "flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-medium text-stone-800 transition hover:bg-brand-soft"
+      : "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand-soft px-3 py-2 text-sm font-medium text-brand transition hover:bg-line sm:px-4";
 
   return (
     <>
       <button
         type="button"
+        role={variant === "menu" ? "menuitem" : undefined}
         onClick={() => (installControl === "prompt" ? void promptInstall() : setStepsOpen(true))}
-        className="flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand-soft px-3 py-2 text-sm font-medium text-brand transition hover:bg-line sm:px-4"
+        className={className}
       >
         <svg
           aria-hidden="true"
@@ -50,50 +46,7 @@ export default function InstallAppButton() {
         <span>Instalar app</span>
       </button>
 
-      {stepsOpen ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
-          <button
-            type="button"
-            aria-label="Cerrar"
-            onClick={() => setStepsOpen(false)}
-            className="absolute inset-0 bg-stone-900/50"
-          />
-
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="install-steps-title"
-            className="relative m-4 w-full max-w-sm rounded-2xl bg-white p-6 shadow-xl"
-          >
-            <h2 id="install-steps-title" className="text-lg font-semibold text-brand">
-              Instalar la app
-            </h2>
-
-            <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-stone-700">
-              <li>
-                Tocá <strong>Compartir</strong> (el cuadrado con la flecha hacia arriba) en la barra de
-                Safari.
-              </li>
-              <li>
-                Elegí <strong>Agregar a inicio</strong>.
-              </li>
-              <li>Abrí la app desde el ícono nuevo de tu pantalla de inicio.</li>
-            </ol>
-
-            <p className="mt-3 text-xs text-stone-500">
-              Para recibir avisos en iPhone, la app tiene que estar instalada.
-            </p>
-
-            <button
-              type="button"
-              onClick={() => setStepsOpen(false)}
-              className="mt-5 w-full rounded-xl bg-brand px-4 py-2.5 text-sm font-medium text-white transition hover:bg-brand-hover"
-            >
-              Entendido
-            </button>
-          </div>
-        </div>
-      ) : null}
+      {stepsOpen ? <InstallStepsDialog onClose={() => setStepsOpen(false)} /> : null}
     </>
   );
 }

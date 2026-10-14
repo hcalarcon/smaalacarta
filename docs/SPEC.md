@@ -501,6 +501,11 @@ llegando al negocio por WhatsApp.
 - **SEGUIMIENTO-43** Un pedido manual de consumo en el local (`entrega = 'local'`, sin envío) se sigue con el camino sin
   repartidor: recibido, aceptado, listo y entregado. Un pedido manual nace confirmado, así que el cliente que abre el
   link ya lo ve aceptado.
+- **SEGUIMIENTO-44** Si con la página abierta cambia la hora marcada (`pedido.prep.desde`) sin que cambie el estado, el
+  seguimiento muestra "El local actualizó la demora" con la hora nueva, en es, en y pt, hasta que el cliente lo cierra o
+  cambia el estado. Se detecta comparando con la última lectura de la página (no hay nada guardado): la primera lectura
+  y la primera vez que aparece la hora no avisan. Con los avisos activados suena y vibra igual que un cambio de estado.
+
 
 ## PWA — Instalar el menú en el celular
 
@@ -1288,6 +1293,21 @@ contradiga: ahora entra a los envíos, lleva opciones y nace confirmado)
   `manual-followup.ts` (mensaje y link de WhatsApp). La acción toma el negocio de `requireBusiness()` y vuelve a
   validar con `courier = business.courier_delivery`.
 
+**Aceptar una sola vez y cambiar la demora** (sin migración; reemplaza a ADMIN-PEDIDOS-35 en lo que contradiga)
+
+- **ADMIN-PEDIDOS-51** Todo botón que espera a la base (`PendingButton`, usado en el panel del local y en el del
+  repartidor) queda gris, con spinner y su texto en gerundio ("Aceptando…", "Retirando…") hasta que vuelve la respuesta,
+  y un segundo toque no hace nada; si falla, vuelve a estar activo y el error se muestra. El pedido pasa de `pending` a
+  `confirmed` una sola vez: `acceptOrderAction` sobre un pedido que ya no está pendiente devuelve `ok` sin confirmar
+  ni fijar el tiempo de nuevo, también si dos pedidos de aceptar llegan juntos (el segundo recibe P0004 de la base y
+  vuelve a leer el estado). El tablero tampoco lanza dos cambios a la vez.
+- **ADMIN-PEDIDOS-52** En un pedido aceptado, "Cambiar demora" reemplaza a "Demorar +10": botones −5, +5, +10, +15 y +30
+  que suman o restan a lo que falta (`adjustPrepAction`, con la hora que guarda la base; el resultado queda entre 5 y 180
+  minutos, bajar de más deja 5), un "Otro valor…" que abre el selector para escribir los minutos y un motivo opcional.
+  Un salto que no es de la lista se rechaza. El selector de Aceptar arranca con el último tiempo que usó el local en ese
+  navegador ("Último que usaste: N min"), después con la sugerencia de la base y, si no, con el tiempo por defecto.
+
+
 ## MP — Cobro con Mercado Pago (Checkout Pro)
 
 *Aplicado por `supabase/migrations/*_mercadopago.sql`, `src/lib/mp/`, `app/api/mp/` y, en `web/`,
@@ -1827,6 +1847,11 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   de referencia (aparte del total), y "Asignar a {favorito}" solo si el favorito efectivo (`manualDeliveryContext`)
   cubre el barrio elegido; "Buscar repartidor" y "Lo llevo yo" siempre. Al cambiar de barrio se desmarca un favorito
   que ya no lo cubre. El modo se elige explícitamente: no hay uno por defecto.
+- **ENVIO-144** Las acciones del repartidor que cambian algo (ofertar, cambiar la oferta, retirar, rechazar, devolver,
+  rendido, En camino y Entregado) usan el botón con espera de ADMIN-PEDIDOS-51: grises, con spinner y en gerundio
+  ("Ofertando…", "Retirando…", "Rechazando…", "Devolviendo…"), y no se pueden tocar dos veces. Los diálogos de
+  confirmación quedan abiertos hasta que vuelve la respuesta.
+
 
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
@@ -2147,6 +2172,38 @@ precios en 0; no existe "incluye N y el resto cuesta X".
   antes.
 - **ADMIN-PWA-37** El payload push lleva `kind` y `urgent` (y `number` y `total` en los urgentes); los
   urgentes salen con urgencia alta y TTL de 60 s, y los demás avisos conservan sus 10 minutos.
+
+
+### Panel en el celular (ADMIN-MOVIL)
+
+- **ADMIN-MOVIL-1** En pantallas menores a `lg` el header muestra solo el nombre y un botón "Más opciones"
+  (⋯); los controles (avisos, instalar, accesos rápidos, cambiar contraseña, salir) pasan a ese menú. Desde
+  `lg` el header queda como estaba.
+- **ADMIN-MOVIL-2** El menú ⋯ lista, según lo que pase el layout: los accesos rápidos (en pestaña nueva), los
+  avisos, "Instalar app" (si no está oculto), el enlace de Superadmin, "Cambiar contraseña" y, al final y
+  separado, "Salir" (con la dirección de este aparato, para sacarlo de la cuenta).
+- **ADMIN-MOVIL-3** El menú ⋯ se cierra con Escape y al tocar afuera, y cada ítem mide al menos 44 px de alto.
+- **ADMIN-MOVIL-4** Al entrar al panel (negocio o repartidor), en pantallas menores a `lg`, aparece un aviso
+  "Instalá SMA a la Carta" solo si la app se puede instalar o explicar cómo; no aparece si ya está instalada
+  o el navegador no la ofrece.
+- **ADMIN-MOVIL-5** "Ahora no" cierra el aviso y no vuelve a aparecer en esa visita (`sessionStorage`); en la
+  próxima visita sí.
+- **ADMIN-MOVIL-6** "Instalar" dispara la instalación del navegador o, en iPhone, muestra los pasos de
+  Compartir → Agregar a inicio.
+- **ADMIN-MOVIL-7** El panel del repartidor, en pantallas menores a `lg`, tiene una barra fija abajo con
+  Pedidos, Rendiciones (con el contador de pendientes de rendir) y Mis zonas, con el ítem activo marcado.
+- **ADMIN-MOVIL-8** La pestaña del repartidor sale de la URL: `/repartidor?tab=rendiciones` abre Rendiciones y
+  cualquier otro valor, Pedidos.
+- **ADMIN-MOVIL-9** Sin scroll horizontal en la página: las rendiciones del repartidor (menores a `sm`) y el
+  historial de pedidos del negocio (menores a `md`, porque tiene más columnas) se ven como tarjetas apiladas;
+  desde ahí siguen siendo tabla.
+- **ADMIN-MOVIL-10** El panel usa Instrument Sans para el texto y Bricolage Grotesque para los títulos, y los
+  colores de la marca (`--color-action` verde para la acción principal) están en los tokens de `globals.css`.
+- **ADMIN-MOVIL-11** En el celular, las acciones de las tarjetas de pedidos (negocio y repartidor) hacen wrap y
+  miden al menos 44 px de alto; las direcciones, notas y nombres largos se parten (`break-words`) en vez de
+  empujar el ancho, y los títulos de página son más chicos (`text-2xl`, `text-3xl` desde `sm`).
+- **ADMIN-MOVIL-12** El detalle del pedido sube como hoja desde abajo en el celular, con scroll interno y el
+  botón de cerrar de 44 px; desde `sm` sigue siendo un diálogo centrado.
 
 ---
 

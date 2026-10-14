@@ -49,7 +49,7 @@ export default function CoverageClient({ zones }: { zones: CoverageZone[] }) {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <section>
-        <h1 className="text-3xl font-bold text-brand">Mis zonas</h1>
+        <h1 className="text-2xl font-bold text-brand sm:text-3xl">Mis zonas</h1>
         <p className="mt-2 text-stone-500">
           Marcá las zonas que llevás. Los locales solo ofrecen las zonas que alguien cubre. El precio es de
           referencia: lo podés ajustar, con un motivo, al aceptar cada pedido.
