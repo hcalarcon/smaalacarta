@@ -104,7 +104,7 @@ export default function AvailableOrderCard({
           <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Retirar en</h3>
           <p className="mt-1 text-sm font-medium text-stone-900">{order.negocio.nombre}</p>
           {order.negocio.direccion ? (
-            <p className="text-sm text-stone-600">{order.negocio.direccion}</p>
+            <p className="break-words text-sm text-stone-600">{order.negocio.direccion}</p>
           ) : null}
         </section>
 
@@ -214,14 +214,14 @@ export default function AvailableOrderCard({
             </label>
           ) : null}
 
-          <div className="flex justify-end gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <button
               type="button"
               onClick={() => {
                 setEditing(false);
                 setErrors({});
               }}
-              className="rounded-xl border border-line-strong px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-brand-soft"
+              className="min-h-11 rounded-xl border border-line-strong px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-brand-soft"
             >
               Volver
             </button>
@@ -229,7 +229,7 @@ export default function AvailableOrderCard({
               type="button"
               disabled={busy}
               onClick={() => submit({ price, reason })}
-              className="rounded-xl bg-action px-4 py-2 text-sm font-semibold text-white transition hover:bg-action-hover disabled:opacity-60"
+              className="min-h-11 rounded-xl bg-action px-4 py-2 text-sm font-semibold text-white transition hover:bg-action-hover disabled:opacity-60"
             >
               Confirmar oferta
             </button>

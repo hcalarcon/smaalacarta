@@ -2174,6 +2174,11 @@ precios en 0; no existe "incluye N y el resto cuesta X".
   desde ahí siguen siendo tabla.
 - **ADMIN-MOVIL-10** El panel usa Instrument Sans para el texto y Bricolage Grotesque para los títulos, y los
   colores de la marca (`--color-action` verde para la acción principal) están en los tokens de `globals.css`.
+- **ADMIN-MOVIL-11** En el celular, las acciones de las tarjetas de pedidos (negocio y repartidor) hacen wrap y
+  miden al menos 44 px de alto; las direcciones, notas y nombres largos se parten (`break-words`) en vez de
+  empujar el ancho, y los títulos de página son más chicos (`text-2xl`, `text-3xl` desde `sm`).
+- **ADMIN-MOVIL-12** El detalle del pedido sube como hoja desde abajo en el celular, con scroll interno y el
+  botón de cerrar de 44 px; desde `sm` sigue siendo un diálogo centrado.
 
 ---
 

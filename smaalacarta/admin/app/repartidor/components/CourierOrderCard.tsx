@@ -105,7 +105,7 @@ export default function CourierOrderCard({
           <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Retirar en</h3>
           <p className="mt-1 text-sm font-medium text-stone-900">{order.negocio.nombre}</p>
           {order.negocio.direccion ? (
-            <p className="text-sm text-stone-600">{order.negocio.direccion}</p>
+            <p className="break-words text-sm text-stone-600">{order.negocio.direccion}</p>
           ) : null}
           {localChat ? (
             <a
@@ -123,10 +123,10 @@ export default function CourierOrderCard({
           <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Entregar a</h3>
           <p className="mt-1 text-sm font-medium text-stone-900">{order.cliente.nombre || "Sin nombre"}</p>
           {order.cliente.direccion ? (
-            <p className="text-sm text-stone-600">{order.cliente.direccion}</p>
+            <p className="break-words text-sm text-stone-600">{order.cliente.direccion}</p>
           ) : null}
           {order.cliente.telefono ? (
-            <p className="text-sm text-stone-600">{order.cliente.telefono}</p>
+            <p className="break-words text-sm text-stone-600">{order.cliente.telefono}</p>
           ) : null}
           <div className="mt-1 flex flex-wrap gap-1.5">
             {clientCall ? (
@@ -194,13 +194,13 @@ export default function CourierOrderCard({
         {order.envio.nota ? (
           <div className="flex gap-2">
             <dt className="text-stone-500">Nota del envío:</dt>
-            <dd>{order.envio.nota}</dd>
+            <dd className="break-words">{order.envio.nota}</dd>
           </div>
         ) : null}
         {order.notas ? (
           <div className="flex gap-2">
             <dt className="text-stone-500">Notas del cliente:</dt>
-            <dd className="whitespace-pre-wrap">{order.notas}</dd>
+            <dd className="whitespace-pre-wrap break-words">{order.notas}</dd>
           </div>
         ) : null}
       </dl>
@@ -247,14 +247,14 @@ export default function CourierOrderCard({
               El pedido vuelve a los demás repartidores y vos no lo vas a volver a ver.
             </p>
 
-            <div className="flex justify-end gap-2">
+            <div className="flex flex-wrap justify-end gap-2">
               <button
                 type="button"
                 onClick={() => {
                   setReturning(false);
                   setReasonError(null);
                 }}
-                className="rounded-xl border border-line-strong px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-brand-soft"
+                className="min-h-11 rounded-xl border border-line-strong px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-brand-soft"
               >
                 Volver
               </button>

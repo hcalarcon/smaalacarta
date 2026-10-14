@@ -702,3 +702,29 @@ describe("tiempo estimado en la tarjeta — ADMIN-PEDIDOS-34 y 35", () => {
     }
   });
 });
+
+// ADMIN-MOVIL-11 y 12
+describe("pedidos en el celular — ADMIN-MOVIL-11 y 12", () => {
+  it("los botones de la tarjeta hacen wrap y miden al menos 44 px en el celular", () => {
+    card(order());
+
+    const detail = screen.getByRole("button", { name: "Detalle" });
+    expect(detail.className).toContain("min-h-11");
+    expect(detail.parentElement?.className).toContain("flex-wrap");
+  });
+
+  it("el detalle del pedido sube como hoja desde abajo en el celular y scrollea por dentro", () => {
+    const { container } = detail(order());
+
+    const dialog = screen.getByRole("dialog");
+    expect(dialog.className).toContain("rounded-t-3xl");
+    expect(dialog.className).toContain("overflow-y-auto");
+    expect(container.firstElementChild?.className).toContain("items-end");
+  });
+
+  it("las notas largas del cliente no empujan el ancho (break-words)", () => {
+    detail(order({ notes: "x".repeat(200) }));
+
+    expect(screen.getByText("x".repeat(200)).className).toContain("break-words");
+  });
+});

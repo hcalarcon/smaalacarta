@@ -178,14 +178,14 @@ export default function OrderCard({
         <span className="text-[11px] text-stone-500">{STATUS_LABELS[order.status as OrderStatus] ?? order.status}</span>
       </div>
 
-      <div className="mt-2 flex gap-1.5">
+      <div className="mt-2 flex flex-wrap gap-1.5">
         {action ? (
           <button
             type="button"
             onClick={() => onAdvance(action.status)}
             disabled={busy || blocked}
             title={blocked ? blockReason : undefined}
-            className="flex-1 rounded-lg bg-action px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-action-hover disabled:opacity-60"
+            className="min-h-11 flex-1 rounded-lg bg-action px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-action-hover disabled:opacity-60"
           >
             {busy ? "Guardando…" : action.label}
           </button>
@@ -195,7 +195,7 @@ export default function OrderCard({
           <button
             type="button"
             onClick={onOpen}
-            className="rounded-lg bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
+            className="min-h-11 rounded-lg bg-red-600 px-2.5 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700"
           >
             Resolver envío
           </button>
@@ -203,7 +203,7 @@ export default function OrderCard({
         <button
           type="button"
           onClick={onOpen}
-          className="rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-medium text-brand transition hover:bg-brand-soft"
+          className="min-h-11 rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-medium text-brand transition hover:bg-brand-soft"
         >
           Detalle
         </button>

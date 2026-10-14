@@ -57,7 +57,7 @@ export default async function MetricsPage({
   return (
     <div className="space-y-8">
       <section>
-        <h1 className="text-3xl font-bold text-brand">Métricas</h1>
+        <h1 className="text-2xl font-bold text-brand sm:text-3xl">Métricas</h1>
         <p className="mt-2 text-stone-500">Cómo le va a {business.name} con los pedidos.</p>
 
         <nav aria-label="Período" className="mt-4 inline-flex rounded-2xl border border-line bg-white p-1">

@@ -459,7 +459,7 @@ export default function OrdersClient({
     <div className="space-y-6">
       <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-brand">Pedidos</h1>
+          <h1 className="text-2xl font-bold text-brand sm:text-3xl">Pedidos</h1>
           <p className="mt-2 text-stone-500">
             Se actualiza solo cada pocos segundos.
           </p>

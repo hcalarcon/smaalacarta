@@ -92,7 +92,7 @@ export default function OrderDetailDialog({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 sm:items-center sm:p-4"
       onClick={onClose}
     >
       <div
@@ -100,12 +100,12 @@ export default function OrderDetailDialog({
         aria-modal="true"
         aria-label={`Pedido ${order.order_number}`}
         onClick={(event) => event.stopPropagation()}
-        className="max-h-[90vh] supports-[height:1dvh]:max-h-[90dvh] w-full max-w-lg overflow-y-auto rounded-3xl bg-white p-6 shadow-2xl"
+        className="max-h-[92vh] supports-[height:1dvh]:max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl bg-white p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-2xl sm:max-h-[90vh] sm:rounded-3xl sm:p-6"
       >
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-xl font-semibold text-brand">Pedido #{order.order_number}</h2>
-            <p className="mt-1 text-sm text-stone-500">
+            <p className="mt-1 break-words text-sm text-stone-500">
               {order.customer_name || "Sin nombre"} · {label(order.status)}
             </p>
             <p className="mt-2 empty:hidden">
@@ -121,7 +121,7 @@ export default function OrderDetailDialog({
             type="button"
             onClick={onClose}
             aria-label="Cerrar"
-            className="rounded-lg px-2 py-1 text-stone-500 hover:bg-brand-soft"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg text-stone-500 hover:bg-brand-soft"
           >
             ✕
           </button>
@@ -169,7 +169,7 @@ export default function OrderDetailDialog({
             </div>
           ) : null}
           {order.notes ? (
-            <div className="flex gap-2"><dt className="text-stone-400">Notas:</dt><dd className="whitespace-pre-wrap">{order.notes}</dd></div>
+            <div className="flex gap-2"><dt className="text-stone-400">Notas:</dt><dd className="whitespace-pre-wrap break-words">{order.notes}</dd></div>
           ) : null}
         </dl>
 

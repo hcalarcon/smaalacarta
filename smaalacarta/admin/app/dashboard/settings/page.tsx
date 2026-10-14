@@ -47,7 +47,7 @@ export default async function SettingsPage({
     // negativos le devuelven ancho al contenido solo en esta pantalla.
     <div className="mx-auto max-w-6xl space-y-4 lg:-mx-3 xl:mx-auto">
       <section>
-        <h1 className="text-3xl font-bold text-brand">Configuración</h1>
+        <h1 className="text-2xl font-bold text-brand sm:text-3xl">Configuración</h1>
         <p className="mt-1 text-stone-500">
           {digitalMenu
             ? `Apariencia, horarios y contacto del menú de ${business.name}.`

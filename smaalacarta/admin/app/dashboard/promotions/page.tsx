@@ -30,7 +30,7 @@ export default async function PromotionsPage() {
     <div className="space-y-8">
       <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-brand">Promociones</h1>
+          <h1 className="text-2xl font-bold text-brand sm:text-3xl">Promociones</h1>
           <p className="mt-2 text-stone-500">
             Armá ofertas con productos de tu menú.
           </p>
