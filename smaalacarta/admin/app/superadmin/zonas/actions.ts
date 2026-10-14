@@ -10,6 +10,7 @@ import {
   saveDeliveryZoneOrder,
   updateDeliveryZone,
 } from "@/lib/db/delivery-zones";
+import { DELIVERY_MODES, setDeliveryMode, type DeliveryMode } from "@/lib/db/platform-settings";
 import { validateZone } from "@/lib/superadmin/zones";
 
 export type ZoneActionResult =
@@ -31,6 +32,20 @@ function zoneError(error: { code?: string }): ZoneActionResult {
     };
   }
   return { ok: false, error: GENERIC };
+}
+
+// El modo de envíos de toda la plataforma (ENVIO-145): vale para los pedidos nuevos; los que están en
+// curso siguen con el modo con el que nacieron.
+export async function setDeliveryModeAction(mode: DeliveryMode): Promise<ZoneActionResult> {
+  await requireSuperAdmin();
+
+  if (!DELIVERY_MODES.includes(mode)) return { ok: false, error: GENERIC };
+
+  const result = await setDeliveryMode(mode);
+  if ("error" in result) return { ok: false, error: GENERIC };
+
+  revalidatePath("/superadmin/zonas");
+  return { ok: true };
 }
 
 export async function createZoneAction(input: { name: string; price: string }): Promise<ZoneActionResult> {

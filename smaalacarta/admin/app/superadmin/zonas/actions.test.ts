@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { requireSuperAdmin, db } = vi.hoisted(() => ({
+const { requireSuperAdmin, db, platform } = vi.hoisted(() => ({
   requireSuperAdmin: vi.fn(),
   db: {
     createDeliveryZone: vi.fn(),
@@ -10,16 +10,19 @@ const { requireSuperAdmin, db } = vi.hoisted(() => ({
     saveDeliveryZoneOrder: vi.fn(),
     updateDeliveryZone: vi.fn(),
   },
+  platform: { setDeliveryMode: vi.fn(), DELIVERY_MODES: ["fixed", "offers"] },
 }));
 
 vi.mock("@/lib/auth/superadmin", () => ({ requireSuperAdmin: () => requireSuperAdmin() }));
 vi.mock("@/lib/db/delivery-zones", () => db);
+vi.mock("@/lib/db/platform-settings", () => platform);
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 import {
   createZoneAction,
   deleteZoneAction,
   reorderZonesAction,
+  setDeliveryModeAction,
   setZoneActiveAction,
   updateZoneAction,
 } from "./actions";
@@ -35,6 +38,34 @@ beforeEach(() => {
   db.updateDeliveryZone.mockResolvedValue({ ok: true });
   db.saveDeliveryZoneOrder.mockResolvedValue({ ok: true });
   db.deleteDeliveryZone.mockResolvedValue({ ok: true, result: "deleted" });
+});
+
+describe("modo de envíos — ENVIO-145", () => {
+  it("quien no es superadmin no llega a la base", async () => {
+    requireSuperAdmin.mockRejectedValue(new Error("NEXT_REDIRECT"));
+
+    await expect(setDeliveryModeAction("offers")).rejects.toThrow("NEXT_REDIRECT");
+    expect(platform.setDeliveryMode).not.toHaveBeenCalled();
+  });
+
+  it("cambia el modo", async () => {
+    platform.setDeliveryMode.mockResolvedValue({ ok: true });
+
+    expect(await setDeliveryModeAction("offers")).toEqual({ ok: true });
+    expect(platform.setDeliveryMode).toHaveBeenCalledWith("offers");
+  });
+
+  it("rechaza un modo desconocido sin tocar la base", async () => {
+    const r = await setDeliveryModeAction("gratis" as never);
+
+    expect(r.ok).toBe(false);
+    expect(platform.setDeliveryMode).not.toHaveBeenCalled();
+  });
+
+  it("si la base lo rechaza, lo dice", async () => {
+    platform.setDeliveryMode.mockResolvedValue({ error: { code: "42501" } });
+    expect((await setDeliveryModeAction("fixed")).ok).toBe(false);
+  });
 });
 
 describe("zonas de la plataforma — ENVIO-56", () => {
