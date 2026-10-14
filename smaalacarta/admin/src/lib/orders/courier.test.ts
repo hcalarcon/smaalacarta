@@ -11,6 +11,7 @@ import {
   formatCountdown,
   hasCourier,
   hasDelivery,
+  acceptsOffers,
   offersLabel,
   searchWarning,
   validateAssignNote,
@@ -146,6 +147,24 @@ describe("aviso 'Nadie ofertó todavía' — ENVIO-118", () => {
 
   it("no avisa si ya hay ofertas", () => {
     expect(searchWarning(order(), at("2026-10-09T22:30:00Z"), 2)).toBeNull();
+  });
+
+  it("en precio fijo dice 'Nadie lo tomó todavía' y no habla de ofertas — ENVIO-154", () => {
+    const fixed = order({ delivery_mode: "fixed" });
+
+    expect(searchWarning(fixed, at("2026-10-09T22:09:59Z"))).toBeNull();
+    expect(searchWarning(fixed, at("2026-10-09T22:10:00Z"))).toMatch(/Nadie lo tomó todavía \(10 min\)/);
+    expect(searchWarning(fixed, at("2026-10-09T22:10:00Z"))).not.toMatch(/ofert/i);
+  });
+
+  it("solo los pedidos de ofertas muestran conteo y lista de ofertas — ENVIO-154", () => {
+    expect(acceptsOffers(order({ delivery_mode: "offers" }))).toBe(true);
+    expect(acceptsOffers(order({ delivery_mode: null }))).toBe(true);
+    expect(acceptsOffers(order({ delivery_mode: "fixed" }))).toBe(false);
+  });
+
+  it("buscando en precio fijo, el estado sigue diciendo desde qué hora — ENVIO-154", () => {
+    expect(courierStatusLabel(order({ delivery_mode: "fixed" }))).toMatch(/^Buscando repartidor desde las \d{2}:\d{2}$/);
   });
 
   it("no avisa si ya lo tomó alguien, lo lleva el local o el pedido terminó", () => {

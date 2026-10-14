@@ -395,6 +395,7 @@ describe("fetchDelivery — ENVIO-29", () => {
         price: 6500,
         reason: "Fuera de zona",
         state: "accepted",
+        mode: "offers",
         note: "Juan, 21:30",
         offers: [],
         closesAt: null,
@@ -455,6 +456,36 @@ describe("fetchDelivery con los estados nuevos — ENVIO-91 y 92", () => {
     });
 
     expect(r.data).toMatchObject({ state: "searching", price: null, listPrice: null });
+  });
+
+  // ENVIO-149: en precio fijo no hay ofertas ni cuenta regresiva, aunque el servidor las mandara.
+  it("precio fijo: trae el modo y descarta ofertas y cierre", async () => {
+    const r = await fetchDelivery({
+      ...cfg,
+      code: CODE,
+      fetchImpl: answer({
+        estado: "searching",
+        modo: "fixed",
+        ofertas: [{ id: OFFER_A, repartidor: "Damián", precio: 5000 }],
+        cierra_en: "2026-10-09T22:05:00Z",
+      }),
+    });
+
+    expect(r.data).toMatchObject({ state: "searching", mode: "fixed", offers: [], closesAt: null });
+  });
+
+  it("sin modo (un servidor viejo) se trata como ofertas y las conserva", async () => {
+    const r = await fetchDelivery({
+      ...cfg,
+      code: CODE,
+      fetchImpl: answer({
+        estado: "searching",
+        ofertas: [{ id: OFFER_A, repartidor: "Damián", precio: 5000 }],
+      }),
+    });
+
+    expect(r.data.mode).toBe("offers");
+    expect(r.data.offers).toHaveLength(1);
   });
 });
 
@@ -555,6 +586,24 @@ describe("deliveryCard — SEGUIMIENTO-27, ENVIO-29, 44 y 91", () => {
     closesAt: null,
   };
   const offer = { id: OFFER_A, courier: "Damián", price: 5000, reason: null, favorite: true };
+
+  it("precio fijo: 'Buscando repartidor' con 'El primero que lo tome', sin hablar de ofertas (ENVIO-154)", () => {
+    const card = deliveryCard({ ...base, state: "searching", courier: "", mode: "fixed" }, "es", money);
+
+    expect(card).toMatchObject({ kind: "searching", title: "Buscando repartidor" });
+    expect(card.lines.join(" ")).toMatch(/primero que lo tome/);
+    expect(card.lines.join(" ")).not.toMatch(/ofrezcan|oferta/i);
+
+    const en = deliveryCard({ ...base, state: "searching", courier: "", mode: "fixed" }, "en", money);
+    expect(en.lines.join(" ")).toMatch(/first one to take it/);
+  });
+
+  it("precio fijo: tomado, muestra quién lo lleva y el precio de lista (ENVIO-154)", () => {
+    const card = deliveryCard({ ...base, mode: "fixed" }, "es", money);
+
+    expect(card).toMatchObject({ kind: "accepted", title: "Lo lleva Damián" });
+    expect(card.lines.join(" ")).toMatch(/5\.000/);
+  });
 
   it("searching sin ofertas: 'Buscando repartidor', con la moto", () => {
     expect(deliveryCard({ ...base, state: "searching", courier: "" }, "es", money)).toMatchObject({

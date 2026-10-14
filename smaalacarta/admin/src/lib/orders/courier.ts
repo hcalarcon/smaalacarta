@@ -29,6 +29,8 @@ export type CourierOrder = {
   courier_responded_at: string | null;
   // Cuándo se abrió la búsqueda (al crearse el pedido, o al devolverlo el repartidor elegido).
   offered_at: string | null;
+  // Cómo se reparte (ENVIO-146): `fixed` lo toma el primero que llega, `offers` se oferta.
+  delivery_mode?: string | null;
 };
 
 // Una oferta de repartidor tal como la entrega `business_order_offers()` (ENVIO-111).
@@ -126,10 +128,15 @@ export function offersLabel(offers: OrderOffers | undefined, now: Date): string 
     : `${count} ${noun}, se está eligiendo la más barata`;
 }
 
+// ¿Este pedido recibe ofertas? Solo en el modo de ofertas: en precio fijo el local no ve conteo ni lista
+// (ENVIO-154). Un pedido sin modo (de antes) se trata como de ofertas.
+export const acceptsOffers = (order: Pick<CourierOrder, "delivery_mode">) => order.delivery_mode !== "fixed";
+
 // Aviso "Nadie ofertó todavía" a los `SEARCH_WARNING_MINUTES` de abierta la búsqueda sin ninguna oferta
-// (ENVIO-118), o null. `offerCount` es cuántas ofertas abiertas hay.
+// (ENVIO-118), o null. `offerCount` es cuántas ofertas abiertas hay. En precio fijo no hay ofertas: dice
+// "Nadie lo tomó todavía" (ENVIO-154).
 export function searchWarning(
-  order: Pick<CourierOrder, "courier_status" | "offered_at" | "status">,
+  order: Pick<CourierOrder, "courier_status" | "offered_at" | "status" | "delivery_mode">,
   now: Date,
   offerCount = 0,
 ): string | null {
@@ -142,7 +149,9 @@ export function searchWarning(
   const minutes = Math.floor((now.getTime() - since) / 60_000);
   if (minutes < SEARCH_WARNING_MINUTES) return null;
 
-  return `Nadie ofertó todavía (${minutes} min): asignalo a mano o llevalo vos.`;
+  const what = order.delivery_mode === "fixed" ? "Nadie lo tomó todavía" : "Nadie ofertó todavía";
+
+  return `${what} (${minutes} min): asignalo a mano o llevalo vos.`;
 }
 
 // Cómo está el envío, en una línea (ENVIO-80). `courierName` es el nombre del repartidor que lo tomó,

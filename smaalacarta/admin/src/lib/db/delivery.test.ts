@@ -752,6 +752,7 @@ describe("lo que ve el cliente — ENVIO-16 y 17", () => {
       precio: 6000,
       motivo_cambio: "Lluvia",
       estado: "accepted",
+      modo: "offers",
     });
     expect(JSON.stringify(d)).not.toMatch(/3515551234|Siempre Viva|telefono|direccion/i);
   });
@@ -769,6 +770,7 @@ describe("lo que ve el cliente — ENVIO-16 y 17", () => {
       precio_lista: 5000,
       precio: 5000,
       estado: "searching",
+      modo: "offers",
       ofertas: [],
     });
 

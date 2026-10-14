@@ -10,6 +10,7 @@ import {
   advanceOrderAction,
   declineOrderAction,
   makeOfferAction,
+  takeOrderAction,
   markSettledAction,
   returnOrderAction,
   withdrawOfferAction,
@@ -116,7 +117,7 @@ export default function CourierOrdersClient({
 
     try {
       const result = await call();
-      if (!result.ok && result.closed) setNotice("El pedido ya no recibe ofertas.");
+      if (!result.ok && result.closed) setNotice(result.error);
       else if (!result.ok) setError({ id: orderId, message: result.error });
     } catch {
       setError({ id: orderId, message: "No pudimos guardar el cambio. Probá de nuevo." });
@@ -333,6 +334,7 @@ export default function CourierOrdersClient({
                     onOffer={(input) =>
                       run(item.id, () => makeOfferAction(item.id, input, Number(item.envio.precio_lista ?? 0)))
                     }
+                    onTake={() => run(item.id, () => takeOrderAction(item.id))}
                     onWithdraw={() => run(item.id, () => withdrawOfferAction(item.id))}
                     onDecline={() => run(item.id, () => declineOrderAction(item.id))}
                   />

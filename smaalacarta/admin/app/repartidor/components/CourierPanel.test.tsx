@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => ({
   offer: vi.fn(),
   withdraw: vi.fn(),
   decline: vi.fn(),
+  take: vi.fn(),
   giveBack: vi.fn(),
   advance: vi.fn(),
   settle: vi.fn(),
@@ -24,6 +25,7 @@ vi.mock("../actions", () => ({
   makeOfferAction: mocks.offer,
   withdrawOfferAction: mocks.withdraw,
   declineOrderAction: mocks.decline,
+  takeOrderAction: mocks.take,
   returnOrderAction: mocks.giveBack,
   advanceOrderAction: mocks.advance,
   markSettledAction: mocks.settle,
@@ -32,7 +34,7 @@ beforeEach(() => {
   // Las pestañas dejan la URL al día (ADMIN-MOVIL-8): que un test no herede la del anterior.
   window.history.replaceState(null, "", "/");
   vi.clearAllMocks();
-  for (const fn of [mocks.offer, mocks.withdraw, mocks.decline, mocks.giveBack, mocks.advance, mocks.settle]) {
+  for (const fn of [mocks.offer, mocks.take, mocks.withdraw, mocks.decline, mocks.giveBack, mocks.advance, mocks.settle]) {
     fn.mockResolvedValue({ ok: true });
   }
 });
@@ -118,6 +120,7 @@ const offerCard = (o: AvailableOrder, onOffer = vi.fn(), onDecline = vi.fn(), on
       busy={false}
       error={null}
       onOffer={onOffer}
+      onTake={vi.fn()}
       onWithdraw={onWithdraw}
       onDecline={onDecline}
     />,
@@ -364,6 +367,65 @@ describe("tablero del repartidor — ENVIO-76 a 78", () => {
     await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
   });
 
+  it("precio fijo: muestra el precio y Tomar, sin ofertas ni Otro precio (ENVIO-153)", () => {
+    render(
+      <CourierOrdersClient
+        serverNow="2026-10-09T22:05:00Z"
+        available={[offer("1", { modo: "fixed" })]}
+        orders={[]}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /^Tomar/ }).textContent).toMatch(/5\.000/);
+    expect(screen.queryByRole("button", { name: /^Ofertar/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Otro precio" })).toBeNull();
+    expect(screen.queryByText(/Sin ofertas todavía/)).toBeNull();
+    expect(screen.getByRole("button", { name: "Rechazar" })).toBeTruthy();
+  });
+
+  it("precio fijo: Tomar llama a la acción del pedido", async () => {
+    render(
+      <CourierOrdersClient
+        serverNow="2026-10-09T22:05:00Z"
+        available={[offer("1", { modo: "fixed" })]}
+        orders={[]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^Tomar/ }));
+
+    await waitFor(() => expect(mocks.take).toHaveBeenCalledWith("1"));
+    await waitFor(() => expect(mocks.refresh).toHaveBeenCalled());
+  });
+
+  it("precio fijo: si lo tomó otro, dice 'Ya lo tomó otro repartidor'", async () => {
+    mocks.take.mockResolvedValue({ ok: false, error: "Ya lo tomó otro repartidor.", closed: true });
+    render(
+      <CourierOrdersClient
+        serverNow="2026-10-09T22:05:00Z"
+        available={[offer("1", { modo: "fixed" })]}
+        orders={[]}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: /^Tomar/ }));
+
+    await waitFor(() => expect(screen.getByRole("status").textContent).toMatch(/Ya lo tomó otro repartidor/));
+  });
+
+  it("ofertas: sigue con Ofertar y no muestra Tomar", () => {
+    render(
+      <CourierOrdersClient
+        serverNow="2026-10-09T22:05:00Z"
+        available={[offer("1", { modo: "offers" })]}
+        orders={[]}
+      />,
+    );
+
+    expect(screen.getByRole("button", { name: /^Ofertar/ })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: /^Tomar/ })).toBeNull();
+  });
+
   it("retirar la oferta llama a la acción del pedido", async () => {
     const mine = { id: "o1", precio: 5000, motivo: null, creada: "2026-10-09T22:02:00Z" };
     render(
@@ -380,7 +442,7 @@ describe("tablero del repartidor — ENVIO-76 a 78", () => {
   });
 
   it("si el pedido ya no recibe ofertas, avisa", async () => {
-    mocks.offer.mockResolvedValue({ ok: false, error: "x", closed: true });
+    mocks.offer.mockResolvedValue({ ok: false, error: "El pedido ya no recibe ofertas.", closed: true });
     render(<CourierOrdersClient serverNow="2026-10-09T22:05:00Z" available={[offer("1")]} orders={[]} />);
 
     fireEvent.click(screen.getByRole("button", { name: /^Ofertar/ }));

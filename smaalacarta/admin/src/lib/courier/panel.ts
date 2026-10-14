@@ -31,6 +31,8 @@ export type AvailableOrder = {
   pago: string | null;
   pago_estado: string;
   envio: { zona: string | null; precio_lista: number | null };
+  // Cómo se reparte (ENVIO-145): `fixed` se toma al precio de lista, `offers` se oferta.
+  modo?: "fixed" | "offers" | null;
   // Cuántas ofertas abiertas hay (sin nombres ni precios de los demás) y la propia, si ya ofertó.
   ofertas: number;
   mi_oferta: { id: string; precio: number; motivo: string | null; creada: string } | null;

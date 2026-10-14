@@ -849,6 +849,7 @@ export type Database = {
           delivery_fee_changed_by: string | null
           delivery_fee_list: number | null
           delivery_fee_reason: string | null
+          delivery_mode: string | null
           delivery_zone_id: string | null
           delivery_zone_name: string | null
           id: string
@@ -894,6 +895,7 @@ export type Database = {
           delivery_fee_changed_by?: string | null
           delivery_fee_list?: number | null
           delivery_fee_reason?: string | null
+          delivery_mode?: string | null
           delivery_zone_id?: string | null
           delivery_zone_name?: string | null
           id?: string
@@ -939,6 +941,7 @@ export type Database = {
           delivery_fee_changed_by?: string | null
           delivery_fee_list?: number | null
           delivery_fee_reason?: string | null
+          delivery_mode?: string | null
           delivery_zone_id?: string | null
           delivery_zone_name?: string | null
           id?: string
@@ -1314,6 +1317,24 @@ export type Database = {
           },
         ]
       }
+      platform_settings: {
+        Row: {
+          delivery_mode: string
+          id: boolean
+          updated_at: string
+        }
+        Insert: {
+          delivery_mode?: string
+          id?: boolean
+          updated_at?: string
+        }
+        Update: {
+          delivery_mode?: string
+          id?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       push_subscriptions: {
         Row: {
           auth: string
@@ -1432,6 +1453,7 @@ export type Database = {
         Args: { p_order_id: string; p_reason: string }
         Returns: undefined
       }
+      courier_take_order: { Args: { p_order_id: string }; Returns: undefined }
       courier_sees_order: {
         Args: { p_courier_id: string; p_order_id: string }
         Returns: boolean
@@ -1520,6 +1542,7 @@ export type Database = {
         Args: { p_endpoint: string }
         Returns: undefined
       }
+      effective_delivery_mode: { Args: { p_business_id: string }; Returns: string }
       effective_favorite_courier: {
         Args: { p_business: string }
         Returns: string
@@ -1575,6 +1598,7 @@ export type Database = {
         Args: { p_slug: string; p_via_path?: boolean }
         Returns: Json
       }
+      platform_searching_orders: { Args: never; Returns: number }
       public_choose_courier: {
         Args: { p_code: string; p_offer_id: string; p_price?: number }
         Returns: undefined

@@ -12,8 +12,11 @@ export function orderErrorMessage(error: DbError) {
     case "P0018":
       return "Falta el teléfono del cliente.";
     case "P0019":
+      return "Ya lo tomó otro repartidor.";
     case "P0020":
       return "El pedido ya no recibe ofertas.";
+    case "P0023":
+      return "Este pedido funciona de otra manera. Actualizá la pantalla.";
     case "P0021":
       return "Contá por qué cambia el precio del envío (de 3 a 140 caracteres).";
     case "P0002":

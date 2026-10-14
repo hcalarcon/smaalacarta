@@ -8,6 +8,7 @@ const { requireCourier, courierDb } = vi.hoisted(() => ({
     courierMarkSettled: vi.fn(),
     setZoneCoverage: vi.fn(),
     courierMakeOffer: vi.fn(),
+    courierTakeOrder: vi.fn(),
     courierWithdrawOffer: vi.fn(),
     courierDeclineOrder: vi.fn(),
     courierReturnOrder: vi.fn(),
@@ -24,6 +25,7 @@ import {
   makeOfferAction,
   returnOrderAction,
   setZoneCoverageAction,
+  takeOrderAction,
   withdrawOfferAction,
 } from "./actions";
 
@@ -46,6 +48,7 @@ describe("quien no es el repartidor no llega a la base — ENVIO-30 y 79", () =>
 
   it.each([
     ["ofertar", () => makeOfferAction(ORDER, input, 5000)],
+    ["tomar", () => takeOrderAction(ORDER)],
     ["retirar la oferta", () => withdrawOfferAction(ORDER)],
     ["rechazar", () => declineOrderAction(ORDER)],
     ["devolver", () => returnOrderAction(ORDER, "Motivo")],
@@ -94,6 +97,25 @@ describe("ofertar por un pedido — ENVIO-98 y 113", () => {
     const r = await makeOfferAction(ORDER, input, 5000);
     expect(r).toMatchObject({ ok: false, error: expect.stringMatching(/no está permitido/i) });
     expect(r).not.toHaveProperty("closed");
+  });
+});
+
+describe("tomar un pedido de precio fijo — ENVIO-147", () => {
+  it("llama a la base solo con el pedido: no manda precio ni motivo", async () => {
+    expect(await takeOrderAction(ORDER)).toEqual({ ok: true });
+    expect(courierDb.courierTakeOrder).toHaveBeenCalledWith(ORDER);
+  });
+
+  it("si lo tomó otro (P0019), lo dice y lo marca como cerrado", async () => {
+    courierDb.courierTakeOrder.mockResolvedValue({ error: { code: "P0019", message: "boom" } });
+
+    const r = await takeOrderAction(ORDER);
+    expect(r).toMatchObject({ ok: false, closed: true, error: "Ya lo tomó otro repartidor." });
+  });
+
+  it("si el pedido es de ofertas (P0023), también lo marca como cerrado", async () => {
+    courierDb.courierTakeOrder.mockResolvedValue({ error: { code: "P0023", message: "boom" } });
+    expect(await takeOrderAction(ORDER)).toMatchObject({ ok: false, closed: true });
   });
 });
 

@@ -126,8 +126,8 @@ export default function ZonesClient({ zones }: { zones: DeliveryZone[] }) {
       <section>
         <h1 className="text-3xl font-bold text-brand">Zonas de envío</h1>
         <p className="mt-2 text-stone-500">
-          Son comunes a toda la plataforma y el precio es de referencia: el repartidor lo ajusta, con motivo, al
-          aceptar un pedido. Un precio nuevo vale para los pedidos nuevos: los que ya se hicieron conservan el
+          Son comunes a toda la plataforma. Con precio fijo, es lo que cobra quien toma el pedido; con ofertas es
+          el precio de lista y el repartidor puede ofertar otro, con motivo. Un precio nuevo vale para los pedidos nuevos: los que ya se hicieron conservan el
           precio con el que se pidieron.
         </p>
       </section>

@@ -69,7 +69,12 @@ export type QueryResult =
 //
 // `before`: nombre de una migración; se aplican solo las anteriores. Sirve para probar cómo una
 // migración transforma datos que ya existían (se aplica después con `applyMigration`).
-export async function createTestDb(options: { before?: string } = {}): Promise<TestDb> {
+//
+// `deliveryMode`: el modo de envíos de la plataforma (ENVIO-145). Los tests de ofertas existentes
+// asumen `offers`; la migración arranca la plataforma en `fixed`, así que se fija acá.
+export async function createTestDb(
+  options: { before?: string; deliveryMode?: "fixed" | "offers" } = {},
+): Promise<TestDb> {
   const db = new PGlite();
   await db.exec(SUPABASE_STUBS);
 
@@ -84,6 +89,10 @@ export async function createTestDb(options: { before?: string } = {}): Promise<T
   await db.exec(
     "grant all on all tables in schema public to anon, authenticated, service_role; grant all on all tables in schema storage to anon, authenticated;",
   );
+
+  if (!options.before) {
+    await db.exec(`update platform_settings set delivery_mode = '${options.deliveryMode ?? "offers"}'`);
+  }
 
   return db;
 }

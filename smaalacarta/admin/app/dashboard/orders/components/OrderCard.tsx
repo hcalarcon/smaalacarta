@@ -13,6 +13,7 @@ import {
   deliveryContext,
   feeSummary,
   hasDelivery,
+  acceptsOffers,
   offersLabel,
   searchWarning,
   type OrderCourier,
@@ -138,8 +139,8 @@ export default function OrderCard({
             🛵 {order.delivery_zone_name ?? "Envío"} · {fee.price}
           </p>
           <p>{courierStatusLabel(order, courierName)}</p>
-          {searching ? <p className="font-medium">{offersLabel(offers, now)}</p> : null}
-          {searching && offers && offers.ofertas.length > 0 ? (
+          {searching && acceptsOffers(order) ? <p className="font-medium">{offersLabel(offers, now)}</p> : null}
+          {searching && acceptsOffers(order) && offers && offers.ofertas.length > 0 ? (
             <ul className="mt-0.5 space-y-0.5">
               {offers.ofertas.slice(0, 3).map((offer) => (
                 <li key={offer.id} className="truncate">
