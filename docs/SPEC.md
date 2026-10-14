@@ -2148,6 +2148,17 @@ precios en 0; no existe "incluye N y el resto cuesta X".
 - **ADMIN-PWA-37** El payload push lleva `kind` y `urgent` (y `number` y `total` en los urgentes); los
   urgentes salen con urgencia alta y TTL de 60 s, y los demás avisos conservan sus 10 minutos.
 
+
+### Panel en el celular (ADMIN-MOVIL)
+
+- **ADMIN-MOVIL-1** En pantallas menores a `lg` el header muestra solo el nombre y un botón "Más opciones"
+  (⋯); los controles (avisos, instalar, accesos rápidos, cambiar contraseña, salir) pasan a ese menú. Desde
+  `lg` el header queda como estaba.
+- **ADMIN-MOVIL-2** El menú ⋯ lista, según lo que pase el layout: los accesos rápidos (en pestaña nueva), los
+  avisos, "Instalar app" (si no está oculto), el enlace de Superadmin, "Cambiar contraseña" y, al final y
+  separado, "Salir" (con la dirección de este aparato, para sacarlo de la cuenta).
+- **ADMIN-MOVIL-3** El menú ⋯ se cierra con Escape y al tocar afuera, y cada ítem mide al menos 44 px de alto.
+
 ---
 
 ## No especificado deliberadamente

@@ -34,7 +34,10 @@ function BellIcon({ off }: { off?: boolean }) {
 const buttonClass =
   "flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl bg-brand-soft px-3 py-2 text-sm font-medium text-brand transition hover:bg-line disabled:opacity-60 sm:px-4";
 
-export default function PushToggle({ variant = "header" }: { variant?: "header" | "banner" }) {
+const menuItemClass =
+  "flex min-h-11 w-full items-center gap-3 rounded-xl px-3 text-left text-sm font-medium text-stone-800 transition hover:bg-brand-soft disabled:opacity-60";
+
+export default function PushToggle({ variant = "header" }: { variant?: "header" | "banner" | "menu" }) {
   const { pushControl, busy, error } = usePwa();
 
   useEffect(() => {
@@ -73,6 +76,52 @@ export default function PushToggle({ variant = "header" }: { variant?: "header" 
           </button>
         ) : null}
       </section>
+    );
+  }
+
+  // Ítem del menú ⋯ del celular: el mismo estado, en una lista en vez de un desplegable.
+  if (variant === "menu") {
+    return (
+      <div>
+        {pushControl === "enable" ? (
+          <button
+            type="button"
+            role="menuitem"
+            disabled={busy}
+            onClick={() => void enablePush()}
+            className={menuItemClass}
+          >
+            <BellIcon />
+            <span>{busy ? "Activando…" : "Activar avisos"}</span>
+          </button>
+        ) : null}
+        {pushControl === "enabled" ? (
+          <>
+            <p className="flex min-h-11 items-center gap-3 px-3 text-sm text-stone-700">
+              <BellIcon />
+              <span>Avisos activados</span>
+            </p>
+            <button
+              type="button"
+              role="menuitem"
+              disabled={busy}
+              onClick={() => void disablePush()}
+              className={`${menuItemClass} text-brand underline`}
+            >
+              {busy ? "Desactivando…" : "Desactivar avisos"}
+            </button>
+          </>
+        ) : null}
+        {pushControl === "blocked" ? <p className="px-3 py-2 text-sm text-stone-700">{BLOCKED_TEXT}</p> : null}
+        {pushControl === "install-first" ? (
+          <p className="px-3 py-2 text-sm text-stone-700">{INSTALL_FIRST_TEXT}</p>
+        ) : null}
+        {error ? (
+          <p role="alert" className="px-3 pb-2 text-xs text-red-700">
+            {error}
+          </p>
+        ) : null}
+      </div>
     );
   }
 

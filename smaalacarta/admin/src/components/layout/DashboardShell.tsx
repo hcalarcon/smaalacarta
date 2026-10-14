@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import DashboardNav from "./DashboardNav";
+import MobileMenu from "./MobileMenu";
 import type { NavLink } from "./nav-links";
 import Logo from "@/components/brand/Logo";
 import InstallAppButton from "@/components/pwa/InstallAppButton";
@@ -143,14 +144,24 @@ export default function DashboardShell({
                 <h2 className="truncate text-lg font-semibold text-brand">
                   {title}
                 </h2>
-                <p className="hidden text-sm text-stone-500 sm:block">
+                <p className="hidden text-sm text-stone-500 lg:block">
                   {subtitle}
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <span className="hidden max-w-[16rem] truncate text-sm text-stone-600 md:block">
+            {/* Celular y tableta: un solo botón ⋯ con todo lo demás (ADMIN-MOVIL-1). */}
+            <div className="shrink-0 lg:hidden">
+              <MobileMenu
+                quickLinks={quickLinks}
+                switchLink={switchLink}
+                showChangePassword={showChangePassword}
+                showAppControls={showAppControls}
+              />
+            </div>
+
+            <div className="hidden items-center gap-3 lg:flex">
+              <span className="max-w-[16rem] truncate text-sm text-stone-600">
                 {userEmail}
               </span>
 
@@ -199,7 +210,7 @@ export default function DashboardShell({
               {showChangePassword ? (
                 <Link
                   href="/cambiar-contrasena"
-                  className="hidden text-sm font-medium text-stone-500 hover:text-brand sm:block"
+                  className="text-sm font-medium text-stone-500 hover:text-brand"
                 >
                   Cambiar contraseña
                 </Link>
