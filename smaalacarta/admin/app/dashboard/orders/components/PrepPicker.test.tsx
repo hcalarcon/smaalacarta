@@ -109,7 +109,7 @@ describe("selector de tiempo al aceptar — ADMIN-PEDIDOS-31 y 32", () => {
     picker({ error: "No pudimos guardar el cambio.", busy: true });
 
     expect(screen.getByRole("alert").textContent).toContain("No pudimos guardar");
-    expect((screen.getByRole("button", { name: /Guardando/ }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: /Aceptando/ }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("se cierra con Cancelar y con Escape", () => {

@@ -631,7 +631,7 @@ describe("tiempo estimado en la tarjeta — ADMIN-PEDIDOS-34 y 35", () => {
     });
 
   const prepCard = (o: Order, at = at21) => {
-    const handlers = { onSetPrep: vi.fn(), onDelay: vi.fn() };
+    const handlers = { onSetPrep: vi.fn(), onAdjust: vi.fn() };
     render(<OrderCard order={o} now={at} busy={false} onAdvance={vi.fn()} onOpen={vi.fn()} {...handlers} />);
     return handlers;
   };
@@ -649,32 +649,47 @@ describe("tiempo estimado en la tarjeta — ADMIN-PEDIDOS-34 y 35", () => {
     expect(text.className).toMatch(/red/);
   });
 
-  it("'Demorar +10' pide el motivo y lo manda con un toque", () => {
-    const { onDelay } = prepCard(timed());
+  it("'Cambiar demora' ofrece −5, +5, +10, +15 y +30 y manda el salto con un toque", () => {
+    const { onAdjust } = prepCard(timed());
 
-    fireEvent.click(screen.getByRole("button", { name: "Demorar +10" }));
-    fireEvent.click(screen.getByRole("button", { name: "Mucho movimiento" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cambiar demora" }));
 
-    expect(onDelay).toHaveBeenCalledWith("busy");
+    for (const name of ["−5 min", "+5 min", "+10 min", "+15 min", "+30 min"]) {
+      expect(screen.getByRole("button", { name })).toBeTruthy();
+    }
+
+    fireEvent.click(screen.getByRole("button", { name: "−5 min" }));
+
+    expect(onAdjust).toHaveBeenCalledWith(-5, null);
   });
 
-  it("el motivo es opcional: 'Sin motivo' demora igual", () => {
-    const { onDelay } = prepCard(timed());
+  it("el motivo es opcional: elegido, viaja con el salto", () => {
+    const { onAdjust } = prepCard(timed());
 
-    fireEvent.click(screen.getByRole("button", { name: "Demorar +10" }));
-    fireEvent.click(screen.getByRole("button", { name: "Sin motivo" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cambiar demora" }));
+    fireEvent.click(screen.getByRole("button", { name: "Mucho movimiento" }));
+    fireEvent.click(screen.getByRole("button", { name: "+15 min" }));
 
-    expect(onDelay).toHaveBeenCalledWith(null);
+    expect(onAdjust).toHaveBeenCalledWith(15, "busy");
   });
 
   it("ofrece los cuatro motivos", () => {
     prepCard(timed());
 
-    fireEvent.click(screen.getByRole("button", { name: "Demorar +10" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cambiar demora" }));
 
     for (const name of ["Mucho movimiento", "Clima", "Falta de insumo", "Otro"]) {
       expect(screen.getByRole("button", { name })).toBeTruthy();
     }
+  });
+
+  it("'Otro valor…' abre el selector para escribir los minutos", () => {
+    const { onSetPrep } = prepCard(timed());
+
+    fireEvent.click(screen.getByRole("button", { name: "Cambiar demora" }));
+    fireEvent.click(screen.getByRole("button", { name: "Otro valor…" }));
+
+    expect(onSetPrep).toHaveBeenCalled();
   });
 
   it("un pedido aceptado sin tiempo ofrece ponerlo", () => {
@@ -697,7 +712,7 @@ describe("tiempo estimado en la tarjeta — ADMIN-PEDIDOS-34 y 35", () => {
       prepCard(timed(extra));
 
       expect(screen.queryByText(/Listo 21:/), JSON.stringify(extra)).toBeNull();
-      expect(screen.queryByRole("button", { name: "Demorar +10" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Cambiar demora" })).toBeNull();
       expect(screen.queryByRole("button", { name: "Poner tiempo" })).toBeNull();
     }
   });

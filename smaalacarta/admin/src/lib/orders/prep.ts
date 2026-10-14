@@ -10,7 +10,8 @@ export const PREP_MIN = 5;
 export const PREP_MAX = 180;
 export const PREP_FALLBACK = 20;
 export const PREP_QUICK_MINUTES = [10, 15, 20, 30, 45] as const;
-export const PREP_DELAY_STEP = 10;
+// Los botones rápidos de "Cambiar la demora": minutos que se suman (o restan) a lo que falta.
+export const PREP_ADJUST_STEPS = [-5, 5, 10, 15, 30] as const;
 
 export const PREP_REASONS = ["busy", "weather", "supply", "other"] as const;
 export type PrepReason = (typeof PREP_REASONS)[number];
@@ -99,10 +100,15 @@ export function prepBadge(order: Timed, now: Date): { text: string; late: boolea
   return { text: `Listo ${time} (atrasado ${-left} min)`, late: true };
 }
 
-// "Demorar +10": lo que falta (nada si ya pasó) más 10 minutos, hasta el máximo.
-export function delayMinutes(readyAt: string | null | undefined, now: Date): number {
+// "Cambiar la demora": lo que falta (nada si ya pasó) más `delta` minutos, que puede ser negativo, dentro del
+// rango válido: bajar de más deja el mínimo, no un error.
+export function adjustMinutes(readyAt: string | null | undefined, now: Date, delta: number): number {
   const left = readyAt ? minutesLeft(readyAt, now) : 0;
   const remaining = Number.isNaN(left) ? 0 : Math.max(0, left);
 
-  return Math.min(PREP_MAX, remaining + PREP_DELAY_STEP);
+  return Math.max(PREP_MIN, Math.min(PREP_MAX, remaining + delta));
+}
+
+export function isAdjustStep(value: unknown): value is (typeof PREP_ADJUST_STEPS)[number] {
+  return typeof value === "number" && (PREP_ADJUST_STEPS as readonly number[]).includes(value);
 }

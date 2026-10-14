@@ -17,6 +17,7 @@ import { itemOptionLines } from "@/lib/orders/item-options";
 import { preorderLabel, scheduledLabel } from "@/lib/orders/scheduled";
 import { STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
+import PendingButton from "@/components/ui/PendingButton";
 import ConfirmDeleteDialog from "../../dashboard/components/ConfirmDeleteDialog";
 import ItemNote from "@/components/ui/ItemNote";
 
@@ -41,10 +42,11 @@ export default function CourierOrderCard({
   busy: boolean;
   error: string | null;
   // Devuelve el pedido, con motivo (ENVIO-66): vuelve a buscarse entre los demás repartidores.
-  onReturn: (reason: string) => void;
-  onAdvance: (status: "on_the_way" | "delivered") => void;
+  // Pueden devolver una promesa: el botón espera lo que tarde y no deja tocar de nuevo (ENVIO-144).
+  onReturn: (reason: string) => void | Promise<void>;
+  onAdvance: (status: "on_the_way" | "delivered") => void | Promise<void>;
   // Marca que ya rindió al local lo cobrado del pedido (ENVIO-42): no se deshace.
-  onSettle: () => void;
+  onSettle: () => void | Promise<void>;
 }) {
   const [returning, setReturning] = useState(false);
   const [reason, setReason] = useState("");
@@ -71,9 +73,10 @@ export default function CourierOrderCard({
     }
 
     setReasonError(null);
-    setReturning(false);
-    setReason("");
-    onReturn(result.reason);
+    return Promise.resolve(onReturn(result.reason)).finally(() => {
+      setReturning(false);
+      setReason("");
+    });
   }
 
   return (
@@ -258,14 +261,14 @@ export default function CourierOrderCard({
               >
                 Volver
               </button>
-              <button
-                type="button"
-                disabled={busy}
+              <PendingButton
+                busy={busy}
+                pendingLabel="Devolviendo…"
                 onClick={submitReturn}
-                className="rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
+                className="min-h-11 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
               >
                 Confirmar devolución
-              </button>
+              </PendingButton>
             </div>
           </div>
         ) : (
@@ -302,14 +305,14 @@ export default function CourierOrderCard({
 
       {actions.onTheWay || actions.delivered ? (
         <div className="mt-3">
-          <button
-            type="button"
-            disabled={busy}
+          <PendingButton
+            busy={busy}
+            pendingLabel={actions.onTheWay ? "Marcando en camino…" : "Marcando entregado…"}
             onClick={() => onAdvance(actions.onTheWay ? "on_the_way" : "delivered")}
             className="min-h-11 w-full rounded-xl bg-action px-5 py-2 text-sm font-semibold text-white transition hover:bg-action-hover disabled:opacity-60 sm:w-auto"
           >
-            {busy ? "Guardando…" : actions.onTheWay ? "En camino" : "Entregado"}
-          </button>
+            {actions.onTheWay ? "En camino" : "Entregado"}
+          </PendingButton>
         </div>
       ) : null}
 
@@ -323,11 +326,11 @@ export default function CourierOrderCard({
         title="Marcar como rendido"
         description={`¿Le rendiste a ${order.negocio.nombre} ${formatMoney(Number(order.total))} del pedido #${order.numero}? La marca no se puede deshacer.`}
         confirmLabel="Sí, rendido"
-        loadingLabel="Guardando..."
+        loadingLabel="Guardando…"
         loading={busy}
-        onConfirm={() => {
+        onConfirm={async () => {
+          await onSettle();
           setSettling(false);
-          onSettle();
         }}
         onClose={() => setSettling(false)}
       />

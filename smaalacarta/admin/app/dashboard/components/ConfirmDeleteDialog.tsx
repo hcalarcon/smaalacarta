@@ -1,5 +1,7 @@
 "use client";
 
+import PendingButton from "@/components/ui/PendingButton";
+
 type ConfirmDeleteDialogProps = {
   open: boolean;
   title?: string;
@@ -40,14 +42,14 @@ export default function ConfirmDeleteDialog({
             Cancelar
           </button>
 
-          <button
-            type="button"
-            disabled={loading}
+          <PendingButton
+            pending={loading}
+            pendingLabel={loadingLabel}
             onClick={onConfirm}
             className="rounded-2xl bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-700 disabled:opacity-50"
           >
-            {loading ? loadingLabel : confirmLabel}
-          </button>
+            {confirmLabel}
+          </PendingButton>
         </div>
       </div>
     </div>

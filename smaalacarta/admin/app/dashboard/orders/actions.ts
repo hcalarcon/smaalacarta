@@ -15,7 +15,7 @@ import { requireBusiness } from "@/lib/get-current-business";
 import { validateAssignNote } from "@/lib/orders/courier";
 import { validateManualOrder, type ManualOrderInput } from "@/lib/orders/manual-order";
 import { manualOrderErrorMessage, orderErrorMessage, settlementErrorMessage } from "@/lib/orders/messages";
-import { acceptsPrepTime, delayMinutes, isPrepReason, validatePrepMinutes } from "@/lib/orders/prep";
+import { acceptsPrepTime, adjustMinutes, isAdjustStep, isPrepReason, validatePrepMinutes } from "@/lib/orders/prep";
 import { STATUSES } from "@/lib/orders/status";
 
 export type OrderActionResult =
@@ -68,8 +68,21 @@ export async function acceptOrderAction(orderId: string, minutes: number | null)
   if ("error" in state) return { ok: false, error: orderErrorMessage(state.error) };
   if (!state.order) return { ok: false, error: NO_ORDER };
 
+  // Idempotente (ADMIN-PEDIDOS-51): un segundo "aceptar" sobre un pedido que ya no está pendiente no cambia
+  // nada ni le avisa al usuario.
+  if (state.order.status !== "pending") return { ok: true };
+
   const confirmed = await setOrderStatus(orderId, "confirmed");
-  if ("error" in confirmed) return { ok: false, error: orderErrorMessage(confirmed.error) };
+  if ("error" in confirmed) {
+    // Si otro pedido de aceptar llegó primero, el pedido ya quedó aceptado: no es un error del usuario.
+    const after = await getOrderPrepState(business.id, orderId);
+    if (!("error" in after) && after.order && after.order.status !== "pending") {
+      revalidatePath("/dashboard/orders");
+      return { ok: true };
+    }
+
+    return { ok: false, error: orderErrorMessage(confirmed.error) };
+  }
 
   revalidatePath("/dashboard/orders");
 
@@ -107,10 +120,16 @@ export async function setPrepAction(
   return { ok: true };
 }
 
-// "Demorar +10" (ADMIN-PEDIDOS-35): suma 10 minutos a lo que falta, calculado con la hora marcada que
-// guarda la base y no con el reloj del navegador.
-export async function delayPrepAction(orderId: string, reason: string | null): Promise<OrderActionResult> {
+// "Cambiar la demora" (ADMIN-PEDIDOS-35 y 52): suma o resta `delta` minutos a lo que falta, calculado con la
+// hora marcada que guarda la base y no con el reloj del navegador. `delta` es uno de los saltos de la lista.
+export async function adjustPrepAction(
+  orderId: string,
+  delta: number,
+  reason: string | null,
+): Promise<OrderActionResult> {
   const { business } = await requireBusiness();
+
+  if (!isAdjustStep(delta)) return { ok: false, error: "Ese cambio de demora no es válido." };
 
   const cleaned = cleanReason(reason);
   if (!cleaned.ok) return { ok: false, error: "Elegí uno de los motivos de la lista." };
@@ -119,7 +138,7 @@ export async function delayPrepAction(orderId: string, reason: string | null): P
   if ("error" in state) return { ok: false, error: orderErrorMessage(state.error) };
   if (!state.order) return { ok: false, error: NO_ORDER };
 
-  const minutes = delayMinutes(state.order.prep_ready_at, new Date());
+  const minutes = adjustMinutes(state.order.prep_ready_at, new Date(), delta);
 
   const result = await setOrderPrep(orderId, minutes, cleaned.reason);
   if ("error" in result) return { ok: false, error: orderErrorMessage(result.error) };

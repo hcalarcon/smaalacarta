@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import PendingButton from "@/components/ui/PendingButton";
 import {
   PREP_MAX,
   PREP_MIN,
@@ -17,6 +18,7 @@ export default function PrepPicker({
   mode,
   suggested,
   defaultMinutes,
+  lastUsed = null,
   busy,
   error,
   onConfirm,
@@ -30,13 +32,18 @@ export default function PrepPicker({
   suggested: number | null;
   // El tiempo por defecto del negocio.
   defaultMinutes: number;
+  // El último tiempo que usó el local en este navegador: tiene prioridad sobre la sugerencia.
+  lastUsed?: number | null;
   busy: boolean;
   error: string | null;
-  onConfirm: (minutes: number) => void;
-  onAcceptWithout?: () => void;
+  // Pueden devolver una promesa: el botón espera lo que tarde y no deja tocar de nuevo.
+  onConfirm: (minutes: number) => void | Promise<void>;
+  onAcceptWithout?: () => void | Promise<void>;
   onClose: () => void;
 }) {
-  const initial = prepSelectorDefault(suggested, defaultMinutes);
+  const last = typeof lastUsed === "number" && validatePrepMinutes(lastUsed).ok ? lastUsed : null;
+  const base = prepSelectorDefault(suggested, defaultMinutes);
+  const initial = last !== null ? { minutes: last, suggested: false } : base;
   // Texto, para poder borrar y escribir.
   const [value, setValue] = useState(String(initial.minutes));
 
@@ -52,6 +59,7 @@ export default function PrepPicker({
   const validation = validatePrepMinutes(value);
   const minutes = validation.ok ? validation.minutes : null;
   const verb = mode === "accept" ? "Aceptar con" : "Guardar";
+  const pendingLabel = mode === "accept" ? "Aceptando…" : "Guardando…";
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-black/40 p-4">
@@ -68,7 +76,11 @@ export default function PrepPicker({
           ¿En cuántos minutos va a estar listo? Es una estimación: el cliente la ve como «aprox.».
         </p>
 
-        {initial.suggested ? (
+        {last !== null ? (
+          <p className="mt-3 rounded-xl bg-cream px-3 py-2 text-sm font-medium text-brand">
+            Último que usaste: {last} min
+          </p>
+        ) : initial.suggested ? (
           <p className="mt-3 rounded-xl bg-cream px-3 py-2 text-sm font-medium text-brand">
             Sugerido: {initial.minutes} min según tus últimos pedidos
           </p>
@@ -119,24 +131,25 @@ export default function PrepPicker({
         ) : null}
 
         <div className="mt-6 flex flex-col gap-2">
-          <button
-            type="button"
-            disabled={busy || minutes === null}
-            onClick={() => minutes !== null && onConfirm(minutes)}
+          <PendingButton
+            pending={busy}
+            pendingLabel={pendingLabel}
+            disabled={minutes === null}
+            onClick={() => (minutes !== null ? onConfirm(minutes) : undefined)}
             className="min-h-12 rounded-2xl bg-brand px-5 py-3 text-base font-bold text-white transition hover:bg-brand-hover disabled:opacity-60"
           >
-            {busy ? "Guardando…" : minutes === null ? `${verb} …` : `${verb} ${minutes} min`}
-          </button>
+            {minutes === null ? `${verb} …` : `${verb} ${minutes} min`}
+          </PendingButton>
 
           {mode === "accept" && onAcceptWithout ? (
-            <button
-              type="button"
-              disabled={busy}
+            <PendingButton
+              busy={busy}
+              pendingLabel="Aceptando…"
               onClick={onAcceptWithout}
               className="min-h-11 rounded-2xl border border-line-strong bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-cream disabled:opacity-60"
             >
               Aceptar sin tiempo
-            </button>
+            </PendingButton>
           ) : null}
 
           <button

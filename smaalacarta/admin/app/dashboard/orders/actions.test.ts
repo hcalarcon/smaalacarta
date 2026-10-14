@@ -18,7 +18,7 @@ vi.mock("@/lib/get-current-business", () => ({ requireBusiness: () => requireBus
 vi.mock("@/lib/db/orders", () => ordersDb);
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-import { acceptOrderAction, createManualOrderAction, delayPrepAction, setPrepAction } from "./actions";
+import { acceptOrderAction, createManualOrderAction, adjustPrepAction, setPrepAction } from "./actions";
 
 const BUSINESS = "a1a1a1a1-0000-0000-0000-000000000001";
 const ORDER = "11111111-1111-1111-1111-111111111111";
@@ -42,7 +42,7 @@ describe("sin sesión de un negocio no llega a la base — ADMIN-PEDIDOS-33", ()
   it.each([
     ["aceptar", () => acceptOrderAction(ORDER, 20)],
     ["cargar el tiempo", () => setPrepAction(ORDER, 20, null)],
-    ["demorar", () => delayPrepAction(ORDER, null)],
+    ["demorar", () => adjustPrepAction(ORDER, 10, null)],
   ])("%s", async (_name, run) => {
     await expect(run()).rejects.toThrow("NEXT_REDIRECT");
     expect(ordersDb.setOrderStatus).not.toHaveBeenCalled();
@@ -122,6 +122,46 @@ describe("aceptar con tiempo — ADMIN-PEDIDOS-31 y 33", () => {
   });
 });
 
+describe("aceptar dos veces seguidas deja un solo cambio — ADMIN-PEDIDOS-51", () => {
+  it("un pedido que ya no está pendiente no se vuelve a confirmar ni a fijarle el tiempo", async () => {
+    ordersDb.getOrderPrepState.mockResolvedValue({ ok: true, order: { ...pending, status: "confirmed" } });
+
+    const r = await acceptOrderAction(ORDER, 25);
+
+    expect(r).toEqual({ ok: true });
+    expect(ordersDb.setOrderStatus).not.toHaveBeenCalled();
+    expect(ordersDb.setOrderPrep).not.toHaveBeenCalled();
+  });
+
+  it("si otro pedido de aceptar se coló entre la lectura y el cambio, tampoco da error ni repite el tiempo", async () => {
+    ordersDb.getOrderPrepState
+      .mockResolvedValueOnce({ ok: true, order: pending })
+      .mockResolvedValueOnce({ ok: true, order: { ...pending, status: "confirmed" } });
+    ordersDb.setOrderStatus.mockResolvedValue({ error: { code: "P0004" } });
+
+    const r = await acceptOrderAction(ORDER, 25);
+
+    expect(r).toEqual({ ok: true });
+    expect(ordersDb.setOrderPrep).not.toHaveBeenCalled();
+  });
+
+  it("dos aceptar en paralelo confirman y fijan el tiempo una sola vez", async () => {
+    let status = "pending";
+    ordersDb.getOrderPrepState.mockImplementation(async () => ({ ok: true, order: { ...pending, status } }));
+    ordersDb.setOrderStatus.mockImplementation(async () => {
+      if (status !== "pending") return { error: { code: "P0004" } };
+      status = "confirmed";
+      return { ok: true };
+    });
+
+    const [a, b] = await Promise.all([acceptOrderAction(ORDER, 25), acceptOrderAction(ORDER, 25)]);
+
+    expect(a).toEqual({ ok: true });
+    expect(b).toEqual({ ok: true });
+    expect(ordersDb.setOrderPrep).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("cargar el tiempo de un pedido aceptado — ADMIN-PEDIDOS-31", () => {
   it("fija los minutos pedidos", async () => {
     const r = await setPrepAction(ORDER, 30, null);
@@ -137,7 +177,7 @@ describe("cargar el tiempo de un pedido aceptado — ADMIN-PEDIDOS-31", () => {
   });
 });
 
-describe("demorar — ADMIN-PEDIDOS-35", () => {
+describe("cambiar la demora — ADMIN-PEDIDOS-35 y 52", () => {
   const withReady = (inMinutes: number) => {
     const ready = new Date(Date.now() + inMinutes * 60_000).toISOString();
     ordersDb.getOrderPrepState.mockResolvedValue({
@@ -149,7 +189,7 @@ describe("demorar — ADMIN-PEDIDOS-35", () => {
   it("suma 10 minutos a lo que falta, con el motivo", async () => {
     withReady(8);
 
-    const r = await delayPrepAction(ORDER, "busy");
+    const r = await adjustPrepAction(ORDER, 10, "busy");
 
     expect(r).toEqual({ ok: true });
     expect(ordersDb.setOrderPrep).toHaveBeenCalledWith(ORDER, 18, "busy");
@@ -158,29 +198,49 @@ describe("demorar — ADMIN-PEDIDOS-35", () => {
   it("si ya pasó la hora, son 10 desde ahora", async () => {
     withReady(-6);
 
-    await delayPrepAction(ORDER, null);
+    await adjustPrepAction(ORDER, 10, null);
 
     expect(ordersDb.setOrderPrep).toHaveBeenCalledWith(ORDER, 10, null);
+  });
+
+  it("baja la demora: resta a lo que falta y no baja de 5", async () => {
+    withReady(20);
+    await adjustPrepAction(ORDER, -5, null);
+    expect(ordersDb.setOrderPrep).toHaveBeenLastCalledWith(ORDER, 15, null);
+
+    withReady(6);
+    await adjustPrepAction(ORDER, -5, null);
+    expect(ordersDb.setOrderPrep).toHaveBeenLastCalledWith(ORDER, 5, null);
+  });
+
+  it("solo acepta los saltos de la lista", async () => {
+    withReady(20);
+    ordersDb.setOrderPrep.mockClear();
+
+    for (const bad of [0, 7, -30, 1000, Number.NaN]) {
+      expect((await adjustPrepAction(ORDER, bad, null)).ok, String(bad)).toBe(false);
+    }
+    expect(ordersDb.setOrderPrep).not.toHaveBeenCalled();
   });
 
   it("el motivo vacío o 'other' se manda como corresponde y uno desconocido se rechaza", async () => {
     withReady(5);
 
-    expect((await delayPrepAction(ORDER, "other")).ok).toBe(true);
+    expect((await adjustPrepAction(ORDER, 10, "other")).ok).toBe(true);
     expect(ordersDb.setOrderPrep).toHaveBeenLastCalledWith(ORDER, 15, "other");
 
-    expect((await delayPrepAction(ORDER, "")).ok).toBe(true);
+    expect((await adjustPrepAction(ORDER, 10, "")).ok).toBe(true);
     expect(ordersDb.setOrderPrep).toHaveBeenLastCalledWith(ORDER, 15, null);
 
     ordersDb.setOrderPrep.mockClear();
-    expect((await delayPrepAction(ORDER, "lluvia")).ok).toBe(false);
+    expect((await adjustPrepAction(ORDER, 10, "lluvia")).ok).toBe(false);
     expect(ordersDb.setOrderPrep).not.toHaveBeenCalled();
   });
 
   it("no demora un pedido ajeno", async () => {
     ordersDb.getOrderPrepState.mockResolvedValue({ ok: true, order: null });
 
-    expect((await delayPrepAction(ORDER, null)).ok).toBe(false);
+    expect((await adjustPrepAction(ORDER, 10, null)).ok).toBe(false);
     expect(ordersDb.setOrderPrep).not.toHaveBeenCalled();
   });
 });
