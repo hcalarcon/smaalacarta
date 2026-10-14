@@ -55,6 +55,16 @@ export async function courierMakeOffer(
   return error ? { error: { code: error.code, message: error.message } } : { ok: true };
 }
 
+// Toma el pedido al precio de lista, en el modo de precio fijo (ENVIO-147): gana el primero que llega y
+// al otro la base le da `P0019`.
+export async function courierTakeOrder(orderId: string): Promise<{ ok: true } | DbFailure> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("courier_take_order", { p_order_id: orderId });
+
+  return error ? { error: { code: error.code, message: error.message } } : { ok: true };
+}
+
 // Retira la propia oferta mientras el cliente no eligió (ENVIO-100).
 export async function courierWithdrawOffer(orderId: string): Promise<{ ok: true } | DbFailure> {
   const supabase = await createClient();

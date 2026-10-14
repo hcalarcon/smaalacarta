@@ -27,6 +27,7 @@ export default function AvailableOrderCard({
   busy,
   error,
   onOffer,
+  onTake,
   onWithdraw,
   onDecline,
 }: {
@@ -36,6 +37,8 @@ export default function AvailableOrderCard({
   error: string | null;
   // Pueden devolver una promesa: el botón espera lo que tarde y no deja tocar de nuevo (ENVIO-144).
   onOffer: (input: OfferInput) => void | Promise<void>;
+  // Precio fijo: toma el pedido al precio de lista (ENVIO-153).
+  onTake: () => void | Promise<void>;
   onWithdraw: () => void | Promise<void>;
   onDecline: () => void | Promise<void>;
 }) {
@@ -48,6 +51,7 @@ export default function AvailableOrderCard({
   const [errors, setErrors] = useState<Errors>({});
 
   const notice = resultNotice(order);
+  const fixed = order.modo === "fixed";
   const collection = collectionInfo({ payment: order.pago, total: order.total, fee: listPrice });
   const when = order.anticipado ? preorderLabel(order.programado) : scheduledLabel(order.programado);
   const since = order.ofrecido_el ?? order.creado;
@@ -121,7 +125,7 @@ export default function AvailableOrderCard({
 
       <dl className="mt-3 space-y-1 rounded-xl bg-cream p-3 text-sm text-stone-700">
         <div className="flex gap-2">
-          <dt className="text-stone-500">Precio de lista del envío:</dt>
+          <dt className="text-stone-500">{fixed ? "Precio del envío:" : "Precio de lista del envío:"}</dt>
           <dd className="font-medium">{formatMoney(listPrice)}</dd>
         </div>
         <div className="flex gap-2">
@@ -132,7 +136,7 @@ export default function AvailableOrderCard({
           <dt className="text-stone-500">Pago:</dt>
           <dd>{paymentLabel(order.pago) || "-"}</dd>
         </div>
-        {notice ? null : (
+        {notice || fixed ? null : (
           <div className="flex gap-2">
             <dt className="text-stone-500">Ofertas:</dt>
             <dd className="font-medium">{offersCountLabel(order.ofertas)}</dd>
@@ -156,7 +160,26 @@ export default function AvailableOrderCard({
         </p>
       ) : null}
 
-      {notice ? null : mine && !editing ? (
+      {notice ? null : fixed ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          <PendingButton
+            busy={busy}
+            pendingLabel="Tomando…"
+            onClick={onTake}
+            className="min-h-11 rounded-xl bg-action px-5 py-2 text-sm font-semibold text-white transition hover:bg-action-hover disabled:opacity-60"
+          >
+            Tomar {formatMoney(listPrice)}
+          </PendingButton>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => setDeclining(true)}
+            className="min-h-11 rounded-xl border border-red-200 px-5 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
+          >
+            Rechazar
+          </button>
+        </div>
+      ) : mine && !editing ? (
         <div className="mt-3 space-y-2">
           <p className="rounded-xl bg-sky-50 px-3 py-2 text-sm font-semibold text-sky-900">
             {myOfferLabel(order, formatMoney)}

@@ -10,6 +10,7 @@ import {
   courierMarkSettled,
   courierReturnOrder,
   courierSetStatus,
+  courierTakeOrder,
   courierWithdrawOffer,
   setZoneCoverage,
 } from "@/lib/db/courier";
@@ -26,7 +27,26 @@ const GENERIC = "No pudimos guardar el cambio. Probá de nuevo.";
 // Todas las acciones empiezan por `requireCourier()`: el repartidor sale de la sesión, nunca del
 // navegador (ENVIO-3). La base vuelve a comprobar de quién es cada pedido y cada barrio.
 
-const isClosed = (code?: string) => code === "P0020" || code === "P0019";
+// P0019: lo tomó otro; P0020: ya no recibe ofertas; P0023: el pedido es del otro modo.
+const isClosed = (code?: string) => code === "P0020" || code === "P0019" || code === "P0023";
+
+// Tomar un pedido de precio fijo (ENVIO-147): al precio de lista, sin precio ni motivo. Si lo tomó otro
+// antes, la base da P0019 y la respuesta lleva `closed` para que el panel lo saque de la lista.
+export async function takeOrderAction(orderId: string): Promise<CourierActionResult> {
+  await requireCourier();
+
+  const result = await courierTakeOrder(orderId);
+  if ("error" in result) {
+    return {
+      ok: false,
+      error: orderErrorMessage(result.error),
+      ...(isClosed(result.error.code) ? { closed: true } : {}),
+    };
+  }
+
+  revalidatePath("/repartidor");
+  return { ok: true };
+}
 
 // Ofertar por un pedido disponible, o cambiar la propia oferta (ENVIO-98): precio de lista o uno
 // distinto con motivo. La base valida de nuevo; si el pedido ya no recibe ofertas da P0020 y la respuesta
