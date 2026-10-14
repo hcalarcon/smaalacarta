@@ -1,8 +1,9 @@
--- Arregla el 500 (57014, statement timeout) del menú público tras 20261102000000_promociones_imagen_y_vigencia.sql.
+-- Optimiza el menú público tras 20261102000000_promociones_imagen_y_vigencia.sql.
 --
--- Causa: `build_public_menu` llamaba a `promotion_remaining()` (invoker, recorre `order_items` y `orders` por
--- promoción, sin índice por `promotion_id`, y sujeta al RLS de quien llama) y a `suggest_default_image()` por cada
--- par promoción–producto. En una base con pedidos reales, el menú de `anon` pasaba el timeout.
+-- El 500 (57014) de ozburguer del 13/10 se debió a que la 20261102 no estaba aplicada en producción; esta migración
+-- no lo arregla, es endurecimiento: `build_public_menu` llamaba a `promotion_remaining()` (invoker, recorre
+-- `order_items` y `orders` por promoción, sin índice por `promotion_id`) y a `suggest_default_image()` por cada par
+-- promoción–producto.
 --
 -- Arreglo, sin tocar la migración anterior:
 -- - Índice parcial `order_items (business_id, promotion_id)`.
