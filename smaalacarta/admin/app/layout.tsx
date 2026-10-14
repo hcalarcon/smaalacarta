@@ -20,6 +20,8 @@ export const metadata: Metadata = {
 // El color de la barra del navegador y de la app instalada: el de la marca (`--color-brand`).
 export const viewport: Viewport = {
   themeColor: "#5a4a3a",
+  // Para que la barra de abajo del repartidor pueda respetar el área segura del iPhone.
+  viewportFit: "cover",
 };
 
 export default function RootLayout({

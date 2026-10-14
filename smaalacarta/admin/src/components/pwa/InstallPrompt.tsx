@@ -83,8 +83,7 @@ export default function InstallPrompt() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="install-prompt-title"
-        className="relative w-full rounded-t-3xl bg-white p-6 shadow-xl"
-        style={{ paddingBottom: "calc(1.5rem + env(safe-area-inset-bottom))" }}
+        className="relative w-full rounded-t-3xl bg-white p-6 pb-[calc(1.5rem+env(safe-area-inset-bottom))] shadow-xl"
       >
         <Logo compact />
 

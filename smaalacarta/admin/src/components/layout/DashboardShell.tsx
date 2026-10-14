@@ -38,6 +38,9 @@ type DashboardShellProps = {
   // "Instalar app" y "Activar avisos" en el header, y el registro del service worker (ADMIN-PWA-16).
   // Los pasan el panel del negocio y el del repartidor; /superadmin no.
   showAppControls?: boolean;
+  // Barra fija de abajo en el celular (panel del repartidor, ADMIN-MOVIL-7): reemplaza al cajón, así que
+  // sin hamburguesa, y el contenido deja lugar para que no la tape.
+  bottomNav?: React.ReactNode;
   children: React.ReactNode;
 };
 
@@ -53,6 +56,7 @@ export default function DashboardShell({
   banner,
   alertBar,
   showAppControls = false,
+  bottomNav,
   children,
 }: DashboardShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -84,7 +88,7 @@ export default function DashboardShell({
       </aside>
 
       {/* Móvil: el mismo menú en un cajón. */}
-      {menuOpen ? (
+      {menuOpen && !bottomNav ? (
         <div className="fixed inset-0 z-40 lg:hidden">
           <button
             type="button"
@@ -126,7 +130,7 @@ export default function DashboardShell({
                 onClick={() => setMenuOpen(true)}
                 aria-label="Abrir menú"
                 aria-expanded={menuOpen}
-                className="rounded-lg p-2 text-brand hover:bg-brand-soft lg:hidden"
+                className={`rounded-lg p-2 text-brand hover:bg-brand-soft lg:hidden ${bottomNav ? "hidden" : ""}`}
               >
                 <svg
                   aria-hidden="true"
@@ -239,7 +243,15 @@ export default function DashboardShell({
           </>
         ) : null}
 
-        <main className="p-4 md:p-6 lg:p-8">{children}</main>
+        <main
+          className={`p-4 md:p-6 lg:p-8 ${
+            bottomNav ? "pb-[calc(5.5rem+env(safe-area-inset-bottom))] lg:pb-8" : ""
+          }`}
+        >
+          {children}
+        </main>
+
+        {bottomNav}
       </div>
     </div>
   );

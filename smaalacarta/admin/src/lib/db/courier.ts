@@ -1,3 +1,5 @@
+import { cache } from "react";
+
 import type { AvailableOrder, CourierPanelOrder } from "@/lib/courier/panel";
 import { createClient } from "@/lib/supabase-server";
 
@@ -8,7 +10,8 @@ type DbFailure = { error: { code?: string; message?: string } };
 
 // Los pedidos con envío del repartidor, los más nuevos primero (ENVIO-15): los de los últimos
 // días y todo lo que sigue abierto. Si la base falla, el error llega a la página.
-export async function listCourierOrders(): Promise<CourierPanelOrder[]> {
+// Con `cache`, el layout (contador de la barra) y la página comparten una sola consulta por pedido.
+export const listCourierOrders = cache(async (): Promise<CourierPanelOrder[]> => {
   const supabase = await createClient();
 
   const { data, error } = await supabase.rpc("courier_orders");
@@ -18,7 +21,7 @@ export async function listCourierOrders(): Promise<CourierPanelOrder[]> {
   }
 
   return Array.isArray(data) ? (data as unknown as CourierPanelOrder[]) : [];
-}
+});
 
 // Los pedidos por los que el repartidor puede ofertar ahora (ENVIO-101), más los que cerró hace un rato.
 // La base resuelve antes lo vencido (ENVIO-106). Si falla, el error llega a la página.

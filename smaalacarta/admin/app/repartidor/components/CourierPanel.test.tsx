@@ -16,7 +16,10 @@ const mocks = vi.hoisted(() => ({
   settle: vi.fn(),
 }));
 
-vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh: mocks.refresh }) }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ refresh: mocks.refresh }),
+  useSearchParams: () => new URLSearchParams(window.location.search),
+}));
 vi.mock("../actions", () => ({
   makeOfferAction: mocks.offer,
   withdrawOfferAction: mocks.withdraw,
@@ -26,6 +29,8 @@ vi.mock("../actions", () => ({
   markSettledAction: mocks.settle,
 }));
 beforeEach(() => {
+  // Las pestañas dejan la URL al día (ADMIN-MOVIL-8): que un test no herede la del anterior.
+  window.history.replaceState(null, "", "/");
   vi.clearAllMocks();
   for (const fn of [mocks.offer, mocks.withdraw, mocks.decline, mocks.giveBack, mocks.advance, mocks.settle]) {
     fn.mockResolvedValue({ ok: true });
@@ -510,6 +515,20 @@ describe("cuánto cobrar y rendiciones — ENVIO-41 y 42", () => {
     expect(row).toContain("$ 2.000");
     expect(row).toContain("$ 1.000");
     expect(plain(region.textContent)).not.toContain("9.999");
+  });
+
+  it("con ?tab=rendiciones en la URL abre Rendiciones directo (ADMIN-MOVIL-8)", () => {
+    window.history.replaceState(null, "", "/?tab=rendiciones");
+    render(<CourierOrdersClient serverNow="2026-10-09T22:05:00Z" orders={[order("1", "pending", "waiting")]} />);
+
+    expect(screen.getByRole("region", { name: "Rendiciones" })).toBeTruthy();
+    expect(screen.queryByRole("region", { name: "Disponibles" })).toBeNull();
+  });
+
+  it("sin ?tab abre Pedidos (ADMIN-MOVIL-8)", () => {
+    render(<CourierOrdersClient serverNow="2026-10-09T22:05:00Z" orders={[order("1", "pending", "waiting")]} />);
+
+    expect(screen.queryByRole("region", { name: "Rendiciones" })).toBeNull();
   });
 
   it("la pestaña Rendiciones avisa cuando no hay nada para rendir", () => {

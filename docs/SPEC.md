@@ -2165,6 +2165,10 @@ precios en 0; no existe "incluye N y el resto cuesta X".
   próxima visita sí.
 - **ADMIN-MOVIL-6** "Instalar" dispara la instalación del navegador o, en iPhone, muestra los pasos de
   Compartir → Agregar a inicio.
+- **ADMIN-MOVIL-7** El panel del repartidor, en pantallas menores a `lg`, tiene una barra fija abajo con
+  Pedidos, Rendiciones (con el contador de pendientes de rendir) y Mis zonas, con el ítem activo marcado.
+- **ADMIN-MOVIL-8** La pestaña del repartidor sale de la URL: `/repartidor?tab=rendiciones` abre Rendiciones y
+  cualquier otro valor, Pedidos.
 
 ---
 

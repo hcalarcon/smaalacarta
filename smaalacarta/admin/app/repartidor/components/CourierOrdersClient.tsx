@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import AvailableOrderCard from "./AvailableOrderCard";
@@ -24,6 +24,7 @@ import {
   type CourierPanelOrder,
   type PanelGroup,
 } from "@/lib/courier/panel";
+import { courierTab, type CourierTab } from "@/lib/courier/nav";
 import { courierOrderState, grandTotals, totalsByBusiness } from "@/lib/courier/settlements";
 import { formatMoney } from "@/lib/promotions/pricing";
 
@@ -58,7 +59,15 @@ export default function CourierOrdersClient({
   // La hora arranca con la del servidor para que el primer render coincida en los dos lados.
   const [now, setNow] = useState(() => new Date(serverNow));
   const [busyId, setBusyId] = useState<string | null>(null);
-  const [tab, setTab] = useState<"pedidos" | "rendiciones">("pedidos");
+  // La pestaña sale de la URL (ADMIN-MOVIL-8). Las pestañas de escritorio la cambian al toque y dejan la
+  // URL al día; si la URL cambia por otro lado (la barra de abajo), manda la URL.
+  const urlTab = courierTab(useSearchParams().get("tab"));
+  const [picked, setPicked] = useState<{ from: CourierTab; tab: CourierTab } | null>(null);
+  const tab = picked && picked.from === urlTab ? picked.tab : urlTab;
+  const pickTab = (next: CourierTab) => {
+    setPicked({ from: urlTab, tab: next });
+    window.history.replaceState(null, "", next === "rendiciones" ? "?tab=rendiciones" : window.location.pathname);
+  };
   const [error, setError] = useState<{ id: string; message: string } | null>(null);
   // Aviso general: "El pedido ya no recibe ofertas" (el pedido desaparece de la lista al refrescar).
   const [notice, setNotice] = useState<string | null>(null);
@@ -152,7 +161,8 @@ export default function CourierOrdersClient({
         </div>
       </section>
 
-      <div role="tablist" aria-label="Secciones" className="flex gap-2">
+      {/* En el celular las reemplaza la barra de abajo. */}
+      <div role="tablist" aria-label="Secciones" className="hidden gap-2 lg:flex">
         {(
           [
             ["pedidos", "Pedidos"],
@@ -164,7 +174,7 @@ export default function CourierOrdersClient({
             type="button"
             role="tab"
             aria-selected={tab === key}
-            onClick={() => setTab(key)}
+            onClick={() => pickTab(key)}
             className={`min-h-11 rounded-xl px-5 py-2 text-sm font-semibold transition ${
               tab === key
                 ? "bg-brand text-white"
