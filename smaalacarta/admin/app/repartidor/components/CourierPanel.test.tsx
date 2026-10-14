@@ -120,6 +120,7 @@ const offerCard = (o: AvailableOrder, onOffer = vi.fn(), onDecline = vi.fn(), on
       busy={false}
       error={null}
       onOffer={onOffer}
+      onTake={vi.fn()}
       onWithdraw={onWithdraw}
       onDecline={onDecline}
     />,

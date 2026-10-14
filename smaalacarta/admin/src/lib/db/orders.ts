@@ -40,6 +40,7 @@ export type OrderDelivery = {
   courier_responded_at: string | null;
   // La búsqueda de repartidor (ENVIO-59 y 95): cuándo se abrió.
   offered_at: string | null;
+  delivery_mode: string | null;
   // Rendición del efectivo (ENVIO-39): cuándo la marcó el repartidor y cuándo la confirmó el local.
   settled_at: string | null;
   settlement_received_at: string | null;
@@ -76,7 +77,7 @@ export type OrderPrep = {
 
 const SELECT =
   "id, order_number, status, total, notes, customer_name, delivery, payment, payment_status, source, scheduled_for, preorder, code, created_at, updated_at, " +
-  "courier_id, delivery_zone_id, delivery_zone_name, delivery_fee_list, delivery_fee, delivery_fee_reason, delivery_fee_changed_at, customer_phone, delivery_address, courier_status, courier_note, courier_responded_at, offered_at, settled_at, settlement_received_at, prep_ready_at, prep_reason, prep_updated_at, " +
+  "courier_id, delivery_zone_id, delivery_zone_name, delivery_fee_list, delivery_fee, delivery_fee_reason, delivery_fee_changed_at, customer_phone, delivery_address, courier_status, courier_note, courier_responded_at, offered_at, delivery_mode, settled_at, settlement_received_at, prep_ready_at, prep_reason, prep_updated_at, " +
   "order_items(name, quantity, unit_price, sort_order, options, note), order_events(kind, status, created_at, note)";
 
 // Los pedidos más recientes del negocio, con su detalle y su línea de tiempo. El RLS

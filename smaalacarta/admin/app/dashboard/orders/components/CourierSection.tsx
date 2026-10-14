@@ -9,6 +9,7 @@ import {
   courierStatusLabel,
   couriersForOrder,
   feeSummary,
+  acceptsOffers,
   offersLabel,
   searchWarning,
   validateAssignNote,
@@ -129,7 +130,7 @@ export default function CourierSection({
         ) : null}
       </dl>
 
-      {searching ? (
+      {searching && acceptsOffers(order) ? (
         <div className="mt-3">
           <p className="text-sm font-medium text-sky-900">{offersLabel(offers, now)}</p>
           {offers && offers.ofertas.length > 0 ? (
