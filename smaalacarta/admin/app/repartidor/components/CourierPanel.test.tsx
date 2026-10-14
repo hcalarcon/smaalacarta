@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AvailableOrderCard from "./AvailableOrderCard";
@@ -529,6 +529,27 @@ describe("cuánto cobrar y rendiciones — ENVIO-41 y 42", () => {
     render(<CourierOrdersClient serverNow="2026-10-09T22:05:00Z" orders={[order("1", "pending", "waiting")]} />);
 
     expect(screen.queryByRole("region", { name: "Rendiciones" })).toBeNull();
+  });
+
+  it("en el celular las rendiciones son una tarjeta por local más una de total; la tabla queda desde sm (ADMIN-MOVIL-9)", () => {
+    window.history.replaceState(null, "", "/?tab=rendiciones");
+    render(
+      <CourierOrdersClient
+        serverNow="2026-10-09T22:05:00Z"
+        orders={[order("1", "delivered", "accepted"), order("2", "delivered", "accepted", { total: 2000, rendicion: settled })]}
+      />,
+    );
+
+    const list = screen.getByRole("list", { name: "Rendiciones por local" });
+    expect(list.className).toContain("sm:hidden");
+    const cards = within(list).getAllByRole("listitem");
+    // Una por local y la de Total.
+    expect(cards).toHaveLength(2);
+    expect(plain(cards[0].textContent)).toContain("Ana Resto");
+    expect(plain(cards[0].textContent)).toContain("Pendiente de rendir");
+    expect(plain(cards[1].textContent)).toContain("Total");
+
+    expect(screen.getByRole("table").parentElement?.className).toContain("sm:block");
   });
 
   it("la pestaña Rendiciones avisa cuando no hay nada para rendir", () => {

@@ -2169,6 +2169,9 @@ precios en 0; no existe "incluye N y el resto cuesta X".
   Pedidos, Rendiciones (con el contador de pendientes de rendir) y Mis zonas, con el ítem activo marcado.
 - **ADMIN-MOVIL-8** La pestaña del repartidor sale de la URL: `/repartidor?tab=rendiciones` abre Rendiciones y
   cualquier otro valor, Pedidos.
+- **ADMIN-MOVIL-9** Sin scroll horizontal en la página: las rendiciones del repartidor (menores a `sm`) y el
+  historial de pedidos del negocio (menores a `md`, porque tiene más columnas) se ven como tarjetas apiladas;
+  desde ahí siguen siendo tabla.
 
 ---
 
