@@ -6,6 +6,7 @@ vi.mock("../../../app/(auth)/actions", () => ({ signOutAction: vi.fn() }));
 vi.mock("@/components/pwa/InstallAppButton", () => ({ default: () => <button>Instalar app</button> }));
 vi.mock("@/components/pwa/PushToggle", () => ({ default: () => <button>Activar avisos</button> }));
 vi.mock("@/components/pwa/PushEndpointField", () => ({ default: () => <input type="hidden" name="pushEndpoint" /> }));
+vi.mock("@/components/pwa/InstallPrompt", () => ({ default: () => <div data-testid="install-prompt" /> }));
 vi.mock("@/components/pwa/ServiceWorkerRegister", () => ({ default: () => <span data-testid="sw-register" /> }));
 
 import DashboardShell from "./DashboardShell";

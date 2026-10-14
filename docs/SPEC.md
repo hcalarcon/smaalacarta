@@ -2158,6 +2158,13 @@ precios en 0; no existe "incluye N y el resto cuesta X".
   avisos, "Instalar app" (si no está oculto), el enlace de Superadmin, "Cambiar contraseña" y, al final y
   separado, "Salir" (con la dirección de este aparato, para sacarlo de la cuenta).
 - **ADMIN-MOVIL-3** El menú ⋯ se cierra con Escape y al tocar afuera, y cada ítem mide al menos 44 px de alto.
+- **ADMIN-MOVIL-4** Al entrar al panel (negocio o repartidor), en pantallas menores a `lg`, aparece un aviso
+  "Instalá SMA a la Carta" solo si la app se puede instalar o explicar cómo; no aparece si ya está instalada
+  o el navegador no la ofrece.
+- **ADMIN-MOVIL-5** "Ahora no" cierra el aviso y no vuelve a aparecer en esa visita (`sessionStorage`); en la
+  próxima visita sí.
+- **ADMIN-MOVIL-6** "Instalar" dispara la instalación del navegador o, en iPhone, muestra los pasos de
+  Compartir → Agregar a inicio.
 
 ---
 

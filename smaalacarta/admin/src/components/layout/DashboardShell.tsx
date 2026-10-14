@@ -8,6 +8,7 @@ import MobileMenu from "./MobileMenu";
 import type { NavLink } from "./nav-links";
 import Logo from "@/components/brand/Logo";
 import InstallAppButton from "@/components/pwa/InstallAppButton";
+import InstallPrompt from "@/components/pwa/InstallPrompt";
 import PushEndpointField from "@/components/pwa/PushEndpointField";
 import PushToggle from "@/components/pwa/PushToggle";
 import ServiceWorkerRegister from "@/components/pwa/ServiceWorkerRegister";
@@ -231,7 +232,12 @@ export default function DashboardShell({
 
         {banner}
 
-        {showAppControls ? <ServiceWorkerRegister /> : null}
+        {showAppControls ? (
+          <>
+            <ServiceWorkerRegister />
+            <InstallPrompt />
+          </>
+        ) : null}
 
         <main className="p-4 md:p-6 lg:p-8">{children}</main>
       </div>

@@ -22,6 +22,10 @@
   --color-accent-hover: #b45309;
   --color-accent-soft: #fef3e2;
 
+  /* Acción principal de cada tarjeta o pantalla (ADMIN-MOVIL-10) */
+  --color-action: #047857;
+  --color-action-hover: #065f46;
+
   /* Superficies y bordes cálidos */
   --color-cream: #faf8f3;
   --color-line: #e5d4c1;
