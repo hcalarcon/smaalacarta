@@ -59,8 +59,10 @@ export type PushEvent = { kind: PushEventKind; order: OrderRecord };
 function isDifferentInstant(a: string, b: string | null): boolean {
   if (b === null) return true;
 
-  const left = new Date(a).getTime();
-  const right = new Date(b).getTime();
+  // Postgres puede escribir la zona como `+00`, que `Date` no entiende: se completa a `+00:00`.
+  const instant = (value: string) => new Date(value.replace(/([+-]\d\d)$/, "$1:00")).getTime();
+  const left = instant(a);
+  const right = instant(b);
 
   if (Number.isNaN(left) || Number.isNaN(right)) return a !== b;
   return left !== right;

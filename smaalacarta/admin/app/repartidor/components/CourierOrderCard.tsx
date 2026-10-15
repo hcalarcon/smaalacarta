@@ -327,7 +327,10 @@ export default function CourierOrderCard({
                 Contá el motivo
                 <input
                   value={reason}
-                  onChange={(event) => setReason(event.target.value)}
+                  onChange={(event) => {
+                    setReason(event.target.value);
+                    setReasonError(null);
+                  }}
                   maxLength={140}
                   placeholder="Me quedé sin nafta"
                   className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-sm"
