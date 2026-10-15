@@ -50,7 +50,11 @@ export default function PrepPicker({
   const initial = last !== null ? { minutes: last, suggested: false } : base;
   // Texto, para poder borrar y escribir.
   const [value, setValue] = useState(String(initial.minutes));
-  const openedAt = useRef(Date.now());
+  const openedAt = useRef(0);
+
+  useEffect(() => {
+    openedAt.current = Date.now();
+  }, []);
 
   // En captura, antes de que el toque llegue a cualquier botón del diálogo.
   function ignoreSecondClick(event: MouseEvent) {
