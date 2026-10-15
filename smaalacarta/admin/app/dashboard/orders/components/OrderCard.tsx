@@ -31,12 +31,16 @@ import {
   type PrepReason,
 } from "@/lib/orders/prep";
 import { orderBadge } from "@/lib/orders/scheduled";
+import { orderUrgency, STEPS, stepIndex } from "@/lib/orders/urgency";
 import { isFinal, primaryAction, STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
 import ItemNote from "@/components/ui/ItemNote";
 import PendingButton from "@/components/ui/PendingButton";
 
-const SHOWN_ITEMS = 3;
+const SHOWN_ITEMS = 2;
+
+// El borde izquierdo dice la urgencia (ADMIN-PEDIDOS-54): neutro, ámbar o rojo.
+const URGENCY_BORDER = ["border-l-line", "border-l-amber-500", "border-l-red-500"] as const;
 
 export default function OrderCard({
   order,
@@ -68,6 +72,11 @@ export default function OrderCard({
 }) {
   const [adjusting, setAdjusting] = useState(false);
   const [reason, setReason] = useState<PrepReason | null>(null);
+
+  function closeAdjust() {
+    setAdjusting(false);
+    setReason(null);
+  }
   const withDelivery = hasDelivery(order);
   const action = primaryAction(order.status, deliveryContext(order));
   const extra = order.order_items.length - SHOWN_ITEMS;
@@ -82,13 +91,21 @@ export default function OrderCard({
   const inKitchen =
     (order.status === "confirmed" || order.status === "preparing") && acceptsPrepTime(order);
   const prep = prepBadge(order, now);
+  const urgency = orderUrgency(order, now, offers?.ofertas.length ?? 0);
+  const step = stepIndex(order.status);
+  const adjustable = Boolean(inKitchen && onAdjust && order.prep_ready_at);
   const courierName = order.courier_id
     ? couriers.find((courier) => courier.id === order.courier_id)?.name
     : undefined;
 
   return (
+    // Tocar la tarjeta abre el detalle; los botones y enlaces de adentro hacen lo suyo y no lo abren.
     <article
-      className={`rounded-xl border p-3 shadow-sm ${
+      onClick={(event) => {
+        if ((event.target as HTMLElement).closest("a, button, input, select, textarea")) return;
+        onOpen();
+      }}
+      className={`cursor-pointer rounded-xl border border-l-4 p-3 shadow-sm ${URGENCY_BORDER[urgency]} ${
         prep?.late ? "border-red-300 bg-red-50" : "border-line bg-white"
       }`}
     >
@@ -108,25 +125,145 @@ export default function OrderCard({
         <span className="shrink-0 text-[11px] text-stone-400">{timeAgo(order.created_at, now)}</span>
       </div>
 
-      {scheduled ? (
-        <p className="mt-2 inline-block rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
-          🕒 {scheduled}
-        </p>
+      {step >= 0 ? (
+        // La cinta del circuito (ADMIN-PEDIDOS-53): siempre del mismo alto; el texto del paso va abajo.
+        <div data-steps aria-hidden="true" title={STEPS[step]} className="mt-2 flex gap-1">
+          {STEPS.map((name, index) => (
+            <span
+              key={name}
+              data-done={index <= step ? "" : undefined}
+              className={`h-1.5 flex-1 rounded-full ${index <= step ? "bg-action" : "bg-line"}`}
+            />
+          ))}
+        </div>
+      ) : null}
+
+      {scheduled || (order.payment_status && order.payment_status !== "not_required") ? (
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          {scheduled ? (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
+              🕒 {scheduled}
+            </span>
+          ) : null}
+          {order.payment_status && order.payment_status !== "not_required" ? (
+            <PaymentBadge status={order.payment_status} />
+          ) : null}
+        </div>
       ) : null}
 
       {prep ? (
-        <p
-          className={`mt-2 text-sm font-semibold ${prep.late ? "text-red-700" : "text-brand"}`}
-          role={prep.late ? "alert" : undefined}
-        >
-          ⏱ {prep.text}
-        </p>
-      ) : null}
+        // El reloj de la demora: en un pedido ajustable es el botón que abre el panel (ADMIN-PEDIDOS-55).
+        <div className="relative mt-2">
+          {adjustable ? (
+            <button
+              type="button"
+              aria-label="Cambiar demora"
+              aria-haspopup="dialog"
+              aria-expanded={adjusting}
+              disabled={busy}
+              onClick={() => (adjusting ? closeAdjust() : setAdjusting(true))}
+              className={`flex min-h-11 w-full items-center justify-between gap-2 rounded-lg border px-2.5 text-left text-sm font-semibold transition disabled:opacity-60 ${
+                prep.late
+                  ? "border-red-300 text-red-700 hover:bg-red-100"
+                  : "border-line-strong text-brand hover:bg-brand-soft"
+              }`}
+            >
+              <span className={prep.late ? "text-red-700" : "text-brand"}>⏱ {prep.text}</span>
+              <span aria-hidden="true" className="shrink-0 text-xs font-medium text-stone-500">
+                Cambiar ▾
+              </span>
+            </button>
+          ) : (
+            <p
+              className={`text-sm font-semibold ${prep.late ? "text-red-700" : "text-brand"}`}
+              role={prep.late ? "alert" : undefined}
+            >
+              ⏱ {prep.text}
+            </p>
+          )}
 
-      {order.payment_status && order.payment_status !== "not_required" ? (
-        <p className="mt-2">
-          <PaymentBadge status={order.payment_status} />
-        </p>
+          {adjusting && adjustable && onAdjust ? (
+            <>
+              <button
+                type="button"
+                aria-hidden="true"
+                tabIndex={-1}
+                onClick={closeAdjust}
+                className="fixed inset-0 z-10 cursor-default"
+              />
+              <div
+                role="dialog"
+                aria-label="Cambiar la demora"
+                onKeyDown={(event) => {
+                  if (event.key === "Escape") closeAdjust();
+                }}
+                className="absolute inset-x-0 top-full z-20 mt-1 rounded-xl border border-line-strong bg-white p-2.5 shadow-lg"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-semibold text-stone-600">Cambiar la demora</p>
+                  <button
+                    type="button"
+                    onClick={closeAdjust}
+                    aria-label="Cerrar"
+                    className="-mr-2 -my-2 grid size-11 place-items-center rounded-lg text-stone-500 hover:bg-brand-soft"
+                  >
+                    ✕
+                  </button>
+                </div>
+
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {PREP_ADJUST_STEPS.map((delta) => (
+                    <PendingButton
+                      key={delta}
+                      busy={busy}
+                      pendingLabel="Guardando…"
+                      onClick={async () => {
+                        await onAdjust(delta, reason);
+                        closeAdjust();
+                      }}
+                      className="min-h-11 min-w-14 rounded-lg border border-line-strong bg-white px-2 py-1 text-xs font-semibold text-brand transition hover:bg-brand-soft disabled:opacity-60"
+                    >
+                      {delta < 0 ? `−${-delta}` : `+${delta}`} min
+                    </PendingButton>
+                  ))}
+                  {onSetPrep ? (
+                    <button
+                      type="button"
+                      disabled={busy}
+                      onClick={() => {
+                        closeAdjust();
+                        onSetPrep();
+                      }}
+                      className="min-h-11 rounded-lg border border-line-strong bg-white px-2 py-1 text-xs font-medium text-brand transition hover:bg-brand-soft disabled:opacity-60"
+                    >
+                      Otro valor…
+                    </button>
+                  ) : null}
+                </div>
+
+                <p className="mt-2 text-[11px] font-medium text-stone-600">Motivo (opcional)</p>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {PREP_REASONS.map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      aria-pressed={reason === option}
+                      disabled={busy}
+                      onClick={() => setReason(reason === option ? null : option)}
+                      className={`min-h-9 rounded-lg border px-2 py-1 text-xs font-medium transition disabled:opacity-60 ${
+                        reason === option
+                          ? "border-brand bg-brand text-white"
+                          : "border-line-strong bg-white text-brand hover:bg-brand-soft"
+                      }`}
+                    >
+                      {PREP_REASON_LABELS[option]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          ) : null}
+        </div>
       ) : null}
 
       {order.customer_phone ? (
@@ -219,91 +356,20 @@ export default function OrderCard({
         <button
           type="button"
           onClick={onOpen}
-          className="min-h-11 rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-medium text-brand transition hover:bg-brand-soft"
+          aria-label="Detalle"
+          title="Detalle"
+          className="min-h-11 min-w-11 rounded-lg border border-line-strong px-2.5 py-1.5 text-base font-semibold leading-none text-brand transition hover:bg-brand-soft"
         >
-          Detalle
+          ⋯
         </button>
       </div>
-
-      {inKitchen && onAdjust && order.prep_ready_at ? (
-        adjusting ? (
-          <div className="mt-2 rounded-lg bg-stone-50 p-2">
-            <p className="text-[11px] font-medium text-stone-600">Cambiar la demora</p>
-            <div className="mt-1.5 flex flex-wrap gap-1.5">
-              {PREP_ADJUST_STEPS.map((step) => (
-                <PendingButton
-                  key={step}
-                  busy={busy}
-                  pendingLabel="Guardando…"
-                  onClick={() => onAdjust(step, reason)}
-                  className="min-h-11 min-w-14 rounded-lg border border-line-strong bg-white px-2 py-1 text-xs font-semibold text-brand transition hover:bg-brand-soft disabled:opacity-60"
-                >
-                  {step < 0 ? `−${-step}` : `+${step}`} min
-                </PendingButton>
-              ))}
-              {onSetPrep ? (
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    setAdjusting(false);
-                    onSetPrep();
-                  }}
-                  className="min-h-11 rounded-lg border border-line-strong bg-white px-2 py-1 text-xs font-medium text-brand transition hover:bg-brand-soft disabled:opacity-60"
-                >
-                  Otro valor…
-                </button>
-              ) : null}
-            </div>
-
-            <p className="mt-2 text-[11px] font-medium text-stone-600">Motivo (opcional)</p>
-            <div className="mt-1 flex flex-wrap gap-1.5">
-              {PREP_REASONS.map((option) => (
-                <button
-                  key={option}
-                  type="button"
-                  aria-pressed={reason === option}
-                  disabled={busy}
-                  onClick={() => setReason(reason === option ? null : option)}
-                  className={`min-h-9 rounded-lg border px-2 py-1 text-xs font-medium transition disabled:opacity-60 ${
-                    reason === option
-                      ? "border-brand bg-brand text-white"
-                      : "border-line-strong bg-white text-brand hover:bg-brand-soft"
-                  }`}
-                >
-                  {PREP_REASON_LABELS[option]}
-                </button>
-              ))}
-              <button
-                type="button"
-                onClick={() => {
-                  setAdjusting(false);
-                  setReason(null);
-                }}
-                className="px-2 py-1 text-xs text-stone-500"
-              >
-                Cerrar
-              </button>
-            </div>
-          </div>
-        ) : (
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => setAdjusting(true)}
-            className="mt-2 min-h-11 w-full rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-medium text-brand transition hover:bg-brand-soft disabled:opacity-60"
-          >
-            Cambiar demora
-          </button>
-        )
-      ) : null}
 
       {inKitchen && onSetPrep && !order.prep_ready_at ? (
         <button
           type="button"
           disabled={busy}
           onClick={onSetPrep}
-          className="mt-2 w-full rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-medium text-brand transition hover:bg-brand-soft disabled:opacity-60"
+          className="mt-2 min-h-11 w-full rounded-lg border border-line-strong px-2.5 py-1.5 text-xs font-medium text-brand transition hover:bg-brand-soft disabled:opacity-60"
         >
           Poner tiempo
         </button>

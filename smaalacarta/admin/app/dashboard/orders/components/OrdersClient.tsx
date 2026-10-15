@@ -48,8 +48,8 @@ import {
 } from "@/lib/orders/urgent-alert";
 import { acceptsPrepTime } from "@/lib/orders/prep";
 import { readLastPrep, saveLastPrep } from "@/lib/orders/prep-last";
-import { compareForBoard } from "@/lib/orders/scheduled";
 import { boardColumn, type BoardColumn } from "@/lib/orders/status";
+import { compareByUrgency, orderUrgency } from "@/lib/orders/urgency";
 import { formatMoney } from "@/lib/promotions/pricing";
 
 // "Terminados" (entregados o cancelados) no es una columna más del tablero:
@@ -116,6 +116,8 @@ export default function OrdersClient({
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
+  // En el celular las tres columnas son pestañas; desde `lg` se ven las tres juntas (ADMIN-PEDIDOS-54).
+  const [tab, setTab] = useState<BoardColumn>("nuevos");
   // Pedido cuya rendición se está por confirmar como recibida (ENVIO-43).
   const [receivingId, setReceivingId] = useState<string | null>(null);
   // El selector del tiempo estimado (ADMIN-PEDIDOS-31): al aceptar, o para cargarlo después.
@@ -471,11 +473,13 @@ export default function OrdersClient({
 
   const byColumn = (key: BoardColumn) => {
     const list = orders.filter((order) => boardColumn(order.status) === key);
-    // Los nuevos y en curso, del más viejo al más nuevo (el más urgente primero) y, en
-    // los programados, por la hora para la que son; los terminados, los más recientes.
+    // Lo que pide atención primero (atrasado, sin repartidor, sin atender) y, a igual urgencia, del más
+    // viejo al más nuevo y los programados por su hora; los terminados, los más recientes.
     return key === "cerrados"
       ? list.slice(0, CLOSED_SHOWN)
-      : [...list].sort(compareForBoard);
+      : [...list].sort((a, b) =>
+          compareByUrgency(a, b, now, (order) => offersByOrder.get(order.id)?.ofertas.length ?? 0),
+        );
   };
 
   return (
@@ -540,22 +544,64 @@ export default function OrdersClient({
         </div>
       ) : (
         <div className="space-y-6">
+          <div role="tablist" aria-label="Columnas del tablero" className="flex gap-1.5 rounded-2xl bg-cream/70 p-1.5 lg:hidden">
+            {COLUMNS.map((column) => {
+              const total = orders.filter((o) => boardColumn(o.status) === column.key).length;
+              const selectedTab = tab === column.key;
+
+              return (
+                <button
+                  key={column.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={selectedTab}
+                  onClick={() => setTab(column.key)}
+                  className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl px-2 text-sm font-semibold transition ${
+                    selectedTab ? "bg-brand text-white shadow-sm" : "text-brand hover:bg-white"
+                  }`}
+                >
+                  {column.title}
+                  <span
+                    className={`rounded-full px-1.5 text-xs font-medium ${
+                      selectedTab ? "bg-white/20 text-white" : "bg-white text-stone-600"
+                    }`}
+                  >
+                    {total}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
           <div className="grid gap-5 lg:grid-cols-3">
             {COLUMNS.map((column) => {
               const list = byColumn(column.key);
               const total = orders.filter((o) => boardColumn(o.status) === column.key).length;
+              const urgent = list.filter(
+                (o) => orderUrgency(o, now, offersByOrder.get(o.id)?.ofertas.length ?? 0) > 0,
+              ).length;
 
               return (
-                <section key={column.key} className="rounded-3xl bg-cream/70 p-4">
-                  <header className="mb-3 flex items-baseline justify-between">
+                <section
+                  key={column.key}
+                  className={`rounded-3xl bg-cream/70 p-4 lg:block ${tab === column.key ? "" : "hidden"}`}
+                >
+                  <header className="mb-3 flex items-baseline justify-between gap-2">
                     <h2 className="font-semibold text-brand">{column.title}</h2>
-                    <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-stone-600">
-                      {total}
+                    <span className="flex items-center gap-1.5">
+                      {urgent > 0 ? (
+                        <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                          {urgent} urgente{urgent === 1 ? "" : "s"}
+                        </span>
+                      ) : null}
+                      <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-stone-600">
+                        {total}
+                      </span>
                     </span>
                   </header>
                   <p className="mb-3 text-xs text-stone-500">{column.hint}</p>
 
-                  <div className="max-h-[65vh] space-y-3 overflow-y-auto pr-1">
+                  <div className="space-y-3 lg:max-h-[65vh] lg:overflow-y-auto lg:pr-1">
                     {list.length === 0 ? (
                       <p className="rounded-2xl border border-dashed border-line-strong p-4 text-center text-sm text-stone-400">
                         Sin pedidos

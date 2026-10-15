@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import OrdersClient from "./OrdersClient";
@@ -834,5 +834,43 @@ describe("globito de pendientes — ADMIN-PEDIDOS-28", () => {
     unmount();
     expect(badge.clearAppBadgeSafe).toHaveBeenCalled();
     expect(badge.restoreFavicon).toHaveBeenCalled();
+  });
+});
+
+// ADMIN-PEDIDOS-54: lo urgente primero y las columnas como pestañas en el celular.
+describe("tablero por urgencia y pestañas — ADMIN-PEDIDOS-54", () => {
+  const columnOf = (title: string) =>
+    screen.getByRole("heading", { name: title }).closest("section") as HTMLElement;
+
+  const kitchen = (id: string, readyAt: string | null) =>
+    ({ ...order(id, "confirmed"), prep_ready_at: readyAt, scheduled_for: null, preorder: false }) as unknown as Order;
+
+  it("en curso: el atrasado va primero aunque haya llegado después", () => {
+    render(board([kitchen("1", "2026-09-30T10:40:00Z"), kitchen("2", "2026-09-30T09:50:00Z")]));
+
+    const text = columnOf("En curso").textContent ?? "";
+    expect(text.indexOf("pedido 2")).toBeLessThan(text.indexOf("pedido 1"));
+  });
+
+  it("el título dice cuántos son urgentes", () => {
+    render(board([kitchen("1", "2026-09-30T10:40:00Z"), kitchen("2", "2026-09-30T09:50:00Z")]));
+
+    expect(within(columnOf("En curso")).getByText("1 urgente")).toBeTruthy();
+    expect(within(columnOf("Nuevos")).queryByText(/urgente/)).toBeNull();
+  });
+
+  it("las pestañas muestran cada columna con su contador y cambian la que se ve", () => {
+    render(board([order("1", "pending"), order("2", "confirmed"), order("3", "confirmed")]));
+
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs.map((tab) => tab.textContent)).toEqual(["Nuevos1", "En curso2", "Listos0"]);
+    expect(tabs[0].getAttribute("aria-selected")).toBe("true");
+    expect(columnOf("En curso").className).toContain("hidden");
+
+    fireEvent.click(tabs[1]);
+
+    expect(tabs[1].getAttribute("aria-selected")).toBe("true");
+    expect(columnOf("En curso").className).not.toMatch(/(^|\s)hidden(\s|$)/);
+    expect(columnOf("Nuevos").className).toMatch(/(^|\s)hidden(\s|$)/);
   });
 });

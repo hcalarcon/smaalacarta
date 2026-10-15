@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import OrderCard from "./OrderCard";
@@ -741,5 +741,134 @@ describe("pedidos en el celular — ADMIN-MOVIL-11 y 12", () => {
     detail(order({ notes: "x".repeat(200) }));
 
     expect(screen.getByText("x".repeat(200)).className).toContain("break-words");
+  });
+});
+
+// ADMIN-PEDIDOS-53 a 55: la tarjeta rediseñada.
+describe("tarjeta del tablero — ADMIN-PEDIDOS-53 a 55", () => {
+  const at21 = new Date("2026-10-12T00:00:00Z");
+  const inMinutes = (minutes: number) => new Date(at21.getTime() + minutes * 60_000).toISOString();
+  const kitchen = (extra: Partial<Order> = {}) =>
+    order({
+      status: "confirmed",
+      payment: "efectivo",
+      payment_status: "not_required",
+      created_at: inMinutes(-10),
+      prep_ready_at: inMinutes(35),
+      ...extra,
+    });
+
+  const render21 = (o: Order, handlers: Record<string, unknown> = {}) =>
+    render(
+      <OrderCard
+        order={o}
+        now={at21}
+        busy={false}
+        onAdvance={vi.fn()}
+        onOpen={vi.fn()}
+        onSetPrep={vi.fn()}
+        onAdjust={vi.fn()}
+        {...handlers}
+      />,
+    );
+
+  it("la cinta marca el paso: un pedido aceptado tiene dos tramos llenos de cinco", () => {
+    const { container } = render21(kitchen());
+
+    const strip = container.querySelector("[data-steps]") as HTMLElement;
+    expect(strip.children).toHaveLength(5);
+    expect(strip.querySelectorAll("[data-done]")).toHaveLength(2);
+  });
+
+  it("muestra como máximo dos productos y cuántos más hay", () => {
+    const items = [1, 2, 3, 4].map((n) => ({ name: `Plato ${n}`, quantity: 1, unit_price: 10, sort_order: n }));
+    render21(kitchen({ order_items: items } as unknown as Partial<Order>));
+
+    expect(screen.getByText("1 × Plato 2")).toBeTruthy();
+    expect(screen.queryByText("1 × Plato 3")).toBeNull();
+    expect(screen.getByText("y 2 más…")).toBeTruthy();
+  });
+
+  it("el borde dice la urgencia: rojo si está atrasado, ámbar si falta poco, neutro si está en orden", () => {
+    const border = (o: Order) => {
+      cleanup();
+      return render21(o).container.querySelector("article")!.className;
+    };
+
+    expect(border(kitchen({ prep_ready_at: inMinutes(-3) }))).toContain("border-l-red-500");
+    expect(border(kitchen({ prep_ready_at: inMinutes(4) }))).toContain("border-l-amber-500");
+    expect(border(kitchen())).not.toMatch(/border-l-(red|amber)/);
+  });
+
+  it("tocar la tarjeta abre el detalle, pero tocar un botón no lo abre dos veces", () => {
+    const onOpen = vi.fn();
+    const onAdvance = vi.fn();
+    const { container } = render21(kitchen(), { onOpen, onAdvance });
+
+    fireEvent.click(container.querySelector("article")!);
+    expect(onOpen).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Preparar" }));
+    expect(onAdvance).toHaveBeenCalledTimes(1);
+    expect(onOpen).toHaveBeenCalledTimes(1);
+  });
+
+  it("cambiar la demora abre un panel superpuesto: el alto de la tarjeta no cambia de lugar los botones", () => {
+    const { container } = render21(kitchen());
+    const footerBefore = screen.getByRole("button", { name: "Detalle" }).parentElement;
+
+    fireEvent.click(screen.getByRole("button", { name: "Cambiar demora" }));
+
+    const panel = screen.getByRole("dialog", { name: "Cambiar la demora" });
+    expect(panel.className).toContain("absolute");
+    expect(container.querySelector("article")!.contains(panel)).toBe(true);
+    expect(screen.getByRole("button", { name: "Detalle" }).parentElement).toBe(footerBefore);
+  });
+
+  it("al elegir un salto lo aplica y el panel se cierra solo", async () => {
+    const onAdjust = vi.fn().mockResolvedValue(undefined);
+    render21(kitchen(), { onAdjust });
+
+    fireEvent.click(screen.getByRole("button", { name: "Cambiar demora" }));
+    fireEvent.click(screen.getByRole("button", { name: "+10 min" }));
+
+    expect(onAdjust).toHaveBeenCalledWith(10, null);
+    await waitFor(() => expect(screen.queryByRole("dialog", { name: "Cambiar la demora" })).toBeNull());
+  });
+
+  it("si el cambio falla, el panel sigue abierto", async () => {
+    const onAdjust = vi.fn().mockRejectedValue(new Error("no"));
+    render21(kitchen(), { onAdjust });
+
+    fireEvent.click(screen.getByRole("button", { name: "Cambiar demora" }));
+    fireEvent.click(screen.getByRole("button", { name: "+10 min" }));
+    await waitFor(() => expect((screen.getByRole("button", { name: "+10 min" }) as HTMLButtonElement).disabled).toBe(false));
+
+    expect(screen.getByRole("dialog", { name: "Cambiar la demora" })).toBeTruthy();
+  });
+
+  it("la ✕ y Escape cierran el panel", () => {
+    render21(kitchen());
+
+    fireEvent.click(screen.getByRole("button", { name: "Cambiar demora" }));
+    fireEvent.click(screen.getByRole("button", { name: "Cerrar" }));
+    expect(screen.queryByRole("dialog", { name: "Cambiar la demora" })).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Cambiar demora" }));
+    fireEvent.keyDown(screen.getByRole("dialog", { name: "Cambiar la demora" }), { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Cambiar la demora" })).toBeNull();
+  });
+
+  it("el botón principal de la tarjeta no se puede tocar dos veces", async () => {
+    let release: () => void = () => {};
+    const onAdvance = vi.fn(() => new Promise<void>((resolve) => (release = resolve)));
+    render21(kitchen(), { onAdvance });
+
+    const button = screen.getByRole("button", { name: "Preparar" });
+    fireEvent.click(button);
+    fireEvent.click(button);
+
+    expect(onAdvance).toHaveBeenCalledTimes(1);
+    release();
   });
 });
