@@ -105,4 +105,8 @@ describe("elección guardada — PUBLICO-77", () => {
     expect(validateChoice({ type: "pickup" }, ZONES)).toEqual({ type: "pickup" });
     expect(validateChoice(null, ZONES)).toBeNull();
   });
+
+  it("el retiro no vale si el local ya no lo ofrece", () => {
+    expect(validateChoice({ type: "pickup" }, ZONES, { pickup: false })).toBeNull();
+  });
 });

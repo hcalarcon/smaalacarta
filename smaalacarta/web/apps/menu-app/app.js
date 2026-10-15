@@ -37,6 +37,7 @@ let ZONE_ON = false;
 let ZONE_CHOICE = null;
 let ZONE_STEP = null;
 let ZONE_PICKUP = true;
+let ZONE_QUERY = "";
 
 // Idioma de la interfaz (IDIOMA-1 a 4) y el menú tal como vino, sin las secciones armadas.
 let LANG = "es";
@@ -1533,18 +1534,39 @@ function initZoneChoice(config, slug) {
 
   ZONE_PICKUP = options.includes("retiro");
   const raw = ZONE.readChoice(window.localStorage, slug);
-  ZONE_CHOICE = ZONE.validateChoice(raw, COURIER_ZONES);
+  ZONE_CHOICE = ZONE.validateChoice(raw, COURIER_ZONES, { pickup: ZONE_PICKUP });
   if (raw && !ZONE_CHOICE) ZONE.clearChoice(window.localStorage, slug);
 
   ZONE_STEP = ZONE_CHOICE ? null : "ask";
   if (ZONE_CHOICE) applyZoneToCheckout(ZONE_CHOICE);
   renderZone();
 
+  // Si el cliente cambia la entrega o el barrio en el checkout, el chip y lo guardado lo siguen.
+  const sync = () => syncZoneFromCheckout(slug);
+  document.querySelector('#form-pedido select[name="entrega"]')?.addEventListener("change", sync);
+  document.querySelector('#form-pedido select[name="barrio"]')?.addEventListener("change", sync);
+
   document.querySelector("#zona-chip")?.addEventListener("click", () => {
     ZONE_STEP = "ask";
     renderZone();
     document.querySelector("#zona-card")?.scrollIntoView({ block: "nearest" });
   });
+}
+
+function syncZoneFromCheckout(slug) {
+  const entrega = document.querySelector('#form-pedido select[name="entrega"]')?.value;
+  const barrio = document.querySelector('#form-pedido select[name="barrio"]')?.value;
+  let next = null;
+  if (entrega === "retiro") next = { type: "pickup" };
+  else if (entrega === "delivery" && barrio && DZ.findZone(COURIER_ZONES, barrio)) {
+    next = { type: "zone", zoneId: barrio };
+  }
+  if (!next) return;
+
+  ZONE_CHOICE = next;
+  ZONE.saveChoice(window.localStorage, slug, next);
+  if (ZONE_STEP === "confirmed") ZONE_STEP = null;
+  renderZone();
 }
 
 // Deja el checkout con el envío y la zona elegidos, o con el retiro.
@@ -1649,6 +1671,7 @@ function renderZone() {
     row.className = "zona-acciones";
     row.append(
       zoneButton(tr("zone.delivery"), () => {
+        ZONE_QUERY = "";
         ZONE_STEP = "zones";
         renderZone();
       }),
@@ -1665,8 +1688,12 @@ function renderZone() {
     search.autocomplete = "off";
     const list = document.createElement("div");
     list.className = "zona-lista";
-    renderZoneList(list, "");
-    search.addEventListener("input", () => renderZoneList(list, search.value));
+    search.value = ZONE_QUERY;
+    renderZoneList(list, ZONE_QUERY);
+    search.addEventListener("input", () => {
+      ZONE_QUERY = search.value;
+      renderZoneList(list, ZONE_QUERY);
+    });
     const notListed = zoneButton(
       tr("zone.notListed"),
       () => {

@@ -58,10 +58,11 @@ export function clearChoice(storage, slug) {
   }
 }
 
-// La elección sigue valiendo si el retiro, o si la zona todavía está en la lista del local.
-export function validateChoice(choice, zones) {
+// La elección sigue valiendo si es el retiro (y el local todavía lo ofrece), o si la zona todavía
+// está en la lista del local.
+export function validateChoice(choice, zones, { pickup = true } = {}) {
   if (!choice) return null;
-  if (choice.type === "pickup") return choice;
+  if (choice.type === "pickup") return pickup ? choice : null;
   if (choice.type === "zone" && zones?.zones.some((zone) => zone.id === choice.zoneId)) return choice;
   return null;
 }
