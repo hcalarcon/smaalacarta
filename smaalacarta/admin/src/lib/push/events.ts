@@ -28,6 +28,8 @@ export type OrderRecord = {
   // La hora de listo que cargó el local y la marca del aviso previo para retirar (ENVIO-158 y 159).
   prep_ready_at: string | null;
   pickup_reminder_sent_at: string | null;
+  // Cuándo cambió por última vez: solo para medir cuánto tarda el webhook en llegar (ENVIO-172).
+  updated_at?: string;
 };
 
 export type WebhookPayload = {

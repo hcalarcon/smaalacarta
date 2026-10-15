@@ -184,3 +184,48 @@ describe("circuito de tiempos — ENVIO-158 a 160", () => {
     expect(d.sent.every((s) => s.url === "/admin/repartidor")).toBe(true);
   });
 });
+
+describe("rapidez del aviso — ENVIO-172", () => {
+  it("busca el nombre del local mientras resuelve a quién avisar, no después", async () => {
+    let release: (ids: string[]) => void = () => undefined;
+    const d = deps({
+      courierUserIds: vi.fn(() => new Promise<string[]>((resolve) => (release = resolve))),
+    });
+
+    const run = handlePushWebhook(
+      d,
+      update(
+        { status: "confirmed", courier_status: "accepted", courier_id: "c-moto" },
+        { status: "ready", courier_status: "accepted", courier_id: "c-moto" },
+      ),
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(d.businessName).toHaveBeenCalled();
+    expect(d.send).not.toHaveBeenCalled();
+
+    release(["u-c-moto"]);
+    const result = await run;
+
+    expect(result.sent).toBe(1);
+  });
+
+  it("un aviso sin destinatarios no deja una consulta fallida sin atender", async () => {
+    const d = deps({
+      courierUserIds: vi.fn(async () => []),
+      businessName: vi.fn(async () => {
+        throw new Error("caída");
+      }),
+    });
+
+    const result = await handlePushWebhook(
+      d,
+      update(
+        { status: "confirmed", courier_status: "accepted", courier_id: "c-moto" },
+        { status: "ready", courier_status: "accepted", courier_id: "c-moto" },
+      ),
+    );
+
+    expect(result.sent).toBe(0);
+  });
+});

@@ -1945,6 +1945,20 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   abre no abre un segundo (hay un solo selector por pedido) y el toque que llega al selector dentro de los primeros
   600 ms como segundo click de una misma secuencia (`event.detail > 1`) no confirma ni cierra. Un toque deliberado
   después sí cuenta.
+- **ENVIO-172** Con el panel abierto, el del local y el del repartidor piden los datos nuevos apenas la base cambia un
+  pedido (`orders`) o una oferta (`courier_offers`), por Supabase Realtime, juntando los cambios que llegan casi a
+  la vez (250 ms) en una sola actualización; no esperan a la consulta periódica, que queda de respaldo. Los avisos
+  que suenan siguen saliendo de comparar lo que la pantalla ya tenía con lo nuevo. El RLS decide qué cambios llegan
+  a cada uno. Si el canal no se puede abrir, la pantalla funciona igual.
+- **ENVIO-173** El webhook de avisos pide el nombre del local, el del repartidor y si lo asignó el local **mientras**
+  resuelve a quién avisar, no después, y responde (y registra) `lagMs` (del cambio en la base a la llegada del
+  webhook) y `handlerMs` (lo que tardó en resolver y mandar). Los avisos por cambio de estado (Listo, demora,
+  cancelado) salen del webhook sobre `orders` en el momento del `UPDATE`; `pg_cron` solo marca los plazos
+  (elección automática, sin ofertas, recordatorios y "10 minutos antes de retirar").
+- **ENVIO-171** El segundo toque de un doble click rápido no hace nada en el selector de la demora: el botón que lo
+  abre no abre un segundo (hay un solo selector por pedido) y el toque que llega al selector dentro de los primeros
+  600 ms como segundo click de una misma secuencia (`event.detail > 1`) no confirma ni cierra. Un toque deliberado
+  después sí cuenta.
 
 
 

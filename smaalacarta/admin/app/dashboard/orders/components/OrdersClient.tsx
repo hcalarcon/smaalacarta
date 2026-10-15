@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useOrderChanges } from "@/lib/realtime/useOrderChanges";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import ManualOrderDialog from "./ManualOrderDialog";
@@ -105,6 +106,8 @@ export default function OrdersClient({
   defaultPrepMinutes?: number;
 }) {
   const router = useRouter();
+  // Un cambio en la base trae los datos nuevos al instante (ENVIO-172); la consulta de abajo queda de respaldo.
+  useOrderChanges(() => router.refresh());
 
   // La hora arranca con la del servidor para que el primer render coincida en los dos
   // lados; después se actualiza sola.
