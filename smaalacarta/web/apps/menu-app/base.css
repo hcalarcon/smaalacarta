@@ -1052,3 +1052,144 @@ body.no-scroll-opciones {
   color: var(--muted, #6b7280);
   cursor: pointer;
 }
+
+/* ==========================================================================
+   Zona de entrega al entrar (PUBLICO-73 a 78): tarjeta liviana y chip. Usan solo variables del
+   tema (--card, --text, --border, --brand), así se leen en claro y oscuro y en las tres plantillas.
+   ========================================================================== */
+.zona-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 36px;
+  margin-top: 0.6rem;
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: inherit;
+  background: rgba(127, 127, 127, 0.22);
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zona-chip[hidden],
+.zona-card[hidden] {
+  display: none;
+}
+
+.zona-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin: 0.75rem 1rem 0;
+  padding: 1rem 3rem 1rem 1rem;
+  border-radius: 14px;
+  background: var(--card, #fff);
+  color: var(--text, #111);
+  border: 1px solid var(--border, #eee);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+}
+
+.zona-titulo {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.zona-cerrar {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
+  width: 44px;
+  height: 44px;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--muted, #6b7280);
+}
+
+.zona-acciones {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.zona-acciones .zona-opcion {
+  flex: 1;
+  justify-content: center;
+}
+
+.zona-opcion,
+.zona-no-esta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding: 0.5rem 0.9rem;
+  border-radius: 12px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--text, #111);
+  border: 1px solid var(--border, #ddd);
+  background: transparent;
+}
+
+.zona-acciones .zona-opcion:first-child {
+  background: var(--brand, #111);
+  border-color: var(--brand, #111);
+  color: var(--on-brand, #fff);
+}
+
+.zona-precio {
+  flex: none;
+  font-weight: 500;
+  color: var(--muted, #6b7280);
+}
+
+.zona-buscar {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.5rem 0.8rem;
+  border-radius: 12px;
+  font-size: 1rem; /* 16 px: iOS no hace zoom al enfocar */
+  color: var(--text, #111);
+  background: transparent;
+  border: 1px solid var(--border, #ddd);
+}
+
+.zona-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 40vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.zona-vacia {
+  margin: 0.4rem 0;
+  color: var(--muted, #6b7280);
+}
+
+.zona-no-esta {
+  border-style: dashed;
+}
+
+.zona-volver {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 0.25rem;
+  font-weight: 600;
+  color: var(--muted, #6b7280);
+  text-decoration: underline;
+}
+
+.zona-chip:focus-visible,
+.zona-card button:focus-visible,
+.zona-buscar:focus-visible {
+  outline: 2px solid var(--brand, #111);
+  outline-offset: 2px;
+}

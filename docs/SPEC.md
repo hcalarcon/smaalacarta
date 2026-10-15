@@ -351,6 +351,20 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   pedir (como con `out_of_stock`), así el carrito se limpia solo.
 - **PUBLICO-72** Los textos están en es, en y pt (`promo.validUntil`, `promo.lastUnits`, `promo.lastOne`) y se ven bien en
   tema claro y oscuro en las tres plantillas.
+- **PUBLICO-73** Solo en locales con envío (entrega "delivery" habilitada y `public_delivery_zones` con al menos un
+  barrio), al entrar el menú muestra una tarjeta liviana que se puede cerrar: "¿Para envío o para retirar?". En los demás
+  locales (y en los menús de un JSON) no aparece nada nuevo.
+- **PUBLICO-74** "Retirar" cierra la tarjeta y deja el checkout en "Retiro en el local". "Envío" muestra las zonas del
+  local con un buscador que ignora acentos y mayúsculas.
+- **PUBLICO-75** Elegir una zona muestra "Enviamos a {zona} · ${precio} aprox." (precio de referencia de
+  `public_delivery_zones`) y deja el checkout con entrega "delivery" y esa zona preseleccionada. El checkout valida la zona
+  como siempre: la tarjeta solo ayuda.
+- **PUBLICO-76** "Mi barrio no está" muestra "Barrio no registrado para envío" y ofrece retirar en el local.
+- **PUBLICO-77** La elección se guarda en `localStorage` por negocio (slug), con `try/catch`; si falla, el menú anda igual.
+  Al volver no se pregunta de nuevo. Una zona guardada que ya no está en la lista se borra y se vuelve a preguntar.
+- **PUBLICO-78** Un chip arriba del menú ("📍 {zona}" o "Retiro") vuelve a abrir la tarjeta para cambiar la elección.
+- **PUBLICO-79** Los textos están en es, en y pt, los nombres de barrio se pintan con `textContent` y se ve bien en las
+  tres plantillas y a 360 px.
 
 ## BUSQUEDA — Buscador
 

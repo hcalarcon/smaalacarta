@@ -54,9 +54,15 @@
       <h1 id="nombre-negocio">...</h1>
       <p id="descripcion-negocio"></p>
 
+      <!-- ZONA DE ENTREGA (PUBLICO-78): lo muestra app.js solo en locales con envío -->
+      <button id="zona-chip" class="zona-chip" type="button" hidden></button>
+
       <!-- BUSCADOR -->
       <input id="buscador" placeholder="Buscar..." data-i18n-placeholder="search" />
     </header>
+
+    <!-- ZONA DE ENTREGA (PUBLICO-73 a 77): tarjeta que arma app.js -->
+    <section id="zona-card" class="zona-card" aria-labelledby="zona-titulo" hidden></section>
 
     <!-- CATEGORÍAS -->
     <nav id="categorias" class="categorias sticky-categorias"></nav>

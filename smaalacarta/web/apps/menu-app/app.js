@@ -30,6 +30,13 @@ let PROMO_INFO;
 // Envío con repartidor (ENVIO-20): los barrios del negocio, o null si no tiene o falló.
 let DZ = null;
 let COURIER_ZONES = null;
+// Zona del cliente al entrar (PUBLICO-73 a 78): `ZONE_ON` es si el local la pregunta; `ZONE_STEP` es
+// qué muestra la tarjeta (ask, zones, notListed, confirmed o null si está cerrada).
+let ZONE = null;
+let ZONE_ON = false;
+let ZONE_CHOICE = null;
+let ZONE_STEP = null;
+let ZONE_PICKUP = true;
 
 // Idioma de la interfaz (IDIOMA-1 a 4) y el menú tal como vino, sin las secciones armadas.
 let LANG = "es";
@@ -215,6 +222,7 @@ async function init() {
     NOTES = await import("/apps/menu-app/lib/item-notes.js");
     // Vigencia y últimas unidades de las promociones (PUBLICO-68 y 69).
     PROMO_INFO = await import("/apps/menu-app/lib/promo-info.js");
+    ZONE = await import("/apps/menu-app/lib/zone-choice.js");
     DZ = deliveryZonesLib;
     OPTIONS = optionsLib;
     OPTIONS_SHEET = optionsSheetLib;
@@ -291,6 +299,7 @@ async function init() {
     }
     applyCheckoutOptions(config);
     initCourierFields();
+    initZoneChoice(config, slug);
     renderScheduleChoice();
     renderDeliveryNotice();
     renderTransferInfo();
@@ -417,6 +426,7 @@ function applyStaticTexts() {
   renderDeliveryNotice();
   renderTransferInfo();
   renderCourierFields();
+  renderZone();
 }
 
 function setLang(lang) {
@@ -1512,6 +1522,175 @@ function initCourierFields() {
   document.querySelector('#form-pedido select[name="entrega"]')?.addEventListener("change", renderCourierFields);
   document.querySelector('#form-pedido select[name="barrio"]')?.addEventListener("change", renderZoneNotice);
   renderCourierFields();
+}
+
+// Zona del cliente al entrar (PUBLICO-73 a 78). Solo con envío y barrios; la tarjeta ayuda, pero
+// el checkout valida la zona como siempre. Los nombres de barrio van con textContent.
+function initZoneChoice(config, slug) {
+  const options = CHECKOUT?.checkoutOptions(config).delivery.options;
+  ZONE_ON = Boolean(MENU_SOURCE && ZONE.askZone({ zones: COURIER_ZONES, deliveryOptions: options }));
+  if (!ZONE_ON) return;
+
+  ZONE_PICKUP = options.includes("retiro");
+  const raw = ZONE.readChoice(window.localStorage, slug);
+  ZONE_CHOICE = ZONE.validateChoice(raw, COURIER_ZONES);
+  if (raw && !ZONE_CHOICE) ZONE.clearChoice(window.localStorage, slug);
+
+  ZONE_STEP = ZONE_CHOICE ? null : "ask";
+  if (ZONE_CHOICE) applyZoneToCheckout(ZONE_CHOICE);
+  renderZone();
+
+  document.querySelector("#zona-chip")?.addEventListener("click", () => {
+    ZONE_STEP = "ask";
+    renderZone();
+    document.querySelector("#zona-card")?.scrollIntoView({ block: "nearest" });
+  });
+}
+
+// Deja el checkout con el envío y la zona elegidos, o con el retiro.
+function applyZoneToCheckout(choice) {
+  const entrega = document.querySelector('#form-pedido select[name="entrega"]');
+  if (!entrega) return;
+
+  const value = choice.type === "zone" ? "delivery" : "retiro";
+  if (![...entrega.options].some((option) => option.value === value)) return;
+
+  entrega.value = value;
+  renderCourierFields();
+
+  if (choice.type === "zone") {
+    const barrio = document.querySelector('#form-pedido select[name="barrio"]');
+    if (barrio) barrio.value = choice.zoneId;
+    renderZoneNotice();
+  }
+}
+
+function chooseZone(choice) {
+  ZONE_CHOICE = choice;
+  ZONE.saveChoice(window.localStorage, MENU_SOURCE.slug, choice);
+  applyZoneToCheckout(choice);
+  ZONE_STEP = choice.type === "zone" ? "confirmed" : null;
+  renderZone();
+}
+
+function zoneButton(text, onClick, className = "zona-opcion") {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.textContent = text;
+  button.addEventListener("click", onClick);
+  return button;
+}
+
+function renderZoneList(list, query) {
+  list.replaceChildren();
+  const found = ZONE.filterZones(COURIER_ZONES.zones, query);
+  if (found.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "zona-vacia";
+    empty.textContent = tr("zone.empty");
+    list.append(empty);
+    return;
+  }
+  found.forEach((zone) => {
+    const button = zoneButton(zone.name, () => chooseZone({ type: "zone", zoneId: zone.id }));
+    const price = document.createElement("span");
+    price.className = "zona-precio";
+    price.textContent = `$${PRICE.formatPrice(zone.price)}`;
+    button.append(price);
+    list.append(button);
+  });
+}
+
+function renderZone() {
+  const card = document.querySelector("#zona-card");
+  const chip = document.querySelector("#zona-chip");
+  if (!card || !chip || !ZONE) return;
+
+  chip.hidden = !ZONE_ON;
+  card.hidden = !ZONE_ON || !ZONE_STEP;
+  if (ZONE_ON) {
+    const zone = ZONE_CHOICE?.type === "zone" ? DZ.findZone(COURIER_ZONES, ZONE_CHOICE.zoneId) : null;
+    chip.textContent = zone
+      ? `📍 ${zone.name}`
+      : ZONE_CHOICE?.type === "pickup"
+        ? `📍 ${tr("zone.chipPickup")}`
+        : `📍 ${tr("zone.change")}`;
+    chip.setAttribute("aria-label", tr("zone.change"));
+  }
+  if (card.hidden) return;
+
+  card.replaceChildren();
+  const title = document.createElement("h2");
+  title.id = "zona-titulo";
+  title.className = "zona-titulo";
+  const close = zoneButton(
+    "×",
+    () => {
+      ZONE_STEP = null;
+      renderZone();
+    },
+    "zona-cerrar",
+  );
+  close.setAttribute("aria-label", tr("zone.close"));
+  const back = () =>
+    zoneButton(
+      tr("zone.back"),
+      () => {
+        ZONE_STEP = "ask";
+        renderZone();
+      },
+      "zona-volver",
+    );
+
+  if (ZONE_STEP === "ask") {
+    title.textContent = tr("zone.question");
+    const row = document.createElement("div");
+    row.className = "zona-acciones";
+    row.append(
+      zoneButton(tr("zone.delivery"), () => {
+        ZONE_STEP = "zones";
+        renderZone();
+      }),
+    );
+    if (ZONE_PICKUP) row.append(zoneButton(tr("zone.pickup"), () => chooseZone({ type: "pickup" })));
+    card.append(close, title, row);
+  } else if (ZONE_STEP === "zones") {
+    title.textContent = tr("zone.delivery");
+    const search = document.createElement("input");
+    search.type = "search";
+    search.className = "zona-buscar";
+    search.placeholder = tr("zone.search");
+    search.setAttribute("aria-label", tr("zone.search"));
+    search.autocomplete = "off";
+    const list = document.createElement("div");
+    list.className = "zona-lista";
+    renderZoneList(list, "");
+    search.addEventListener("input", () => renderZoneList(list, search.value));
+    const notListed = zoneButton(
+      tr("zone.notListed"),
+      () => {
+        ZONE_STEP = "notListed";
+        renderZone();
+      },
+      "zona-no-esta",
+    );
+    card.append(close, title, search, list, notListed, back());
+  } else if (ZONE_STEP === "notListed") {
+    title.textContent = tr("zone.unavailable");
+    card.append(close, title);
+    if (ZONE_PICKUP) card.append(zoneButton(tr("zone.pickupOffer"), () => chooseZone({ type: "pickup" })));
+    card.append(back());
+  } else if (ZONE_STEP === "confirmed") {
+    const zone = DZ.findZone(COURIER_ZONES, ZONE_CHOICE?.zoneId);
+    if (!zone) {
+      ZONE_STEP = null;
+      card.hidden = true;
+      return;
+    }
+    title.textContent = tr("zone.available", ZONE.zoneLabel(zone, PRICE.formatPrice));
+    card.append(close, title);
+  }
 }
 
 // Para cuándo es el pedido (PUBLICO-30): con un menú de Supabase que acepta pedidos
