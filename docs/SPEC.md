@@ -510,9 +510,8 @@ llegando al negocio por WhatsApp.
   retirar" y "Retirado" solo en un pedido para retirar.
 - **SEGUIMIENTO-36** `public_order_tracking` entrega `nota` en cada ítem que la tiene; el seguimiento la muestra bajo el
   ítem con `textContent`, como lo que el cliente pidió.
-- **SEGUIMIENTO-37** `public_order_tracking` entrega `pedido.prep` (`desde`, `hasta`, `actualizado` y `motivo`) solo si el
-  negocio tiene `show_prep_time`, el pedido está en Confirmado o En preparación, no es programado ni anticipado y el
-  local cargó el tiempo; `desde` es `prep_ready_at` y `hasta` es `desde` + `PREP_WINDOW_MINUTES` (10). Sin eso no trae
+- **SEGUIMIENTO-37** `public_order_tracking` entrega `pedido.prep` (`desde`, `hasta`, `actualizado` y `motivo`) si el
+  local cargó el tiempo (con o sin `show_prep_time`: "Aceptar sin tiempo" no muestra nada), el pedido está en Confirmado o En preparación, no es programado ni anticipado; `desde` es `prep_ready_at` y `hasta` es `desde` + `PREP_WINDOW_MINUTES` (10). Sin eso no trae
   la clave, y nunca trae datos de otro negocio.
 - **SEGUIMIENTO-38** `PREP_WINDOW_MINUTES` (10) es una sola constante: la de `admin/src/lib/orders/prep.ts` y la de
   `web/apps/tracker/lib/prep.js` valen lo mismo, y un test las compara.
@@ -556,6 +555,17 @@ llegando al negocio por WhatsApp.
   opciones", y los productos, el barrio y las notas, bajo "Detalle del pedido". Cerrado es el estado de partida.
 - **ADMIN-REPARTIDOR-5** El panel muestra primero los envíos en curso (lo que hay que hacer ahora), después los
   disponibles y al final el historial. "Mi perfil" aparece en la barra de abajo del celular y en el menú lateral.
+- **ADMIN-REPARTIDOR-6** La tarjeta de un pedido entra casi entera en 360 px: línea 1 con número, local y estado; línea
+  2 destacada con lo que cobra y el precio del envío, y la hora de listo; línea 3 "Retiro → Entrega" (local → barrio y
+  dirección); y la acción principal. Teléfonos, WhatsApp, datos del cliente, pago y productos van en "Ver detalle",
+  cerrado de partida.
+- **ADMIN-REPARTIDOR-7** Lo primero en pantalla son los pedidos: sin título grande ni textos de ayuda, con el sonido
+  como un botón chico y el aviso de activar notificaciones en una tira de una línea. "Mis envíos en curso" no se
+  muestra si está vacío; "Disponibles" sí dice que no hay nada. El historial va plegado, una línea por pedido, salvo lo
+  que sigue sin rendir, que conserva su tarjeta.
+- **SEGUIMIENTO-49** El tiempo del local se ve grande, debajo del estado, en una sola línea ("Listo aprox. 13:40 ·
+  faltan 25 min", o "Llega aprox." con la hora del repartidor), siempre que el local haya cargado una hora, esté o no
+  encendido `show_prep_time` (migración `20261110000000`).
 
 
 ## PWA — Instalar el menú en el celular

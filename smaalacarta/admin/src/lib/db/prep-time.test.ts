@@ -283,12 +283,14 @@ describe("el seguimiento — SEGUIMIENTO-37", () => {
     expect(eventos.map((e) => e.estado)).toEqual(["pending", "confirmed"]);
   });
 
-  it("con el interruptor apagado no entrega nada, aunque el local haya cargado el tiempo", async () => {
+  it("con el interruptor apagado lo entrega igual si el local cargó el tiempo, y si no, no entrega nada", async () => {
     const { id, code } = await place("beto", FERNET);
     await setStatus(BETO, id, "confirmed");
-    await prep(BETO, id, 30);
-
+    // Aceptado sin tiempo: no hay nada que mostrar.
     expect((await tracking(code)).pedido).not.toHaveProperty("prep");
+
+    await prep(BETO, id, 30);
+    expect((await tracking(code)).pedido.prep).toBeDefined();
   });
 
   it("deja de entregarlo cuando el pedido está listo", async () => {

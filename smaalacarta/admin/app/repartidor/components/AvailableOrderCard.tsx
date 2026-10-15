@@ -103,17 +103,12 @@ export default function AvailableOrderCard({
 
   return (
     <article
-      className={`rounded-2xl border p-4 shadow-sm ${notice ? "border-stone-200 bg-stone-50" : "border-line bg-white"}`}
+      className={`rounded-2xl border p-3 shadow-sm ${notice ? "border-stone-200 bg-stone-50" : "border-line bg-white"}`}
     >
-      <header className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <p className="text-base font-semibold text-brand">
-            #{order.numero} · {order.negocio.nombre}
-          </p>
-          <p className="text-xs text-stone-500">
-            Pedido de las {formatDateTime(order.creado)} · {timeAgo(since, now)}
-          </p>
-        </div>
+      <header className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+        <p className="min-w-0 break-words text-base font-semibold text-brand">
+          #{order.numero} · {order.negocio.nombre}
+        </p>
 
         {order.pago_estado === "not_required" || order.pago_estado === "paid" ? null : (
           <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-semibold text-stone-600">
@@ -121,7 +116,6 @@ export default function AvailableOrderCard({
           </span>
         )}
       </header>
-
       {notice ? (
         <p role="status" className="mt-3 rounded-xl bg-stone-200 px-3 py-2 text-sm font-semibold text-stone-800">
           {notice}
@@ -134,56 +128,24 @@ export default function AvailableOrderCard({
         </p>
       ) : null}
 
-      {ready ? (
-        <p className="mt-3 rounded-xl bg-brand-soft px-3 py-2 text-sm font-semibold text-brand">⏱ {ready}</p>
-      ) : null}
-
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <section>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Retirar en</h3>
-          <p className="mt-1 text-sm font-medium text-stone-900">{order.negocio.nombre}</p>
-          {order.negocio.direccion ? (
-            <p className="break-words text-sm text-stone-600">{order.negocio.direccion}</p>
-          ) : null}
-        </section>
-
-        <section>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Entregar en</h3>
-          <p className="mt-1 text-sm font-medium text-stone-900">{order.envio.zona ?? "-"}</p>
-          <p className="text-xs text-stone-500">
-            Los datos del cliente los ves cuando te eligen.
-          </p>
-        </section>
-      </div>
-
-      <dl className="mt-3 space-y-1 rounded-xl bg-cream p-3 text-sm text-stone-700">
-        <div className="flex gap-2">
-          <dt className="text-stone-500">{fixed ? "Precio del envío:" : "Precio de lista del envío:"}</dt>
-          <dd className="font-medium">{formatMoney(listPrice)}</dd>
-        </div>
-        <div className="flex gap-2">
-          <dt className="text-stone-500">Total del pedido (lo cobra el local):</dt>
-          <dd className="font-medium">{formatMoney(Number(order.total))}</dd>
-        </div>
-        <div className="flex gap-2">
-          <dt className="text-stone-500">Pago:</dt>
-          <dd>{paymentLabel(order.pago) || "-"}</dd>
-        </div>
-        {notice || fixed ? null : (
-          <div className="flex gap-2">
-            <dt className="text-stone-500">Ofertas:</dt>
-            <dd className="font-medium">{offersCountLabel(order.ofertas)}</dd>
-          </div>
-        )}
-      </dl>
-
       {notice ? null : (
         <p
-          className={`mt-3 rounded-xl px-3 py-2 text-sm font-semibold ${
+          className={`mt-2 rounded-xl px-3 py-2 text-sm font-semibold ${
             collection.cash ? "bg-amber-100 text-amber-900" : "bg-sky-50 text-sky-900"
           }`}
         >
           💵 {collection.text}
+        </p>
+      )}
+
+      {ready ? (
+        <p className="mt-3 rounded-xl bg-brand-soft px-3 py-2 text-sm font-semibold text-brand">⏱ {ready}</p>
+      ) : null}
+
+      {notice ? null : (
+        <p className="mt-2 break-words text-sm text-stone-700">
+          <span className="text-stone-500">Retiro</span> {order.negocio.direccion || order.negocio.nombre}{" "}
+          <span aria-hidden="true">→</span> <span className="text-stone-500">Entrega</span> {order.envio.zona ?? "-"}
         </p>
       )}
 
@@ -306,6 +268,56 @@ export default function AvailableOrderCard({
           </MoreOptions>
         </div>
       )}
+
+      <details className="mt-3 rounded-xl border border-line">
+        <summary className="flex min-h-11 cursor-pointer items-center px-3 text-sm font-semibold text-brand">
+          Ver detalle
+        </summary>
+        <div className="px-3 pb-3">
+          <p className="mt-1 text-xs text-stone-500">
+            Pedido de las {formatDateTime(order.creado)} · {timeAgo(since, now)}
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Retirar en</h3>
+              <p className="mt-1 text-sm font-medium text-stone-900">{order.negocio.nombre}</p>
+              {order.negocio.direccion ? (
+                <p className="break-words text-sm text-stone-600">{order.negocio.direccion}</p>
+              ) : null}
+            </section>
+
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Entregar en</h3>
+              <p className="mt-1 text-sm font-medium text-stone-900">{order.envio.zona ?? "-"}</p>
+              <p className="text-xs text-stone-500">
+                Los datos del cliente los ves cuando te eligen.
+              </p>
+            </section>
+          </div>
+
+              <dl className="mt-3 space-y-1 rounded-xl bg-cream p-3 text-sm text-stone-700">
+            <div className="flex gap-2">
+              <dt className="text-stone-500">{fixed ? "Precio del envío:" : "Precio de lista del envío:"}</dt>
+              <dd className="font-medium">{formatMoney(listPrice)}</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="text-stone-500">Total del pedido (lo cobra el local):</dt>
+              <dd className="font-medium">{formatMoney(Number(order.total))}</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="text-stone-500">Pago:</dt>
+              <dd>{paymentLabel(order.pago) || "-"}</dd>
+            </div>
+            {notice || fixed ? null : (
+              <div className="flex gap-2">
+                <dt className="text-stone-500">Ofertas:</dt>
+                <dd className="font-medium">{offersCountLabel(order.ofertas)}</dd>
+              </div>
+            )}
+          </dl>
+
+            </div>
+      </details>
 
       <ConfirmDeleteDialog
         open={declining}

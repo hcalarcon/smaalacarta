@@ -8,7 +8,7 @@ import { SUPABASE } from "/apps/menu-app/supabase-config.js";
 import { nextAlerts, pollInterval, snapshotOf } from "/apps/tracker/lib/alerts.js";
 import { icon } from "/apps/tracker/lib/icons.js";
 import { confirmText, countdown, countdownText, offerView, sortOffers } from "/apps/tracker/lib/offers.js";
-import { prepView } from "/apps/tracker/lib/prep.js";
+import { etaView as buildEta } from "/apps/tracker/lib/prep.js";
 import { cancelReason, deliveryMode, progressSteps } from "/apps/tracker/lib/steps.js";
 import {
   fetchDelivery,
@@ -322,6 +322,14 @@ function alertsCard() {
 // El último cambio de demora que vio esta página y el cliente todavía no cerró (SEGUIMIENTO-44).
 let prepNotice = false;
 
+// Lo que va grande debajo del estado (SEGUIMIENTO-45): con repartidor y su hora de llegada, "Llega aprox.";
+// si no, la hora de listo del local. `line` junta la hora y lo que falta en una sola frase.
+const ON_THE_WAY = ["handed_to_courier", "on_the_way"];
+
+function etaView(data, mode, now) {
+  return buildEta({ prep: data.pedido.prep, arrivesAt: ON_THE_WAY.includes(data.pedido.estado) ? (data.envio?.arrivesAt ?? null) : null }, { now, lang, pickup: mode === "pickup" });
+}
+
 function progressCard(data, mode, view) {
   const progress = progressSteps(data.pedido.estado, mode, lang);
 
@@ -347,12 +355,11 @@ function progressCard(data, mode, view) {
   if (scheduled) card.insertBefore(el("p", { className: "status-scheduled", text: scheduled }), card.firstChild);
 
   // El tiempo estimado del local (SEGUIMIENTO-39 a 42): solo llega si el negocio lo activó. Con textContent.
-  const prep = prepView(data.pedido.prep, { now: new Date(), lang, pickup: mode === "pickup" });
+  const prep = etaView(data, mode, new Date());
   if (prep) {
     card.appendChild(
-      el("div", { className: `status-prep status-prep-${prep.kind}`, attrs: { "data-tick": "prep", "data-pickup": String(mode === "pickup") } }, [
-        el("p", { className: "status-prep-text", text: prep.text }),
-        ...(prep.hint ? [el("p", { className: "status-prep-hint", text: prep.hint })] : []),
+      el("div", { className: `status-prep status-prep-${prep.kind}`, attrs: { "data-tick": "eta", "data-pickup": String(mode === "pickup") } }, [
+        el("p", { className: "status-prep-text", text: prep.line }),
         ...(prep.reason ? [el("p", { className: "status-prep-reason", text: prep.reason })] : []),
       ]),
     );
@@ -432,7 +439,9 @@ function deliveryNode(data) {
       el("span", { className: "delivery-icon" }, [icon(document, card.icon)]),
       el("div", {}, [
         el("h2", { className: "delivery-title", text: card.title }),
-        ...card.lines.map((line) =>
+        ...card.lines
+          .filter((line) => !(etaView(data, "other", new Date())?.line && line === arrivalLine(data.envio, lang)))
+          .map((line) =>
           el("p", {
             className: "delivery-line",
             text: line,
@@ -549,19 +558,17 @@ function tickTimes() {
   const { data } = current;
   const now = new Date();
 
-  const prepNode = document.querySelector('[data-tick="prep"]');
-  if (prepNode) {
-    const prep = prepView(data.pedido.prep, { now, lang, pickup: prepNode.dataset.pickup === "true" });
+  const etaNode = document.querySelector('[data-tick="eta"]');
+  if (etaNode) {
+    const eta = etaView(data, etaNode.dataset.pickup === "true" ? "pickup" : "other", now);
 
-    if (!prep || !prepNode.classList.contains(`status-prep-${prep.kind}`)) {
+    if (!eta || !etaNode.classList.contains(`status-prep-${eta.kind}`)) {
       paint();
       return;
     }
 
-    const text = prepNode.querySelector(".status-prep-text");
-    const hint = prepNode.querySelector(".status-prep-hint");
-    if (text && text.textContent !== prep.text) text.textContent = prep.text;
-    if (hint && prep.hint && hint.textContent !== prep.hint) hint.textContent = prep.hint;
+    const text = etaNode.querySelector(".status-prep-text");
+    if (text && text.textContent !== eta.line) text.textContent = eta.line;
   }
 
   const arrivalNode = document.querySelector('[data-tick="arrival"]');

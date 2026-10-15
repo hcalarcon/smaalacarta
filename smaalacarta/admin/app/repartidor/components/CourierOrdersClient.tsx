@@ -30,16 +30,11 @@ import {
 import { changeText, courierChanges, snapshotOrders } from "@/lib/courier/changes";
 import { courierTab, type CourierTab } from "@/lib/courier/nav";
 import { courierOrderState, grandTotals, totalsByBusiness } from "@/lib/courier/settlements";
+import { STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
 
 const REFRESH_MS = 15_000;
 const HISTORY_SHOWN = 20;
-
-const HINTS: Record<PanelGroup, string> = {
-  disponibles: "Pedidos de tus zonas: ofertá con el precio de lista o con otro, y el cliente elige",
-  en_curso: "Los que te eligieron: el local te los entrega y los llevás",
-  historial: "Entregados, cancelados o que no pudiste llevar",
-};
 
 const EMPTY: Record<PanelGroup, string> = {
   disponibles: "No hay pedidos para ofertar ahora.",
@@ -157,31 +152,22 @@ export default function CourierOrdersClient({
   const toSettleCount = orders.filter((item) => courierOrderState(item) === "to_settle").length;
   // Lo que hay que hacer ahora primero: los envíos en curso, después lo que se puede ofertar (ADMIN-REPARTIDOR-5).
   const order: PanelGroup[] = ["en_curso", "disponibles", "historial"];
+  const soundLabel = !soundOn ? "Activar sonido" : audioReady ? "Sonido activado" : "Tocá para activar el sonido";
 
   return (
     <div className="space-y-6">
-      <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-brand sm:text-3xl">Pedidos con envío</h1>
-          <p className="mt-2 text-stone-500">Se actualiza solo cada pocos segundos.</p>
-        </div>
+      <section className="flex items-center justify-between gap-3">
+        <h1 className="text-xl font-bold text-brand sm:text-2xl">Pedidos con envío</h1>
 
-        <div>
-          <button
-            type="button"
-            onClick={toggleSound}
-            className="min-h-11 rounded-xl border border-line-strong bg-white px-5 py-3 text-sm font-semibold text-brand transition hover:bg-cream"
-          >
-            {!soundOn
-              ? "🔔 Activar sonido"
-              : audioReady
-                ? "🔔 Sonido activado"
-                : "🔕 Tocá para activar el sonido"}
-          </button>
-          {soundOn ? (
-            <p className="mt-1 text-xs text-stone-500">Mantené esta pantalla abierta para recibir avisos</p>
-          ) : null}
-        </div>
+        <button
+          type="button"
+          onClick={toggleSound}
+          aria-label={soundLabel}
+          title={soundLabel}
+          className="flex min-h-11 min-w-11 items-center justify-center rounded-xl border border-line-strong bg-white px-3 text-lg text-brand transition hover:bg-cream"
+        >
+          <span aria-hidden="true">{soundOn && audioReady ? "🔔" : "🔕"}</span>
+        </button>
       </section>
 
       {/* En el celular las reemplaza la barra de abajo. */}
@@ -348,24 +334,74 @@ export default function CourierOrdersClient({
               ? groups[group]
               : [];
 
+        // Una caja vacía no aporta: solo "Disponibles" dice que no hay nada (ADMIN-REPARTIDOR-7).
+        if (total === 0 && group !== "disponibles") return null;
+
+        if (group === "historial") {
+          // Lo que sigue pendiente de rendir va con su tarjeta (tiene el botón Rendido); el resto, una línea.
+          const pending = list.filter((item) => courierOrderState(item) === "to_settle");
+          const done = list.filter((item) => courierOrderState(item) !== "to_settle");
+
+          return (
+            <section key={group} aria-label={GROUP_TITLES[group]} className="space-y-3">
+              {pending.length > 0 ? (
+                <div className="grid gap-3 xl:grid-cols-2">
+                  {pending.map((item) => (
+                    <CourierOrderCard
+                      key={item.id}
+                      order={item}
+                      now={now}
+                      busy={busyId === item.id}
+                      error={error?.id === item.id ? error.message : null}
+                      onReturn={(kind, reason) => run(item.id, () => returnOrderAction(item.id, kind, reason ?? ""))}
+                      onAdvance={(status, eta) => run(item.id, () => advanceOrderAction(item.id, status, eta))}
+                      onSetEta={(kind, minutes) => run(item.id, () => setEtaAction(item.id, kind, minutes))}
+                      onSettle={() => run(item.id, () => markSettledAction(item.id))}
+                    />
+                  ))}
+                </div>
+              ) : null}
+
+              {done.length > 0 ? (
+                <details className="rounded-2xl border border-line bg-white">
+                  <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-4 text-lg font-semibold text-brand">
+                    {GROUP_TITLES[group]}
+                    <span className="rounded-full bg-cream px-2 py-0.5 text-xs font-medium text-stone-600">
+                      {done.length}
+                    </span>
+                  </summary>
+                  <ul className="divide-y divide-line px-4 pb-2">
+                    {done.map((item) => (
+                      <li key={item.id} className="flex flex-wrap items-center justify-between gap-x-3 py-2 text-sm">
+                        <span className="min-w-0 break-words font-medium text-stone-800">
+                          #{item.numero} · {item.negocio.nombre}
+                        </span>
+                        <span className="text-xs text-stone-500">
+                          {STATUS_LABELS[item.estado as OrderStatus] ?? item.estado}
+                          {item.envio.precio != null ? ` · ${formatMoney(Number(item.envio.precio))}` : ""}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                </details>
+              ) : null}
+            </section>
+          );
+        }
+
         return (
           <section key={group} aria-label={GROUP_TITLES[group]} className="space-y-3">
-            <header>
-              <h2 className="flex items-baseline gap-2 text-xl font-semibold text-brand">
-                {GROUP_TITLES[group]}
-                <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-stone-600">
-                  {total}
-                </span>
-              </h2>
-              <p className="text-xs text-stone-500">{HINTS[group]}</p>
-            </header>
+            <h2 className="flex items-baseline gap-2 text-lg font-semibold text-brand">
+              {GROUP_TITLES[group]}
+              <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-stone-600">{total}</span>
+            </h2>
 
-            {total === 0 && !(group === "disponibles" && disponibles.length > 0) ? (
+            {group === "disponibles" && total === 0 && disponibles.length === 0 ? (
               <p className="rounded-2xl border border-dashed border-line-strong bg-white p-4 text-center text-sm text-stone-400">
                 {EMPTY[group]}
               </p>
             ) : group === "disponibles" ? (
-              <div className="grid gap-4 xl:grid-cols-2">
+              <div className="grid gap-3 xl:grid-cols-2">
                 {disponibles.map((item) => (
                   <AvailableOrderCard
                     key={item.id}
@@ -383,7 +419,7 @@ export default function CourierOrdersClient({
                 ))}
               </div>
             ) : (
-              <div className="grid gap-4 xl:grid-cols-2">
+              <div className="grid gap-3 xl:grid-cols-2">
                 {list.map((item) => (
                   <CourierOrderCard
                     key={item.id}

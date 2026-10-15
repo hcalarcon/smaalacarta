@@ -75,3 +75,12 @@ export function arrivalView(arrivesAt, { now = new Date(), lang = "es" } = {}) {
     hint: minutesLeft(minutes, lang),
   };
 }
+
+// Lo que va grande debajo del estado (SEGUIMIENTO-45): con la hora de llegada del repartidor, "Llega aprox.";
+// si no, la hora de listo del local. `line` junta la hora y lo que falta en una sola frase.
+export function etaView({ prep, arrivesAt }, { now = new Date(), lang = "es", pickup = false } = {}) {
+  const arrival = arrivalView(arrivesAt ?? null, { now, lang });
+  const view = arrival ? { ...arrival, reason: null } : prepView(prep, { now, lang, pickup });
+
+  return view ? { ...view, line: view.hint ? `${view.text} · ${view.hint}` : view.text } : null;
+}

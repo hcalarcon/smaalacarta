@@ -378,6 +378,46 @@ describe("tablero del repartidor — ENVIO-76 a 78", () => {
     expect(section("Disponibles").textContent).not.toContain("#2 ");
   });
 
+  it("sin envíos en curso no hay caja vacía y el primer pedido es un disponible — ADMIN-REPARTIDOR-7", () => {
+    render(<CourierOrdersClient serverNow="2026-10-09T22:05:00Z" available={[offer("1")]} orders={[]} />);
+
+    expect(screen.queryByRole("region", { name: "Mis envíos en curso" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Historial" })).toBeNull();
+
+    const regions = screen.getAllByRole("region") as HTMLElement[];
+    expect(regions[0].textContent).toContain("#1 ");
+    // Sin textos de ayuda largos ni avisos de pantalla abierta.
+    expect(screen.queryByText(/Se actualiza solo/)).toBeNull();
+    expect(screen.queryByText(/Mantené esta pantalla abierta/)).toBeNull();
+  });
+
+  it("la tarjeta lleva precio, hora y acción sin abrir nada; el contacto está en 'Ver detalle' — ADMIN-REPARTIDOR-6", () => {
+    card(
+      order("5", "ready", "accepted", {
+        tiempos: {
+          listo_a: "2026-10-09T22:30:00Z",
+          demora_min: 25,
+          listo_antes: null,
+          llega_local_a: null,
+          llega_cliente_a: null,
+        },
+      }),
+    );
+
+    const article = screen.getByRole("article");
+    const summary = screen.getByText("Ver detalle");
+    const details = summary.closest("details") as HTMLElement;
+
+    // A la vista: cobro y envío, hora de listo, de dónde a dónde.
+    expect(article.textContent).toContain("Envío");
+    expect(article.textContent).toContain("Listo para retirar");
+    expect(article.textContent).toContain("Retiro");
+    // En el detalle: teléfono y WhatsApp del cliente.
+    expect(within(details).getByRole("link", { name: "Llamar" })).toBeTruthy();
+    expect(within(details).getByRole("link", { name: "WhatsApp del cliente" })).toBeTruthy();
+    expect(details.hasAttribute("open")).toBe(false);
+  });
+
   it("sin pedidos disponibles lo dice", () => {
     render(<CourierOrdersClient serverNow="2026-10-09T22:05:00Z" available={[]} orders={[]} />);
     expect(screen.getByText(/No hay pedidos para ofertar/)).toBeTruthy();

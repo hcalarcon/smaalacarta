@@ -541,7 +541,9 @@ body {
 }
 
 .status-prep-text {
-  font-weight: 700;
+  font-size: 1.25rem;
+  font-weight: 800;
+  line-height: 1.3;
   color: var(--brand);
 }
 
