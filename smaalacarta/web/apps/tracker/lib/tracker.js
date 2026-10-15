@@ -266,8 +266,7 @@ function normalizeOffers(list) {
 // dígitos; si no, no se usa (y nunca llega a un link).
 const COURIER_WHATSAPP = /^[0-9]{8,15}$/;
 
-// Valida la respuesta de `public_order_delivery`; null si no es un envío reconocible. Nunca trae
-// teléfono ni dirección del cliente (ENVIO-17): esta página tampoco los muestra.
+// Lo que el repartidor asignado dejó dicho (SEGUIMIENTO-47), o null si no marcó ni escribió nada.
 function normalizeExtras(data) {
   if (!data || typeof data !== "object") return null;
 
@@ -280,6 +279,8 @@ function normalizeExtras(data) {
   return extras.shop || extras.seek || extras.note ? extras : null;
 }
 
+// Valida la respuesta de `public_order_delivery`; null si no es un envío reconocible. Nunca trae
+// teléfono ni dirección del cliente (ENVIO-17): esta página tampoco los muestra.
 function normalizeDelivery(data) {
   if (!data || typeof data !== "object") return null;
   if (!DELIVERY_STATES.includes(data.estado)) return null;
@@ -364,6 +365,14 @@ function courierContact(delivery, lang) {
 // - `self`: "Lo lleva el local".
 // `money` formatea los precios en el idioma del cliente. Devuelve `{ kind, icon, title, lines, link? }`, o
 // null si no hay nada que mostrar (un estado que no se conoce, como los viejos `requested`/`rejected`).
+// "Llega aprox. 21:55 · faltan 12 min" o "Unos minutos más", o null sin hora de llegada (SEGUIMIENTO-45).
+export function arrivalLine(delivery, lang, now = new Date()) {
+  const arrival = arrivalView(delivery?.arrivesAt ?? null, { now, lang });
+  if (!arrival) return null;
+
+  return arrival.hint ? `${arrival.text} · ${arrival.hint}` : arrival.text;
+}
+
 export function deliveryCard(delivery, lang, money, now = new Date()) {
   if (!delivery) return null;
 
@@ -404,9 +413,8 @@ export function deliveryCard(delivery, lang, money, now = new Date()) {
   const lines = [];
 
   if (delivery.note) lines.push(delivery.note);
-  // "Llega aprox. 21:55 · faltan 12 min", o "Unos minutos más" pasada la hora (SEGUIMIENTO-45).
-  const arrival = arrivalView(delivery.arrivesAt, { now, lang });
-  if (arrival) lines.push(arrival.hint ? `${arrival.text} · ${arrival.hint}` : arrival.text);
+  const arrival = arrivalLine(delivery, lang, now);
+  if (arrival) lines.push(arrival);
   if (delivery.price !== null) {
     lines.push(t("tracker.delivery.pay", lang, { precio: money.format(delivery.price) }));
   }

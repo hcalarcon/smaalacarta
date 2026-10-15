@@ -33,7 +33,7 @@ describe("antes de la ventana — SEGUIMIENTO-39", () => {
 
   it("la cuenta se actualiza con la hora y redondea hacia arriba", () => {
     const early = prepView(prep(), { now: at("2026-10-13T00:29:01Z"), lang: "es" });
-    expect(early.hint).toBe("faltan 1 min");
+    expect(early.hint).toBe("falta 1 min");
 
     const before = prepView(prep(), { now: at("2026-10-13T00:00:00Z"), lang: "es" });
     expect(before.hint).toBe("faltan 30 min");
@@ -133,7 +133,7 @@ describe("la hora de llegada del repartidor — SEGUIMIENTO-45", () => {
     const view = arrivalView(LLEGA, { now: at("2026-10-13T00:43:00Z"), lang: "es" });
     expect(view).toEqual({ kind: "range", text: "Llega aprox. 21:55", hint: "faltan 12 min" });
 
-    expect(arrivalView(LLEGA, { now: at("2026-10-13T00:54:30Z"), lang: "es" }).hint).toBe("faltan 1 min");
+    expect(arrivalView(LLEGA, { now: at("2026-10-13T00:54:30Z"), lang: "es" }).hint).toBe("falta 1 min");
   });
 
   it("pasada la hora dice 'Unos minutos más', sin números negativos", () => {

@@ -19,6 +19,7 @@ export default function ProfileClient({ initial }: { initial: CourierPreferences
   function change(patch: Partial<CourierPreferences>) {
     setValue((current) => ({ ...current, ...patch }));
     setDone(false);
+    setError(null);
   }
 
   async function save() {

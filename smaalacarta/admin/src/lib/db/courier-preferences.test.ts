@@ -120,6 +120,19 @@ describe("el seguimiento — SEGUIMIENTO-47", () => {
     });
   });
 
+  it("con el pedido entregado o cancelado ya no se ven — SEGUIMIENTO-48", async () => {
+    await save(TOQUE_USER, true, true, "Paso por la farmacia");
+
+    for (const status of ["delivered", "cancelled"]) {
+      const o = await pedido();
+      await take(db, TOQUE_USER, o.id);
+      expect((await delivery(o.code)).preferencias).toBeDefined();
+
+      await db.exec(`update orders set status = '${status}' where id = '${o.id}'`);
+      expect((await delivery(o.code)).preferencias, status).toBeUndefined();
+    }
+  });
+
   it("sin nada marcado ni escrito no hay bloque", async () => {
     await save(MOTO_USER, false, false, null);
     const o = await pedido();

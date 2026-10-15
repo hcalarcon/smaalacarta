@@ -371,7 +371,16 @@ export default function CourierOrderCard({
       </details>
 
       {actions.returnOrder ? (
-        <details className="mt-3 rounded-xl border border-line" open={returning || undefined}>
+        <details
+          className="mt-3 rounded-xl border border-line"
+          onToggle={(event) => {
+            if (event.currentTarget.open) return;
+            setReturning(false);
+            setReturnKind(null);
+            setReason("");
+            setReasonError(null);
+          }}
+        >
           <summary className="flex min-h-11 cursor-pointer items-center px-3 text-sm font-semibold text-stone-700">
             Más opciones
           </summary>

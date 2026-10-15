@@ -15,6 +15,7 @@ import {
   fetchTracking,
   brandTheme,
   chooseCourier,
+  arrivalLine,
   deliveryCard,
   isFinalStatus,
   itemRow,
@@ -349,7 +350,7 @@ function progressCard(data, mode, view) {
   const prep = prepView(data.pedido.prep, { now: new Date(), lang, pickup: mode === "pickup" });
   if (prep) {
     card.appendChild(
-      el("div", { className: `status-prep status-prep-${prep.kind}` }, [
+      el("div", { className: `status-prep status-prep-${prep.kind}`, attrs: { "data-tick": "prep", "data-pickup": String(mode === "pickup") } }, [
         el("p", { className: "status-prep-text", text: prep.text }),
         ...(prep.hint ? [el("p", { className: "status-prep-hint", text: prep.hint })] : []),
         ...(prep.reason ? [el("p", { className: "status-prep-reason", text: prep.reason })] : []),
@@ -431,7 +432,14 @@ function deliveryNode(data) {
       el("span", { className: "delivery-icon" }, [icon(document, card.icon)]),
       el("div", {}, [
         el("h2", { className: "delivery-title", text: card.title }),
-        ...card.lines.map((line) => el("p", { className: "delivery-line", text: line })),
+        ...card.lines.map((line) =>
+          el("p", {
+            className: "delivery-line",
+            text: line,
+            // La línea de llegada se repinta sola (SEGUIMIENTO-45).
+            attrs: line === arrivalLine(data.envio, lang) ? { "data-tick": "arrival" } : {},
+          }),
+        ),
       ]),
     ]),
   ]);
@@ -530,6 +538,37 @@ function offersNode(delivery) {
   }
 
   return wrap;
+}
+
+// Descuenta "faltan N min" cambiando solo el texto de esos nodos (SEGUIMIENTO-45): sin rehacer la página no se
+// pierde el foco, el scroll ni lo que se esté tocando. Si cambió de fase (de "en unos minutos" a "unos minutos
+// más"), se repinta una vez.
+function tickTimes() {
+  if (current.kind !== "data") return;
+
+  const { data } = current;
+  const now = new Date();
+
+  const prepNode = document.querySelector('[data-tick="prep"]');
+  if (prepNode) {
+    const prep = prepView(data.pedido.prep, { now, lang, pickup: prepNode.dataset.pickup === "true" });
+
+    if (!prep || !prepNode.classList.contains(`status-prep-${prep.kind}`)) {
+      paint();
+      return;
+    }
+
+    const text = prepNode.querySelector(".status-prep-text");
+    const hint = prepNode.querySelector(".status-prep-hint");
+    if (text && text.textContent !== prep.text) text.textContent = prep.text;
+    if (hint && prep.hint && hint.textContent !== prep.hint) hint.textContent = prep.hint;
+  }
+
+  const arrivalNode = document.querySelector('[data-tick="arrival"]');
+  if (arrivalNode) {
+    const line = arrivalLine(data.envio, lang, now);
+    if (line && arrivalNode.textContent !== line) arrivalNode.textContent = line;
+  }
 }
 
 function tickCountdown() {
@@ -800,8 +839,13 @@ async function start() {
   schedule();
 
   // "faltan 12 min" se descuenta con la hora aunque no llegue una lectura nueva (SEGUIMIENTO-45).
-  setInterval(() => {
-    if (document.visibilityState === "visible" && !finished && current.kind === "data") paint();
+  const timesTimer = setInterval(() => {
+    // Con el pedido entregado o cancelado ya no hay nada que descontar.
+    if (finished) {
+      clearInterval(timesTimer);
+      return;
+    }
+    if (document.visibilityState === "visible") tickTimes();
   }, 30_000);
 
   // Al volver a la pestaña se lee de inmediato, sin esperar al próximo turno.

@@ -62,6 +62,8 @@ dev-fede    espacio de Fede (usuario git `FedeAtadia`).
    - Toda tabla nueva lleva RLS filtrando por `business_id`, en la misma migración.
      Excepción aprobada por Herni: `push_subscriptions` filtra por `user_id`, porque la
      suscripción es de la persona y la cuenta repartidor no tiene negocio.
+     Mismo criterio, aprobado por Herni: `courier_preferences` filtra por `courier_id` (las preferencias
+     son del repartidor, que no tiene negocio).
    - Después de una migración: `npm run db:types` y commitear `src/types/database.ts`.
    - Avisá antes de crear una migración si otra tarea del plan también toca el esquema.
 

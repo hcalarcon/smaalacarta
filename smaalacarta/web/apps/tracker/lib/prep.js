@@ -20,6 +20,11 @@ function clock(date, lang) {
   }).format(date);
 }
 
+// "faltan 12 min", con su singular ("falta 1 min").
+function minutesLeft(n, lang) {
+  return n === 1 ? t("tracker.prep.in1", lang) : t("tracker.prep.in", lang, { n });
+}
+
 // Qué mostrar con el `pedido.prep` que entrega `public_order_tracking`, o null si no hay nada que mostrar:
 // - `kind`: `range` (todavía dentro de lo previsto) o `late` (ya pasó el fin de la ventana).
 // - `text`: la línea principal. `hint`: "en unos N min" o "Falta poco" (null si se demora).
@@ -50,7 +55,7 @@ export function prepView(prep, { now = new Date(), lang = "es", pickup = false }
   return {
     kind: "range",
     text,
-    hint: minutes > 0 ? t("tracker.prep.in", lang, { n: minutes }) : t("tracker.prep.soon", lang),
+    hint: minutes > 0 ? minutesLeft(minutes, lang) : t("tracker.prep.soon", lang),
     reason,
   };
 }
@@ -62,11 +67,11 @@ export function arrivalView(arrivesAt, { now = new Date(), lang = "es" } = {}) {
 
   const minutes = Math.ceil((arrivesAt - now.getTime()) / 60_000);
 
-  if (minutes <= 0) return { kind: "late", text: t("tracker.prep.late", lang), hint: null };
+  if (minutes <= 0) return { kind: "late", text: t("tracker.delivery.late", lang), hint: null };
 
   return {
     kind: "range",
     text: t("tracker.delivery.arrives", lang, { hora: clock(new Date(arrivesAt), lang) }),
-    hint: t("tracker.prep.in", lang, { n: minutes }),
+    hint: minutesLeft(minutes, lang),
   };
 }

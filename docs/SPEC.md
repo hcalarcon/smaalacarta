@@ -533,7 +533,8 @@ llegando al negocio por WhatsApp.
 - **SEGUIMIENTO-45** El seguimiento dice el resultado y no la demora en minutos: "Listo aprox. 21:40" (con envío ya
   tomado, "Llega aprox. 21:55" con la hora del repartidor) y "faltan 12 min", que se descuenta con la hora aunque no
   haya lecturas nuevas (se repinta cada 30 s con la pestaña visible). Pasada la hora dice "Unos minutos más", sin horas
-  ni números negativos. Se actualiza solo cuando el local cambia la demora, por la lectura periódica (SEGUIMIENTO-32;
+  ni números negativos (con 1 minuto, "falta 1 min"). Se repinta cambiando solo el texto de esos nodos, sin rehacer la
+  página, y el reloj se detiene al entregarse o cancelarse el pedido. Se actualiza solo cuando el local cambia la demora, por la lectura periódica (SEGUIMIENTO-32;
   sin Realtime, que exigiría abrir las políticas de `orders` a `anon`). En es, en y pt.
 - **SEGUIMIENTO-46** Con el selector de idioma dentro del encabezado, la barra de arriba se oculta: no queda una franja
   en blanco sobre el seguimiento.
@@ -541,6 +542,8 @@ llegando al negocio por WhatsApp.
   también: compras en el camino · buscar otros pedidos." y el texto del repartidor, solo con lo que marcó o escribió; sin
   nada, no hay bloque. Sale de `preferencias` en `public_order_delivery`, que lee solo las del repartidor de ese pedido.
   El texto se escribe con `textContent`. En es, en y pt.
+- **SEGUIMIENTO-48** Con el pedido entregado o cancelado, `preferencias` ya no se entrega: el link del seguimiento
+  queda en manos del cliente y el texto que el repartidor cambie después no se tiene que ver en un pedido cerrado.
 - **ADMIN-REPARTIDOR-1** Las preferencias del repartidor viven en `courier_preferences` (una fila por repartidor):
   "Compro cosas en el camino", "Busco otros pedidos" y un texto de hasta 140 caracteres, opcional. Con RLS: cada
   repartidor lee la suya y nadie escribe directo; se guardan con `courier_save_preferences`, que toma al repartidor de
