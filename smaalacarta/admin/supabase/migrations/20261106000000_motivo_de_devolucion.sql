@@ -85,6 +85,13 @@ $$;
 
 REVOKE ALL ON FUNCTION public.track_pickup_time() FROM PUBLIC, anon, authenticated;
 
+-- Lo ya devuelto por cambio de demora y todavía buscando conserva su marca.
+UPDATE public.orders
+SET returned_reason_kind = 'delay_changed'
+WHERE returned_prep_changed
+  AND courier_status = 'searching'
+  AND returned_reason_kind IS NULL;
+
 ALTER TABLE public.orders DROP COLUMN IF EXISTS returned_prep_changed;
 
 -- Devolver exige un tipo. "Otro" trae el texto (3 a 140 caracteres); los otros dos no lo necesitan.

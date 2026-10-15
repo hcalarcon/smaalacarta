@@ -348,6 +348,7 @@ export default function CourierOrderCard({
                 onClick={() => {
                   setReturning(false);
                   setReturnKind(null);
+                  setReason("");
                   setReasonError(null);
                 }}
                 className="min-h-11 rounded-xl border border-line-strong px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-brand-soft"

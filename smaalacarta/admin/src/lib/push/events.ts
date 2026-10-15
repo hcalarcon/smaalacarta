@@ -60,7 +60,7 @@ function isDifferentInstant(a: string, b: string | null): boolean {
   if (b === null) return true;
 
   // Postgres puede escribir la zona como `+00`, que `Date` no entiende: se completa a `+00:00`.
-  const instant = (value: string) => new Date(value.replace(/([+-]\d\d)$/, "$1:00")).getTime();
+  const instant = (value: string) => new Date(value.replace(/([T ]\d\d:\d\d(?::\d\d(?:\.\d+)?)?[+-]\d\d)$/, "$1:00")).getTime();
   const left = instant(a);
   const right = instant(b);
 
