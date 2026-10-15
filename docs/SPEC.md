@@ -570,6 +570,12 @@ llegando al negocio por WhatsApp.
 - **SEGUIMIENTO-50** `show_prep_time` es `true` por defecto (migración `20261111000000`, que también lo enciende en los
   negocios existentes y en `save_business_settings` cuando la fila nace sin él). Si el local lo apaga, `public_order_tracking`
   no entrega `pedido.prep` aunque la hora esté cargada y el cliente no ve el tiempo; al volver a encenderlo, sí.
+- **SEGUIMIENTO-51** La línea de la hora ("Listo aprox. 13:40 · faltan 25 min") se muestra en un tamaño de texto normal
+  destacado (1 rem, negrita), sin competir con el estado del pedido.
+- **ADMIN-REPARTIDOR-8** La tarjeta del pedido del repartidor, en orden: #número · local · estado, **destino** (ícono
+  de ubicación, barrio y dirección de entrega en grande), retiro en {local} más chico, hora de listo, la plata en una sola
+  línea chica (lo que cobra por el envío y un chip "Cobrar $X" si tiene que cobrar al cliente) y la acción principal.
+  Total, desglose y lo que se rinde, solo en "Ver detalle".
 
 
 ## PWA — Instalar el menú en el celular
@@ -1387,6 +1393,12 @@ contradiga: ahora entra a los envíos, lleva opciones y nace confirmado)
 - **ADMIN-PEDIDOS-56** El menú lateral de escritorio se achica a solo íconos con el nombre en el tooltip, y el contenido
   usa todo el ancho. La elección se recuerda en el navegador (`localStorage`, con `try/catch`, `src/lib/layout/sidebar-pref.ts`).
   En el celular sigue la hamburguesa.
+- **ADMIN-PEDIDOS-57** Todo cambio de estado lleva el estado que la persona veía (`from`; `p_from` en
+  `set_order_status` y `courier_set_status`, migración `20261112000000`) y solo se aplica si el pedido sigue ahí: si no,
+  la base no hace nada, no registra evento y no da error. Un doble click, dos pestañas o Realtime nunca avanzan dos pasos.
+  Aceptar manda `from = pending`. En el panel del repartidor, un segundo toque sobre el mismo pedido no lanza otra acción.
+- **ADMIN-PEDIDOS-58** Al confirmar la aceptación (con tiempo o sin él), el cartel de "Nuevo pedido" y la cuenta de sin
+  atender se van en el momento, sin esperar al servidor; si la acción falla, vuelven y se muestra el error.
 
 
 ## MP — Cobro con Mercado Pago (Checkout Pro)
