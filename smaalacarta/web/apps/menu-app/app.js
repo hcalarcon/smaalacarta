@@ -38,6 +38,8 @@ let ZONE_CHOICE = null;
 let ZONE_STEP = null;
 let ZONE_PICKUP = true;
 let ZONE_QUERY = "";
+// Quién tenía el foco al abrirse el diálogo de la zona: vuelve ahí al cerrarlo (PUBLICO-81).
+let ZONE_RETURN_FOCUS = null;
 
 // Idioma de la interfaz (IDIOMA-1 a 4) y el menú tal como vino, sin las secciones armadas.
 let LANG = "es";
@@ -1122,6 +1124,28 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     return;
   }
 
+  // El envío solo se confirma a una zona de la lista, y no con "Mi barrio no está" (PUBLICO-82).
+  const deliveryProblem = DZ
+    ? DZ.deliveryProblem({
+        zones: COURIER_ZONES,
+        delivery: f.get("entrega"),
+        zoneId: f.get("barrio"),
+        blocked: Boolean(ZONE_ON && ZONE?.deliveryBlocked(ZONE_CHOICE)),
+      })
+    : null;
+  if (deliveryProblem) {
+    alert(
+      tr(
+        deliveryProblem === "no_delivery"
+          ? ZONE_PICKUP
+            ? "zone.noDelivery"
+            : "zone.noDeliveryOnly"
+          : "error.invalidZone",
+      ),
+    );
+    return;
+  }
+
   // Envío con repartidor (ENVIO-21): barrio y dirección. Los campos ocultos van deshabilitados y no
   // entran en el FormData.
   const courier = DZ
@@ -1546,6 +1570,12 @@ function initZoneChoice(config, slug) {
   document.querySelector('#form-pedido select[name="entrega"]')?.addEventListener("change", sync);
   document.querySelector('#form-pedido select[name="barrio"]')?.addEventListener("change", sync);
 
+  document.addEventListener("keydown", onZoneKeydown);
+  // Tocar el fondo oscurecido cierra el diálogo, como Escape.
+  document.querySelector("#zona-card")?.addEventListener("click", (event) => {
+    if (event.target === event.currentTarget) closeZoneDialog();
+  });
+
   document.querySelector("#zona-chip")?.addEventListener("click", () => {
     ZONE_STEP = "ask";
     renderZone();
@@ -1556,6 +1586,8 @@ function initZoneChoice(config, slug) {
 function syncZoneFromCheckout(slug) {
   const entrega = document.querySelector('#form-pedido select[name="entrega"]')?.value;
   const barrio = document.querySelector('#form-pedido select[name="barrio"]')?.value;
+  // Con el envío bloqueado el checkout no cambia la elección: se sale con el chip (PUBLICO-80).
+  if (ZONE.deliveryBlocked(ZONE_CHOICE)) return;
   let next = null;
   if (entrega === "retiro") next = { type: "pickup" };
   else if (entrega === "delivery" && barrio && DZ.findZone(COURIER_ZONES, barrio)) {
@@ -1589,9 +1621,10 @@ function applyZoneToCheckout(choice) {
 
 function chooseZone(choice) {
   ZONE_CHOICE = choice;
-  ZONE.saveChoice(window.localStorage, MENU_SOURCE.slug, choice);
+  // "Mi barrio no está" no se recuerda: al volver se pregunta de nuevo (PUBLICO-80).
+  if (choice.type !== "notListed") ZONE.saveChoice(window.localStorage, MENU_SOURCE.slug, choice);
   applyZoneToCheckout(choice);
-  ZONE_STEP = choice.type === "zone" ? "confirmed" : null;
+  ZONE_STEP = choice.type === "zone" ? "confirmed" : choice.type === "notListed" ? "notListed" : null;
   renderZone();
 }
 
@@ -1624,36 +1657,97 @@ function renderZoneList(list, query) {
   });
 }
 
+// Cierra el diálogo de la zona sin cambiar la elección (×, Escape o tocar el fondo).
+function closeZoneDialog() {
+  ZONE_STEP = null;
+  renderZone();
+}
+
+// Con "Mi barrio no está" el checkout queda solo en retiro: la opción de envío se ve deshabilitada y el aviso
+// dice por qué (PUBLICO-80). Al elegir una zona de la lista, vuelve a estar habilitada.
+function applyDeliveryBlock() {
+  const blocked = Boolean(ZONE_ON && ZONE?.deliveryBlocked(ZONE_CHOICE));
+  const entrega = document.querySelector('#form-pedido select[name="entrega"]');
+  const notice = document.querySelector("#aviso-sin-envio");
+
+  const option = entrega?.querySelector('option[value="delivery"]');
+  if (entrega && option) {
+    option.disabled = blocked;
+    if (blocked && entrega.value === "delivery") {
+      entrega.value = ZONE_PICKUP && entrega.querySelector('option[value="retiro"]') ? "retiro" : "";
+      renderCourierFields();
+    }
+  }
+
+  if (notice) {
+    notice.hidden = !blocked;
+    notice.textContent = blocked ? tr(ZONE_PICKUP ? "zone.noDelivery" : "zone.noDeliveryOnly") : "";
+  }
+}
+
+// El diálogo atrapa el foco y bloquea el scroll de atrás (PUBLICO-81). Al cerrarse, el foco vuelve a quien lo abrió.
+function onZoneKeydown(event) {
+  const card = document.querySelector("#zona-card");
+  if (!card || card.hidden) return;
+
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeZoneDialog();
+    return;
+  }
+  if (event.key !== "Tab") return;
+
+  const focusables = [...card.querySelectorAll("button, input")].filter((el) => !el.disabled && !el.hidden);
+  if (focusables.length === 0) return;
+
+  const next = ZONE.nextFocusIndex(focusables.indexOf(document.activeElement), focusables.length, event.shiftKey);
+  event.preventDefault();
+  focusables[next].focus();
+}
+
 function renderZone() {
   const card = document.querySelector("#zona-card");
   const chip = document.querySelector("#zona-chip");
   if (!card || !chip || !ZONE) return;
 
+  const wasOpen = !card.hidden;
   chip.hidden = !ZONE_ON;
   card.hidden = !ZONE_ON || !ZONE_STEP;
+  if (!wasOpen && !card.hidden) ZONE_RETURN_FOCUS = document.activeElement;
+
   if (ZONE_ON) {
     const zone = ZONE_CHOICE?.type === "zone" ? DZ.findZone(COURIER_ZONES, ZONE_CHOICE.zoneId) : null;
     chip.textContent = zone
       ? `📍 ${zone.name}`
       : ZONE_CHOICE?.type === "pickup"
         ? `📍 ${tr("zone.chipPickup")}`
-        : `📍 ${tr("zone.change")}`;
+        : ZONE_CHOICE?.type === "notListed"
+          ? `📍 ${tr("zone.chipNoDelivery")}`
+          : `📍 ${tr("zone.change")}`;
     chip.setAttribute("aria-label", tr("zone.change"));
   }
-  if (card.hidden) return;
+
+  applyDeliveryBlock();
+  document.body.classList.toggle("zona-abierta", !card.hidden);
+
+  if (card.hidden) {
+    if (wasOpen && ZONE_RETURN_FOCUS?.isConnected) ZONE_RETURN_FOCUS.focus?.();
+    ZONE_RETURN_FOCUS = null;
+    return;
+  }
 
   card.replaceChildren();
+  // En el celular es una hoja desde abajo; en escritorio, un diálogo centrado con el fondo oscurecido (PUBLICO-80).
+  const panel = document.createElement("div");
+  panel.className = "zona-dialogo";
+  panel.setAttribute("role", "dialog");
+  panel.setAttribute("aria-modal", "true");
+  panel.setAttribute("aria-labelledby", "zona-titulo");
+
   const title = document.createElement("h2");
   title.id = "zona-titulo";
   title.className = "zona-titulo";
-  const close = zoneButton(
-    "×",
-    () => {
-      ZONE_STEP = null;
-      renderZone();
-    },
-    "zona-cerrar",
-  );
+  const close = zoneButton("×", closeZoneDialog, "zona-cerrar");
   close.setAttribute("aria-label", tr("zone.close"));
   const back = () =>
     zoneButton(
@@ -1677,7 +1771,7 @@ function renderZone() {
       }),
     );
     if (ZONE_PICKUP) row.append(zoneButton(tr("zone.pickup"), () => chooseZone({ type: "pickup" })));
-    card.append(close, title, row);
+    panel.append(close, title, row);
   } else if (ZONE_STEP === "zones") {
     title.textContent = tr("zone.delivery");
     const search = document.createElement("input");
@@ -1694,30 +1788,28 @@ function renderZone() {
       ZONE_QUERY = search.value;
       renderZoneList(list, ZONE_QUERY);
     });
-    const notListed = zoneButton(
-      tr("zone.notListed"),
-      () => {
-        ZONE_STEP = "notListed";
-        renderZone();
-      },
-      "zona-no-esta",
-    );
-    card.append(close, title, search, list, notListed, back());
+    // "Mi barrio no está" bloquea el envío al instante (PUBLICO-80).
+    const notListed = zoneButton(tr("zone.notListed"), () => chooseZone({ type: "notListed" }), "zona-no-esta");
+    panel.append(close, title, search, list, notListed, back());
   } else if (ZONE_STEP === "notListed") {
-    title.textContent = tr("zone.unavailable");
-    card.append(close, title);
-    if (ZONE_PICKUP) card.append(zoneButton(tr("zone.pickupOffer"), () => chooseZone({ type: "pickup" })));
-    card.append(back());
+    title.textContent = tr(ZONE_PICKUP ? "zone.noDelivery" : "zone.noDeliveryOnly");
+    panel.append(close, title);
+    if (ZONE_PICKUP) panel.append(zoneButton(tr("zone.pickupOffer"), () => chooseZone({ type: "pickup" })));
+    panel.append(back());
   } else if (ZONE_STEP === "confirmed") {
     const zone = DZ.findZone(COURIER_ZONES, ZONE_CHOICE?.zoneId);
     if (!zone) {
       ZONE_STEP = null;
-      card.hidden = true;
+      renderZone();
       return;
     }
     title.textContent = tr("zone.available", ZONE.zoneLabel(zone, PRICE.formatPrice));
-    card.append(close, title);
+    panel.append(close, title);
   }
+
+  card.append(panel);
+  // El foco entra al diálogo: el buscador si hay, si no la primera opción.
+  (panel.querySelector(".zona-buscar") ?? panel.querySelector(".zona-opcion") ?? panel.querySelector("button"))?.focus();
 }
 
 // Para cuándo es el pedido (PUBLICO-30): con un menú de Supabase que acepta pedidos

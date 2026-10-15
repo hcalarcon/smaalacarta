@@ -3,7 +3,9 @@ import { describe, expect, it } from "vitest";
 import {
   askZone,
   clearChoice,
+  deliveryBlocked,
   filterZones,
+  nextFocusIndex,
   readChoice,
   saveChoice,
   validateChoice,
@@ -108,5 +110,37 @@ describe("elección guardada — PUBLICO-77", () => {
 
   it("el retiro no vale si el local ya no lo ofrece", () => {
     expect(validateChoice({ type: "pickup" }, ZONES, { pickup: false })).toBeNull();
+  });
+});
+
+
+describe("'Mi barrio no está' bloquea el envío — PUBLICO-80", () => {
+  it("solo esa elección bloquea; una zona, el retiro o no haber elegido no", () => {
+    expect(deliveryBlocked({ type: "notListed" })).toBe(true);
+    expect(deliveryBlocked({ type: "zone", zoneId: "a" })).toBe(false);
+    expect(deliveryBlocked({ type: "pickup" })).toBe(false);
+    expect(deliveryBlocked(null)).toBe(false);
+  });
+
+  it("no se guarda: al volver se pregunta de nuevo", () => {
+    const s = memory();
+    saveChoice(s, "x", { type: "notListed" });
+    expect(readChoice(s, "x")).toBeNull();
+    expect(validateChoice({ type: "notListed" }, ZONES)).toBeNull();
+  });
+});
+
+describe("foco atrapado en el diálogo — PUBLICO-81", () => {
+  it("Tab avanza y vuelve al primero; Shift+Tab retrocede y pasa al último", () => {
+    expect(nextFocusIndex(0, 3, false)).toBe(1);
+    expect(nextFocusIndex(2, 3, false)).toBe(0);
+    expect(nextFocusIndex(0, 3, true)).toBe(2);
+    expect(nextFocusIndex(2, 3, true)).toBe(1);
+  });
+
+  it("con el foco fuera del diálogo entra por el primero (Tab) o el último (Shift+Tab)", () => {
+    expect(nextFocusIndex(-1, 3, false)).toBe(0);
+    expect(nextFocusIndex(-1, 3, true)).toBe(2);
+    expect(nextFocusIndex(-1, 0, false)).toBe(-1);
   });
 });

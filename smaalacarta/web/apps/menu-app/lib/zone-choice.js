@@ -66,3 +66,17 @@ export function validateChoice(choice, zones, { pickup = true } = {}) {
   if (choice.type === "zone" && zones?.zones.some((zone) => zone.id === choice.zoneId)) return choice;
   return null;
 }
+
+// "Mi barrio no está" (PUBLICO-80): no es una elección que se guarde (al volver se pregunta de nuevo), pero
+// mientras vale el checkout queda solo en retiro y el envío, deshabilitado.
+export function deliveryBlocked(choice) {
+  return choice?.type === "notListed";
+}
+
+// Foco atrapado en el diálogo (PUBLICO-81): a qué elemento pasa el foco con Tab (o Shift+Tab) entre `count`
+// elementos enfocables, dando la vuelta en los extremos. `current` es -1 si el foco está fuera del diálogo.
+export function nextFocusIndex(current, count, backwards) {
+  if (count <= 0) return -1;
+  if (current < 0) return backwards ? count - 1 : 0;
+  return (current + (backwards ? -1 : 1) + count) % count;
+}

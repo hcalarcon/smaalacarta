@@ -359,12 +359,23 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
 - **PUBLICO-75** Elegir una zona muestra "Enviamos a {zona} · ${precio} aprox." (precio de referencia de
   `public_delivery_zones`) y deja el checkout con entrega "delivery" y esa zona preseleccionada. El checkout valida la zona
   como siempre: la tarjeta solo ayuda.
-- **PUBLICO-76** "Mi barrio no está" muestra "Barrio no registrado para envío" y ofrece retirar en el local.
+- **PUBLICO-76** "Mi barrio no está" muestra "No hay envío a tu barrio. Podés retirar en el local." (sin la segunda frase si
+  el local no ofrece retiro) y ofrece retirar; además bloquea el envío (ver PUBLICO-80).
 - **PUBLICO-77** La elección se guarda en `localStorage` por negocio (slug), con `try/catch`; si falla, el menú anda igual.
   Al volver no se pregunta de nuevo. Una zona guardada que ya no está en la lista se borra y se vuelve a preguntar.
 - **PUBLICO-78** Un chip arriba del menú ("📍 {zona}" o "Retiro") vuelve a abrir la tarjeta para cambiar la elección.
 - **PUBLICO-79** Los textos están en es, en y pt, los nombres de barrio se pintan con `textContent` y se ve bien en las
   tres plantillas y a 360 px.
+- **PUBLICO-80** El selector de zona es un diálogo con el fondo oscurecido detrás: hoja desde abajo en el celular y
+  centrado en escritorio (≥ 640 px), con el scroll de la página bloqueado mientras está abierto. Elegir "Mi barrio no
+  está" bloquea el envío: el checkout queda solo en retiro, la opción "Envío" se ve deshabilitada y un aviso dice "No
+  hay envío a tu barrio. Podés retirar en el local." (es/en/pt); el chip dice "Sin envío a tu barrio". Elegir una zona
+  de la lista con el chip vuelve a habilitar el envío. Esta elección no se guarda: al volver se pregunta de nuevo.
+- **PUBLICO-81** El diálogo de zona atrapa el foco (Tab y Shift+Tab dan la vuelta), se cierra con Escape, con × o
+  tocando el fondo, enfoca el buscador (o la primera opción) al abrirse y devuelve el foco a quien lo abrió.
+- **PUBLICO-82** El checkout no confirma con envío si no hay una zona de la lista elegida, ni con "Mi barrio no está"
+  aunque quede una zona cargada: avisa y no crea el pedido. Con barrios sin cargar no se exige zona. El servidor la
+  valida igual (`create_public_order`).
 
 ## BUSQUEDA — Buscador
 
@@ -1955,10 +1966,6 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   webhook) y `handlerMs` (lo que tardó en resolver y mandar). Los avisos por cambio de estado (Listo, demora,
   cancelado) salen del webhook sobre `orders` en el momento del `UPDATE`; `pg_cron` solo marca los plazos
   (elección automática, sin ofertas, recordatorios y "10 minutos antes de retirar").
-- **ENVIO-171** El segundo toque de un doble click rápido no hace nada en el selector de la demora: el botón que lo
-  abre no abre un segundo (hay un solo selector por pedido) y el toque que llega al selector dentro de los primeros
-  600 ms como segundo click de una misma secuencia (`event.detail > 1`) no confirma ni cierra. Un toque deliberado
-  después sí cuenta.
 
 
 

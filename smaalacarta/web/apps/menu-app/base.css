@@ -1080,18 +1080,51 @@ body.no-scroll-opciones {
   display: none;
 }
 
+/* El selector es un diálogo con el fondo oscurecido (PUBLICO-80): hoja desde abajo en el celular y centrado en
+   escritorio. El fondo es #zona-card; el contenido, .zona-dialogo. */
 .zona-card {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.zona-dialogo {
   position: relative;
   display: flex;
   flex-direction: column;
   gap: 0.7rem;
-  margin: 0.75rem 1rem 0;
-  padding: 1rem 3rem 1rem 1rem;
-  border-radius: 14px;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1.1rem 3.25rem max(1.25rem, env(safe-area-inset-bottom)) 1.1rem;
+  border-radius: 18px 18px 0 0;
   background: var(--card, #fff);
   color: var(--text, #111);
   border: 1px solid var(--border, #eee);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.2);
+}
+
+@media (min-width: 640px) {
+  .zona-card {
+    align-items: center;
+    padding: 1.5rem;
+  }
+
+  .zona-dialogo {
+    width: min(28rem, 100%);
+    padding: 1.5rem 3.5rem 1.5rem 1.5rem;
+    border-radius: 18px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  }
+}
+
+body.zona-abierta {
+  overflow: hidden;
 }
 
 .zona-titulo {
