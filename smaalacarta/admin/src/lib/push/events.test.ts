@@ -172,6 +172,13 @@ describe("circuito de tiempos — ENVIO-158 a 160", () => {
       "courier_prep_changed",
     ]);
     expect(kinds(update({ prep_ready_at: "2026-10-12T15:30:00Z" }, { prep_ready_at: "2026-10-12T16:00:00Z" }))).toEqual([]);
+
+    // La misma hora escrita distinto (formato, milisegundos o zona) no es un cambio (ENVIO-167).
+    for (const same of ["2026-10-12T15:30:00.000Z", "2026-10-12T15:30:00+00:00", "2026-10-12T12:30:00-03:00"]) {
+      expect(
+        kinds(update({ ...taken, prep_ready_at: "2026-10-12T15:30:00Z" }, { ...taken, prep_ready_at: same })),
+      ).toEqual([]);
+    }
   });
 
   it("un pedido ya entregado o cancelado no avisa por la demora", () => {

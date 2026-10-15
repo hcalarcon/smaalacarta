@@ -54,6 +54,18 @@ export type PushEventKind =
 
 export type PushEvent = { kind: PushEventKind; order: OrderRecord };
 
+// Dos horas son la misma si son el mismo instante, aunque vengan escritas distinto (`+00:00` o `Z`, con o
+// sin milisegundos, otra zona horaria): comparar el texto avisaría de un cambio que no existe (ENVIO-167).
+function isDifferentInstant(a: string, b: string | null): boolean {
+  if (b === null) return true;
+
+  const left = new Date(a).getTime();
+  const right = new Date(b).getTime();
+
+  if (Number.isNaN(left) || Number.isNaN(right)) return a !== b;
+  return left !== right;
+}
+
 // ¿Los repartidores pueden verlo y ofertar? Es la misma regla que `courier_sees_order` en la base, sin lo
 // que depende de cada repartidor (zona que cubre, rechazos): buscando, sin elegido, abierto y, si es de
 // Mercado Pago, ya pagado.
@@ -127,7 +139,7 @@ export function detectEvents(payload: WebhookPayload): PushEvent[] {
 
     if (
       order.prep_ready_at !== null &&
-      order.prep_ready_at !== before.prep_ready_at &&
+      isDifferentInstant(order.prep_ready_at, before.prep_ready_at) &&
       order.status !== "ready" &&
       order.status !== "handed_to_courier" &&
       order.status !== "on_the_way"
