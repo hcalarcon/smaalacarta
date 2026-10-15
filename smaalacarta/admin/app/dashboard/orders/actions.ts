@@ -28,6 +28,7 @@ export async function setOrderStatusAction(
   orderId: string,
   status: string,
   note?: string,
+  from?: string,
 ): Promise<OrderActionResult> {
   await requireBusiness();
 
@@ -35,7 +36,12 @@ export async function setOrderStatusAction(
     return { ok: false, error: "Estado desconocido." };
   }
 
-  const result = await setOrderStatus(orderId, status, note);
+  if (from !== undefined && !(STATUSES as readonly string[]).includes(from)) {
+    return { ok: false, error: "Estado desconocido." };
+  }
+
+  // `from` es el estado que el usuario veía: si el pedido ya cambió, la base no hace nada y no es un error.
+  const result = await setOrderStatus(orderId, status, note, from);
   if ("error" in result) {
     return { ok: false, error: orderErrorMessage(result.error) };
   }
@@ -72,7 +78,7 @@ export async function acceptOrderAction(orderId: string, minutes: number | null)
   // nada ni le avisa al usuario.
   if (state.order.status !== "pending") return { ok: true };
 
-  const confirmed = await setOrderStatus(orderId, "confirmed");
+  const confirmed = await setOrderStatus(orderId, "confirmed", undefined, "pending");
   if ("error" in confirmed) {
     // Si otro pedido de aceptar llegó primero, el pedido ya quedó aceptado: no es un error del usuario.
     const after = await getOrderPrepState(business.id, orderId);

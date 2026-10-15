@@ -56,7 +56,7 @@ describe("aceptar con tiempo — ADMIN-PEDIDOS-31 y 33", () => {
 
     expect(r).toEqual({ ok: true });
     expect(ordersDb.getOrderPrepState).toHaveBeenCalledWith(BUSINESS, ORDER);
-    expect(ordersDb.setOrderStatus).toHaveBeenCalledWith(ORDER, "confirmed");
+    expect(ordersDb.setOrderStatus).toHaveBeenCalledWith(ORDER, "confirmed", undefined, "pending");
     expect(ordersDb.setOrderPrep).toHaveBeenCalledWith(ORDER, 25, null);
     expect(ordersDb.setOrderStatus.mock.invocationCallOrder[0]).toBeLessThan(
       ordersDb.setOrderPrep.mock.invocationCallOrder[0],
@@ -67,7 +67,7 @@ describe("aceptar con tiempo — ADMIN-PEDIDOS-31 y 33", () => {
     const r = await acceptOrderAction(ORDER, null);
 
     expect(r).toEqual({ ok: true });
-    expect(ordersDb.setOrderStatus).toHaveBeenCalledWith(ORDER, "confirmed");
+    expect(ordersDb.setOrderStatus).toHaveBeenCalledWith(ORDER, "confirmed", undefined, "pending");
     expect(ordersDb.setOrderPrep).not.toHaveBeenCalled();
   });
 
@@ -89,7 +89,7 @@ describe("aceptar con tiempo — ADMIN-PEDIDOS-31 y 33", () => {
     const r = await acceptOrderAction(ORDER, 25);
 
     expect(r).toEqual({ ok: true });
-    expect(ordersDb.setOrderStatus).toHaveBeenCalledWith(ORDER, "confirmed");
+    expect(ordersDb.setOrderStatus).toHaveBeenCalledWith(ORDER, "confirmed", undefined, "pending");
     expect(ordersDb.setOrderPrep).not.toHaveBeenCalled();
   });
 

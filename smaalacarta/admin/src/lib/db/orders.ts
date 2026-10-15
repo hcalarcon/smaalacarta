@@ -133,6 +133,7 @@ export async function setOrderStatus(
   orderId: string,
   status: string,
   note?: string,
+  from?: string,
 ): Promise<{ ok: true } | DbFailure> {
   const supabase = await createClient();
 
@@ -140,6 +141,7 @@ export async function setOrderStatus(
     p_order_id: orderId,
     p_status: status,
     p_note: note ?? null,
+    p_from: from ?? null,
   });
 
   return error ? { error: { code: error.code, message: error.message } } : { ok: true };

@@ -1520,7 +1520,7 @@ export type Database = {
         Returns: string
       }
       courier_set_status: {
-        Args: { p_order_id: string; p_status: string }
+        Args: { p_from?: string; p_order_id: string; p_status: string }
         Returns: undefined
       }
       courier_take_order: { Args: { p_order_id: string }; Returns: undefined }
@@ -1793,7 +1793,12 @@ export type Database = {
         Returns: string
       }
       set_order_status: {
-        Args: { p_note?: string; p_order_id: string; p_status: string }
+        Args: {
+          p_from?: string
+          p_note?: string
+          p_order_id: string
+          p_status: string
+        }
         Returns: undefined
       }
       set_product_option_groups: {

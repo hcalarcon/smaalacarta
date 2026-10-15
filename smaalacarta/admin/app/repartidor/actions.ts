@@ -161,6 +161,7 @@ export async function advanceOrderAction(
   orderId: string,
   status: "on_the_way" | "delivered",
   etaMinutes?: number,
+  from?: string,
 ): Promise<CourierActionResult> {
   await requireCourier();
 
@@ -176,7 +177,7 @@ export async function advanceOrderAction(
     if ("error" in eta) return { ok: false, error: orderErrorMessage(eta.error) };
   }
 
-  const result = await courierSetStatus(orderId, status);
+  const result = await courierSetStatus(orderId, status, from);
   if ("error" in result) {
     return { ok: false, error: orderErrorMessage(result.error) };
   }

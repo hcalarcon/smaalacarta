@@ -176,8 +176,8 @@ describe("avanzar un pedido — ENVIO-77", () => {
     await advanceOrderAction(ORDER, "on_the_way");
     await advanceOrderAction(ORDER, "delivered");
 
-    expect(courierDb.courierSetStatus).toHaveBeenNthCalledWith(1, ORDER, "on_the_way");
-    expect(courierDb.courierSetStatus).toHaveBeenNthCalledWith(2, ORDER, "delivered");
+    expect(courierDb.courierSetStatus).toHaveBeenNthCalledWith(1, ORDER, "on_the_way", undefined);
+    expect(courierDb.courierSetStatus).toHaveBeenNthCalledWith(2, ORDER, "delivered", undefined);
   });
 
   it("un estado que no es del repartidor no llega a la base", async () => {
@@ -280,6 +280,12 @@ describe("tiempos de llegada — ENVIO-157", () => {
     await advanceOrderAction(ORDER, "on_the_way");
 
     expect(courierDb.courierSetEta).not.toHaveBeenCalled();
-    expect(courierDb.courierSetStatus).toHaveBeenCalledWith(ORDER, "on_the_way");
+    expect(courierDb.courierSetStatus).toHaveBeenCalledWith(ORDER, "on_the_way", undefined);
+  });
+
+  it("lleva el estado de origen a la base (ADMIN-PEDIDOS-57)", async () => {
+    await advanceOrderAction(ORDER, "delivered", undefined, "on_the_way");
+
+    expect(courierDb.courierSetStatus).toHaveBeenCalledWith(ORDER, "delivered", "on_the_way");
   });
 });

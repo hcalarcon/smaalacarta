@@ -105,12 +105,14 @@ export async function courierReturnOrder(
 export async function courierSetStatus(
   orderId: string,
   status: "on_the_way" | "delivered",
+  from?: string,
 ): Promise<{ ok: true } | DbFailure> {
   const supabase = await createClient();
 
   const { error } = await supabase.rpc("courier_set_status", {
     p_order_id: orderId,
     p_status: status,
+    p_from: from ?? null,
   });
 
   return error ? { error: { code: error.code, message: error.message } } : { ok: true };

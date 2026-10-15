@@ -583,6 +583,44 @@ describe("los dos caminos de estados — ENVIO-9 y 10", () => {
     expect((await courierStatus(REPA, o.id, "on_the_way")).ok).toBe(true);
   });
 
+  it("ADMIN-PEDIDOS-57: dos cambios seguidos con el mismo estado de origen avanzan un solo paso", async () => {
+    const o = await courierOrder();
+    await confirmAndTake(o.id);
+
+    const from = (user: string | null, to: string, f: string) =>
+      call(user, `select public.set_order_status('${o.id}', '${to}', null, '${f}')`);
+
+    expect((await from(ANA, "preparing", "confirmed")).ok).toBe(true);
+    // El segundo toque todavía creía que estaba en "confirmed": no hace nada y no da error.
+    expect((await from(ANA, "preparing", "confirmed")).ok).toBe(true);
+    expect((await from(ANA, "ready", "confirmed")).ok).toBe(true);
+    expect(await status(o.id)).toBe("preparing");
+
+    const events = await db.query<{ n: string }>(
+      "select count(*) as n from order_events where order_id = $1 and status = 'preparing'",
+      [o.id],
+    );
+    expect(Number(events.rows[0].n)).toBe(1);
+
+    expect((await from(ANA, "ready", "preparing")).ok).toBe(true);
+    expect(await status(o.id)).toBe("ready");
+  });
+
+  it("ADMIN-PEDIDOS-57: courier_set_status con el mismo estado de origen avanza un solo paso", async () => {
+    const o = await courierOrder();
+    await confirmAndTake(o.id);
+    for (const s of ["preparing", "ready", "handed_to_courier"]) await setStatus(ANA, o.id, s);
+
+    const from = (to: string, f: string) =>
+      call(REPA, `select public.courier_set_status('${o.id}', '${to}', '${f}')`);
+
+    expect((await from("on_the_way", "handed_to_courier")).ok).toBe(true);
+    // Un segundo toque sobre el mismo botón no lo entrega.
+    expect((await from("on_the_way", "handed_to_courier")).ok).toBe(true);
+    expect((await from("delivered", "handed_to_courier")).ok).toBe(true);
+    expect(await status(o.id)).toBe("on_the_way");
+  });
+
   it("courier_set_status no ve pedidos que no son del repartidor", async () => {
     const r = await order("beto", FERNET, { delivery: "delivery" });
     const id = await orderId(created(r)!.code);
