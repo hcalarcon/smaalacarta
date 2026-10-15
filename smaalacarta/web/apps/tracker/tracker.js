@@ -418,6 +418,9 @@ let countdownEl = null;
 let refreshNow = null;
 
 function deliveryNode(data) {
+  // Un pedido cancelado antes de aceptarse vuelve a `waiting`: no hay nada que esperar (ENVIO-165).
+  if (data.pedido?.estado === "cancelled" && data.envio?.state === "waiting") return null;
+
   const card = deliveryCard(data.envio, lang, money);
   if (!card) return null;
 

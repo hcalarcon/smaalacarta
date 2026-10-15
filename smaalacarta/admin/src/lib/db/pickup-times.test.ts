@@ -361,10 +361,11 @@ describe("el aviso para ir a retirar — ENVIO-158 y 159", () => {
 
   it("si el local cambia la demora, el aviso se rearma y queda la hora anterior", async () => {
     const o = await taken(60);
+    // La hora que vio el repartidor al tomarlo: es la que queda como anterior, aunque cambie varias veces.
+    const before = (await row(o.id)).prep_ready_at;
     await db.exec(`update orders set prep_ready_at = now() + interval '8 minutes' where id = '${o.id}'`);
     await timers();
     expect((await row(o.id)).pickup_reminder_sent_at).not.toBeNull();
-    const before = (await row(o.id)).prep_ready_at;
 
     const r = await prep(o.id, 45);
     expect(r.ok).toBe(true);

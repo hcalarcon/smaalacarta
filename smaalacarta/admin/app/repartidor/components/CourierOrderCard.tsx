@@ -62,6 +62,7 @@ export default function CourierOrderCard({
   const [reasonError, setReasonError] = useState<string | null>(null);
   const [settling, setSettling] = useState(false);
   const [changingPickup, setChangingPickup] = useState(false);
+  const [changingDropoff, setChangingDropoff] = useState(false);
 
   const actions = availableActions(order);
   const collection = collectionInfo({ payment: order.pago, total: order.total, fee: order.envio.precio });
@@ -84,7 +85,10 @@ export default function CourierOrderCard({
   const dropoffEta = etaLabel("dropoff", times?.llega_cliente_a);
 
   function setEta(kind: EtaKind, minutes: number) {
-    return Promise.resolve(onSetEta?.(kind, minutes)).finally(() => setChangingPickup(false));
+    return Promise.resolve(onSetEta?.(kind, minutes)).finally(() => {
+      setChangingPickup(false);
+      setChangingDropoff(false);
+    });
   }
 
   function submitReturn() {
@@ -367,10 +371,20 @@ export default function CourierOrderCard({
       ) : null}
 
       {order.estado === "on_the_way" && onSetEta ? (
-        dropoffEta ? (
-          <p className="mt-3 text-sm font-medium text-stone-800">{dropoffEta}</p>
+        dropoffEta && !changingDropoff ? (
+          <p className="mt-3 flex flex-wrap items-center gap-2 text-sm font-medium text-stone-800">
+            {dropoffEta}
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setChangingDropoff(true)}
+              className="rounded-lg border border-line-strong px-2.5 py-1 text-xs font-medium text-brand transition hover:bg-brand-soft disabled:opacity-60"
+            >
+              Cambiar
+            </button>
+          </p>
         ) : (
-          <EtaPicker title="Llego al cliente en…" busy={busy} onPick={(minutes) => onSetEta("dropoff", minutes)} />
+          <EtaPicker title="Llego al cliente en…" busy={busy} onPick={(minutes) => setEta("dropoff", minutes)} />
         )
       ) : null}
 

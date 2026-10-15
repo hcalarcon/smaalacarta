@@ -287,7 +287,8 @@ BEGIN
     new.pickup_reminder_sent_at := NULL;
 
     IF old.courier_id IS NOT NULL AND new.courier_id IS NOT DISTINCT FROM old.courier_id THEN
-      new.ready_was_at := public.order_ready_at(old);
+      -- Se queda con la primera hora que vio el repartidor: varios cambios seguidos no la pisan.
+      new.ready_was_at := coalesce(old.ready_was_at, public.order_ready_at(old));
     END IF;
   END IF;
 
@@ -420,7 +421,7 @@ BEGIN
       delivery_fee_reason = NULL,
       delivery_fee_changed_by = NULL,
       delivery_fee_changed_at = NULL,
-      returned_prep_changed = (ready_was_at IS NOT NULL),
+      returned_prep_changed = (ready_was_at IS NOT NULL AND ready_was_at IS DISTINCT FROM prep_ready_at),
       updated_at = now()
   WHERE id = p_order_id;
 
