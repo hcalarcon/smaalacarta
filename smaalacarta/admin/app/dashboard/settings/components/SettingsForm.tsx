@@ -888,10 +888,9 @@ export default function SettingsForm({
             className="mt-1 h-5 w-5"
           />
           <span>
-            <span className="block font-medium text-stone-900">Mostrar el tiempo estimado a mis clientes</span>
+            <span className="block font-medium text-stone-900">Tus clientes ven a qué hora sale su pedido</span>
             <span className="block text-sm text-stone-500">
-              Es siempre aproximado: el cliente ve una ventana de 10 minutos («listo entre las 21:30 y las 21:40»),
-              no una promesa. Apagado, vos igual cargás el tiempo pero el cliente no lo ve.
+              Es siempre aproximado. Apagado, vos igual cargás el tiempo pero el cliente no lo ve.
             </span>
           </span>
         </label>

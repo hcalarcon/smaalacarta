@@ -10,7 +10,7 @@ const BETO = "bbbbbbbb-0000-0000-0000-000000000002";
 const CARLA = "cccccccc-0000-0000-0000-000000000003";
 const DANI = "dddddddd-0000-0000-0000-000000000004";
 const NEG_ANA = "a1a1a1a1-0000-0000-0000-000000000001"; // muestra el tiempo al cliente
-const NEG_BETO = "b2b2b2b2-0000-0000-0000-000000000002"; // lo deja apagado (por defecto)
+const NEG_BETO = "b2b2b2b2-0000-0000-0000-000000000002"; // lo apaga a propósito en el test del interruptor
 const NEG_CARLA = "c3c3c3c3-0000-0000-0000-000000000003"; // para la sugerencia
 const NEG_DANI = "d4d4d4d4-0000-0000-0000-000000000004"; // para los últimos 20
 const CAT_ANA = "c1000000-0000-0000-0000-000000000001";
@@ -283,13 +283,25 @@ describe("el seguimiento — SEGUIMIENTO-37", () => {
     expect(eventos.map((e) => e.estado)).toEqual(["pending", "confirmed"]);
   });
 
-  it("con el interruptor apagado lo entrega igual si el local cargó el tiempo, y si no, no entrega nada", async () => {
+  it("encendido (por defecto) lo entrega si el local cargó el tiempo; aceptado sin tiempo, no — SEGUIMIENTO-50", async () => {
     const { id, code } = await place("beto", FERNET);
     await setStatus(BETO, id, "confirmed");
     // Aceptado sin tiempo: no hay nada que mostrar.
     expect((await tracking(code)).pedido).not.toHaveProperty("prep");
 
     await prep(BETO, id, 30);
+    expect((await tracking(code)).pedido.prep).toBeDefined();
+  });
+
+  it("apagado no entrega nada, aunque el local haya cargado el tiempo, y al volver a encenderlo, sí — SEGUIMIENTO-50", async () => {
+    const { id, code } = await place("beto", FERNET);
+    await setStatus(BETO, id, "confirmed");
+    await prep(BETO, id, 30);
+
+    await db.exec(`update business_settings set show_prep_time = false where business_id = '${NEG_BETO}'`);
+    expect((await tracking(code)).pedido).not.toHaveProperty("prep");
+
+    await db.exec(`update business_settings set show_prep_time = true where business_id = '${NEG_BETO}'`);
     expect((await tracking(code)).pedido.prep).toBeDefined();
   });
 
@@ -325,11 +337,11 @@ describe("el seguimiento — SEGUIMIENTO-37", () => {
 });
 
 describe("configuración — ADMIN-CONFIG-49 y 50", () => {
-  it("por defecto el tiempo no se muestra y el valor por defecto es 20", async () => {
+  it("por defecto el tiempo se muestra y el valor por defecto es 20", async () => {
     const r = await db.query<{ show: boolean; mins: number }>(
       `select show_prep_time as show, default_prep_minutes as mins from business_settings where business_id = '${NEG_BETO}'`,
     );
-    expect(r.rows[0]).toEqual({ show: false, mins: 20 });
+    expect(r.rows[0]).toEqual({ show: true, mins: 20 });
   });
 
   const save = (user: string, business: string, show: unknown, minutes: unknown) =>

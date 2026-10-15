@@ -511,7 +511,8 @@ llegando al negocio por WhatsApp.
 - **SEGUIMIENTO-36** `public_order_tracking` entrega `nota` en cada ítem que la tiene; el seguimiento la muestra bajo el
   ítem con `textContent`, como lo que el cliente pidió.
 - **SEGUIMIENTO-37** `public_order_tracking` entrega `pedido.prep` (`desde`, `hasta`, `actualizado` y `motivo`) si el
-  local cargó el tiempo (con o sin `show_prep_time`: "Aceptar sin tiempo" no muestra nada), el pedido está en Confirmado o En preparación, no es programado ni anticipado; `desde` es `prep_ready_at` y `hasta` es `desde` + `PREP_WINDOW_MINUTES` (10). Sin eso no trae
+  negocio tiene `show_prep_time` (encendido por defecto), el local cargó el tiempo ("Aceptar sin tiempo" no muestra
+  nada), el pedido está en Confirmado o En preparación, no es programado ni anticipado; `desde` es `prep_ready_at` y `hasta` es `desde` + `PREP_WINDOW_MINUTES` (10). Sin eso no trae
   la clave, y nunca trae datos de otro negocio.
 - **SEGUIMIENTO-38** `PREP_WINDOW_MINUTES` (10) es una sola constante: la de `admin/src/lib/orders/prep.ts` y la de
   `web/apps/tracker/lib/prep.js` valen lo mismo, y un test las compara.
@@ -564,8 +565,11 @@ llegando al negocio por WhatsApp.
   muestra si está vacío; "Disponibles" sí dice que no hay nada. El historial va plegado, una línea por pedido, salvo lo
   que sigue sin rendir, que conserva su tarjeta.
 - **SEGUIMIENTO-49** El tiempo del local se ve grande, debajo del estado, en una sola línea ("Listo aprox. 13:40 ·
-  faltan 25 min", o "Llega aprox." con la hora del repartidor), siempre que el local haya cargado una hora, esté o no
-  encendido `show_prep_time` (migración `20261110000000`).
+  faltan 25 min", o "Llega aprox." con la hora del repartidor), siempre que el local haya cargado una hora y el negocio
+  tenga `show_prep_time` encendido.
+- **SEGUIMIENTO-50** `show_prep_time` es `true` por defecto (migración `20261111000000`, que también lo enciende en los
+  negocios existentes y en `save_business_settings` cuando la fila nace sin él). Si el local lo apaga, `public_order_tracking`
+  no entrega `pedido.prep` aunque la hora esté cargada y el cliente no ve el tiempo; al volver a encenderlo, sí.
 
 
 ## PWA — Instalar el menú en el celular
@@ -1184,8 +1188,8 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
 - **ADMIN-CONFIG-48** Configuración tiene el interruptor "Permitir notas en cada producto" (`allow_item_notes`, activo
   por defecto), en Entrega y pago; se guarda con "Guardar cambios" y `save_business_settings` lo recibe en
   `p_allow_item_notes`.
-- **ADMIN-CONFIG-49** Configuración tiene la sección "Tiempos de preparación" con el interruptor "Mostrar el tiempo
-  estimado a mis clientes" (`show_prep_time`, apagado por defecto) y la aclaración de que siempre es aproximado; se
+- **ADMIN-CONFIG-49** Configuración tiene la sección "Tiempos de preparación" con el interruptor "Tus clientes ven
+  a qué hora sale su pedido" (`show_prep_time`, encendido por defecto) y la aclaración de que siempre es aproximado; se
   guarda con "Guardar cambios" y `save_business_settings` lo recibe en `p_show_prep_time`.
 - **ADMIN-CONFIG-50** La misma sección tiene "Tiempo de preparación por defecto" (`default_prep_minutes`, 20 por
   defecto): un entero de 5 a 180, validado en `validateSettings` y en la base; es lo que el selector de Aceptar

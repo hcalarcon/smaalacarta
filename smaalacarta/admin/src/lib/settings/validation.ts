@@ -97,7 +97,7 @@ export const DEFAULT_SETTINGS: SettingsInput = {
   headerImageY: CENTER,
   showDefaultImages: true,
   allowItemNotes: true,
-  showPrepTime: false,
+  showPrepTime: true,
   defaultPrepMinutes: PREP_FALLBACK,
   logoUrl: "",
   menuPdfUrl: "",
