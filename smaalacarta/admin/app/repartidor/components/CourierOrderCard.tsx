@@ -129,15 +129,25 @@ export default function CourierOrderCard({
         </div>
       </header>
 
-      {order.estado !== "cancelled" ? (
-        <p
-          className={`mt-2 rounded-xl px-3 py-2 text-sm font-semibold ${
-            collection.cash ? "bg-amber-100 text-amber-900" : "bg-sky-50 text-sky-900"
-          }`}
-        >
-          💵 {collection.text} · Envío {formatMoney(currentFee)}
-        </p>
-      ) : null}
+      {/* Línea 2: adónde lo lleva, lo más importante (ADMIN-REPARTIDOR-8). */}
+      <div className="mt-2 flex items-start gap-2">
+        <span aria-hidden="true" className="text-xl leading-6">
+          📍
+        </span>
+        <div className="min-w-0">
+          <p className="sr-only">Entregar en</p>
+          <p className="break-words text-lg font-bold leading-snug text-stone-900">
+            {order.envio.zona || order.cliente.direccion || "-"}
+          </p>
+          {order.envio.zona && order.cliente.direccion ? (
+            <p className="break-words text-base font-medium text-stone-800">{order.cliente.direccion}</p>
+          ) : null}
+          <p className="mt-0.5 break-words text-xs text-stone-500">
+            Retiro en {order.negocio.nombre}
+            {order.negocio.direccion ? ` · ${order.negocio.direccion}` : ""}
+          </p>
+        </div>
+      </div>
 
       {ready ? (
         <p className="mt-3 rounded-xl bg-brand-soft px-3 py-2 text-sm font-semibold text-brand">
@@ -172,12 +182,21 @@ export default function CourierOrderCard({
         )
       ) : null}
 
-      {/* Línea 3: de dónde a dónde. */}
-      <p className="mt-2 break-words text-sm text-stone-700">
-        <span className="text-stone-500">Retiro</span> {order.negocio.direccion || order.negocio.nombre}{" "}
-        <span aria-hidden="true">→</span> <span className="text-stone-500">Entrega</span>{" "}
-        {[order.envio.zona, order.cliente.direccion].filter(Boolean).join(" · ") || "-"}
-      </p>
+      {/* Plata en una línea: lo que cobra por el envío y, si hay que cobrarle algo al cliente, el chip. */}
+      {order.estado !== "cancelled" ? (
+        <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-stone-600">
+          <span>Envío {formatMoney(currentFee)}</span>
+          {collection.toCollect > 0 ? (
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs font-bold ${
+                collection.cash ? "bg-amber-100 text-amber-900" : "bg-sky-50 text-sky-900"
+              }`}
+            >
+              Cobrar {formatMoney(collection.toCollect)}
+            </span>
+          ) : null}
+        </p>
+      ) : null}
 
       {error ? (
         <p role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
@@ -332,6 +351,10 @@ export default function CourierOrderCard({
         <div className="flex gap-2">
           <dt className="text-stone-500">Total del pedido (lo cobra el local):</dt>
           <dd className="font-medium">{formatMoney(Number(order.total))}</dd>
+        </div>
+        <div className="flex gap-2">
+          <dt className="text-stone-500">Cobro:</dt>
+          <dd>{collection.text}</dd>
         </div>
         <div className="flex gap-2">
           <dt className="text-stone-500">Pago:</dt>

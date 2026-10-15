@@ -81,6 +81,8 @@ export default function CourierOrdersClient({
 
   // Los pedidos por los que ofertó: cuando uno aparece entre sus envíos en curso, lo eligieron y suena un
   // aviso distinto (ENVIO-116). Los que ya estaban en curso al abrir la pantalla no suenan.
+  // Pedidos con una acción en vuelo: corta un segundo toque que llega antes de que cambie `busyId`.
+  const [inFlight] = useState<Set<string>>(() => new Set());
   const offeredIds = useRef<Set<string>>(new Set());
   const announced = useRef<Set<string>>(new Set(orders.map((item) => item.id)));
 
@@ -127,6 +129,10 @@ export default function CourierOrdersClient({
   }, [router, soundOnRef]);
 
   async function run(orderId: string, call: () => ReturnType<typeof makeOfferAction>) {
+    // Un segundo toque sobre el mismo pedido, aunque llegue en el mismo instante, no lanza otra acción.
+    if (inFlight.has(orderId)) return;
+    inFlight.add(orderId);
+
     setError(null);
     setNotice(null);
     setBusyId(orderId);
@@ -138,6 +144,7 @@ export default function CourierOrdersClient({
     } catch {
       setError({ id: orderId, message: "No pudimos guardar el cambio. Probá de nuevo." });
     } finally {
+      inFlight.delete(orderId);
       setBusyId(null);
       router.refresh();
     }
@@ -354,7 +361,7 @@ export default function CourierOrdersClient({
                       busy={busyId === item.id}
                       error={error?.id === item.id ? error.message : null}
                       onReturn={(kind, reason) => run(item.id, () => returnOrderAction(item.id, kind, reason ?? ""))}
-                      onAdvance={(status, eta) => run(item.id, () => advanceOrderAction(item.id, status, eta))}
+                      onAdvance={(status, eta) => run(item.id, () => advanceOrderAction(item.id, status, eta, item.estado))}
                       onSetEta={(kind, minutes) => run(item.id, () => setEtaAction(item.id, kind, minutes))}
                       onSettle={() => run(item.id, () => markSettledAction(item.id))}
                     />
@@ -428,7 +435,7 @@ export default function CourierOrdersClient({
                     busy={busyId === item.id}
                     error={error?.id === item.id ? error.message : null}
                     onReturn={(kind, reason) => run(item.id, () => returnOrderAction(item.id, kind, reason ?? ""))}
-                    onAdvance={(status, eta) => run(item.id, () => advanceOrderAction(item.id, status, eta))}
+                    onAdvance={(status, eta) => run(item.id, () => advanceOrderAction(item.id, status, eta, item.estado))}
                     onSetEta={(kind, minutes) => run(item.id, () => setEtaAction(item.id, kind, minutes))}
                     onSettle={() => run(item.id, () => markSettledAction(item.id))}
                   />

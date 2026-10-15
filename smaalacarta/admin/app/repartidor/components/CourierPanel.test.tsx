@@ -138,15 +138,28 @@ const offerCard = (o: AvailableOrder, onOffer = vi.fn(), onDecline = vi.fn(), on
   );
 
 describe("pedido que ya tomó, en el panel del repartidor — ENVIO-31", () => {
+  it("lo más visible es adónde lleva el pedido y la plata va en una línea (ADMIN-REPARTIDOR-8)", () => {
+    const { container } = card(order("12", "preparing", "accepted"));
+
+    const pin = screen.getByText("📍");
+    expect(pin.parentElement?.textContent).toContain("Calle 123");
+    expect(pin.parentElement?.textContent).toMatch(/Retiro en/);
+    expect(container.textContent).toMatch(/Envío\s?\$/);
+    // Total, desglose y rendición, solo dentro de "Ver detalle".
+    const outsideDetail = container.cloneNode(true) as HTMLElement;
+    outsideDetail.querySelector("details")?.remove();
+    expect(outsideDetail.textContent).not.toMatch(/Cobrar al cliente/);
+  });
+
   it("muestra local, cliente, barrio, precio, total del local, pago y productos con opciones", () => {
     card(order("12", "preparing", "accepted"));
 
     expect(screen.getAllByText(/Ana Resto/).length).toBeGreaterThan(0);
     expect(screen.getByText("San Martín 100")).toBeTruthy();
     expect(screen.getByText("Cliente")).toBeTruthy();
-    expect(screen.getByText("Calle 123")).toBeTruthy();
+    expect(screen.getAllByText("Calle 123").length).toBeTruthy();
     expect(screen.getByText("3644277105")).toBeTruthy();
-    expect(screen.getByText("Cantera")).toBeTruthy();
+    expect(screen.getAllByText("Cantera").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/\$\s?8\.200/).length).toBeGreaterThan(0);
     expect(screen.getByText("Efectivo")).toBeTruthy();
     expect(screen.getByText("2 × Helado")).toBeTruthy();
@@ -205,7 +218,7 @@ describe("pedido disponible — ENVIO-71 y 113 a 115", () => {
 
     expect(screen.getAllByText(/Ana Resto/).length).toBeGreaterThan(0);
     expect(screen.getByText("San Martín 100")).toBeTruthy();
-    expect(screen.getByText("Cantera")).toBeTruthy();
+    expect(screen.getAllByText("Cantera").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/\$\s?8\.200/).length).toBeGreaterThan(0);
     expect(screen.getByText("Efectivo")).toBeTruthy();
     expect(screen.getByText("2 ofertas")).toBeTruthy();
