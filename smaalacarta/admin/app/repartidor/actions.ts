@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { requireCourier } from "@/lib/auth/courier";
-import { validateReturnReason } from "@/lib/courier/panel";
+import { validateReturn } from "@/lib/courier/panel";
 import { validateEta, type EtaKind } from "@/lib/courier/times";
 import {
   courierDeclineOrder,
@@ -112,16 +112,20 @@ export async function declineOrderAction(orderId: string): Promise<CourierAction
   return { ok: true };
 }
 
-// Devolver un pedido que había tomado, con motivo obligatorio (ENVIO-66).
-export async function returnOrderAction(orderId: string, reason: string): Promise<CourierActionResult> {
+// Devolver un pedido que había tomado, con un motivo elegido (ENVIO-66 y 166).
+export async function returnOrderAction(
+  orderId: string,
+  kind: string,
+  reason: string,
+): Promise<CourierActionResult> {
   await requireCourier();
 
-  const validation = validateReturnReason(reason);
+  const validation = validateReturn(kind, reason);
   if (!validation.ok) {
     return { ok: false, error: validation.error, fieldErrors: { reason: validation.error } };
   }
 
-  const result = await courierReturnOrder(orderId, validation.reason);
+  const result = await courierReturnOrder(orderId, validation.kind, validation.reason);
   if ("error" in result) {
     return { ok: false, error: orderErrorMessage(result.error) };
   }

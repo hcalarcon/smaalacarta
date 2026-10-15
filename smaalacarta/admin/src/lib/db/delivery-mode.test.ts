@@ -315,7 +315,7 @@ describe("devolver, cancelar, asignar a mano y 'lo llevo yo' en los dos modos �
 
       it("el que devuelve no lo vuelve a ver y otro repartidor sí, con el mismo modo", async () => {
         const o = await taken();
-        const r = await call(TOQUE_USER, `select public.courier_return_order('${o.id}', 'Se me rompió la moto')`);
+        const r = await call(TOQUE_USER, `select public.courier_return_order('${o.id}', 'other', 'Se me rompió la moto')`);
         expect(r.ok).toBe(true);
 
         expect(await row(o.id)).toMatchObject({ courier_status: "searching", courier_id: null, delivery_mode: mode });

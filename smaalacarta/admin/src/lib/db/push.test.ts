@@ -270,7 +270,7 @@ describe("tareas por tiempo — ADMIN-PWA-5 a 8", () => {
     // Hubo una marca vieja (p. ej. de antes de que alguien ofertara).
     await db.exec(`update orders set no_offers_alerted_at = now() where id = '${o.id}'`);
 
-    const returned = await call(BETO, `select public.courier_return_order('${o.id}', 'Se me pinchó la moto')`);
+    const returned = await call(BETO, `select public.courier_return_order('${o.id}', 'other', 'Se me pinchó la moto')`);
     expect(returned.ok).toBe(true);
 
     const row = await orderRow(o.id);

@@ -340,12 +340,21 @@ describe("tiempos del envío en el panel del local — ENVIO-164", () => {
     expect(pickupEtaNotice({ ...accepted, courier_status: "searching" })).toBeNull();
   });
 
-  it("si lo devolvió por un cambio de demora, lo dice mientras vuelve a buscar", () => {
-    const back = order({ courier_status: "searching", returned_prep_changed: true });
+  it("dice el motivo que eligió el repartidor mientras vuelve a buscar (ENVIO-166)", () => {
+    const back = order({ courier_status: "searching", returned_reason_kind: "delay_changed" });
     expect(returnedNotice(back)).toBe("Lo devolvió: cambió la demora");
     expect(courierStatusLabel(back)).toMatch(/^Buscando repartidor desde las/);
+    expect(returnedNotice({ ...back, returned_reason_kind: "vehicle" })).toBe("Lo devolvió: problema con el vehículo");
+    expect(returnedNotice({ ...back, returned_reason_kind: "other", returned_reason: "Me quedé sin nafta" })).toBe(
+      "Lo devolvió: Me quedé sin nafta",
+    );
+  });
+
+  it("no lo dice si no hay motivo, ya lo tomó otro o el pedido terminó", () => {
+    const back = order({ courier_status: "searching", returned_reason_kind: "vehicle" });
     expect(returnedNotice({ ...back, courier_status: "accepted" })).toBeNull();
-    expect(returnedNotice({ ...back, returned_prep_changed: false })).toBeNull();
+    expect(returnedNotice({ ...back, returned_reason_kind: null })).toBeNull();
+    expect(returnedNotice({ ...back, returned_reason_kind: "other", returned_reason: null })).toBeNull();
     expect(returnedNotice({ ...back, status: "cancelled" })).toBeNull();
   });
 });

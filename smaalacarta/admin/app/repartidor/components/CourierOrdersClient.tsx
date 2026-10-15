@@ -350,7 +350,7 @@ export default function CourierOrdersClient({
                     now={now}
                     busy={busyId === item.id}
                     error={error?.id === item.id ? error.message : null}
-                    onReturn={(reason) => run(item.id, () => returnOrderAction(item.id, reason))}
+                    onReturn={(kind, reason) => run(item.id, () => returnOrderAction(item.id, kind, reason ?? ""))}
                     onAdvance={(status, eta) => run(item.id, () => advanceOrderAction(item.id, status, eta))}
                     onSetEta={(kind, minutes) => run(item.id, () => setEtaAction(item.id, kind, minutes))}
                     onSettle={() => run(item.id, () => markSettledAction(item.id))}

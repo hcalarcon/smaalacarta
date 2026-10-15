@@ -84,10 +84,18 @@ export async function courierDeclineOrder(orderId: string): Promise<{ ok: true }
 }
 
 // Devuelve un pedido que había tomado, con motivo (ENVIO-66).
-export async function courierReturnOrder(orderId: string, reason: string): Promise<{ ok: true } | DbFailure> {
+export async function courierReturnOrder(
+  orderId: string,
+  kind: "delay_changed" | "vehicle" | "other",
+  reason: string | null,
+): Promise<{ ok: true } | DbFailure> {
   const supabase = await createClient();
 
-  const { error } = await supabase.rpc("courier_return_order", { p_order_id: orderId, p_reason: reason });
+  const { error } = await supabase.rpc("courier_return_order", {
+    p_order_id: orderId,
+    p_kind: kind,
+    ...(reason === null ? {} : { p_reason: reason }),
+  });
 
   return error ? { error: { code: error.code, message: error.message } } : { ok: true };
 }

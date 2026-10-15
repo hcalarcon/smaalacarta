@@ -7,7 +7,9 @@ import {
   availableActions,
   chatLink,
   telLink,
-  validateReturnReason,
+  returnKindOptions,
+  validateReturn,
+  type ReturnKind,
   type CourierPanelOrder,
 } from "@/lib/courier/panel";
 import { canMarkSettled, courierOrderState, settlementLabel } from "@/lib/courier/settlements";
@@ -49,7 +51,7 @@ export default function CourierOrderCard({
   error: string | null;
   // Devuelve el pedido, con motivo (ENVIO-66): vuelve a buscarse entre los demás repartidores.
   // Pueden devolver una promesa: el botón espera lo que tarde y no deja tocar de nuevo (ENVIO-144).
-  onReturn: (reason: string) => void | Promise<void>;
+  onReturn: (kind: ReturnKind, reason: string | null) => void | Promise<void>;
   // Al marcar En camino puede llevar los minutos que tarda en llegar al cliente (ENVIO-163).
   onAdvance: (status: "on_the_way" | "delivered", etaMinutes?: number) => void | Promise<void>;
   // "Llego al local en X" / "Llego al cliente en X" (ENVIO-157).
@@ -58,6 +60,7 @@ export default function CourierOrderCard({
   onSettle: () => void | Promise<void>;
 }) {
   const [returning, setReturning] = useState(false);
+  const [returnKind, setReturnKind] = useState<ReturnKind | null>(null);
   const [reason, setReason] = useState("");
   const [reasonError, setReasonError] = useState<string | null>(null);
   const [settling, setSettling] = useState(false);
@@ -92,15 +95,16 @@ export default function CourierOrderCard({
   }
 
   function submitReturn() {
-    const result = validateReturnReason(reason);
+    const result = validateReturn(returnKind ?? "", reason);
     if (!result.ok) {
       setReasonError(result.error);
       return;
     }
 
     setReasonError(null);
-    return Promise.resolve(onReturn(result.reason)).finally(() => {
+    return Promise.resolve(onReturn(result.kind, result.reason)).finally(() => {
       setReturning(false);
+      setReturnKind(null);
       setReason("");
     });
   }
@@ -294,17 +298,43 @@ export default function CourierOrderCard({
       {actions.returnOrder ? (
         returning ? (
           <div className="mt-3 space-y-3 rounded-xl border border-line p-3">
-            <label className="block text-sm text-stone-700">
-              Motivo de la devolución
-              <input
-                value={reason}
-                onChange={(event) => setReason(event.target.value)}
-                maxLength={200}
-                placeholder="Se me pinchó la moto"
-                className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-sm"
-              />
-              {reasonError ? <span className="text-xs text-red-700">{reasonError}</span> : null}
-            </label>
+            <fieldset>
+              <legend className="text-sm font-medium text-stone-700">¿Por qué lo devolvés?</legend>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {returnKindOptions(Boolean(change)).map((option) => (
+                  <button
+                    key={option.kind}
+                    type="button"
+                    aria-pressed={returnKind === option.kind}
+                    onClick={() => {
+                      setReturnKind(option.kind);
+                      setReasonError(null);
+                    }}
+                    className={`min-h-11 rounded-xl border px-4 py-2 text-sm font-semibold transition ${
+                      returnKind === option.kind
+                        ? "border-red-600 bg-red-50 text-red-800"
+                        : "border-line-strong text-stone-700 hover:bg-brand-soft"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+
+            {returnKind === "other" ? (
+              <label className="block text-sm text-stone-700">
+                Contá el motivo
+                <input
+                  value={reason}
+                  onChange={(event) => setReason(event.target.value)}
+                  maxLength={140}
+                  placeholder="Me quedé sin nafta"
+                  className="mt-1 w-full rounded-lg border border-line-strong px-3 py-2 text-sm"
+                />
+              </label>
+            ) : null}
+            {reasonError ? <p className="text-xs text-red-700">{reasonError}</p> : null}
             <p className="text-xs text-stone-500">
               El pedido vuelve a los demás repartidores y vos no lo vas a volver a ver.
             </p>
@@ -314,6 +344,7 @@ export default function CourierOrderCard({
                 type="button"
                 onClick={() => {
                   setReturning(false);
+                  setReturnKind(null);
                   setReasonError(null);
                 }}
                 className="min-h-11 rounded-xl border border-line-strong px-4 py-2 text-sm font-medium text-stone-700 transition hover:bg-brand-soft"

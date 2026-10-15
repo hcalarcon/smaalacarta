@@ -312,12 +312,27 @@ describe("acciones sobre lo que tomó — ENVIO-77", () => {
     fireEvent.click(screen.getByRole("button", { name: "Devolver" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirmar devolución" }));
     expect(onReturn).not.toHaveBeenCalled();
-    expect(screen.getByText(/por qué devolvés/i)).toBeTruthy();
+    expect(screen.getByText(/Elegí por qué devolvés/i)).toBeTruthy();
 
-    fireEvent.change(screen.getByLabelText(/motivo de la devolución/i), { target: { value: "Se pinchó la moto" } });
+    fireEvent.click(screen.getByRole("button", { name: "Otro" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar devolución" }));
+    expect(onReturn).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText(/contá el motivo/i), { target: { value: "Se pinchó la moto" } });
     fireEvent.click(screen.getByRole("button", { name: "Confirmar devolución" }));
 
-    expect(onReturn).toHaveBeenCalledWith("Se pinchó la moto");
+    expect(onReturn).toHaveBeenCalledWith("other", "Se pinchó la moto");
+  });
+
+  it("un motivo fijo se devuelve sin texto", () => {
+    const onReturn = vi.fn();
+    card(order("12", "preparing", "accepted"), onReturn);
+
+    fireEvent.click(screen.getByRole("button", { name: "Devolver" }));
+    fireEvent.click(screen.getByRole("button", { name: "Problema con el vehículo" }));
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar devolución" }));
+
+    expect(onReturn).toHaveBeenCalledWith("vehicle", null);
   });
 
   it("entregado al repartidor ofrece En camino y ya no Devolver; en camino ofrece Entregado", () => {
@@ -489,10 +504,11 @@ describe("tablero del repartidor — ENVIO-76 a 78", () => {
     render(<CourierOrdersClient serverNow="2026-10-09T22:05:00Z" available={[]} orders={[order("1", "ready", "accepted")]} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Devolver" }));
-    fireEvent.change(screen.getByLabelText(/motivo de la devolución/i), { target: { value: "No llego" } });
+    fireEvent.click(screen.getByRole("button", { name: "Otro" }));
+    fireEvent.change(screen.getByLabelText(/contá el motivo/i), { target: { value: "No llego" } });
     fireEvent.click(screen.getByRole("button", { name: "Confirmar devolución" }));
 
-    await waitFor(() => expect(mocks.giveBack).toHaveBeenCalledWith("1", "No llego"));
+    await waitFor(() => expect(mocks.giveBack).toHaveBeenCalledWith("1", "other", "No llego"));
   });
 
   it("si la acción falla, el error se ve en ese pedido", async () => {
@@ -738,6 +754,28 @@ describe("circuito de tiempos — ENVIO-163", () => {
     const old = screen.getByText("21:05");
     expect(old.tagName).toBe("S");
     expect(screen.getByRole("button", { name: "Devolver" })).toBeTruthy();
+  });
+
+  it("con un cambio de demora sin ver, 'Cambió la demora' es el primer botón al devolver", () => {
+    timedCard(order("12", "confirmed", "accepted", { tiempos: times({ listo_antes: "2026-10-10T00:05:00Z" }) }));
+    fireEvent.click(screen.getByRole("button", { name: "Devolver" }));
+
+    const labels = screen
+      .getAllByRole("button", { pressed: false })
+      .map((b) => b.textContent)
+      .filter((t) => ["Cambió la demora", "Problema con el vehículo", "Otro"].includes(t ?? ""));
+    expect(labels).toEqual(["Cambió la demora", "Problema con el vehículo", "Otro"]);
+  });
+
+  it("sin cambio de demora, 'Cambió la demora' no va primero", () => {
+    timedCard(order("12", "confirmed", "accepted", { tiempos: times() }));
+    fireEvent.click(screen.getByRole("button", { name: "Devolver" }));
+
+    const labels = screen
+      .getAllByRole("button", { pressed: false })
+      .map((b) => b.textContent)
+      .filter((t) => ["Cambió la demora", "Problema con el vehículo", "Otro"].includes(t ?? ""));
+    expect(labels[0]).toBe("Problema con el vehículo");
   });
 
   it("al marcar En camino puede cargar 'Llego al cliente en…', y también salir sin tiempo", async () => {

@@ -278,7 +278,7 @@ describe("los dos tiempos del repartidor — ENVIO-157", () => {
   it("devolver el pedido borra los tiempos", async () => {
     const o = await taken();
     await eta(MOTO_USER, o.id, "pickup", 10);
-    const r = await call(MOTO_USER, `select public.courier_return_order('${o.id}', 'Cambió la demora')`);
+    const r = await call(MOTO_USER, `select public.courier_return_order('${o.id}', 'other', 'Cambió la demora')`);
     expect(r.ok).toBe(true);
     const after = await row(o.id);
     expect(after.courier_eta_pickup_at).toBeNull();
@@ -289,26 +289,42 @@ describe("los dos tiempos del repartidor — ENVIO-157", () => {
     expect((await available(MOTO_USER)).map((x) => x.id)).not.toContain(o.id);
   });
 
-  it("si lo devuelve después de un cambio de demora, el pedido vuelve marcado (ENVIO-159 y 164)", async () => {
+  const returnedReason = async (id: string) =>
+    (
+      await db.query<{ kind: string | null; text: string | null }>(
+        "select returned_reason_kind as kind, returned_reason as text from orders where id = $1",
+        [id],
+      )
+    ).rows[0];
+
+  it("la devolución guarda el motivo elegido y lo limpia cuando otro lo toma (ENVIO-166)", async () => {
     const o = await taken();
-    await prep(o.id, 50);
-    expect((await row(o.id)).ready_was_at).not.toBeNull();
+    const r = await call(MOTO_USER, `select public.courier_return_order('${o.id}', 'delay_changed')`);
+    expect(r.ok).toBe(true);
+    expect(await returnedReason(o.id)).toEqual({ kind: "delay_changed", text: null });
 
-    await call(MOTO_USER, `select public.courier_return_order('${o.id}', 'No me sirve la hora')`);
-    const flag = async () =>
-      (await db.query<{ f: boolean }>("select returned_prep_changed as f from orders where id = $1", [o.id])).rows[0].f;
-    expect(await flag()).toBe(true);
-
-    // Lo toma otro repartidor: la marca se limpia.
+    // Lo toma otro repartidor: el motivo se limpia.
     await take(TOQUE_USER, o.id);
-    expect(await flag()).toBe(false);
+    expect(await returnedReason(o.id)).toEqual({ kind: null, text: null });
   });
 
-  it("una devolución sin cambio de demora no lleva la marca", async () => {
+  it("problema con el vehículo y otro con texto (ENVIO-166)", async () => {
+    const a = await taken();
+    await call(MOTO_USER, `select public.courier_return_order('${a.id}', 'vehicle', 'ignorado')`);
+    expect(await returnedReason(a.id)).toEqual({ kind: "vehicle", text: null });
+
+    const b = await taken();
+    await call(MOTO_USER, `select public.courier_return_order('${b.id}', 'other', '  Me quedé sin nafta  ')`);
+    expect(await returnedReason(b.id)).toEqual({ kind: "other", text: "Me quedé sin nafta" });
+  });
+
+  it("'Otro' sin texto, con menos de 3 o más de 140 caracteres, o un tipo inválido, dan error (ENVIO-166)", async () => {
     const o = await taken();
-    await call(MOTO_USER, `select public.courier_return_order('${o.id}', 'Se me pinchó la moto')`);
-    const r = await db.query<{ f: boolean }>("select returned_prep_changed as f from orders where id = $1", [o.id]);
-    expect(r.rows[0].f).toBe(false);
+    for (const args of [`'other'`, `'other', '  '`, `'other', 'ab'`, `'other', '${"x".repeat(141)}'`, `'nada', 'x'`]) {
+      const r = await call(MOTO_USER, `select public.courier_return_order('${o.id}', ${args})`);
+      expect(!r.ok && r.code).toBe("22023");
+    }
+    expect((await row(o.id)).courier_id).toBe(MOTO);
   });
 
   it("en ofertas, al ser elegido el repartidor también lo carga", async () => {
@@ -444,7 +460,8 @@ describe("el local no escribe los tiempos del circuito — ENVIO-162", () => {
     ["courier_eta_dropoff_at", "now()"],
     ["pickup_reminder_sent_at", "now()"],
     ["ready_was_at", "now()"],
-    ["returned_prep_changed", "true"],
+    ["returned_reason_kind", "'vehicle'"],
+    ["returned_reason", "'x'"],
   ])("%s", async (column, value) => {
     const o = await envio();
     const r = await call(ANA, `update orders set ${column} = ${value} where id = '${o.id}'`);

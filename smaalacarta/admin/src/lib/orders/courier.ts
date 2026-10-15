@@ -34,7 +34,8 @@ export type CourierOrder = {
   // Cuándo llega al local, según lo que cargó el repartidor (ENVIO-157).
   courier_eta_pickup_at?: string | null;
   // Lo devolvió después de que el local cambió la demora (ENVIO-159).
-  returned_prep_changed?: boolean;
+  returned_reason_kind?: string | null;
+  returned_reason?: string | null;
 };
 
 // Una oferta de repartidor tal como la entrega `business_order_offers()` (ENVIO-111).
@@ -199,14 +200,25 @@ export function pickupEtaNotice(
   return time ? `Llega al local a las ${time}` : null;
 }
 
-// "Lo devolvió: cambió la demora" mientras el pedido vuelve a buscar repartidor (ENVIO-164).
+// "Lo devolvió: {motivo}" mientras el pedido vuelve a buscar repartidor (ENVIO-164 y 166).
 export function returnedNotice(
-  order: Pick<CourierOrder, "courier_status" | "status" | "returned_prep_changed">,
+  order: Pick<CourierOrder, "courier_status" | "status" | "returned_reason_kind" | "returned_reason">,
 ): string | null {
-  if (!order.returned_prep_changed || order.courier_status !== "searching") return null;
+  if (order.courier_status !== "searching") return null;
   if (order.status === "delivered" || order.status === "cancelled") return null;
 
-  return "Lo devolvió: cambió la demora";
+  switch (order.returned_reason_kind) {
+    case "delay_changed":
+      return "Lo devolvió: cambió la demora";
+    case "vehicle":
+      return "Lo devolvió: problema con el vehículo";
+    case "other": {
+      const text = order.returned_reason?.trim();
+      return text ? `Lo devolvió: ${text}` : null;
+    }
+    default:
+      return null;
+  }
 }
 
 // Los repartidores activos que cubren la zona del pedido (los que se pueden asignar a mano), por nombre.

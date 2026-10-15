@@ -627,7 +627,7 @@ describe("devolver, cancelar y resolver desde el local — ENVIO-107 a 109", () 
     // Pasaron 20 minutos desde las ofertas originales.
     await age(o.id, 20);
 
-    const r = await call(TOQUE_USER, `select public.courier_return_order('${o.id}', 'Se me pinchó la moto')`);
+    const r = await call(TOQUE_USER, `select public.courier_return_order('${o.id}', 'other', 'Se me pinchó la moto')`);
     expect(r.ok).toBe(true);
 
     expect(await row(o.id)).toMatchObject({ courier_id: null, courier_status: "searching", delivery_fee: "5000.00" });
@@ -653,7 +653,7 @@ describe("devolver, cancelar y resolver desde el local — ENVIO-107 a 109", () 
     const o = await envio();
     await offer(db, TOQUE_USER, o.id);
     await choose(db, TOQUE_USER, o.id);
-    await call(TOQUE_USER, `select public.courier_return_order('${o.id}', 'No llego')`);
+    await call(TOQUE_USER, `select public.courier_return_order('${o.id}', 'other', 'No llego')`);
     expect(code(await offer(db, TOQUE_USER, o.id))).toBe("P0020");
     expect((await offer(db, MOTO_USER, o.id)).ok).toBe(true);
   });

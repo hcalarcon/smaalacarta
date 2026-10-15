@@ -264,12 +264,12 @@ describe("rechazar y devolver — ENVIO-65 y 66", () => {
     const o = await searching();
     await take(MOTO_USER, o.id, 7000, "Lluvia");
 
-    const sinMotivo = await call(MOTO_USER, `select public.courier_return_order('${o.id}', '  ')`);
+    const sinMotivo = await call(MOTO_USER, `select public.courier_return_order('${o.id}', 'other', '  ')`);
     expect(!sinMotivo.ok && sinMotivo.code).toBe("22023");
     expect((await row(o.id)).courier_id).toBe(MOTO);
 
     const antes = new Date((await row(o.id)).offered_at as string).getTime();
-    const ok = await call(MOTO_USER, `select public.courier_return_order('${o.id}', 'Se me pinchó la moto')`);
+    const ok = await call(MOTO_USER, `select public.courier_return_order('${o.id}', 'other', 'Se me pinchó la moto')`);
     expect(ok.ok).toBe(true);
 
     const r = await row(o.id);
@@ -309,15 +309,15 @@ describe("rechazar y devolver — ENVIO-65 y 66", () => {
     const o = await searching();
     await take(TOQUE_USER, o.id);
 
-    const otro = await call(MOTO_USER, `select public.courier_return_order('${o.id}', 'x')`);
+    const otro = await call(MOTO_USER, `select public.courier_return_order('${o.id}', 'vehicle')`);
     expect(!otro.ok && otro.code).toBe("P0002");
-    const local = await call(ANA, `select public.courier_return_order('${o.id}', 'x')`);
+    const local = await call(ANA, `select public.courier_return_order('${o.id}', 'vehicle')`);
     expect(local.ok).toBe(false);
-    const anon = await call(null, `select public.courier_return_order('${o.id}', 'x')`);
+    const anon = await call(null, `select public.courier_return_order('${o.id}', 'vehicle')`);
     expect(anon.ok).toBe(false);
 
     await setStatus(ANA, o.id, "handed_to_courier");
-    const tarde = await call(TOQUE_USER, `select public.courier_return_order('${o.id}', 'Ya lo tengo')`);
+    const tarde = await call(TOQUE_USER, `select public.courier_return_order('${o.id}', 'other', 'Ya lo tengo')`);
     expect(!tarde.ok && tarde.code).toBe("P0004");
     expect((await row(o.id)).courier_id).toBe(TOQUE);
   });
@@ -326,7 +326,7 @@ describe("rechazar y devolver — ENVIO-65 y 66", () => {
     const o = await searching();
     await take(TOQUE_USER, o.id);
     await setStatus(ANA, o.id, "ready");
-    const r = await call(TOQUE_USER, `select public.courier_return_order('${o.id}', 'No llego')`);
+    const r = await call(TOQUE_USER, `select public.courier_return_order('${o.id}', 'other', 'No llego')`);
     expect(r.ok).toBe(true);
     expect((await row(o.id)).status).toBe("ready");
     expect(await sees(MOTO_USER, o.id)).toBe(true);

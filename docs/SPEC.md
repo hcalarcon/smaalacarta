@@ -1905,9 +1905,18 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   curso muestra la hora de listo y, si cambió, "Cambió" con la anterior tachada; al marcar En camino pide "Llego al
   cliente en…". Los botones tienen espera.
 - **ENVIO-164** Panel del local: el pedido con repartidor muestra "Llega al local a las HH:MM" si lo cargó; si el
-  repartidor lo devolvió por un cambio de demora, "Lo devolvió: cambió la demora" y vuelve a "Buscando repartidor".
+  repartidor lo devolvió, dice el motivo que eligió (ENVIO-166) y vuelve a "Buscando repartidor".
 - **ENVIO-165** Seguimiento: pendiente con envío, "Esperando que el local confirme"; en camino, "Llega aprox. a las
   HH:MM" si el repartidor cargó el tiempo (es/en/pt).
+- **ENVIO-166** *Reemplaza la deducción de ENVIO-164.* Al tocar Devolver, el repartidor elige "Cambió la demora",
+  "Problema con el vehículo" u "Otro" (con texto de 3 a 140 caracteres). `courier_return_order(pedido, tipo, texto)`
+  guarda `orders.returned_reason_kind` (`delay_changed`, `vehicle`, `other`) y `returned_reason` (solo con "Otro");
+  un tipo inválido o "Otro" sin texto da `22023`, y solo devuelve el repartidor asignado (`P0002`). El local ve "Lo
+  devolvió: cambió la demora", "Lo devolvió: problema con el vehículo" o "Lo devolvió: {texto}" mientras el pedido
+  vuelve a buscar; al tomarlo otro repartidor el motivo se limpia. Si el repartidor tiene un cambio de demora sin
+  ver, "Cambió la demora" es el primer botón. `returned_prep_changed` se elimina.
+- **ENVIO-167** El aviso "El local cambió la demora" compara las horas como instantes (`timestamptz`), no como
+  texto: la misma hora escrita distinto (`Z` o `+00:00`, con o sin milisegundos, otra zona) no avisa.
 
 
 

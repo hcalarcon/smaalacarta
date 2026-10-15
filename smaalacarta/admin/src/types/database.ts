@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.18"
   }
   graphql_public: {
     Tables: {
@@ -834,9 +834,9 @@ export type Database = {
           active: boolean
           business_id: string
           code: string
-          courier_id: string | null
           courier_eta_dropoff_at: string | null
           courier_eta_pickup_at: string | null
+          courier_id: string | null
           courier_note: string | null
           courier_requested_at: string | null
           courier_responded_at: string | null
@@ -864,13 +864,14 @@ export type Database = {
           order_number: string
           payment: string | null
           payment_status: string
-          preorder: boolean
           pickup_reminder_sent_at: string | null
+          preorder: boolean
           prep_ready_at: string | null
           prep_reason: string | null
           prep_updated_at: string | null
           ready_was_at: string | null
-          returned_prep_changed: boolean
+          returned_reason: string | null
+          returned_reason_kind: string | null
           scheduled_for: string | null
           settled_at: string | null
           settled_by: string | null
@@ -885,9 +886,9 @@ export type Database = {
           active?: boolean
           business_id: string
           code?: string
-          courier_id?: string | null
           courier_eta_dropoff_at?: string | null
           courier_eta_pickup_at?: string | null
+          courier_id?: string | null
           courier_note?: string | null
           courier_requested_at?: string | null
           courier_responded_at?: string | null
@@ -915,13 +916,14 @@ export type Database = {
           order_number: string
           payment?: string | null
           payment_status?: string
-          preorder?: boolean
           pickup_reminder_sent_at?: string | null
+          preorder?: boolean
           prep_ready_at?: string | null
           prep_reason?: string | null
           prep_updated_at?: string | null
           ready_was_at?: string | null
-          returned_prep_changed?: boolean
+          returned_reason?: string | null
+          returned_reason_kind?: string | null
           scheduled_for?: string | null
           settled_at?: string | null
           settled_by?: string | null
@@ -936,9 +938,9 @@ export type Database = {
           active?: boolean
           business_id?: string
           code?: string
-          courier_id?: string | null
           courier_eta_dropoff_at?: string | null
           courier_eta_pickup_at?: string | null
+          courier_id?: string | null
           courier_note?: string | null
           courier_requested_at?: string | null
           courier_responded_at?: string | null
@@ -966,13 +968,14 @@ export type Database = {
           order_number?: string
           payment?: string | null
           payment_status?: string
-          preorder?: boolean
           pickup_reminder_sent_at?: string | null
+          preorder?: boolean
           prep_ready_at?: string | null
           prep_reason?: string | null
           prep_updated_at?: string | null
           ready_was_at?: string | null
-          returned_prep_changed?: boolean
+          returned_reason?: string | null
+          returned_reason_kind?: string | null
           scheduled_for?: string | null
           settled_at?: string | null
           settled_by?: string | null
@@ -1091,6 +1094,24 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_settings: {
+        Row: {
+          delivery_mode: string
+          id: boolean
+          updated_at: string
+        }
+        Insert: {
+          delivery_mode?: string
+          id?: boolean
+          updated_at?: string
+        }
+        Update: {
+          delivery_mode?: string
+          id?: boolean
+          updated_at?: string
+        }
+        Relationships: []
       }
       product_option_groups: {
         Row: {
@@ -1332,24 +1353,6 @@ export type Database = {
           },
         ]
       }
-      platform_settings: {
-        Row: {
-          delivery_mode: string
-          id: boolean
-          updated_at: string
-        }
-        Insert: {
-          delivery_mode?: string
-          id?: boolean
-          updated_at?: string
-        }
-        Update: {
-          delivery_mode?: string
-          id?: boolean
-          updated_at?: string
-        }
-        Relationships: []
-      }
       push_subscriptions: {
         Row: {
           auth: string
@@ -1465,10 +1468,9 @@ export type Database = {
       courier_offers_window: { Args: never; Returns: string }
       courier_orders: { Args: { p_since?: string }; Returns: Json }
       courier_return_order: {
-        Args: { p_order_id: string; p_reason: string }
+        Args: { p_kind: string; p_order_id: string; p_reason?: string }
         Returns: undefined
       }
-      courier_take_order: { Args: { p_order_id: string }; Returns: undefined }
       courier_sees_order: {
         Args: { p_courier_id: string; p_order_id: string }
         Returns: boolean
@@ -1481,6 +1483,7 @@ export type Database = {
         Args: { p_order_id: string; p_status: string }
         Returns: undefined
       }
+      courier_take_order: { Args: { p_order_id: string }; Returns: undefined }
       courier_withdraw_offer: {
         Args: { p_order_id: string }
         Returns: undefined
@@ -1561,7 +1564,10 @@ export type Database = {
         Args: { p_endpoint: string }
         Returns: undefined
       }
-      effective_delivery_mode: { Args: { p_business_id: string }; Returns: string }
+      effective_delivery_mode: {
+        Args: { p_business_id: string }
+        Returns: string
+      }
       effective_favorite_courier: {
         Args: { p_business: string }
         Returns: string
@@ -1591,6 +1597,16 @@ export type Database = {
       next_order_number: { Args: { p_business_id: string }; Returns: number }
       no_offers_alert_window: { Args: never; Returns: string }
       normalize_words: { Args: { p_text: string }; Returns: string[] }
+      order_prep_minutes: {
+        Args: { o: Database["public"]["Tables"]["orders"]["Row"] }
+        Returns: number
+      }
+      order_ready_at: {
+        Args: { o: Database["public"]["Tables"]["orders"]["Row"] }
+        Returns: string
+      }
+      pickup_reminder_lead: { Args: never; Returns: string }
+      platform_searching_orders: { Args: never; Returns: number }
       preorder_window: {
         Args: { p_cutoffs: Json; p_now: string; p_schedule: Json }
         Returns: {
@@ -1617,7 +1633,6 @@ export type Database = {
         Args: { p_slug: string; p_via_path?: boolean }
         Returns: Json
       }
-      platform_searching_orders: { Args: never; Returns: number }
       public_choose_courier: {
         Args: { p_code: string; p_offer_id: string; p_price?: number }
         Returns: undefined
@@ -1643,15 +1658,6 @@ export type Database = {
         Args: { p_business_id: string; p_options: Json; p_product_id: string }
         Returns: Json
       }
-      order_prep_minutes: {
-        Args: { o: Database["public"]["Tables"]["orders"]["Row"] }
-        Returns: number
-      }
-      order_ready_at: {
-        Args: { o: Database["public"]["Tables"]["orders"]["Row"] }
-        Returns: string
-      }
-      pickup_reminder_lead: { Args: never; Returns: string }
       run_order_timers: { Args: never; Returns: undefined }
       save_business_settings: {
         Args: {

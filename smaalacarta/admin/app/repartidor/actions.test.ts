@@ -53,7 +53,7 @@ describe("quien no es el repartidor no llega a la base — ENVIO-30 y 79", () =>
     ["tomar", () => takeOrderAction(ORDER)],
     ["retirar la oferta", () => withdrawOfferAction(ORDER)],
     ["rechazar", () => declineOrderAction(ORDER)],
-    ["devolver", () => returnOrderAction(ORDER, "Motivo")],
+    ["devolver", () => returnOrderAction(ORDER, "other", "Motivo")],
     ["avanzar", () => advanceOrderAction(ORDER, "on_the_way")],
     ["cargar el tiempo", () => setEtaAction(ORDER, "pickup", 10)],
     ["marcar una zona", () => setZoneCoverageAction("22222222-2222-2222-2222-222222222222", true)],
@@ -148,12 +148,17 @@ describe("rechazar un pedido — ENVIO-65", () => {
 
 describe("devolver un pedido — ENVIO-66", () => {
   it("manda el motivo recortado", async () => {
-    expect(await returnOrderAction(ORDER, "  Se pinchó la moto ")).toEqual({ ok: true });
-    expect(courierDb.courierReturnOrder).toHaveBeenCalledWith(ORDER, "Se pinchó la moto");
+    expect(await returnOrderAction(ORDER, "other", "  Se pinchó la moto ")).toEqual({ ok: true });
+    expect(courierDb.courierReturnOrder).toHaveBeenCalledWith(ORDER, "other", "Se pinchó la moto");
   });
 
-  it("sin motivo no llega a la base", async () => {
-    const r = await returnOrderAction(ORDER, "   ");
+  it("un motivo fijo se manda sin texto", async () => {
+    expect(await returnOrderAction(ORDER, "delay_changed", "")).toEqual({ ok: true });
+    expect(courierDb.courierReturnOrder).toHaveBeenCalledWith(ORDER, "delay_changed", null);
+  });
+
+  it("'Otro' sin motivo no llega a la base", async () => {
+    const r = await returnOrderAction(ORDER, "other", "   ");
 
     expect(r).toMatchObject({ ok: false, fieldErrors: { reason: expect.any(String) } });
     expect(courierDb.courierReturnOrder).not.toHaveBeenCalled();
@@ -161,7 +166,7 @@ describe("devolver un pedido — ENVIO-66", () => {
 
   it("traduce el error de la base", async () => {
     courierDb.courierReturnOrder.mockResolvedValue({ error: { code: "P0004", message: "boom" } });
-    const r = await returnOrderAction(ORDER, "Motivo");
+    const r = await returnOrderAction(ORDER, "other", "Motivo");
     expect(r).toMatchObject({ ok: false, error: expect.stringMatching(/no está permitido/i) });
   });
 });

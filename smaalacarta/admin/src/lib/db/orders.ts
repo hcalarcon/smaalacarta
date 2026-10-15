@@ -26,9 +26,10 @@ export type OrderEvent = {
 // Lo que se sabe del envío con repartidor de un pedido (ENVIO-6); todo nulo si no lleva. El teléfono
 // del cliente (`customer_phone`) está en todos los pedidos (ENVIO-70).
 export type OrderDelivery = {
-  // Cuándo llega al local según el repartidor, y si lo devolvió por un cambio de demora (ENVIO-164).
+  // Cuándo llega al local según el repartidor, y por qué lo devolvió el repartidor (ENVIO-164 y 166).
   courier_eta_pickup_at?: string | null;
-  returned_prep_changed?: boolean;
+  returned_reason_kind?: string | null;
+  returned_reason?: string | null;
   courier_id: string | null;
   delivery_zone_id: string | null;
   delivery_zone_name: string | null;
@@ -80,7 +81,7 @@ export type OrderPrep = {
 
 const SELECT =
   "id, order_number, status, total, notes, customer_name, delivery, payment, payment_status, source, scheduled_for, preorder, code, created_at, updated_at, " +
-  "courier_id, delivery_zone_id, delivery_zone_name, delivery_fee_list, delivery_fee, delivery_fee_reason, delivery_fee_changed_at, customer_phone, delivery_address, courier_status, courier_note, courier_responded_at, offered_at, delivery_mode, courier_eta_pickup_at, returned_prep_changed, settled_at, settlement_received_at, prep_ready_at, prep_reason, prep_updated_at, " +
+  "courier_id, delivery_zone_id, delivery_zone_name, delivery_fee_list, delivery_fee, delivery_fee_reason, delivery_fee_changed_at, customer_phone, delivery_address, courier_status, courier_note, courier_responded_at, offered_at, delivery_mode, courier_eta_pickup_at, returned_reason_kind, returned_reason, settled_at, settlement_received_at, prep_ready_at, prep_reason, prep_updated_at, " +
   "order_items(name, quantity, unit_price, sort_order, options, note), order_events(kind, status, created_at, note)";
 
 // Los pedidos más recientes del negocio, con su detalle y su línea de tiempo. El RLS
