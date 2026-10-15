@@ -395,6 +395,7 @@ describe("fetchDelivery — ENVIO-29", () => {
         price: 6500,
         reason: "Fuera de zona",
         state: "accepted",
+        arrivesAt: null,
         mode: "offers",
         note: "Juan, 21:30",
         offers: [],
@@ -620,8 +621,25 @@ describe("deliveryCard — SEGUIMIENTO-27, ENVIO-29, 44 y 91", () => {
     });
   });
 
-  it("waiting (un pedido viejo) se muestra como buscando", () => {
-    expect(deliveryCard({ ...base, state: "waiting" }, "es", money).kind).toBe("searching");
+  it("waiting: el local todavía no aceptó, y lo dice en los tres idiomas — ENVIO-165", () => {
+    const waiting = { ...base, state: "waiting", courier: "", whatsapp: null };
+
+    expect(deliveryCard(waiting, "es", money)).toMatchObject({
+      kind: "waiting",
+      title: "Esperando que el local confirme",
+    });
+    expect(deliveryCard(waiting, "en", money).title).toBe("Waiting for the restaurant to confirm");
+    expect(deliveryCard(waiting, "pt", money).title).toBe("Aguardando o local confirmar");
+  });
+
+  it("accepted con tiempo de llegada: dice la hora aprox., y sin él no dice nada — ENVIO-165", () => {
+    // 2026-10-12T00:55:00Z es 21:55 en Argentina.
+    const at = Date.parse("2026-10-12T00:55:00Z");
+
+    expect(deliveryCard({ ...base, arrivesAt: at }, "es", money).lines).toContain("Llega aprox. a las 21:55");
+    expect(deliveryCard({ ...base, arrivesAt: at }, "en", money).lines).toContain("Arrives around 21:55");
+    expect(deliveryCard({ ...base, arrivesAt: at }, "pt", money).lines).toContain("Chega por volta das 21:55");
+    expect(deliveryCard({ ...base, arrivesAt: null }, "es", money).lines.join(" ")).not.toContain("Llega aprox");
   });
 
   it("self: dice que lo lleva el local", () => {

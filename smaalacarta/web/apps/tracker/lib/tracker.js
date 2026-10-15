@@ -4,6 +4,7 @@
 import { cssUrl } from "../../menu-app/lib/html.js";
 import { headerBackground, positionText } from "../../menu-app/lib/info.js";
 import { LANGS, LOCALES, t } from "../../menu-app/lib/i18n.js";
+import { TIME_ZONE } from "../../menu-app/lib/schedule.js";
 
 const CODE = /^[0-9a-f]{20}$/;
 
@@ -283,6 +284,9 @@ function normalizeDelivery(data) {
     price: Number.isFinite(price) ? price : null,
     reason: typeof data.motivo_cambio === "string" && data.motivo_cambio ? data.motivo_cambio : null,
     state: data.estado,
+    // A qué hora llega al cliente, según lo que cargó el repartidor al retirar (ENVIO-161).
+    arrivesAt:
+      typeof data.llega_a === "string" && !Number.isNaN(Date.parse(data.llega_a)) ? Date.parse(data.llega_a) : null,
     // Precio fijo (`fixed`) u ofertas (ENVIO-149): en precio fijo no hay ofertas ni cuenta regresiva.
     mode: data.modo === "fixed" ? "fixed" : "offers",
     note: typeof data.nota === "string" && data.nota ? data.nota : null,
@@ -349,8 +353,14 @@ export function deliveryCard(delivery, lang, money) {
   if (!delivery) return null;
 
   switch (delivery.state) {
-    // `waiting` ya no se usa (el pedido nace buscando), pero un pedido viejo se muestra igual.
+    // El local todavía no aceptó el pedido: la búsqueda se abre cuando lo acepta (ENVIO-155 y 165).
     case "waiting":
+      return {
+        kind: "waiting",
+        icon: "received",
+        title: t("tracker.delivery.waiting", lang),
+        lines: [t("tracker.delivery.waitingText", lang)],
+      };
     case "searching":
       return delivery.offers.length > 0
         ? { kind: "choose", icon: "choose", title: t("tracker.delivery.chooseTitle", lang), lines: [] }
@@ -379,6 +389,15 @@ export function deliveryCard(delivery, lang, money) {
   const lines = [];
 
   if (delivery.note) lines.push(delivery.note);
+  if (delivery.arrivesAt !== null && Number.isFinite(delivery.arrivesAt)) {
+    const hora = new Intl.DateTimeFormat(LOCALES[lang] ?? LOCALES.es, {
+      hour: "2-digit",
+      minute: "2-digit",
+      hourCycle: "h23",
+      timeZone: TIME_ZONE,
+    }).format(new Date(delivery.arrivesAt));
+    lines.push(t("tracker.delivery.arrives", lang, { hora }));
+  }
   if (delivery.price !== null) {
     lines.push(t("tracker.delivery.pay", lang, { precio: money.format(delivery.price) }));
   }
