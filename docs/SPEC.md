@@ -2264,6 +2264,19 @@ precios en 0; no existe "incluye N y el resto cuesta X".
 
 ---
 
+## WEB-ENTORNO — Los menús leen la base según el entorno de Vercel
+
+*Aplicado por `web/apps/menu-app/lib/supabase-env.js`, `web/api/supabase-config.js` y
+`web/apps/menu-app/supabase-config.js`. Cubierto por `supabase-env.test.js`. Solo URL y publishable key.*
+
+- **WEB-ENTORNO-1** Con `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` definidas, la
+  configuración de Supabase usa esos valores (en Preview, la base de prueba).
+- **WEB-ENTORNO-2** Sin las variables (o si falta una), usa los de producción, sin mezclar bases.
+- **WEB-ENTORNO-3** En el navegador, `supabase-config.js` pide `/api/supabase-config`; si falla o la
+  respuesta no es válida, usa los de producción. Las funciones de `api/` leen `process.env` directo.
+
+---
+
 ## No especificado deliberadamente
 
 Lo que está fuera a propósito. Un requisito para cualquiera de estas cosas se

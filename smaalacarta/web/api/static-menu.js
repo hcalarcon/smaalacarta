@@ -9,7 +9,9 @@ import { fetchPublicMenu, isSupabaseConfigured } from "../apps/menu-app/lib/publ
 import { resolveTarget } from "../apps/menu-app/lib/hostname.js";
 import { staticCacheControl } from "../apps/menu-app/lib/static-cache.js";
 import { renderStaticMenuPage } from "../apps/menu-app/lib/static-page.js";
-import { SUPABASE } from "../apps/menu-app/supabase-config.js";
+import { resolveSupabase } from "../apps/menu-app/lib/supabase-env.js";
+
+const SUPABASE = resolveSupabase(process.env);
 
 const NOT_FOUND =
   "<!doctype html><title>Menú no encontrado</title><h1>No encontramos este menú.</h1>";

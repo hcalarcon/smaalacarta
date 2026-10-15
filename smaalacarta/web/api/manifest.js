@@ -3,7 +3,9 @@
 // el `Host` para que la caché de Vercel no mezcle negocios.
 import { fetchPublicMenu, isSupabaseConfigured } from "../apps/menu-app/lib/public-menu.js";
 import { buildManifest } from "../apps/menu-app/lib/manifest.js";
-import { SUPABASE } from "../apps/menu-app/supabase-config.js";
+import { resolveSupabase } from "../apps/menu-app/lib/supabase-env.js";
+
+const SUPABASE = resolveSupabase(process.env);
 
 const SLUG = /^[a-z0-9][a-z0-9-]{0,62}$/;
 
