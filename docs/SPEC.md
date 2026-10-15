@@ -547,6 +547,12 @@ llegando al negocio por WhatsApp.
   la sesión y recorta el texto.
 - **ADMIN-REPARTIDOR-2** La pantalla "Mi perfil" (`/repartidor/perfil`) las edita, con botón que espera a la base
   (`PendingButton`) y botones de al menos 44 px. Un texto de más de 140 caracteres se rechaza.
+- **ADMIN-REPARTIDOR-3** En la tarjeta de cada pedido del repartidor la acción principal siempre está a la vista y
+  arriba: Ofertar / Tomar en los disponibles; "llego en…", En camino y Entregado (y Rendido) en los envíos en curso.
+- **ADMIN-REPARTIDOR-4** Lo secundario va al abrir: Devolver, Otro precio, Retirar la oferta y Rechazar, bajo "Más
+  opciones", y los productos, el barrio y las notas, bajo "Detalle del pedido". Cerrado es el estado de partida.
+- **ADMIN-REPARTIDOR-5** El panel muestra primero los envíos en curso (lo que hay que hacer ahora), después los
+  disponibles y al final el historial. "Mi perfil" aparece en la barra de abajo del celular y en el menú lateral.
 
 
 ## PWA — Instalar el menú en el celular

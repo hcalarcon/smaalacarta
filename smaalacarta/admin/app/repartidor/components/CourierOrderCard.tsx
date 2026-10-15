@@ -227,6 +227,84 @@ export default function CourierOrderCard({
         </p>
       ) : null}
 
+      {error ? (
+        <p role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+          {error}
+        </p>
+      ) : null}
+
+      {/* La acción principal del pedido siempre a la vista, arriba (ADMIN-REPARTIDOR-3). */}
+      {settlement !== "none" ? (
+        <div className="mt-3 rounded-xl border border-line p-3">
+          <p className="text-sm font-semibold text-stone-800">
+            💵 {settlementLabel(settlement, Number(order.total))}
+          </p>
+          {canMarkSettled(settlement) ? (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setSettling(true)}
+              className="mt-2 min-h-11 rounded-xl bg-action px-5 py-2 text-sm font-semibold text-white transition hover:bg-action-hover disabled:opacity-60"
+            >
+              Rendido
+            </button>
+          ) : null}
+        </div>
+      ) : null}
+
+      {actions.onTheWay ? (
+        <EtaPicker
+          title="Salgo hacia el cliente: llego en…"
+          busy={busy}
+          onPick={(minutes) => onAdvance("on_the_way", minutes)}
+        />
+      ) : null}
+
+      {order.estado === "on_the_way" && onSetEta ? (
+        dropoffEta && !changingDropoff ? (
+          <p className="mt-3 flex flex-wrap items-center gap-2 text-sm font-medium text-stone-800">
+            {dropoffEta}
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setChangingDropoff(true)}
+              className="rounded-lg border border-line-strong px-2.5 py-1 text-xs font-medium text-brand transition hover:bg-brand-soft disabled:opacity-60"
+            >
+              Cambiar
+            </button>
+          </p>
+        ) : (
+          <EtaPicker title="Llego al cliente en…" busy={busy} onPick={(minutes) => setEta("dropoff", minutes)} />
+        )
+      ) : null}
+
+      {actions.onTheWay || actions.delivered ? (
+        <div className="mt-3">
+          <PendingButton
+            busy={busy}
+            pendingLabel={actions.onTheWay ? "Marcando en camino…" : "Marcando entregado…"}
+            onClick={() => onAdvance(actions.onTheWay ? "on_the_way" : "delivered")}
+            className="min-h-11 w-full rounded-xl bg-action px-5 py-2 text-sm font-semibold text-white transition hover:bg-action-hover disabled:opacity-60 sm:w-auto"
+          >
+            {actions.onTheWay ? "En camino" : "Entregado"}
+          </PendingButton>
+        </div>
+      ) : null}
+
+      {order.envio.estado === "accepted" && !actions.onTheWay && !actions.delivered && order.estado !== "delivered" && order.estado !== "cancelled" ? (
+        <p className="mt-3 text-xs text-stone-500">
+          Cuando el local te lo entregue vas a poder marcarlo En camino.
+        </p>
+      ) : null}
+      {/* Lo demás, al abrir (ADMIN-REPARTIDOR-4). */}
+      <details className="mt-3 rounded-xl border border-line">
+        <summary className="flex min-h-11 cursor-pointer items-center justify-between gap-2 px-3 text-sm font-semibold text-brand">
+          Detalle del pedido
+          <span className="text-xs font-normal text-stone-500">
+            {order.items.length} {order.items.length === 1 ? "producto" : "productos"} · {formatMoney(Number(order.total))}
+          </span>
+        </summary>
+        <div className="px-3 pb-3">
       <dl className="mt-3 space-y-1 rounded-xl bg-cream p-3 text-sm text-stone-700">
         <div className="flex gap-2">
           <dt className="text-stone-500">Barrio:</dt>
@@ -289,14 +367,16 @@ export default function CourierOrderCard({
         </ul>
       ) : null}
 
-      {error ? (
-        <p role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
-          {error}
-        </p>
-      ) : null}
+        </div>
+      </details>
 
       {actions.returnOrder ? (
-        returning ? (
+        <details className="mt-3 rounded-xl border border-line" open={returning || undefined}>
+          <summary className="flex min-h-11 cursor-pointer items-center px-3 text-sm font-semibold text-stone-700">
+            Más opciones
+          </summary>
+          <div className="px-3 pb-3">
+        {returning ? (
           <div className="mt-3 space-y-3 rounded-xl border border-line p-3">
             <fieldset>
               <legend className="text-sm font-medium text-stone-700">¿Por qué lo devolvés?</legend>
@@ -376,71 +456,11 @@ export default function CourierOrderCard({
               Devolver
             </button>
           </div>
-        )
+        )}
+          </div>
+        </details>
       ) : null}
 
-      {settlement !== "none" ? (
-        <div className="mt-3 rounded-xl border border-line p-3">
-          <p className="text-sm font-semibold text-stone-800">
-            💵 {settlementLabel(settlement, Number(order.total))}
-          </p>
-          {canMarkSettled(settlement) ? (
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setSettling(true)}
-              className="mt-2 min-h-11 rounded-xl bg-action px-5 py-2 text-sm font-semibold text-white transition hover:bg-action-hover disabled:opacity-60"
-            >
-              Rendido
-            </button>
-          ) : null}
-        </div>
-      ) : null}
-
-      {actions.onTheWay ? (
-        <EtaPicker
-          title="Salgo hacia el cliente: llego en…"
-          busy={busy}
-          onPick={(minutes) => onAdvance("on_the_way", minutes)}
-        />
-      ) : null}
-
-      {order.estado === "on_the_way" && onSetEta ? (
-        dropoffEta && !changingDropoff ? (
-          <p className="mt-3 flex flex-wrap items-center gap-2 text-sm font-medium text-stone-800">
-            {dropoffEta}
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setChangingDropoff(true)}
-              className="rounded-lg border border-line-strong px-2.5 py-1 text-xs font-medium text-brand transition hover:bg-brand-soft disabled:opacity-60"
-            >
-              Cambiar
-            </button>
-          </p>
-        ) : (
-          <EtaPicker title="Llego al cliente en…" busy={busy} onPick={(minutes) => setEta("dropoff", minutes)} />
-        )
-      ) : null}
-
-      {actions.onTheWay || actions.delivered ? (
-        <div className="mt-3">
-          <PendingButton
-            busy={busy}
-            pendingLabel={actions.onTheWay ? "Marcando en camino…" : "Marcando entregado…"}
-            onClick={() => onAdvance(actions.onTheWay ? "on_the_way" : "delivered")}
-            className="min-h-11 w-full rounded-xl bg-action px-5 py-2 text-sm font-semibold text-white transition hover:bg-action-hover disabled:opacity-60 sm:w-auto"
-          >
-            {actions.onTheWay ? "En camino" : "Entregado"}
-          </PendingButton>
-        </div>
-      ) : null}
-
-      {order.envio.estado === "accepted" && !actions.onTheWay && !actions.delivered && order.estado !== "delivered" && order.estado !== "cancelled" ? (
-        <p className="mt-3 text-xs text-stone-500">
-          Cuando el local te lo entregue vas a poder marcarlo En camino.
-        </p>
-      ) : null}
       <ConfirmDeleteDialog
         open={settling}
         title="Marcar como rendido"

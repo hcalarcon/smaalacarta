@@ -155,7 +155,8 @@ export default function CourierOrdersClient({
   const settlements = totalsByBusiness(orders);
   const settlementTotals = grandTotals(settlements);
   const toSettleCount = orders.filter((item) => courierOrderState(item) === "to_settle").length;
-  const order: PanelGroup[] = ["disponibles", "en_curso", "historial"];
+  // Lo que hay que hacer ahora primero: los envíos en curso, después lo que se puede ofertar (ADMIN-REPARTIDOR-5).
+  const order: PanelGroup[] = ["en_curso", "disponibles", "historial"];
 
   return (
     <div className="space-y-6">

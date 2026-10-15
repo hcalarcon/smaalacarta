@@ -1,7 +1,7 @@
 "use client";
 
 import { paymentLabel } from "@/lib/orders/labels";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import {
   myOfferLabel,
@@ -22,6 +22,32 @@ type Errors = Partial<Record<"price" | "reason", string>>;
 // Un pedido por el que el repartidor puede ofertar (ENVIO-71 y 113 a 115): local, barrio, precio de lista,
 // hora y cuántas ofertas hay; sin nada del cliente hasta que lo eligen. Si su oferta se cerró, muestra el
 // aviso en lugar de las acciones. Todo texto del local se escribe como texto, nunca como HTML.
+// Lo secundario de cada pedido (otro precio, retirar la oferta, rechazar) se abre aparte: a la vista queda
+// solo la acción principal (ADMIN-REPARTIDOR-3).
+function MoreOptions({ children }: { children: ReactNode }) {
+  return (
+    <details className="w-full rounded-xl border border-line">
+      <summary className="flex min-h-11 cursor-pointer items-center px-3 text-sm font-semibold text-stone-700">
+        Más opciones
+      </summary>
+      <div className="flex flex-wrap gap-2 px-3 pb-3">{children}</div>
+    </details>
+  );
+}
+
+function RejectButton({ busy, onClick }: { busy: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={onClick}
+      className="min-h-11 rounded-xl border border-red-200 px-5 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
+    >
+      Rechazar
+    </button>
+  );
+}
+
 export default function AvailableOrderCard({
   order,
   now,
@@ -177,14 +203,9 @@ export default function AvailableOrderCard({
           >
             Tomar {formatMoney(listPrice)}
           </PendingButton>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => setDeclining(true)}
-            className="min-h-11 rounded-xl border border-red-200 px-5 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
-          >
-            Rechazar
-          </button>
+          <MoreOptions>
+            <RejectButton busy={busy} onClick={() => setDeclining(true)} />
+          </MoreOptions>
         </div>
       ) : mine && !editing ? (
         <div className="mt-3 space-y-2">
@@ -201,22 +222,17 @@ export default function AvailableOrderCard({
             >
               Cambiar
             </button>
-            <PendingButton
-              busy={busy}
-              pendingLabel="Retirando…"
-              onClick={onWithdraw}
-              className="min-h-11 rounded-xl border border-line-strong bg-white px-5 py-2 text-sm font-semibold text-stone-700 transition hover:bg-cream disabled:opacity-60"
-            >
-              Retirar
-            </PendingButton>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setDeclining(true)}
-              className="min-h-11 rounded-xl border border-red-200 px-5 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
-            >
-              Rechazar
-            </button>
+            <MoreOptions>
+              <PendingButton
+                busy={busy}
+                pendingLabel="Retirando…"
+                onClick={onWithdraw}
+                className="min-h-11 rounded-xl border border-line-strong bg-white px-5 py-2 text-sm font-semibold text-stone-700 transition hover:bg-cream disabled:opacity-60"
+              >
+                Retirar
+              </PendingButton>
+              <RejectButton busy={busy} onClick={() => setDeclining(true)} />
+            </MoreOptions>
           </div>
         </div>
       ) : editing ? (
@@ -277,22 +293,17 @@ export default function AvailableOrderCard({
           >
             Ofertar {formatMoney(listPrice)}
           </PendingButton>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => setEditing(true)}
-            className="min-h-11 rounded-xl border border-line-strong bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-cream disabled:opacity-60"
-          >
-            Otro precio
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => setDeclining(true)}
-            className="min-h-11 rounded-xl border border-red-200 px-5 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
-          >
-            Rechazar
-          </button>
+          <MoreOptions>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setEditing(true)}
+              className="min-h-11 rounded-xl border border-line-strong bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-cream disabled:opacity-60"
+            >
+              Otro precio
+            </button>
+            <RejectButton busy={busy} onClick={() => setDeclining(true)} />
+          </MoreOptions>
         </div>
       )}
 
