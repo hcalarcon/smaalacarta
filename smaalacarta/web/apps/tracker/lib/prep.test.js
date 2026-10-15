@@ -20,7 +20,7 @@ describe("antes de la ventana — SEGUIMIENTO-39", () => {
     const view = prepView(prep(), { now: at("2026-10-13T00:18:00Z"), lang: "es" });
 
     expect(view.kind).toBe("range");
-    expect(view.text).toBe("Listo entre 21:30 y 21:40 (aprox.)");
+    expect(view.text).toBe("Listo aprox. a las 21:30");
     expect(view.hint).toBe("en unos 12 min");
   });
 
@@ -48,11 +48,11 @@ describe("antes de la ventana — SEGUIMIENTO-39", () => {
 
   it("en inglés y en portugués, con la hora de Argentina", () => {
     const en = prepView(prep(), { now: at("2026-10-13T00:18:00Z"), lang: "en" });
-    expect(en.text).toBe("Ready between 21:30 and 21:40 (approx.)");
+    expect(en.text).toBe("Ready around 21:30");
     expect(en.hint).toBe("in about 12 min");
 
     const pt = prepView(prep(), { now: at("2026-10-13T00:18:00Z"), lang: "pt" });
-    expect(pt.text).toBe("Pronto entre 21:30 e 21:40 (aprox.)");
+    expect(pt.text).toBe("Pronto por volta das 21:30");
     expect(pt.hint).toBe("em cerca de 12 min");
   });
 });
