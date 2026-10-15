@@ -46,6 +46,19 @@ self.addEventListener("push", (event) => {
     options.body = head.concat(data.body ? [data.body] : []).join(" · ");
   }
 
+  // Lo que el local le cambia al repartidor (ENVIO-168): Listo, otra demora o cancelado. Cada uno es un tag
+  // distinto, pero si el aviso anterior sigue en pantalla tiene que volver a sonar y vibrar.
+  if (
+    data.kind === "courier_order_ready" ||
+    data.kind === "courier_prep_changed" ||
+    data.kind === "order_cancelled"
+  ) {
+    options.renotify = true;
+    options.silent = false;
+    options.vibrate = [200, 100, 200];
+    options.tag = data.tag || "order-change";
+  }
+
   event.waitUntil(self.registration.showNotification(data.title || "SMA a la Carta", options));
 });
 

@@ -26,6 +26,7 @@ import {
   type CourierPanelOrder,
   type PanelGroup,
 } from "@/lib/courier/panel";
+import { changeText, courierChanges, snapshotOrders } from "@/lib/courier/changes";
 import { courierTab, type CourierTab } from "@/lib/courier/nav";
 import { courierOrderState, grandTotals, totalsByBusiness } from "@/lib/courier/settlements";
 import { formatMoney } from "@/lib/promotions/pricing";
@@ -97,6 +98,22 @@ export default function CourierOrdersClient({
     // `playChosen` cambia en cada render; lo que importa es cuándo llegan datos nuevos.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orders, available]);
+
+  // Lo que cambió el local en un pedido que ya tomó (ENVIO-168): Listo, otra demora o cancelado. Suena y
+  // queda a la vista; los demás cambios de estado no avisan. Lo que ya estaba al abrir no cuenta.
+  const seenOrders = useRef(snapshotOrders(orders));
+  const [changes, setChanges] = useState<string[]>([]);
+
+  useEffect(() => {
+    const found = courierChanges(seenOrders.current, orders);
+    seenOrders.current = snapshotOrders(orders);
+
+    if (found.length > 0) {
+      playChosen();
+      setChanges((current) => [...found.map(changeText), ...current].slice(0, 3));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orders]);
 
   // Se actualiza solo (mismo mecanismo que el tablero del local). Con la pestaña oculta solo sigue
   // si el sonido está activado: quien lo activó espera el aviso aunque esté en otra pestaña.
@@ -202,6 +219,26 @@ export default function CourierOrdersClient({
             Cerrar
           </button>
         </p>
+      ) : null}
+
+      {changes.length > 0 ? (
+        <div
+          role="status"
+          className="flex items-start justify-between gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900"
+        >
+          <ul className="space-y-1">
+            {changes.map((text) => (
+              <li key={text}>{text}</li>
+            ))}
+          </ul>
+          <button
+            type="button"
+            onClick={() => setChanges([])}
+            className="rounded-lg px-2 py-1 text-xs font-semibold text-amber-900 hover:bg-amber-100"
+          >
+            Cerrar
+          </button>
+        </div>
       ) : null}
 
       {tab === "rendiciones" ? (
