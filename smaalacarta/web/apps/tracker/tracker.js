@@ -799,6 +799,11 @@ async function start() {
   await refresh();
   schedule();
 
+  // "faltan 12 min" se descuenta con la hora aunque no llegue una lectura nueva (SEGUIMIENTO-45).
+  setInterval(() => {
+    if (document.visibilityState === "visible" && !finished && current.kind === "data") paint();
+  }, 30_000);
+
   // Al volver a la pestaña se lee de inmediato, sin esperar al próximo turno.
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "visible" && !finished) refreshNow();

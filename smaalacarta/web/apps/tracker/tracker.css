@@ -33,6 +33,10 @@ body {
   padding: 0.5rem 1rem;
 }
 
+.lang-bar[hidden] {
+  display: none;
+}
+
 .selector-idioma {
   display: inline-flex;
   border: 1px solid var(--line);
