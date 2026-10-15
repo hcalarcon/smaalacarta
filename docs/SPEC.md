@@ -1941,6 +1941,10 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   que ya tomó: Listo, otra demora (otro instante, no otro texto) y cancelado. Los demás cambios de estado no avisan,
   y un pedido que ya estaba al abrir no cuenta. Son los mismos que el push (ENVIO-159, 160 y `order_cancelled`), y en
   el service worker suenan y vibran aunque haya un aviso anterior en pantalla.
+- **ENVIO-171** El segundo toque de un doble click rápido no hace nada en el selector de la demora: el botón que lo
+  abre no abre un segundo (hay un solo selector por pedido) y el toque que llega al selector dentro de los primeros
+  600 ms como segundo click de una misma secuencia (`event.detail > 1`) no confirma ni cierra. Un toque deliberado
+  después sí cuenta.
 
 
 

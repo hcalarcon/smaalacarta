@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, type MouseEvent } from "react";
 
 import PendingButton from "@/components/ui/PendingButton";
 import {
@@ -10,6 +10,10 @@ import {
   prepSelectorDefault,
   validatePrepMinutes,
 } from "@/lib/orders/prep";
+
+// Un doble click rápido en "Aceptar" abre este selector con el primer toque y el segundo cae encima de él: si
+// llega dentro de este margen y es el segundo de la secuencia (`detail > 1`), no cuenta (ENVIO-171).
+const DOUBLE_CLICK_GUARD_MS = 600;
 
 // El selector del tiempo estimado (ADMIN-PEDIDOS-31 y 32): al aceptar un pedido, o para cargarlo después en
 // uno que se aceptó sin tiempo. Solo pinta; la regla del rango y el valor preseleccionado están en `prep.ts`.
@@ -46,6 +50,15 @@ export default function PrepPicker({
   const initial = last !== null ? { minutes: last, suggested: false } : base;
   // Texto, para poder borrar y escribir.
   const [value, setValue] = useState(String(initial.minutes));
+  const openedAt = useRef(Date.now());
+
+  // En captura, antes de que el toque llegue a cualquier botón del diálogo.
+  function ignoreSecondClick(event: MouseEvent) {
+    if (event.detail > 1 && Date.now() - openedAt.current < DOUBLE_CLICK_GUARD_MS) {
+      event.stopPropagation();
+      event.preventDefault();
+    }
+  }
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -67,6 +80,7 @@ export default function PrepPicker({
         role="dialog"
         aria-modal="true"
         aria-labelledby="prep-picker-title"
+        onClickCapture={ignoreSecondClick}
         className="w-full max-w-md rounded-3xl bg-white p-6 shadow-xl"
       >
         <h2 id="prep-picker-title" className="text-xl font-semibold text-brand">

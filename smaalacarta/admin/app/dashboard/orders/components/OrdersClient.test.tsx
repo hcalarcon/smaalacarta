@@ -581,6 +581,32 @@ describe("tiempo de preparación al aceptar — ADMIN-PEDIDOS-31 a 33", () => {
     expect(screen.queryByRole("button", { name: "Aceptar" })).toBeNull();
   });
 
+  it("dos toques en Aceptar dejan un solo selector y no aceptan nada (ENVIO-171)", async () => {
+    render(withPrep([full("1")]));
+    const button = screen.getByRole("button", { name: "Aceptar" });
+
+    await act(async () => {
+      fireEvent.click(button);
+      fireEvent.click(button);
+    });
+
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(accept).not.toHaveBeenCalled();
+  });
+
+  it("dos toques en el botón de la tarjeta del tablero dejan un solo selector (ENVIO-171)", async () => {
+    render(withPrep([full("1", { created_at: "2026-09-30T10:00:00Z" })]));
+    fireEvent.click(screen.getByRole("button", { name: "Ver pedidos" }));
+    const button = screen.getByRole("button", { name: "avanzar 1" });
+
+    await act(async () => {
+      fireEvent.click(button);
+      fireEvent.click(button);
+    });
+
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+  });
+
   it("sin sugerencia ofrece el tiempo por defecto del negocio", async () => {
     render(withPrep([full("1")], { defaultMinutes: 35 }));
 

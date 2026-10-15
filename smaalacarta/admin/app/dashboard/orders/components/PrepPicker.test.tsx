@@ -120,4 +120,24 @@ describe("selector de tiempo al aceptar — ADMIN-PEDIDOS-31 y 32", () => {
 
     expect(onClose).toHaveBeenCalledTimes(2);
   });
+
+  it("el segundo click de un doble click rápido no confirma lo que quedó debajo (ENVIO-171)", () => {
+    const handlers = picker();
+
+    fireEvent.click(screen.getByRole("button", { name: "Aceptar con 20 min" }), { detail: 2 });
+    fireEvent.click(screen.getByRole("button", { name: "Aceptar sin tiempo" }), { detail: 2 });
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }), { detail: 2 });
+
+    expect(handlers.onConfirm).not.toHaveBeenCalled();
+    expect(handlers.onAcceptWithout).not.toHaveBeenCalled();
+    expect(handlers.onClose).not.toHaveBeenCalled();
+  });
+
+  it("un toque normal sí confirma (ENVIO-171)", () => {
+    const handlers = picker();
+
+    fireEvent.click(screen.getByRole("button", { name: "Aceptar con 20 min" }), { detail: 1 });
+
+    expect(handlers.onConfirm).toHaveBeenCalledWith(20);
+  });
 });
