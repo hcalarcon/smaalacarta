@@ -11,6 +11,8 @@ import {
   feeSummary,
   acceptsOffers,
   offersLabel,
+  pickupEtaNotice,
+  returnedNotice,
   searchWarning,
   validateAssignNote,
   type OrderCourier,
@@ -95,7 +97,11 @@ export default function CourierSection({
         </div>
         <div className="flex gap-2">
           <dt className="text-stone-400">Estado:</dt>
-          <dd className="font-medium">{courierStatusLabel(order, taker?.name)}</dd>
+          <dd className="font-medium">
+            {courierStatusLabel(order, taker?.name)}
+            {returnedNotice(order) ? <span className="block font-semibold text-amber-800">{returnedNotice(order)}</span> : null}
+            {pickupEtaNotice(order) ? <span className="block">⏱ {pickupEtaNotice(order)}</span> : null}
+          </dd>
         </div>
         <div className="flex gap-2">
           <dt className="text-stone-400">Precio del envío:</dt>

@@ -31,6 +31,10 @@ export type CourierOrder = {
   offered_at: string | null;
   // Cómo se reparte (ENVIO-146): `fixed` lo toma el primero que llega, `offers` se oferta.
   delivery_mode?: string | null;
+  // Cuándo llega al local, según lo que cargó el repartidor (ENVIO-157).
+  courier_eta_pickup_at?: string | null;
+  // Lo devolvió después de que el local cambió la demora (ENVIO-159).
+  returned_prep_changed?: boolean;
 };
 
 // Una oferta de repartidor tal como la entrega `business_order_offers()` (ENVIO-111).
@@ -182,6 +186,27 @@ export function courierStatusLabel(
     default:
       return "Sin envío con repartidor";
   }
+}
+
+// "Llega al local a las 21:40", si el repartidor cargó el tiempo y todavía no retiró el pedido (ENVIO-164).
+export function pickupEtaNotice(
+  order: Pick<CourierOrder, "courier_status" | "status" | "courier_eta_pickup_at">,
+): string | null {
+  if (order.courier_status !== "accepted") return null;
+  if (!["pending", "confirmed", "preparing", "ready"].includes(order.status)) return null;
+
+  const time = clockTime(order.courier_eta_pickup_at);
+  return time ? `Llega al local a las ${time}` : null;
+}
+
+// "Lo devolvió: cambió la demora" mientras el pedido vuelve a buscar repartidor (ENVIO-164).
+export function returnedNotice(
+  order: Pick<CourierOrder, "courier_status" | "status" | "returned_prep_changed">,
+): string | null {
+  if (!order.returned_prep_changed || order.courier_status !== "searching") return null;
+  if (order.status === "delivered" || order.status === "cancelled") return null;
+
+  return "Lo devolvió: cambió la demora";
 }
 
 // Los repartidores activos que cubren la zona del pedido (los que se pueden asignar a mano), por nombre.

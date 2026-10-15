@@ -15,6 +15,8 @@ import {
   hasDelivery,
   acceptsOffers,
   offersLabel,
+  pickupEtaNotice,
+  returnedNotice,
   searchWarning,
   type OrderCourier,
   type OrderOffers,
@@ -139,6 +141,8 @@ export default function OrderCard({
             🛵 {order.delivery_zone_name ?? "Envío"} · {fee.price}
           </p>
           <p>{courierStatusLabel(order, courierName)}</p>
+          {returnedNotice(order) ? <p className="font-semibold text-amber-800">{returnedNotice(order)}</p> : null}
+          {pickupEtaNotice(order) ? <p className="font-medium">⏱ {pickupEtaNotice(order)}</p> : null}
           {searching && acceptsOffers(order) ? <p className="font-medium">{offersLabel(offers, now)}</p> : null}
           {searching && acceptsOffers(order) && offers && offers.ofertas.length > 0 ? (
             <ul className="mt-0.5 space-y-0.5">

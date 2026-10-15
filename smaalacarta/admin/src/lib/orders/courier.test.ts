@@ -13,6 +13,8 @@ import {
   hasDelivery,
   acceptsOffers,
   offersLabel,
+  pickupEtaNotice,
+  returnedNotice,
   searchWarning,
   validateAssignNote,
   validateOffer,
@@ -325,5 +327,25 @@ describe("la oferta del repartidor — ENVIO-98", () => {
       ok: true,
       price: 5000.5,
     });
+  });
+});
+
+describe("tiempos del envío en el panel del local — ENVIO-164", () => {
+  it("dice a qué hora llega al local, hasta que lo retira", () => {
+    // 2026-10-12T00:40:00Z es 21:40 en Argentina.
+    const accepted = order({ courier_status: "accepted", courier_eta_pickup_at: "2026-10-12T00:40:00Z" });
+    expect(pickupEtaNotice(accepted)).toBe("Llega al local a las 21:40");
+    expect(pickupEtaNotice({ ...accepted, status: "handed_to_courier" })).toBeNull();
+    expect(pickupEtaNotice({ ...accepted, courier_eta_pickup_at: null })).toBeNull();
+    expect(pickupEtaNotice({ ...accepted, courier_status: "searching" })).toBeNull();
+  });
+
+  it("si lo devolvió por un cambio de demora, lo dice mientras vuelve a buscar", () => {
+    const back = order({ courier_status: "searching", returned_prep_changed: true });
+    expect(returnedNotice(back)).toBe("Lo devolvió: cambió la demora");
+    expect(courierStatusLabel(back)).toMatch(/^Buscando repartidor desde las/);
+    expect(returnedNotice({ ...back, courier_status: "accepted" })).toBeNull();
+    expect(returnedNotice({ ...back, returned_prep_changed: false })).toBeNull();
+    expect(returnedNotice({ ...back, status: "cancelled" })).toBeNull();
   });
 });
