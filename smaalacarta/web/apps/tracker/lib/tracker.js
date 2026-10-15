@@ -5,6 +5,7 @@ import { cssUrl } from "../../menu-app/lib/html.js";
 import { headerBackground, positionText } from "../../menu-app/lib/info.js";
 import { LANGS, LOCALES, t } from "../../menu-app/lib/i18n.js";
 import { TIME_ZONE } from "../../menu-app/lib/schedule.js";
+import { arrivalView } from "./prep.js";
 
 const CODE = /^[0-9a-f]{20}$/;
 
@@ -349,7 +350,7 @@ function courierContact(delivery, lang) {
 // - `self`: "Lo lleva el local".
 // `money` formatea los precios en el idioma del cliente. Devuelve `{ kind, icon, title, lines, link? }`, o
 // null si no hay nada que mostrar (un estado que no se conoce, como los viejos `requested`/`rejected`).
-export function deliveryCard(delivery, lang, money) {
+export function deliveryCard(delivery, lang, money, now = new Date()) {
   if (!delivery) return null;
 
   switch (delivery.state) {
@@ -389,15 +390,9 @@ export function deliveryCard(delivery, lang, money) {
   const lines = [];
 
   if (delivery.note) lines.push(delivery.note);
-  if (delivery.arrivesAt !== null && Number.isFinite(delivery.arrivesAt)) {
-    const hora = new Intl.DateTimeFormat(LOCALES[lang] ?? LOCALES.es, {
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-      timeZone: TIME_ZONE,
-    }).format(new Date(delivery.arrivesAt));
-    lines.push(t("tracker.delivery.arrives", lang, { hora }));
-  }
+  // "Llega aprox. 21:55 · faltan 12 min", o "Unos minutos más" pasada la hora (SEGUIMIENTO-45).
+  const arrival = arrivalView(delivery.arrivesAt, { now, lang });
+  if (arrival) lines.push(arrival.hint ? `${arrival.text} · ${arrival.hint}` : arrival.text);
   if (delivery.price !== null) {
     lines.push(t("tracker.delivery.pay", lang, { precio: money.format(delivery.price) }));
   }

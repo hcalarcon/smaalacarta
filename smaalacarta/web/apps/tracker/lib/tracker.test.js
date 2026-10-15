@@ -636,9 +636,15 @@ describe("deliveryCard — SEGUIMIENTO-27, ENVIO-29, 44 y 91", () => {
     // 2026-10-12T00:55:00Z es 21:55 en Argentina.
     const at = Date.parse("2026-10-12T00:55:00Z");
 
-    expect(deliveryCard({ ...base, arrivesAt: at }, "es", money).lines).toContain("Llega aprox. a las 21:55");
-    expect(deliveryCard({ ...base, arrivesAt: at }, "en", money).lines).toContain("Arrives around 21:55");
-    expect(deliveryCard({ ...base, arrivesAt: at }, "pt", money).lines).toContain("Chega por volta das 21:55");
+    const now = new Date("2026-10-12T00:43:00Z");
+
+    expect(deliveryCard({ ...base, arrivesAt: at }, "es", money, now).lines).toContain("Llega aprox. 21:55 · faltan 12 min");
+    expect(deliveryCard({ ...base, arrivesAt: at }, "en", money, now).lines).toContain("Arrives around 21:55 · 12 min to go");
+    expect(deliveryCard({ ...base, arrivesAt: at }, "pt", money, now).lines).toContain("Chega por volta das 21:55 · faltam 12 min");
+    // Pasada la hora: sin números negativos (SEGUIMIENTO-45).
+    expect(
+      deliveryCard({ ...base, arrivesAt: at }, "es", money, new Date("2026-10-12T01:30:00Z")).lines,
+    ).toContain("Unos minutos más");
     expect(deliveryCard({ ...base, arrivesAt: null }, "es", money).lines.join(" ")).not.toContain("Llega aprox");
   });
 

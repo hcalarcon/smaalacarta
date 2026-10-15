@@ -54,3 +54,19 @@ export function prepView(prep, { now = new Date(), lang = "es", pickup = false }
     reason,
   };
 }
+
+// La hora a la que llega el repartidor (`envio.arrivesAt`, en ms) y cuánto falta (SEGUIMIENTO-45). Misma regla
+// que el tiempo del local: "aprox.", se descuenta con la hora y, pasada, dice "Unos minutos más" (nunca negativos).
+export function arrivalView(arrivesAt, { now = new Date(), lang = "es" } = {}) {
+  if (typeof arrivesAt !== "number" || !Number.isFinite(arrivesAt)) return null;
+
+  const minutes = Math.ceil((arrivesAt - now.getTime()) / 60_000);
+
+  if (minutes <= 0) return { kind: "late", text: t("tracker.prep.late", lang), hint: null };
+
+  return {
+    kind: "range",
+    text: t("tracker.delivery.arrives", lang, { hora: clock(new Date(arrivesAt), lang) }),
+    hint: t("tracker.prep.in", lang, { n: minutes }),
+  };
+}

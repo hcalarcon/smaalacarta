@@ -530,6 +530,13 @@ llegando al negocio por WhatsApp.
   seguimiento muestra "El local actualizó la demora" con la hora nueva, en es, en y pt, hasta que el cliente lo cierra o
   cambia el estado. Se detecta comparando con la última lectura de la página (no hay nada guardado): la primera lectura
   y la primera vez que aparece la hora no avisan. Con los avisos activados suena y vibra igual que un cambio de estado.
+- **SEGUIMIENTO-45** El seguimiento dice el resultado y no la demora en minutos: "Listo aprox. 21:40" (con envío ya
+  tomado, "Llega aprox. 21:55" con la hora del repartidor) y "faltan 12 min", que se descuenta con la hora aunque no
+  haya lecturas nuevas (se repinta cada 30 s con la pestaña visible). Pasada la hora dice "Unos minutos más", sin horas
+  ni números negativos. Se actualiza solo cuando el local cambia la demora, por la lectura periódica (SEGUIMIENTO-32;
+  sin Realtime, que exigiría abrir las políticas de `orders` a `anon`). En es, en y pt.
+- **SEGUIMIENTO-46** Con el selector de idioma dentro del encabezado, la barra de arriba se oculta: no queda una franja
+  en blanco sobre el seguimiento.
 
 
 ## PWA — Instalar el menú en el celular

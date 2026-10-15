@@ -72,6 +72,8 @@ const langBar = document.getElementById("lang-bar");
 // se pierde cuando render() reemplaza el contenido cada 15 s.
 function dockLangSelector(header) {
   if (!langBox) return;
+  // Con el selector dentro del encabezado la barra de arriba queda vacía: sin ocultarla deja una franja en blanco.
+  if (langBar) langBar.hidden = Boolean(header);
   if (header) header.prepend(langBox);
   else if (langBox.parentElement !== langBar) langBar?.appendChild(langBox);
 }
