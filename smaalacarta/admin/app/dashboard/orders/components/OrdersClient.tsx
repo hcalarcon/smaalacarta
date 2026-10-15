@@ -361,7 +361,8 @@ export default function OrdersClient({
 
   // Aceptar un pedido pendiente (con hora de entrega ya marcada o no) pasa por el selector del tiempo; lo
   // programado y anticipado ya tiene su hora y se confirma directo (ADMIN-PEDIDOS-31).
-  function requestStatus(order: Order, status: string, note?: string) {
+  // Devuelve la promesa de la acción para que el botón que la llamó espere (ENVIO-168).
+  function requestStatus(order: Order, status: string, note?: string): Promise<void> | undefined {
     if (status === "confirmed" && order.status === "pending" && acceptsPrepTime(order)) {
       setError(null);
       // `last`: el último tiempo que usó el local en este navegador (ADMIN-PEDIDOS-52), leído al abrir.
@@ -369,7 +370,7 @@ export default function OrdersClient({
       return;
     }
 
-    void changeStatus(order.id, status, note);
+    return changeStatus(order.id, status, note);
   }
 
   async function submitPrep(minutes: number | null) {
@@ -626,7 +627,8 @@ export default function OrdersClient({
         loading={busyId === receivingId && receivingId !== null}
       />
 
-      {alertOrder ? (
+      {/* Con el selector abierto la tarjeta no queda debajo: un solo diálogo (ENVIO-168). */}
+      {alertOrder && !activePicker ? (
         <NewOrderAlert
           order={alertOrder}
           moreCount={count - 1}

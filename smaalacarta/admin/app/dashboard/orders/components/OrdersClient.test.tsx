@@ -571,6 +571,16 @@ describe("tiempo de preparación al aceptar — ADMIN-PEDIDOS-31 a 33", () => {
     expect(picker()).toBeNull();
   });
 
+  it("con el selector abierto la tarjeta de pedido nuevo no queda debajo: un solo diálogo (ENVIO-168)", async () => {
+    render(withPrep([full("1")]));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
+
+    expect(picker()).toBeTruthy();
+    expect(modal()).toBeNull();
+    expect(screen.queryByRole("button", { name: "Aceptar" })).toBeNull();
+  });
+
   it("sin sugerencia ofrece el tiempo por defecto del negocio", async () => {
     render(withPrep([full("1")], { defaultMinutes: 35 }));
 

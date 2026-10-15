@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AvailableOrderCard from "./AvailableOrderCard";
@@ -228,7 +228,7 @@ describe("pedido disponible — ENVIO-71 y 113 a 115", () => {
     expect(onOffer).toHaveBeenCalledWith({ price: "5000", reason: "" });
   });
 
-  it("Otro precio: con el de lista ya cargado, y un precio distinto exige motivo", () => {
+  it("Otro precio: con el de lista ya cargado, y un precio distinto exige motivo", async () => {
     const onOffer = vi.fn();
     offerCard(offer("12"), onOffer);
 
@@ -237,18 +237,18 @@ describe("pedido disponible — ENVIO-71 y 113 a 115", () => {
     expect(screen.queryByLabelText(/motivo del cambio/i)).toBeNull();
 
     fireEvent.change(screen.getByLabelText(/precio de tu oferta/i), { target: { value: "26000" } });
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar oferta" }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Confirmar oferta" })));
 
     expect(onOffer).not.toHaveBeenCalled();
     expect(screen.getByText(/por qué cambia el precio/i)).toBeTruthy();
 
     fireEvent.change(screen.getByLabelText(/motivo del cambio/i), { target: { value: "Fuera de zona" } });
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar oferta" }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Confirmar oferta" })));
 
     expect(onOffer).toHaveBeenCalledWith({ price: "26000", reason: "Fuera de zona" });
   });
 
-  it("con oferta hecha: 'Tu oferta', Cambiar y Retirar", () => {
+  it("con oferta hecha: 'Tu oferta', Cambiar y Retirar", async () => {
     const onOffer = vi.fn();
     const onWithdraw = vi.fn();
     offerCard(
@@ -261,13 +261,13 @@ describe("pedido disponible — ENVIO-71 y 113 a 115", () => {
     expect(screen.getByText(/Tu oferta: \$\s?6\.000,00, esperando al cliente/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Ofertar/ })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Retirar" }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Retirar" })));
     expect(onWithdraw).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole("button", { name: "Cambiar" }));
     expect((screen.getByLabelText(/precio de tu oferta/i) as HTMLInputElement).value).toBe("6000");
     fireEvent.change(screen.getByLabelText(/precio de tu oferta/i), { target: { value: "5000" } });
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar oferta" }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Confirmar oferta" })));
     expect(onOffer).toHaveBeenCalledWith({ price: "5000", reason: "Llueve" });
   });
 
@@ -305,21 +305,21 @@ describe("pedido disponible — ENVIO-71 y 113 a 115", () => {
 });
 
 describe("acciones sobre lo que tomó — ENVIO-77", () => {
-  it("antes de la entrega del local se puede devolver, con motivo obligatorio", () => {
+  it("antes de la entrega del local se puede devolver, con motivo obligatorio", async () => {
     const onReturn = vi.fn();
     card(order("12", "preparing", "accepted"), onReturn);
 
     fireEvent.click(screen.getByRole("button", { name: "Devolver" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar devolución" }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Confirmar devolución" })));
     expect(onReturn).not.toHaveBeenCalled();
     expect(screen.getByText(/Elegí por qué devolvés/i)).toBeTruthy();
 
     fireEvent.click(screen.getByRole("button", { name: "Otro" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar devolución" }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Confirmar devolución" })));
     expect(onReturn).not.toHaveBeenCalled();
 
     fireEvent.change(screen.getByLabelText(/contá el motivo/i), { target: { value: "Se pinchó la moto" } });
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar devolución" }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Confirmar devolución" })));
 
     expect(onReturn).toHaveBeenCalledWith("other", "Se pinchó la moto");
   });
@@ -728,7 +728,7 @@ describe("circuito de tiempos — ENVIO-163", () => {
     timedCard(order("12", "confirmed", "accepted", { tiempos: times() }), vi.fn(), onSetEta);
 
     fireEvent.change(screen.getByLabelText(/otro tiempo/i), { target: { value: "121" } });
-    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Guardar" })));
     expect(screen.getByRole("alert").textContent).toMatch(/1 a 120/);
     expect(onSetEta).not.toHaveBeenCalled();
 
