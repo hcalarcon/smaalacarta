@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import type { Order } from "@/lib/db/orders";
 import { timeAgo } from "@/lib/orders/format";
@@ -72,6 +72,12 @@ export default function OrderCard({
 }) {
   const [adjusting, setAdjusting] = useState(false);
   const [reason, setReason] = useState<PrepReason | null>(null);
+
+  // Al abrir el panel el foco entra en él: el teclado sigue ahí y Escape lo cierra.
+  const panelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (adjusting) panelRef.current?.focus();
+  }, [adjusting]);
 
   function closeAdjust() {
     setAdjusting(false);
@@ -192,12 +198,14 @@ export default function OrderCard({
                 className="fixed inset-0 z-10 cursor-default"
               />
               <div
+                ref={panelRef}
+                tabIndex={-1}
                 role="dialog"
                 aria-label="Cambiar la demora"
                 onKeyDown={(event) => {
                   if (event.key === "Escape") closeAdjust();
                 }}
-                className="absolute inset-x-0 top-full z-20 mt-1 rounded-xl border border-line-strong bg-white p-2.5 shadow-lg"
+                className="absolute inset-x-0 top-full z-20 mt-1 rounded-xl border border-line-strong bg-white p-2.5 shadow-lg outline-none"
               >
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-semibold text-stone-600">Cambiar la demora</p>

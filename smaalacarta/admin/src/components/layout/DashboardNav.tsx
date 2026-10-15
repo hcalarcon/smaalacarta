@@ -33,7 +33,11 @@ export default function DashboardNav({
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
             title={collapsed ? link.label : undefined}
-            aria-label={collapsed ? link.label : undefined}
+            aria-label={
+              collapsed
+                ? `${link.label}${navBadgeLabel(link.badge) ? `, ${link.badge} pendientes` : ""}`
+                : undefined
+            }
             className={`relative flex items-center rounded-xl text-sm font-medium transition ${
               collapsed ? "justify-center py-3" : "gap-3 px-4 py-3"
             } ${

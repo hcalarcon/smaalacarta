@@ -18,7 +18,7 @@ const base = {
   subtitle: "Administración del negocio",
   sidebarSubtitle: "Panel administrador",
   userEmail: "ana@x.com",
-  links: [{ href: "/dashboard", label: "Resumen" }],
+  links: [{ href: "/dashboard", label: "Resumen", icon: "M0 0" }],
 };
 
 // ADMIN-PWA-16: los botones de instalar y de avisos solo salen donde el layout pasa `showAppControls`.
@@ -61,7 +61,7 @@ describe("DashboardShell — menú lateral achicable, ADMIN-PEDIDOS-56", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Achicar menú lateral" }));
 
-    const link = screen.getByRole("link", { name: "Pedidos" });
+    const link = screen.getByRole("link", { name: "Pedidos, 3 pendientes" });
     expect(link.getAttribute("title")).toBe("Pedidos");
     expect(link.textContent).toBe("3");
     expect(localStorage.getItem("sma.sidebar.collapsed")).toBe("1");

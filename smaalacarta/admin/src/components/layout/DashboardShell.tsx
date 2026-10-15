@@ -80,7 +80,7 @@ export default function DashboardShell({
     <div className="min-h-screen bg-cream text-stone-900">
       {/* Escritorio: barra lateral fija, que se achica a solo íconos. */}
       <aside
-        className={`fixed inset-y-0 left-0 hidden flex-col border-r border-line bg-white transition-[width] lg:flex ${
+        className={`fixed inset-y-0 left-0 hidden flex-col border-r border-line bg-white transition-[width] motion-reduce:transition-none lg:flex ${
           collapsed ? "w-16" : "w-60"
         }`}
       >
@@ -156,7 +156,7 @@ export default function DashboardShell({
         </div>
       ) : null}
 
-      <div className={`transition-[padding] ${collapsed ? "lg:pl-16" : "lg:pl-60"}`}>
+      <div className={`transition-[padding] motion-reduce:transition-none ${collapsed ? "lg:pl-16" : "lg:pl-60"}`}>
         <header className="sticky top-0 z-30 border-b border-line bg-white/90 backdrop-blur">
           {alertBar}
           <div className="flex items-center justify-between gap-4 px-4 py-3 md:px-6 lg:px-8">
