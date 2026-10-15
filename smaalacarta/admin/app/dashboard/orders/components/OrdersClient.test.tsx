@@ -571,6 +571,31 @@ describe("tiempo de preparación al aceptar — ADMIN-PEDIDOS-31 a 33", () => {
     expect(picker()).toBeNull();
   });
 
+  it("al aceptar, el cartel de pedido nuevo se va en el momento, sin esperar al servidor (ADMIN-PEDIDOS-58)", async () => {
+    let finish: (value: { ok: true }) => void = () => {};
+    accept.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)) as never);
+    render(withPrep([full("1")]));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: /Aceptar con/ })));
+
+    // La acción sigue en vuelo y el pedido sigue "pending" en las props: el cartel ya no está.
+    expect(modal()).toBeNull();
+
+    await act(async () => finish({ ok: true }));
+    expect(modal()).toBeNull();
+  });
+
+  it("si aceptar falla, el cartel vuelve y se muestra el error (ADMIN-PEDIDOS-58)", async () => {
+    accept.mockResolvedValueOnce({ ok: false, error: "No se pudo" } as never);
+    render(withPrep([full("1")]));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: /Aceptar con/ })));
+
+    expect(screen.getAllByText("No se pudo")).toBeTruthy();
+  });
+
   it("con el selector abierto la tarjeta de pedido nuevo no queda debajo: un solo diálogo (ENVIO-168)", async () => {
     render(withPrep([full("1")]));
 
@@ -642,7 +667,7 @@ describe("tiempo de preparación al aceptar — ADMIN-PEDIDOS-31 a 33", () => {
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "avanzar 1" })));
 
     expect(picker()).toBeNull();
-    expect(setOrderStatusAction).toHaveBeenCalledWith("1", "confirmed", undefined);
+    expect(setOrderStatusAction).toHaveBeenCalledWith("1", "confirmed", undefined, "pending");
   });
 
   it("otros pasos de estado no pasan por el selector", async () => {
@@ -651,7 +676,7 @@ describe("tiempo de preparación al aceptar — ADMIN-PEDIDOS-31 a 33", () => {
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "preparar 1" })));
 
     expect(picker()).toBeNull();
-    expect(setOrderStatusAction).toHaveBeenCalledWith("1", "preparing", undefined);
+    expect(setOrderStatusAction).toHaveBeenCalledWith("1", "preparing", undefined, "confirmed");
   });
 
   it("un pedido aceptado sin tiempo lo carga después, sin 'Aceptar sin tiempo'", async () => {

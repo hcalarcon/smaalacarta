@@ -141,6 +141,9 @@ export default function OrdersClient({
   const [mutedUntil, setMutedUntil] = useState<number | null>(null);
   // Pedidos cuya tarjeta se cerró con "Ver pedidos": no vuelve a aparecer por ellos.
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => new Set());
+  // Pedidos que se acaban de aceptar y el servidor todavía no confirmó: dejan de contar como sin atender en
+  // el momento (actualización optimista). Si la acción falla, vuelven.
+  const [acceptedIds, setAcceptedIds] = useState<Set<string>>(() => new Set());
   const [blinkPhase, setBlinkPhase] = useState(true);
   const reducedMotion = useSyncExternalStore(subscribeReducedMotion, reducedMotionSnapshot, () => false);
 
@@ -159,7 +162,7 @@ export default function OrdersClient({
     soundOnRef.current = soundOn;
   }, [soundOn]);
 
-  const unattended = unattendedOrders(orders);
+  const unattended = unattendedOrders(orders).filter((order) => !acceptedIds.has(order.id));
   const count = unattended.length;
   const ordersRef = useRef(orders);
   const alarmActive = soundOn && audioReady && count > 0 && mutedUntil === null;
@@ -360,6 +363,15 @@ export default function OrdersClient({
   );
   const alertOrder = byAge.find((order) => !dismissedIds.has(order.id)) ?? null;
 
+  function markAccepted(orderId: string, accepted: boolean) {
+    setAcceptedIds((current) => {
+      const next = new Set(current);
+      if (accepted) next.add(orderId);
+      else next.delete(orderId);
+      return next;
+    });
+  }
+
   function viewOrders() {
     setDismissedIds((current) => new Set([...current, ...unattended.map((order) => order.id)]));
   }
@@ -375,7 +387,7 @@ export default function OrdersClient({
       return;
     }
 
-    return changeStatus(order.id, status, note);
+    return changeStatus(order.id, status, note, order.status, order.status === "pending" && status === "confirmed");
   }
 
   async function submitPrep(minutes: number | null) {
@@ -385,6 +397,7 @@ export default function OrdersClient({
     inFlight.current = true;
     setError(null);
     setBusyId(orderId);
+    if (mode === "accept") markAccepted(orderId, true);
 
     try {
       const result =
@@ -393,9 +406,13 @@ export default function OrdersClient({
       if (result.ok) {
         setPrepPicker(null);
         if (minutes !== null) saveLastPrep(slug, minutes);
-      } else setError(result.error);
+      } else {
+        setError(result.error);
+        if (mode === "accept") markAccepted(orderId, false);
+      }
     } catch {
       setError("No pudimos guardar el cambio. Probá de nuevo.");
+      if (mode === "accept") markAccepted(orderId, false);
     } finally {
       inFlight.current = false;
       setBusyId(null);
@@ -403,18 +420,25 @@ export default function OrdersClient({
     }
   }
 
-  async function changeStatus(orderId: string, status: string, note?: string) {
+  // `from`: el estado que el usuario veía al tocar; la base solo aplica el cambio si el pedido sigue ahí, así un
+  // doble click o dos pestañas nunca avanzan dos pasos.
+  async function changeStatus(orderId: string, status: string, note?: string, from?: string, accepting = false) {
     if (inFlight.current) return;
 
     inFlight.current = true;
     setError(null);
     setBusyId(orderId);
+    if (accepting) markAccepted(orderId, true);
 
     try {
-      const result = await setOrderStatusAction(orderId, status, note);
-      if (!result.ok) setError(result.error);
+      const result = await setOrderStatusAction(orderId, status, note, from);
+      if (!result.ok) {
+        setError(result.error);
+        if (accepting) markAccepted(orderId, false);
+      }
     } catch {
       setError("No pudimos guardar el cambio. Probá de nuevo.");
+      if (accepting) markAccepted(orderId, false);
     } finally {
       inFlight.current = false;
       setBusyId(null);
