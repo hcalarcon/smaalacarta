@@ -1331,6 +1331,22 @@ contradiga: ahora entra a los envíos, lleva opciones y nace confirmado)
   minutos, bajar de más deja 5), un "Otro valor…" que abre el selector para escribir los minutos y un motivo opcional.
   Un salto que no es de la lista se rechaza. El selector de Aceptar arranca con el último tiempo que usó el local en ese
   navegador ("Último que usaste: N min"), después con la sugerencia de la base y, si no, con el tiempo por defecto.
+- **ADMIN-PEDIDOS-53** La tarjeta del tablero tiene una estructura fija: arriba `#número · nombre`, hace cuánto llegó y
+  el reloj de la demora; una cinta de cinco tramos (Nuevo, Aceptado, Cocina, Listo, Entrega) que marca el paso
+  (`stepIndex`, `src/lib/orders/urgency.ts`); los productos en dos líneas como máximo con "y N más…"; y un pie con el
+  botón principal a todo el ancho y "Detalle" (⋯). Tocar la tarjeta también abre el detalle. El teléfono y, buscando
+  repartidor, el resumen de ofertas siguen en la tarjeta (ENVIO-117 y el teléfono de cualquier pedido).
+- **ADMIN-PEDIDOS-54** Dentro de cada columna, lo que pide atención va primero (`orderUrgency` y `compareByUrgency`):
+  alta (borde rojo) si el pedido pasó la hora de la demora o lleva 10 minutos buscando repartidor sin ofertas; media
+  (borde ámbar) si faltan 5 minutos o menos para la demora o un pendiente espera hace 5 minutos o más. A igual
+  urgencia, el orden de siempre. El título de cada columna dice cuántos son urgentes. En el celular las tres
+  columnas son pestañas (Nuevos, En curso, Listos) con su contador.
+- **ADMIN-PEDIDOS-55** "Cambiar demora" ya no estira la tarjeta: el reloj de la demora (o ⋯) abre un panel superpuesto
+  con los saltos, los motivos opcionales y "Otro valor…". Al elegir un salto se aplica y el panel se cierra solo;
+  también cierran la ✕, tocar fuera y Escape. Los botones son los de espera de ADMIN-PEDIDOS-51.
+- **ADMIN-PEDIDOS-56** El menú lateral de escritorio se achica a solo íconos con el nombre en el tooltip, y el contenido
+  usa todo el ancho. La elección se recuerda en el navegador (`localStorage`, con `try/catch`, `src/lib/layout/sidebar-pref.ts`).
+  En el celular sigue la hamburguesa.
 
 
 ## MP — Cobro con Mercado Pago (Checkout Pro)
