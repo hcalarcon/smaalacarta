@@ -505,7 +505,7 @@ llegando al negocio por WhatsApp.
   la clave, y nunca trae datos de otro negocio.
 - **SEGUIMIENTO-38** `PREP_WINDOW_MINUTES` (10) es una sola constante: la de `admin/src/lib/orders/prep.ts` y la de
   `web/apps/tracker/lib/prep.js` valen lo mismo, y un test las compara.
-- **SEGUIMIENTO-39** Con `prep`, el seguimiento dice "Listo entre 21:30 y 21:40 (aprox.)" y, antes de `hasta`, "en unos N min"
+- **SEGUIMIENTO-39** Con `prep`, el seguimiento dice "Listo aprox. a las 21:30" (ENVIO-169) y, antes de `hasta`, "en unos N min"
   (se renueva con la página); nunca un número negativo. Para retirar dice "Podés pasar a retirar desde las 21:30".
 - **SEGUIMIENTO-40** Pasado `hasta` el seguimiento dice "Se está demorando un poco más de lo previsto", sin horas ni números.
 - **SEGUIMIENTO-41** Si el local dejó un motivo (`busy`, `weather`, `supply`, `other`), se muestra como texto amable ("por
@@ -1931,6 +1931,16 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   ver, "Cambió la demora" es el primer botón. `returned_prep_changed` se elimina.
 - **ENVIO-167** El aviso "El local cambió la demora" compara las horas como instantes (`timestamptz`), no como
   texto: la misma hora escrita distinto (`Z` o `+00:00`, con o sin milisegundos, otra zona) no avisa.
+- **ENVIO-168** Aceptar un pedido es **un solo diálogo**: mientras el selector de la demora está abierto, la tarjeta
+  de "Nuevo pedido" no queda debajo, y el único botón principal es "Aceptar con X min". `PendingButton` se bloquea en
+  el mismo toque, con una marca sincrónica y antes de llamar a la acción, aunque la acción no devuelva una promesa:
+  dos toques seguidos en el mismo instante llaman una sola vez. Vale en el panel del local y en el del repartidor.
+- **ENVIO-169** El seguimiento dice "Listo aprox. a las HH:MM" (es/en/pt), con la hora marcada por el local (ver
+  SEGUIMIENTO-39); cuando el local la cambia, la hora nueva. Sigue dependiendo de `show_prep_time` del negocio.
+- **ENVIO-170** Con el panel abierto, al repartidor le avisan (sonido y cartel) tres cambios del local en un pedido
+  que ya tomó: Listo, otra demora (otro instante, no otro texto) y cancelado. Los demás cambios de estado no avisan,
+  y un pedido que ya estaba al abrir no cuenta. Son los mismos que el push (ENVIO-159, 160 y `order_cancelled`), y en
+  el service worker suenan y vibran aunque haya un aviso anterior en pantalla.
 
 
 
