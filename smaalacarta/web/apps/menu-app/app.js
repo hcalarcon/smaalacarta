@@ -1572,8 +1572,14 @@ function initZoneChoice(config, slug) {
 
   document.addEventListener("keydown", onZoneKeydown);
   // Tocar el fondo oscurecido cierra el diálogo, como Escape.
+  // Solo si el toque empezó y terminó en el fondo: arrastrar una selección desde el buscador no lo cierra.
+  let pressedBackdrop = false;
+  document.querySelector("#zona-card")?.addEventListener("pointerdown", (event) => {
+    pressedBackdrop = event.target === event.currentTarget;
+  });
   document.querySelector("#zona-card")?.addEventListener("click", (event) => {
-    if (event.target === event.currentTarget) closeZoneDialog();
+    if (pressedBackdrop && event.target === event.currentTarget) closeZoneDialog();
+    pressedBackdrop = false;
   });
 
   document.querySelector("#zona-chip")?.addEventListener("click", () => {

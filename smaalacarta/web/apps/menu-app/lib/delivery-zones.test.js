@@ -219,6 +219,11 @@ describe("deliveryProblem — PUBLICO-82", () => {
     expect(deliveryProblem({ zones, delivery: "delivery", zoneId: "a", blocked: true })).toBe("no_delivery");
   });
 
+  it("bloqueado y sin entrega elegida (local solo con envío) tampoco deja confirmar", () => {
+    expect(deliveryProblem({ zones, delivery: "", zoneId: "", blocked: true })).toBe("no_delivery");
+    expect(deliveryProblem({ zones, delivery: null, zoneId: "", blocked: true })).toBe("no_delivery");
+  });
+
   it("el retiro nunca tiene problema, ni con el envío bloqueado", () => {
     expect(deliveryProblem({ zones, delivery: "retiro", zoneId: "", blocked: true })).toBeNull();
   });

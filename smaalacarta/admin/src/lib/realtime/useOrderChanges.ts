@@ -36,7 +36,8 @@ export function useOrderChanges(onChange: () => void) {
     try {
       client = createClient();
       channel = client
-        .channel("order-changes")
+        // Nombre propio por montaje: uno fijo devuelve el canal anterior si todavía se está cerrando.
+        .channel(`order-changes-${Math.random().toString(36).slice(2)}`)
         .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, changed)
         .on("postgres_changes", { event: "*", schema: "public", table: "courier_offers" }, changed)
         .subscribe();
