@@ -268,6 +268,18 @@ const COURIER_WHATSAPP = /^[0-9]{8,15}$/;
 
 // Valida la respuesta de `public_order_delivery`; null si no es un envío reconocible. Nunca trae
 // teléfono ni dirección del cliente (ENVIO-17): esta página tampoco los muestra.
+function normalizeExtras(data) {
+  if (!data || typeof data !== "object") return null;
+
+  const extras = {
+    shop: data.compras_en_camino === true,
+    seek: data.busca_pedidos === true,
+    note: typeof data.texto === "string" ? data.texto.trim().slice(0, 140) : "",
+  };
+
+  return extras.shop || extras.seek || extras.note ? extras : null;
+}
+
 function normalizeDelivery(data) {
   if (!data || typeof data !== "object") return null;
   if (!DELIVERY_STATES.includes(data.estado)) return null;
@@ -285,6 +297,8 @@ function normalizeDelivery(data) {
     price: Number.isFinite(price) ? price : null,
     reason: typeof data.motivo_cambio === "string" && data.motivo_cambio ? data.motivo_cambio : null,
     state: data.estado,
+    // Lo que el repartidor asignado dejó dicho (SEGUIMIENTO-47): nulo si no marcó ni escribió nada.
+    extras: normalizeExtras(data.preferencias),
     // A qué hora llega al cliente, según lo que cargó el repartidor al retirar (ENVIO-161).
     arrivesAt:
       typeof data.llega_a === "string" && !Number.isNaN(Date.parse(data.llega_a)) ? Date.parse(data.llega_a) : null,
@@ -404,6 +418,24 @@ export function deliveryCard(delivery, lang, money, now = new Date()) {
         ? t("tracker.delivery.was", lang, { precio, motivo: delivery.reason })
         : t("tracker.delivery.wasNoReason", lang, { precio }),
     );
+  }
+
+  // "Podés pedirle a {nombre} también: compras en el camino · buscar otros pedidos." y su texto, solo con
+  // repartidor asignado y si marcó algo (SEGUIMIENTO-47). El texto va a la pantalla con textContent.
+  if (delivery.extras) {
+    const things = [
+      ...(delivery.extras.shop ? [t("tracker.delivery.extras.shop", lang)] : []),
+      ...(delivery.extras.seek ? [t("tracker.delivery.extras.seek", lang)] : []),
+    ];
+
+    if (things.length > 0) {
+      lines.push(
+        delivery.courier
+          ? t("tracker.delivery.extras", lang, { repartidor: delivery.courier, cosas: things.join(" · ") })
+          : t("tracker.delivery.extrasAnon", lang, { cosas: things.join(" · ") }),
+      );
+    }
+    if (delivery.extras.note) lines.push(delivery.extras.note);
   }
 
   if (contact) lines.push(contact.line);

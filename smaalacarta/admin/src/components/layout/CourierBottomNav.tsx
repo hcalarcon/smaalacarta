@@ -18,7 +18,7 @@ export default function CourierBottomNav({ toSettleCount }: { toSettleCount: num
       aria-label="Secciones del repartidor"
       className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-white pb-[env(safe-area-inset-bottom)] lg:hidden"
     >
-      <ul className="grid grid-cols-3">
+      <ul className="grid grid-cols-4">
         {items.map((item) => (
           <li key={item.key}>
             <Link

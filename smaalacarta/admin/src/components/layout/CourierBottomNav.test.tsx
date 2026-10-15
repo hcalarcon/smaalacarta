@@ -17,7 +17,7 @@ beforeEach(() => {
 
 // ADMIN-MOVIL-7
 describe("CourierBottomNav — ADMIN-MOVIL-7", () => {
-  it("muestra Pedidos, Rendiciones y Mis zonas, y solo se ve en el celular (lg:hidden)", () => {
+  it("muestra Pedidos, Rendiciones, Mis zonas y Mi perfil, y solo se ve en el celular (lg:hidden)", () => {
     render(<CourierBottomNav toSettleCount={0} />);
 
     const bar = screen.getByRole("navigation", { name: "Secciones del repartidor" });
@@ -28,6 +28,7 @@ describe("CourierBottomNav — ADMIN-MOVIL-7", () => {
       "/repartidor?tab=rendiciones",
     );
     expect(screen.getByRole("link", { name: "Mis zonas" })).toHaveAttribute("href", "/repartidor/zonas");
+    expect(screen.getByRole("link", { name: "Mi perfil" })).toHaveAttribute("href", "/repartidor/perfil");
   });
 
   it("marca Pedidos como activo en /repartidor", () => {

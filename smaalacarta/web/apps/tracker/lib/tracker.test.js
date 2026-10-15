@@ -395,6 +395,7 @@ describe("fetchDelivery — ENVIO-29", () => {
         price: 6500,
         reason: "Fuera de zona",
         state: "accepted",
+        extras: null,
         arrivesAt: null,
         mode: "offers",
         note: "Juan, 21:30",
@@ -646,6 +647,20 @@ describe("deliveryCard — SEGUIMIENTO-27, ENVIO-29, 44 y 91", () => {
       deliveryCard({ ...base, arrivesAt: at }, "es", money, new Date("2026-10-12T01:30:00Z")).lines,
     ).toContain("Unos minutos más");
     expect(deliveryCard({ ...base, arrivesAt: null }, "es", money).lines.join(" ")).not.toContain("Llega aprox");
+  });
+
+  it("con repartidor asignado y preferencias, dice qué más se le puede pedir — SEGUIMIENTO-47", () => {
+    const extras = { shop: true, seek: true, note: "Hasta las 22" };
+
+    const lines = deliveryCard({ ...base, extras }, "es", money).lines;
+    expect(lines).toContain("Podés pedirle a Damián también: compras en el camino · buscar otros pedidos.");
+    expect(lines).toContain("Hasta las 22");
+
+    expect(
+      deliveryCard({ ...base, extras: { shop: false, seek: true, note: "" } }, "en", money).lines.join(" "),
+    ).toContain("picking up other orders");
+    // Sin nada marcado, no hay bloque.
+    expect(deliveryCard({ ...base, extras: null }, "es", money).lines.join(" ")).not.toContain("Podés pedirle");
   });
 
   it("self: dice que lo lleva el local", () => {

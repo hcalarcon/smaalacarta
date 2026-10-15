@@ -537,6 +537,16 @@ llegando al negocio por WhatsApp.
   sin Realtime, que exigiría abrir las políticas de `orders` a `anon`). En es, en y pt.
 - **SEGUIMIENTO-46** Con el selector de idioma dentro del encabezado, la barra de arriba se oculta: no queda una franja
   en blanco sobre el seguimiento.
+- **SEGUIMIENTO-47** Con repartidor asignado (nunca mientras se busca), el seguimiento dice "Podés pedirle a {nombre}
+  también: compras en el camino · buscar otros pedidos." y el texto del repartidor, solo con lo que marcó o escribió; sin
+  nada, no hay bloque. Sale de `preferencias` en `public_order_delivery`, que lee solo las del repartidor de ese pedido.
+  El texto se escribe con `textContent`. En es, en y pt.
+- **ADMIN-REPARTIDOR-1** Las preferencias del repartidor viven en `courier_preferences` (una fila por repartidor):
+  "Compro cosas en el camino", "Busco otros pedidos" y un texto de hasta 140 caracteres, opcional. Con RLS: cada
+  repartidor lee la suya y nadie escribe directo; se guardan con `courier_save_preferences`, que toma al repartidor de
+  la sesión y recorta el texto.
+- **ADMIN-REPARTIDOR-2** La pantalla "Mi perfil" (`/repartidor/perfil`) las edita, con botón que espera a la base
+  (`PendingButton`) y botones de al menos 44 px. Un texto de más de 140 caracteres se rechaza.
 
 
 ## PWA — Instalar el menú en el celular

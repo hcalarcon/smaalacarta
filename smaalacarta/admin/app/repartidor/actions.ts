@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireCourier } from "@/lib/auth/courier";
 import { validateReturn } from "@/lib/courier/panel";
+import { validatePreferences, type CourierPreferences } from "@/lib/courier/profile";
 import { validateEta, type EtaKind } from "@/lib/courier/times";
 import {
   courierDeclineOrder,
@@ -13,6 +14,7 @@ import {
   courierSetEta,
   courierSetStatus,
   courierTakeOrder,
+  saveCourierPreferences,
   courierWithdrawOffer,
   setZoneCoverage,
 } from "@/lib/db/courier";
@@ -198,6 +200,21 @@ export async function setZoneCoverageAction(zoneId: string, covered: boolean): P
   if ("error" in result) return { ok: false, error: GENERIC };
 
   revalidatePath("/repartidor/zonas");
+  return { ok: true };
+}
+
+// Sus preferencias (ADMIN-REPARTIDOR-2): "Compro cosas en el camino", "Busco otros pedidos" y un texto corto. El
+// repartidor sale de la sesión; el cliente las ve en el seguimiento solo cuando el pedido es de este repartidor.
+export async function savePreferencesAction(input: CourierPreferences): Promise<CourierActionResult> {
+  await requireCourier();
+
+  const validation = validatePreferences(input);
+  if (!validation.ok) return { ok: false, error: validation.error };
+
+  const result = await saveCourierPreferences(validation.value);
+  if ("error" in result) return { ok: false, error: GENERIC };
+
+  revalidatePath("/repartidor/perfil");
   return { ok: true };
 }
 

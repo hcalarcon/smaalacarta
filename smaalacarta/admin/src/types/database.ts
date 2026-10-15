@@ -422,6 +422,38 @@ export type Database = {
           },
         ]
       }
+      courier_preferences: {
+        Row: {
+          courier_id: string
+          note: string | null
+          seeks_orders: boolean
+          shops_on_the_way: boolean
+          updated_at: string
+        }
+        Insert: {
+          courier_id: string
+          note?: string | null
+          seeks_orders?: boolean
+          shops_on_the_way?: boolean
+          updated_at?: string
+        }
+        Update: {
+          courier_id?: string
+          note?: string | null
+          seeks_orders?: boolean
+          shops_on_the_way?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_preferences_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: true
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courier_users: {
         Row: {
           courier_id: string
@@ -1469,6 +1501,14 @@ export type Database = {
       courier_orders: { Args: { p_since?: string }; Returns: Json }
       courier_return_order: {
         Args: { p_kind: string; p_order_id: string; p_reason?: string }
+        Returns: undefined
+      }
+      courier_save_preferences: {
+        Args: {
+          p_note: string
+          p_seeks_orders: boolean
+          p_shops_on_the_way: boolean
+        }
         Returns: undefined
       }
       courier_sees_order: {
