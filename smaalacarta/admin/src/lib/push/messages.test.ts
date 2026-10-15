@@ -138,3 +138,38 @@ describe("aviso fuerte de pedido nuevo — ADMIN-PWA-33 y 37", () => {
     expect(ttlSeconds(common)).toBe(600);
   });
 });
+
+describe("circuito de tiempos — ENVIO-158 a 160", () => {
+  // 2026-10-12T00:35:00Z es 21:35 en Argentina (UTC-3).
+  const timed = { ...ORDER, courier_id: "c-moto", prep_ready_at: "2026-10-12T00:35:00Z" };
+
+  it("aviso previo: hora de listo del local, hacia el panel del repartidor", () => {
+    expect(buildMessage("courier_pickup_soon", timed, ctx)).toMatchObject({
+      title: "#0042: pasá a retirar pronto",
+      body: "Ana Resto · Listo a las 21:35",
+      url: "/admin/repartidor",
+      tag: `order-${ORDER.id}-courier_pickup_soon`,
+      urgent: false,
+    });
+  });
+
+  it("aviso previo sin hora cargada no inventa una", () => {
+    expect(buildMessage("courier_pickup_soon", { ...timed, prep_ready_at: null }, ctx).body).toBe("Ana Resto");
+  });
+
+  it("Listo: el nombre del local", () => {
+    expect(buildMessage("courier_order_ready", timed, ctx)).toMatchObject({
+      title: "Listo para retirar en Ana Resto",
+      body: "#0042",
+      url: "/admin/repartidor",
+    });
+  });
+
+  it("cambio de demora: la hora nueva", () => {
+    expect(buildMessage("courier_prep_changed", timed, ctx)).toMatchObject({
+      title: "El local cambió la demora: listo a las 21:35",
+      body: "Ana Resto · #0042 · Podés devolverlo si no te sirve",
+      url: "/admin/repartidor",
+    });
+  });
+});

@@ -137,3 +137,46 @@ describe("recordatorio de pedido nuevo — ADMIN-PWA-33", () => {
     expect(kinds(update({ status: "pending", new_order_reminders: 2 }, { status: "confirmed", new_order_reminders: 2 }))).toEqual([]);
   });
 });
+
+describe("circuito de tiempos — ENVIO-158 a 160", () => {
+  const taken = { courier_status: "accepted", courier_id: "c-moto", status: "confirmed" };
+
+  it("el aviso previo sale cuando la marca pasa de vacía a puesta", () => {
+    expect(
+      kinds(update({ ...taken, pickup_reminder_sent_at: null }, { ...taken, pickup_reminder_sent_at: "2026-10-12T15:20:00Z" })),
+    ).toEqual(["courier_pickup_soon"]);
+  });
+
+  it("no repite el aviso previo en otro cambio con la marca puesta", () => {
+    const sent = { ...taken, pickup_reminder_sent_at: "2026-10-12T15:20:00Z" };
+    expect(kinds(update(sent, { ...sent, payment_status: "paid" }))).toEqual([]);
+  });
+
+  it("al rearmar el aviso (la marca se borra) no avisa", () => {
+    expect(kinds(update({ ...taken, pickup_reminder_sent_at: "2026-10-12T15:20:00Z" }, { ...taken, pickup_reminder_sent_at: null }))).toEqual([]);
+  });
+
+  it("Listo avisa al repartidor del pedido y a nadie si no tiene", () => {
+    expect(kinds(update({ ...taken, status: "preparing" }, { ...taken, status: "ready" }))).toEqual(["courier_order_ready"]);
+    expect(kinds(update({ status: "preparing" }, { status: "ready" }))).toEqual([]);
+  });
+
+  it("cambiar la demora con repartidor avisa con la hora nueva", () => {
+    expect(
+      kinds(update({ ...taken, prep_ready_at: "2026-10-12T15:30:00Z" }, { ...taken, prep_ready_at: "2026-10-12T16:00:00Z" })),
+    ).toEqual(["courier_prep_changed"]);
+  });
+
+  it("cargar la demora por primera vez con repartidor también avisa; sin repartidor no", () => {
+    expect(kinds(update({ ...taken, prep_ready_at: null }, { ...taken, prep_ready_at: "2026-10-12T16:00:00Z" }))).toEqual([
+      "courier_prep_changed",
+    ]);
+    expect(kinds(update({ prep_ready_at: "2026-10-12T15:30:00Z" }, { prep_ready_at: "2026-10-12T16:00:00Z" }))).toEqual([]);
+  });
+
+  it("un pedido ya entregado o cancelado no avisa por la demora", () => {
+    expect(
+      kinds(update({ ...taken, prep_ready_at: "2026-10-12T15:30:00Z" }, { ...taken, status: "cancelled", prep_ready_at: "2026-10-12T16:00:00Z" })),
+    ).toEqual(["order_cancelled"]);
+  });
+});

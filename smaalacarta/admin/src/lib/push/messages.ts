@@ -1,5 +1,6 @@
 import { deliveryLabel } from "@/lib/orders/labels";
 import { BASE_PATH } from "@/lib/base-path";
+import { formatClock } from "@/lib/orders/prep";
 
 import type { OrderRecord, PushEventKind } from "./events";
 
@@ -130,6 +131,27 @@ function compose(kind: PushEventKind, order: OrderRecord, ctx: MessageContext): 
       return {
         title: "Pedido cancelado",
         body: join(ctx.businessName, number),
+        url: courierPanel,
+        tag,
+      };
+    case "courier_pickup_soon":
+      return {
+        title: `${number}: pasá a retirar pronto`,
+        body: join(ctx.businessName, order.prep_ready_at ? `Listo a las ${formatClock(order.prep_ready_at)}` : ""),
+        url: courierPanel,
+        tag,
+      };
+    case "courier_order_ready":
+      return {
+        title: `Listo para retirar en ${ctx.businessName}`,
+        body: number,
+        url: courierPanel,
+        tag,
+      };
+    case "courier_prep_changed":
+      return {
+        title: `El local cambió la demora: listo a las ${order.prep_ready_at ? formatClock(order.prep_ready_at) : "—"}`,
+        body: join(ctx.businessName, number, "Podés devolverlo si no te sirve"),
         url: courierPanel,
         tag,
       };

@@ -83,6 +83,11 @@ const clock = new Intl.DateTimeFormat("es-AR", {
   timeZone: "America/Argentina/Buenos_Aires",
 });
 
+// La hora (HH:MM, de Argentina) de un instante: lo que se le dice al repartidor y al local.
+export function formatClock(value: string | Date): string {
+  return clock.format(typeof value === "string" ? new Date(value) : value);
+}
+
 // El texto de la tarjeta de un pedido Confirmado o En preparación con tiempo: "Listo 21:35 (en 8 min)".
 // `late` pone la tarjeta en alerta cuando ya pasó la hora.
 export function prepBadge(order: Timed, now: Date): { text: string; late: boolean } | null {

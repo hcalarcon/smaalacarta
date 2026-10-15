@@ -69,6 +69,9 @@ async function recipients(deps: PushDeps, event: PushEvent, once: Once): Promise
       return deps.courierUserIds(unique(couriers));
     }
     case "courier_chosen":
+    case "courier_pickup_soon":
+    case "courier_order_ready":
+    case "courier_prep_changed":
       return order.courier_id ? deps.courierUserIds([order.courier_id]) : [];
     case "courier_not_chosen": {
       const offerers = await once(`offerers:${order.id}`, () => deps.offererCourierIds(order.id));

@@ -25,6 +25,9 @@ export type OrderRecord = {
   total: number | null;
   // Cuántos recordatorios de pedido sin atender mandó `run_order_timers()` (ADMIN-PWA-33).
   new_order_reminders: number;
+  // La hora de listo que cargó el local y la marca del aviso previo para retirar (ENVIO-158 y 159).
+  prep_ready_at: string | null;
+  pickup_reminder_sent_at: string | null;
 };
 
 export type WebhookPayload = {
@@ -40,6 +43,9 @@ export type PushEventKind =
   | "courier_chosen"
   | "courier_not_chosen"
   | "order_cancelled"
+  | "courier_pickup_soon"
+  | "courier_order_ready"
+  | "courier_prep_changed"
   // Al local
   | "local_new_order"
   | "local_new_order_reminder"
@@ -99,6 +105,36 @@ export function detectEvents(payload: WebhookPayload): PushEvent[] {
   }
 
   if (order.status === "cancelled" && before.status !== "cancelled") add("order_cancelled");
+
+  // Avisos al repartidor que ya tiene el pedido (ENVIO-158 a 160). Un pedido cerrado no avisa más.
+  const withCourier =
+    order.courier_id !== null &&
+    order.courier_status === "accepted" &&
+    order.status !== "cancelled" &&
+    order.status !== "delivered";
+
+  if (withCourier) {
+    // El cron suma la marca 10 minutos antes de la hora de listo; que se borre (se rearma) no avisa.
+    if (
+      order.pickup_reminder_sent_at !== null &&
+      before.pickup_reminder_sent_at === null &&
+      (order.status === "confirmed" || order.status === "preparing")
+    ) {
+      add("courier_pickup_soon");
+    }
+
+    if (order.status === "ready" && before.status !== "ready") add("courier_order_ready");
+
+    if (
+      order.prep_ready_at !== null &&
+      order.prep_ready_at !== before.prep_ready_at &&
+      order.status !== "ready" &&
+      order.status !== "handed_to_courier" &&
+      order.status !== "on_the_way"
+    ) {
+      add("courier_prep_changed");
+    }
+  }
 
   // El cron suma un recordatorio mientras el pedido por menú sigue sin atender; si ya lo atendieron en el
   // medio, el aviso no tiene sentido.

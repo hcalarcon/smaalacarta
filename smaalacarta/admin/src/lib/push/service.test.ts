@@ -163,3 +163,24 @@ describe("fallas — ADMIN-PWA-26", () => {
     expect(d.sent.map((s) => s.title)).toEqual(["Pedido nuevo #0042", "Pedido nuevo #0042"]);
   });
 });
+
+describe("circuito de tiempos — ENVIO-158 a 160", () => {
+  const taken = { courier_status: "accepted", courier_id: "c-moto", status: "confirmed" };
+
+  it("el aviso previo, Listo y el cambio de demora van solo al repartidor del pedido", async () => {
+    const d = deps();
+    await handlePushWebhook(
+      d,
+      update({ ...taken, pickup_reminder_sent_at: null }, { ...taken, pickup_reminder_sent_at: "2026-10-12T15:20:00Z" }),
+    );
+    await handlePushWebhook(d, update({ ...taken, status: "preparing" }, { ...taken, status: "ready" }));
+    await handlePushWebhook(
+      d,
+      update({ ...taken, prep_ready_at: "2026-10-12T15:30:00Z" }, { ...taken, prep_ready_at: "2026-10-12T16:00:00Z" }),
+    );
+
+    expect(d.sent).toHaveLength(3);
+    expect(usersOf(d)).toEqual(["u-c-moto", "u-c-moto", "u-c-moto"]);
+    expect(d.sent.every((s) => s.url === "/admin/repartidor")).toBe(true);
+  });
+});
