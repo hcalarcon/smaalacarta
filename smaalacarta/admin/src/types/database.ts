@@ -835,6 +835,8 @@ export type Database = {
           business_id: string
           code: string
           courier_id: string | null
+          courier_eta_dropoff_at: string | null
+          courier_eta_pickup_at: string | null
           courier_note: string | null
           courier_requested_at: string | null
           courier_responded_at: string | null
@@ -863,9 +865,12 @@ export type Database = {
           payment: string | null
           payment_status: string
           preorder: boolean
+          pickup_reminder_sent_at: string | null
           prep_ready_at: string | null
           prep_reason: string | null
           prep_updated_at: string | null
+          ready_was_at: string | null
+          returned_prep_changed: boolean
           scheduled_for: string | null
           settled_at: string | null
           settled_by: string | null
@@ -881,6 +886,8 @@ export type Database = {
           business_id: string
           code?: string
           courier_id?: string | null
+          courier_eta_dropoff_at?: string | null
+          courier_eta_pickup_at?: string | null
           courier_note?: string | null
           courier_requested_at?: string | null
           courier_responded_at?: string | null
@@ -909,9 +916,12 @@ export type Database = {
           payment?: string | null
           payment_status?: string
           preorder?: boolean
+          pickup_reminder_sent_at?: string | null
           prep_ready_at?: string | null
           prep_reason?: string | null
           prep_updated_at?: string | null
+          ready_was_at?: string | null
+          returned_prep_changed?: boolean
           scheduled_for?: string | null
           settled_at?: string | null
           settled_by?: string | null
@@ -927,6 +937,8 @@ export type Database = {
           business_id?: string
           code?: string
           courier_id?: string | null
+          courier_eta_dropoff_at?: string | null
+          courier_eta_pickup_at?: string | null
           courier_note?: string | null
           courier_requested_at?: string | null
           courier_responded_at?: string | null
@@ -955,9 +967,12 @@ export type Database = {
           payment?: string | null
           payment_status?: string
           preorder?: boolean
+          pickup_reminder_sent_at?: string | null
           prep_ready_at?: string | null
           prep_reason?: string | null
           prep_updated_at?: string | null
+          ready_was_at?: string | null
+          returned_prep_changed?: boolean
           scheduled_for?: string | null
           settled_at?: string | null
           settled_by?: string | null
@@ -1458,6 +1473,10 @@ export type Database = {
         Args: { p_courier_id: string; p_order_id: string }
         Returns: boolean
       }
+      courier_set_eta: {
+        Args: { p_kind: string; p_minutes: number; p_order_id: string }
+        Returns: string
+      }
       courier_set_status: {
         Args: { p_order_id: string; p_status: string }
         Returns: undefined
@@ -1624,6 +1643,15 @@ export type Database = {
         Args: { p_business_id: string; p_options: Json; p_product_id: string }
         Returns: Json
       }
+      order_prep_minutes: {
+        Args: { o: Database["public"]["Tables"]["orders"]["Row"] }
+        Returns: number
+      }
+      order_ready_at: {
+        Args: { o: Database["public"]["Tables"]["orders"]["Row"] }
+        Returns: string
+      }
+      pickup_reminder_lead: { Args: never; Returns: string }
       run_order_timers: { Args: never; Returns: undefined }
       save_business_settings: {
         Args: {

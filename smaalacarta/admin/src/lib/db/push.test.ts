@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { asUser, createTestDb, createUser, type TestDb } from "@/test/db";
-import { choose, offer } from "@/test/offers";
+import { choose, offer, openSearch } from "@/test/offers";
 
 // ADMIN-PWA-1 a 8 contra Postgres real: suscripciones push y tareas por tiempo.
 const ANA = "aaaaaaaa-0000-0000-0000-000000000001"; // dueña de un negocio con envío
@@ -47,6 +47,7 @@ async function envio() {
   if (!r.ok) throw new Error(`no se pudo crear el pedido: ${r.error}`);
   const c = (r.rows[0].result as { code: string }).code;
   const id = (await db.query<{ id: string }>("select id from orders where code = $1", [c])).rows[0].id;
+  await openSearch(db, id);
   return { id, code: c };
 }
 

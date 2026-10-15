@@ -599,7 +599,8 @@ describe("create_public_order con las zonas del local — ENVIO-54", () => {
       "select courier_id, delivery_fee_list, courier_status from orders where code = $1",
       [sinCode],
     );
-    expect(o.rows[0]).toEqual({ courier_id: null, delivery_fee_list: "5000.00", courier_status: "searching" });
+    // La búsqueda se abre cuando el local acepta el pedido (ENVIO-155).
+    expect(o.rows[0]).toEqual({ courier_id: null, delivery_fee_list: "5000.00", courier_status: "waiting" });
 
     expect((await prefs(ANA, DOS)).ok).toBe(true);
     const fav = await order("ana", await zoneId("Cantera"));

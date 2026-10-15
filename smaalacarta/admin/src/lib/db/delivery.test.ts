@@ -304,7 +304,8 @@ describe("crear un pedido con envío — ENVIO-5, 6 y 7", () => {
       delivery_fee: "5000.00",
       customer_phone: "3515551234",
       delivery_address: "Av. Siempre Viva 742",
-      courier_status: "searching",
+      // La búsqueda se abre cuando el local acepta el pedido (ENVIO-155).
+      courier_status: "waiting",
       status: "pending",
     });
   });
@@ -764,7 +765,16 @@ describe("lo que ve el cliente — ENVIO-16 y 17", () => {
     };
 
     const a = await courierOrder();
-    // Desde que se crea ya busca (ENVIO-95), sin ofertas todavía.
+    // Hasta que el local lo acepta espera (ENVIO-155); al aceptarlo busca, sin ofertas todavía (ENVIO-95).
+    expect(await estado(a.code)).toEqual({
+      zona: "Cantera",
+      precio_lista: 5000,
+      precio: 5000,
+      estado: "waiting",
+      modo: "offers",
+    });
+
+    await setStatus(ANA, a.id, "confirmed");
     expect(await estado(a.code)).toEqual({
       zona: "Cantera",
       precio_lista: 5000,
@@ -773,9 +783,6 @@ describe("lo que ve el cliente — ENVIO-16 y 17", () => {
       modo: "offers",
       ofertas: [],
     });
-
-    await setStatus(ANA, a.id, "confirmed");
-    expect((await estado(a.code)).estado).toBe("searching");
 
     await call(ANA, `select public.business_self_delivery('${a.id}')`);
     const self = await estado(a.code);

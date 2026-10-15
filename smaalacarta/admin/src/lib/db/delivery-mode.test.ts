@@ -2,7 +2,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { asUser, createTestDb, createUser, type TestDb } from "@/test/db";
-import { offer } from "@/test/offers";
+import { offer, openSearch } from "@/test/offers";
 
 // ENVIO-145 a 154 contra Postgres real: el modo de envíos (precio fijo u ofertas).
 const SUPER = "99999999-0000-0000-0000-000000000009";
@@ -37,6 +37,7 @@ async function envio() {
   if (!r.ok) throw new Error(`no se pudo crear el pedido: ${r.error}`);
   const code = (r.rows[0].result as { code: string }).code;
   const o = (await db.query<{ id: string }>("select id from orders where code = $1", [code])).rows[0];
+  await openSearch(db, o.id);
   return { id: o.id, code };
 }
 

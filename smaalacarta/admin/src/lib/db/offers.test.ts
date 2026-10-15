@@ -152,19 +152,24 @@ afterAll(async () => {
   await db.close();
 });
 
-describe("la búsqueda está abierta desde que se crea — ENVIO-59 y 95", () => {
-  it("el pedido con envío nace sin repartidor y buscando, y ya lo ven los repartidores", async () => {
+describe("la búsqueda se abre al confirmar — ENVIO-59, 95 y 155", () => {
+  it("el pedido con envío nace sin repartidor y esperando: los repartidores no lo ven hasta que el local lo acepta", async () => {
     const o = await envio();
     const r = await row(o.id);
-    expect(r).toMatchObject({ courier_id: null, courier_status: "searching", status: "pending" });
-    expect(r.offered_at).not.toBeNull();
+    expect(r).toMatchObject({ courier_id: null, courier_status: "waiting", status: "pending" });
+    expect(r.offered_at).toBeNull();
+    expect(await sees(TOQUE_USER, o.id)).toBe(false);
+
+    expect((await confirm(o.id)).ok).toBe(true);
+    expect((await row(o.id)).courier_status).toBe("searching");
+    expect((await row(o.id)).offered_at).not.toBeNull();
     expect(await sees(TOQUE_USER, o.id)).toBe(true);
   });
 
-  it("confirmarlo no cambia la búsqueda: offered_at queda", async () => {
+  it("después de abrirse, seguir el pedido no cambia la búsqueda: offered_at queda", async () => {
     const o = await envio();
-    const antes = await row(o.id);
     expect((await confirm(o.id)).ok).toBe(true);
+    const antes = await row(o.id);
     await setStatus(ANA, o.id, "preparing");
     const despues = await row(o.id);
     expect(despues.courier_status).toBe("searching");
@@ -180,9 +185,10 @@ describe("la búsqueda está abierta desde que se crea — ENVIO-59 y 95", () =>
     expect(r).toMatchObject({ courier_id: null, courier_status: null, offered_at: null });
   });
 
-  it("el pedido programado se ofrece apenas se crea, con su hora", async () => {
+  it("el pedido programado se ofrece al aceptarlo, con su hora", async () => {
     const o = await envio();
     await db.exec(`update orders set scheduled_for = now() + interval '1 day' where id = '${o.id}'`);
+    expect((await confirm(o.id)).ok).toBe(true);
 
     const lista = await available(TOQUE_USER);
     const found = lista.find((x) => x.id === o.id);

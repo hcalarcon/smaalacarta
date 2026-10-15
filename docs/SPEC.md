@@ -1877,6 +1877,37 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
 - **ENVIO-154** Panel del local, pedido `fixed` buscando: "Buscando repartidor desde las HH:MM" (sin conteo de ofertas)
   y, a los 10 minutos, "Nadie lo tomó todavía". Seguimiento `fixed`: "Buscando repartidor" y después quien lo tomó,
   con el precio de lista, sin lista de ofertas ni cuenta regresiva (es/en/pt).
+- **ENVIO-155** La búsqueda de repartidor se abre cuando el local acepta el pedido (`pending → confirmed`), en los dos
+  modos y sea común, anticipado o programado. Mientras está pendiente el pedido con envío queda `waiting`: ningún
+  repartidor lo ve, lo toma ni oferta. El pedido manual, que nace confirmado, busca al crearse. Los 10 minutos de
+  "nadie lo tomó" cuentan desde que se abre la búsqueda. Los que hoy buscan en `pending`, sin repartidor, vuelven a
+  `waiting` y se les borran las ofertas.
+- **ENVIO-156** Cada pedido que ve el repartidor trae `listo_a` (la hora estimada de listo) y `demora_min`. Salen de
+  lo que cargó el local; si no cargó nada, de `default_prep_minutes` desde que aceptó. Un pedido programado o
+  anticipado muestra su hora y sin demora.
+- **ENVIO-157** El repartidor carga dos tiempos con `courier_set_eta()`: "Llego al local en X min" (pedido suyo, antes
+  de retirar) y "Llego al cliente en X min" (ya retirado). De 1 a 120 minutos; un pedido ajeno da P0002, un rango
+  fuera de lugar o un tipo desconocido, 22023, y un estado que no corresponde, P0004. Se borran al devolver el pedido.
+- **ENVIO-158** Aviso previo: 10 minutos antes de la hora estimada de listo, `run_order_timers()` marca una sola vez
+  `pickup_reminder_sent_at` en el pedido con repartidor que todavía no está listo; esa marca dispara el aviso push
+  "Pasá a retirar". Si el local cambia la demora, la marca se reinicia y el aviso se rearma. La constante es
+  `pickup_reminder_lead()`.
+- **ENVIO-159** Si el local cambia la demora de un pedido con repartidor, queda el evento de la demora, la base guarda
+  la hora anterior (`ready_was_at`) y al repartidor le llega "El local cambió la demora: listo a las HH:MM". Si no le
+  sirve, lo devuelve y vuelve a aparecerles a los otros repartidores.
+- **ENVIO-160** Cuando el local marca Listo un pedido con repartidor, le llega "Listo para retirar en {local}".
+- **ENVIO-161** `public_order_delivery()` trae `llega_a` (la hora que cargó el repartidor para llegar al cliente) una vez
+  retirado el pedido; no trae ningún dato del repartidor que no mostrara.
+- **ENVIO-162** Los miembros del local no escriben `courier_eta_pickup_at`, `courier_eta_dropoff_at`,
+  `pickup_reminder_sent_at` ni `ready_was_at`: solo las funciones del circuito y el cron.
+- **ENVIO-163** `/repartidor`: cada pedido disponible muestra "Listo para retirar a las HH:MM · Demora 45 min"; al
+  tomarlo (o ser elegido) pide "Llego al local en…" con 5, 10, 15, 20 y 30 minutos más un campo libre de 1 a 120; en
+  curso muestra la hora de listo y, si cambió, "Cambió" con la anterior tachada; al marcar En camino pide "Llego al
+  cliente en…". Los botones tienen espera.
+- **ENVIO-164** Panel del local: el pedido con repartidor muestra "Llega al local a las HH:MM" si lo cargó; si el
+  repartidor lo devolvió por un cambio de demora, "Lo devolvió: cambió la demora" y vuelve a "Buscando repartidor".
+- **ENVIO-165** Seguimiento: pendiente con envío, "Esperando que el local confirme"; en camino, "Llega aprox. a las
+  HH:MM" si el repartidor cargó el tiempo (es/en/pt).
 
 
 
