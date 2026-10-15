@@ -12,6 +12,7 @@ const { requireCourier, courierDb } = vi.hoisted(() => ({
     courierWithdrawOffer: vi.fn(),
     courierDeclineOrder: vi.fn(),
     courierReturnOrder: vi.fn(),
+    courierSetEta: vi.fn(),
   },
 }));
 
@@ -24,6 +25,7 @@ import {
   declineOrderAction,
   makeOfferAction,
   returnOrderAction,
+  setEtaAction,
   setZoneCoverageAction,
   takeOrderAction,
   withdrawOfferAction,
@@ -53,6 +55,7 @@ describe("quien no es el repartidor no llega a la base — ENVIO-30 y 79", () =>
     ["rechazar", () => declineOrderAction(ORDER)],
     ["devolver", () => returnOrderAction(ORDER, "Motivo")],
     ["avanzar", () => advanceOrderAction(ORDER, "on_the_way")],
+    ["cargar el tiempo", () => setEtaAction(ORDER, "pickup", 10)],
     ["marcar una zona", () => setZoneCoverageAction("22222222-2222-2222-2222-222222222222", true)],
   ])("%s", async (_name, run) => {
     await expect(run()).rejects.toThrow("NEXT_REDIRECT");
@@ -211,5 +214,67 @@ describe("Mis zonas — ENVIO-57", () => {
 
     await expect(setZoneCoverageAction(ZONE, true)).rejects.toThrow("NEXT_REDIRECT");
     expect(courierDb.setZoneCoverage).not.toHaveBeenCalled();
+  });
+});
+
+describe("tiempos de llegada — ENVIO-157", () => {
+  it("carga el tiempo con el pedido y el tipo, y la base recibe los minutos validados", async () => {
+    const result = await setEtaAction(ORDER, "pickup", 15);
+
+    expect(result).toEqual({ ok: true });
+    expect(courierDb.courierSetEta).toHaveBeenCalledWith(ORDER, "pickup", 15);
+  });
+
+  it.each([0, 121, 7.5, Number.NaN])("rechaza %s sin llamar a la base", async (minutes) => {
+    const result = await setEtaAction(ORDER, "pickup", minutes);
+
+    expect(result.ok).toBe(false);
+    expect(courierDb.courierSetEta).not.toHaveBeenCalled();
+  });
+
+  it("rechaza un tipo desconocido", async () => {
+    const result = await setEtaAction(ORDER, "otro" as never, 10);
+
+    expect(result.ok).toBe(false);
+    expect(courierDb.courierSetEta).not.toHaveBeenCalled();
+  });
+
+  it("si la base lo rechaza, devuelve el error", async () => {
+    courierDb.courierSetEta.mockResolvedValue({ error: { code: "P0002" } });
+
+    const result = await setEtaAction(ORDER, "pickup", 10);
+    expect(result.ok).toBe(false);
+  });
+
+  it("En camino con tiempo: carga el tiempo al cliente y después cambia el estado", async () => {
+    const calls: string[] = [];
+    courierDb.courierSetEta.mockImplementation(async () => {
+      calls.push("eta");
+      return { ok: true };
+    });
+    courierDb.courierSetStatus.mockImplementation(async () => {
+      calls.push("status");
+      return { ok: true };
+    });
+
+    const result = await advanceOrderAction(ORDER, "on_the_way", 15);
+
+    expect(result).toEqual({ ok: true });
+    expect(courierDb.courierSetEta).toHaveBeenCalledWith(ORDER, "dropoff", 15);
+    expect(calls).toEqual(["eta", "status"]);
+  });
+
+  it("En camino con un tiempo inválido no cambia el estado", async () => {
+    const result = await advanceOrderAction(ORDER, "on_the_way", 500);
+
+    expect(result.ok).toBe(false);
+    expect(courierDb.courierSetStatus).not.toHaveBeenCalled();
+  });
+
+  it("En camino sin tiempo sigue como antes", async () => {
+    await advanceOrderAction(ORDER, "on_the_way");
+
+    expect(courierDb.courierSetEta).not.toHaveBeenCalled();
+    expect(courierDb.courierSetStatus).toHaveBeenCalledWith(ORDER, "on_the_way");
   });
 });

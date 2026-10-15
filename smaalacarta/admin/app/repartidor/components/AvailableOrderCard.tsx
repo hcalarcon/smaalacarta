@@ -9,6 +9,7 @@ import {
   resultNotice,
   type AvailableOrder,
 } from "@/lib/courier/panel";
+import { readyLine } from "@/lib/courier/times";
 import { collectionInfo, validateOffer, type OfferInput } from "@/lib/orders/courier";
 import { formatDateTime, timeAgo } from "@/lib/orders/format";
 import { preorderLabel, scheduledLabel } from "@/lib/orders/scheduled";
@@ -55,6 +56,8 @@ export default function AvailableOrderCard({
   const collection = collectionInfo({ payment: order.pago, total: order.total, fee: listPrice });
   const when = order.anticipado ? preorderLabel(order.programado) : scheduledLabel(order.programado);
   const since = order.ofrecido_el ?? order.creado;
+  // La hora de listo y la demora que cargó el local (ENVIO-163): se ve antes de tomar u ofertar.
+  const ready = notice ? null : readyLine(order.listo_a, order.demora_min);
 
   // ¿El precio escrito es distinto del de lista? Entonces el motivo es obligatorio.
   const typed = validateOffer({ price, reason: "-" }, listPrice);
@@ -103,6 +106,10 @@ export default function AvailableOrderCard({
         <p className="mt-3 rounded-xl bg-amber-100 px-3 py-2 text-base font-bold text-amber-900">
           🕒 {when}
         </p>
+      ) : null}
+
+      {ready ? (
+        <p className="mt-3 rounded-xl bg-brand-soft px-3 py-2 text-sm font-semibold text-brand">⏱ {ready}</p>
       ) : null}
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">

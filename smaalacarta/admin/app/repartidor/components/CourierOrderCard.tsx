@@ -11,6 +11,7 @@ import {
   type CourierPanelOrder,
 } from "@/lib/courier/panel";
 import { canMarkSettled, courierOrderState, settlementLabel } from "@/lib/courier/settlements";
+import { etaLabel, readyChange, readyLine, type EtaKind } from "@/lib/courier/times";
 import { collectionInfo } from "@/lib/orders/courier";
 import { formatDateTime, timeAgo } from "@/lib/orders/format";
 import { itemOptionLines } from "@/lib/orders/item-options";
@@ -20,6 +21,10 @@ import { formatMoney } from "@/lib/promotions/pricing";
 import PendingButton from "@/components/ui/PendingButton";
 import ConfirmDeleteDialog from "../../dashboard/components/ConfirmDeleteDialog";
 import ItemNote from "@/components/ui/ItemNote";
+import EtaPicker from "./EtaPicker";
+
+// Antes de este estado el local todavía no le entregó el pedido al repartidor.
+const RETURNABLE_STATES = ["pending", "confirmed", "preparing", "ready"];
 
 const ENVIO_LABELS: Record<string, string> = {
   accepted: "Lo tomaste",
@@ -35,6 +40,7 @@ export default function CourierOrderCard({
   error,
   onReturn,
   onAdvance,
+  onSetEta,
   onSettle,
 }: {
   order: CourierPanelOrder;
@@ -44,7 +50,10 @@ export default function CourierOrderCard({
   // Devuelve el pedido, con motivo (ENVIO-66): vuelve a buscarse entre los demás repartidores.
   // Pueden devolver una promesa: el botón espera lo que tarde y no deja tocar de nuevo (ENVIO-144).
   onReturn: (reason: string) => void | Promise<void>;
-  onAdvance: (status: "on_the_way" | "delivered") => void | Promise<void>;
+  // Al marcar En camino puede llevar los minutos que tarda en llegar al cliente (ENVIO-163).
+  onAdvance: (status: "on_the_way" | "delivered", etaMinutes?: number) => void | Promise<void>;
+  // "Llego al local en X" / "Llego al cliente en X" (ENVIO-157).
+  onSetEta?: (kind: EtaKind, minutes: number) => void | Promise<void>;
   // Marca que ya rindió al local lo cobrado del pedido (ENVIO-42): no se deshace.
   onSettle: () => void | Promise<void>;
 }) {
@@ -52,6 +61,7 @@ export default function CourierOrderCard({
   const [reason, setReason] = useState("");
   const [reasonError, setReasonError] = useState<string | null>(null);
   const [settling, setSettling] = useState(false);
+  const [changingPickup, setChangingPickup] = useState(false);
 
   const actions = availableActions(order);
   const collection = collectionInfo({ payment: order.pago, total: order.total, fee: order.envio.precio });
@@ -64,6 +74,18 @@ export default function CourierOrderCard({
   const localChat = chatLink(order.negocio.whatsapp);
   const clientChat = chatLink(order.cliente.telefono);
   const clientCall = telLink(order.cliente.telefono);
+
+  // La hora de listo (con la anterior tachada si el local la cambió) solo importa hasta retirar el pedido.
+  const times = order.tiempos;
+  const beforePickup = RETURNABLE_STATES.includes(order.estado) && order.envio.estado === "accepted";
+  const change = beforePickup ? readyChange(times) : null;
+  const ready = beforePickup ? readyLine(times?.listo_a, times?.demora_min) : null;
+  const pickupEta = etaLabel("pickup", times?.llega_local_a);
+  const dropoffEta = etaLabel("dropoff", times?.llega_cliente_a);
+
+  function setEta(kind: EtaKind, minutes: number) {
+    return Promise.resolve(onSetEta?.(kind, minutes)).finally(() => setChangingPickup(false));
+  }
 
   function submitReturn() {
     const result = validateReturnReason(reason);
@@ -102,6 +124,39 @@ export default function CourierOrderCard({
           </span>
         </div>
       </header>
+
+      {ready ? (
+        <p className="mt-3 rounded-xl bg-brand-soft px-3 py-2 text-sm font-semibold text-brand">
+          ⏱{" "}
+          {change ? (
+            <>
+              Listo para retirar a las <s className="text-stone-500">{change.before}</s> {change.now}
+              {times?.demora_min != null ? ` · Demora ${times.demora_min} min` : ""}{" "}
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-900">Cambió</span>
+            </>
+          ) : (
+            ready
+          )}
+        </p>
+      ) : null}
+
+      {beforePickup && onSetEta ? (
+        pickupEta && !changingPickup ? (
+          <p className="mt-2 flex flex-wrap items-center gap-2 text-sm font-medium text-stone-800">
+            {pickupEta}
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setChangingPickup(true)}
+              className="rounded-lg border border-line-strong px-2.5 py-1 text-xs font-medium text-brand transition hover:bg-brand-soft disabled:opacity-60"
+            >
+              Cambiar
+            </button>
+          </p>
+        ) : (
+          <EtaPicker title="Llego al local en…" busy={busy} onPick={(minutes) => setEta("pickup", minutes)} />
+        )
+      ) : null}
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <section>
@@ -301,6 +356,22 @@ export default function CourierOrderCard({
             </button>
           ) : null}
         </div>
+      ) : null}
+
+      {actions.onTheWay ? (
+        <EtaPicker
+          title="Salgo hacia el cliente: llego en…"
+          busy={busy}
+          onPick={(minutes) => onAdvance("on_the_way", minutes)}
+        />
+      ) : null}
+
+      {order.estado === "on_the_way" && onSetEta ? (
+        dropoffEta ? (
+          <p className="mt-3 text-sm font-medium text-stone-800">{dropoffEta}</p>
+        ) : (
+          <EtaPicker title="Llego al cliente en…" busy={busy} onPick={(minutes) => onSetEta("dropoff", minutes)} />
+        )
       ) : null}
 
       {actions.onTheWay || actions.delivered ? (

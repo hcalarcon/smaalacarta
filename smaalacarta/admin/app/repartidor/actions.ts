@@ -4,11 +4,13 @@ import { revalidatePath } from "next/cache";
 
 import { requireCourier } from "@/lib/auth/courier";
 import { validateReturnReason } from "@/lib/courier/panel";
+import { validateEta, type EtaKind } from "@/lib/courier/times";
 import {
   courierDeclineOrder,
   courierMakeOffer,
   courierMarkSettled,
   courierReturnOrder,
+  courierSetEta,
   courierSetStatus,
   courierTakeOrder,
   courierWithdrawOffer,
@@ -128,15 +130,44 @@ export async function returnOrderAction(orderId: string, reason: string): Promis
   return { ok: true };
 }
 
-// En camino y Entregado (ENVIO-14 y 77).
+// "Llego al local en X min" o "Llego al cliente en X min" (ENVIO-157). El repartidor sale de la sesión y la
+// base comprueba que el pedido sea suyo.
+export async function setEtaAction(orderId: string, kind: EtaKind, minutes: number): Promise<CourierActionResult> {
+  await requireCourier();
+
+  if (kind !== "pickup" && kind !== "dropoff") return { ok: false, error: GENERIC };
+
+  const validation = validateEta(minutes);
+  if (!validation.ok) return { ok: false, error: validation.error, fieldErrors: { minutes: validation.error } };
+
+  const result = await courierSetEta(orderId, kind, validation.minutes);
+  if ("error" in result) {
+    return { ok: false, error: orderErrorMessage(result.error) };
+  }
+
+  revalidatePath("/repartidor");
+  return { ok: true };
+}
+
+// En camino y Entregado (ENVIO-14 y 77). Al marcar En camino puede cargar cuánto tarda en llegar al
+// cliente (ENVIO-157): el tiempo se guarda antes de cambiar el estado, así lo ve el cliente al instante.
 export async function advanceOrderAction(
   orderId: string,
   status: "on_the_way" | "delivered",
+  etaMinutes?: number,
 ): Promise<CourierActionResult> {
   await requireCourier();
 
   if (status !== "on_the_way" && status !== "delivered") {
     return { ok: false, error: "Estado desconocido." };
+  }
+
+  if (etaMinutes !== undefined) {
+    const validation = validateEta(etaMinutes);
+    if (!validation.ok) return { ok: false, error: validation.error, fieldErrors: { minutes: validation.error } };
+
+    const eta = await courierSetEta(orderId, "dropoff", validation.minutes);
+    if ("error" in eta) return { ok: false, error: orderErrorMessage(eta.error) };
   }
 
   const result = await courierSetStatus(orderId, status);

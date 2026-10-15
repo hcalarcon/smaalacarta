@@ -13,6 +13,7 @@ import {
   takeOrderAction,
   markSettledAction,
   returnOrderAction,
+  setEtaAction,
   withdrawOfferAction,
 } from "../actions";
 import {
@@ -350,7 +351,8 @@ export default function CourierOrdersClient({
                     busy={busyId === item.id}
                     error={error?.id === item.id ? error.message : null}
                     onReturn={(reason) => run(item.id, () => returnOrderAction(item.id, reason))}
-                    onAdvance={(status) => run(item.id, () => advanceOrderAction(item.id, status))}
+                    onAdvance={(status, eta) => run(item.id, () => advanceOrderAction(item.id, status, eta))}
+                    onSetEta={(kind, minutes) => run(item.id, () => setEtaAction(item.id, kind, minutes))}
                     onSettle={() => run(item.id, () => markSettledAction(item.id))}
                   />
                 ))}

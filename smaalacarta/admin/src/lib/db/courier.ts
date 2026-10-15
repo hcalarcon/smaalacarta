@@ -107,6 +107,20 @@ export async function courierSetStatus(
   return error ? { error: { code: error.code, message: error.message } } : { ok: true };
 }
 
+// Carga "llego al local en X" o "llego al cliente en X" (ENVIO-157). La base exige que el pedido sea suyo, el
+// rango de 1 a 120 y el estado que corresponde.
+export async function courierSetEta(
+  orderId: string,
+  kind: "pickup" | "dropoff",
+  minutes: number,
+): Promise<{ ok: true } | DbFailure> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("courier_set_eta", { p_order_id: orderId, p_kind: kind, p_minutes: minutes });
+
+  return error ? { error: { code: error.code, message: error.message } } : { ok: true };
+}
+
 // El repartidor marca que ya rindió al local lo cobrado del pedido (ENVIO-39). La base exige que
 // sea suyo, en efectivo, entregado y sin marcar.
 export async function courierMarkSettled(orderId: string): Promise<{ ok: true } | DbFailure> {

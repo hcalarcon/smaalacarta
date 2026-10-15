@@ -1,6 +1,8 @@
 import { whatsappDigits } from "@/lib/orders/courier";
 import type { OrderItemOption } from "@/lib/orders/item-options";
 
+import type { CourierTimes } from "./times";
+
 // Panel del repartidor (ENVIO-76 a 79 y 113 a 116): qué grupo y qué acciones le corresponden a cada
 // pedido. Reglas puras; los componentes solo pintan. La base exige lo mismo (`courier_make_offer`,
 // `courier_return_order` y `courier_set_status`).
@@ -23,6 +25,9 @@ export type AvailableOrder = {
   creado: string;
   // Cuándo se abrió la búsqueda.
   ofrecido_el: string | null;
+  // La hora estimada de listo y la demora que cargó el local (ENVIO-156). La demora falta en un programado.
+  listo_a?: string | null;
+  demora_min?: number | null;
   programado: string | null;
   anticipado: boolean;
   negocio: { nombre: string; direccion: string | null };
@@ -67,6 +72,8 @@ export type CourierPanelOrder = {
     consultado_el: string | null;
     respondido_el: string | null;
   };
+  // La hora de listo y los dos "llego en X" (ENVIO-157).
+  tiempos?: CourierTimes;
   // Rendición del efectivo (ENVIO-40): cuándo la marcó el repartidor y cuándo la confirmó el local.
   rendicion: { rendido_el: string | null; recibido_el: string | null };
 };

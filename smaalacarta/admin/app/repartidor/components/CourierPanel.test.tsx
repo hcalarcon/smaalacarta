@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   giveBack: vi.fn(),
   advance: vi.fn(),
   settle: vi.fn(),
+  setEta: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -29,12 +30,22 @@ vi.mock("../actions", () => ({
   returnOrderAction: mocks.giveBack,
   advanceOrderAction: mocks.advance,
   markSettledAction: mocks.settle,
+  setEtaAction: mocks.setEta,
 }));
 beforeEach(() => {
   // Las pestañas dejan la URL al día (ADMIN-MOVIL-8): que un test no herede la del anterior.
   window.history.replaceState(null, "", "/");
   vi.clearAllMocks();
-  for (const fn of [mocks.offer, mocks.take, mocks.withdraw, mocks.decline, mocks.giveBack, mocks.advance, mocks.settle]) {
+  for (const fn of [
+    mocks.offer,
+    mocks.take,
+    mocks.withdraw,
+    mocks.decline,
+    mocks.giveBack,
+    mocks.advance,
+    mocks.settle,
+    mocks.setEta,
+  ]) {
     fn.mockResolvedValue({ ok: true });
   }
 });
@@ -643,5 +654,118 @@ describe("cuánto cobrar y rendiciones — ENVIO-41 y 42", () => {
     render(<CourierOrdersClient serverNow="2026-10-09T23:30:00Z" orders={[...old, pending]} />);
 
     expect((screen.getByRole("region", { name: "Historial" }) as HTMLElement).textContent).toContain("#1 ");
+  });
+});
+
+describe("circuito de tiempos — ENVIO-163", () => {
+  // 2026-10-10T00:35:00Z es 21:35 en Argentina; 00:05Z, 21:05.
+  const times = (extra: Partial<NonNullable<CourierPanelOrder["tiempos"]>> = {}) => ({
+    listo_a: "2026-10-10T00:35:00Z",
+    demora_min: 45,
+    listo_antes: null,
+    llega_local_a: null,
+    llega_cliente_a: null,
+    ...extra,
+  });
+
+  const timedCard = (o: CourierPanelOrder, onAdvance = vi.fn(), onSetEta = vi.fn()) =>
+    render(
+      <CourierOrderCard
+        order={o}
+        now={now}
+        busy={false}
+        error={null}
+        onReturn={vi.fn()}
+        onAdvance={onAdvance}
+        onSetEta={onSetEta}
+        onSettle={vi.fn()}
+      />,
+    );
+
+  it("un pedido disponible muestra la hora de listo y la demora antes de tomarlo", () => {
+    offerCard(offer("12", { listo_a: "2026-10-10T00:35:00Z", demora_min: 45 }));
+
+    expect(screen.getByText(/Listo para retirar a las 21:35 · Demora 45 min/)).toBeTruthy();
+  });
+
+  it("sin hora cargada no inventa una", () => {
+    offerCard(offer("12"));
+
+    expect(screen.queryByText(/Listo para retirar/)).toBeNull();
+  });
+
+  it("recién tomado pide 'Llego al local en…' con los botones rápidos, y manda el tipo y los minutos", async () => {
+    const onSetEta = vi.fn();
+    timedCard(order("12", "confirmed", "accepted", { tiempos: times() }), vi.fn(), onSetEta);
+
+    expect(screen.getByText("Llego al local en…")).toBeTruthy();
+    for (const minutes of [5, 10, 15, 20, 30]) {
+      expect(screen.getByRole("button", { name: `${minutes} min` })).toBeTruthy();
+    }
+
+    fireEvent.click(screen.getByRole("button", { name: "15 min" }));
+    await waitFor(() => expect(onSetEta).toHaveBeenCalledWith("pickup", 15));
+  });
+
+  it("el campo libre valida de 1 a 120", async () => {
+    const onSetEta = vi.fn();
+    timedCard(order("12", "confirmed", "accepted", { tiempos: times() }), vi.fn(), onSetEta);
+
+    fireEvent.change(screen.getByLabelText(/otro tiempo/i), { target: { value: "121" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    expect(screen.getByRole("alert").textContent).toMatch(/1 a 120/);
+    expect(onSetEta).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText(/otro tiempo/i), { target: { value: "45" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    await waitFor(() => expect(onSetEta).toHaveBeenCalledWith("pickup", 45));
+  });
+
+  it("con el tiempo cargado muestra a qué hora llega y deja cambiarlo", () => {
+    timedCard(
+      order("12", "confirmed", "accepted", { tiempos: times({ llega_local_a: "2026-10-10T00:15:00Z" }) }),
+    );
+
+    expect(screen.getByText("Llegás al local a las 21:15")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Cambiar" }));
+    expect(screen.getByText("Llego al local en…")).toBeTruthy();
+  });
+
+  it("si el local cambió la demora, marca 'Cambió' con la hora vieja tachada", () => {
+    timedCard(order("12", "confirmed", "accepted", { tiempos: times({ listo_antes: "2026-10-10T00:05:00Z" }) }));
+
+    expect(screen.getByText("Cambió")).toBeTruthy();
+    const old = screen.getByText("21:05");
+    expect(old.tagName).toBe("S");
+    expect(screen.getByRole("button", { name: "Devolver" })).toBeTruthy();
+  });
+
+  it("al marcar En camino puede cargar 'Llego al cliente en…', y también salir sin tiempo", async () => {
+    const onAdvance = vi.fn();
+    timedCard(order("12", "handed_to_courier", "accepted", { tiempos: times() }), onAdvance);
+
+    expect(screen.getByText(/llego en…/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "20 min" }));
+    await waitFor(() => expect(onAdvance).toHaveBeenCalledWith("on_the_way", 20));
+
+    onAdvance.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "En camino" }));
+    await waitFor(() => expect(onAdvance).toHaveBeenCalledWith("on_the_way"));
+  });
+
+  it("ya en camino sin tiempo al cliente lo pide, con el tipo dropoff", async () => {
+    const onSetEta = vi.fn();
+    timedCard(order("12", "on_the_way", "accepted", { tiempos: times() }), vi.fn(), onSetEta);
+
+    expect(screen.getByText("Llego al cliente en…")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "10 min" }));
+    await waitFor(() => expect(onSetEta).toHaveBeenCalledWith("dropoff", 10));
+  });
+
+  it("un pedido entregado no pide ningún tiempo", () => {
+    timedCard(order("12", "delivered", "accepted", { tiempos: times() }));
+
+    expect(screen.queryByText(/Llego al/)).toBeNull();
+    expect(screen.queryByText(/Listo para retirar/)).toBeNull();
   });
 });
