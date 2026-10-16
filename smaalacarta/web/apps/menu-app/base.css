@@ -81,7 +81,8 @@ textarea {
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
   font-size: 1.15rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
+  --loader-espaciado: 0.04em;
+  letter-spacing: var(--loader-espaciado);
   color: var(--text, #111827);
 }
 
@@ -125,7 +126,7 @@ textarea {
     pointer-events: none;
   }
 
-  body.entrando :is(header, nav, main, .cta-section, #btn-carrito) {
+  body.entrando :is(header, nav, main, .cta-section) {
     animation: menu-entra 0.5s ease-out backwards;
   }
 
@@ -149,8 +150,8 @@ textarea {
 
 @keyframes loader-escribir {
   0% { width: 0; }
-  60%, 90% { width: 14ch; }
-  100% { width: 14ch; opacity: 0; }
+  60%, 90% { width: calc(14ch + 14 * var(--loader-espaciado)); }
+  100% { width: calc(14ch + 14 * var(--loader-espaciado)); opacity: 0; }
 }
 
 body.loading {

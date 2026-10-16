@@ -33,6 +33,15 @@ describe("loader en la página (PUBLICO-83)", () => {
     expect(css).toMatch(/\[data-tema="oscuro"\] \.loader/);
   });
 
+  it("la marca se escribe completa y el carrito no aparece de golpe al entrar", () => {
+    const marca = "SMA a la carta";
+    expect(css).toContain(`steps(${marca.length}, end)`);
+    // Cada letra mide 1ch más el espaciado entre letras: el ancho final tiene que sumarlo.
+    expect(css).toContain(`width: calc(${marca.length}ch + ${marca.length} * var(--loader-espaciado))`);
+    // El botón del carrito arranca invisible por su cuenta: animarlo lo mostraba medio segundo.
+    expect(css).not.toMatch(/body\.entrando :is\([^)]*btn-carrito/);
+  });
+
   it("el texto está en es, en y pt", () => {
     for (const lang of LANGS) expect(DICTIONARY[lang]["loader.loading"]).toBeTruthy();
   });
