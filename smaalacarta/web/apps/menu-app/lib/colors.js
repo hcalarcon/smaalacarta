@@ -85,6 +85,8 @@ export function brandVariables(colores) {
     "--on-header": onHeader,
     "--on-header-shadow":
       onHeader === DARK_TEXT ? "0 1px 2px rgba(255, 255, 255, 0.5)" : "0 1px 2px rgba(0, 0, 0, 0.35)",
+    // Degradé detrás del nombre del local (cara de app): oscuro bajo texto claro, claro bajo texto oscuro.
+    "--header-scrim": onHeader === DARK_TEXT ? "#ffffff" : "#000000",
     "--brand-ink": ensureContrastOnWhite(main),
   };
   // Pastilla de precio (PUBLICO-87): fondo propio y el texto que se lee sobre él.

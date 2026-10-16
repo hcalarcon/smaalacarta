@@ -171,6 +171,12 @@ textarea {
   display: none;
 }
 
+/* Línea "Abierto · zona" y botón compacto de idioma: solo la cara de app los muestra. */
+.linea-estado,
+.idioma-toggle {
+  display: none;
+}
+
 /* Aviso de idioma (PUBLICO-90): chico y que se cierra. */
 .aviso-idioma {
   position: fixed;

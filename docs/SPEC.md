@@ -393,8 +393,8 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
 - **PUBLICO-90** Si corresponde sugerir un idioma (PUBLICO-88) y el menú está en español, aparece un aviso chico
   ("¿Ver el menú en English?") con un botón para cambiar y otro para cerrar; cualquiera de los dos guarda la
   elección y el aviso no vuelve.
-- **PUBLICO-91** El selector "ES · EN · PT" queda fijo arriba, siempre a la vista al desplazarse, con botones de al
-  menos 44 px de alto.
+- **PUBLICO-91** El idioma es un solo botón compacto ("ES") dentro del encabezado, que abre la lista ES / EN / PT;
+  se va con el desplazamiento y nunca queda encima de las categorías. Botones de al menos 44 px de alto.
 - **PUBLICO-92** Abajo hay una barra fija con Menú, Promos y Carrito (el carrito con contador de unidades); cada
   botón tiene `aria-label` y al menos 44 px de alto; Promos no aparece si el local no tiene promociones.
 - **PUBLICO-93** Las promos y los destacados van en un carrusel horizontal centrado con scroll suave y snap; con una
@@ -404,10 +404,12 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
 - **PUBLICO-95** La hoja del checkout se cierra con Escape y con el gesto de atrás del celular, devuelve el foco a
   quien la abrió y no deja desplazar la página de atrás.
 - **PUBLICO-96** Los nombres de productos, promos y del local se parten en líneas (`text-wrap: balance`,
-  `hyphens: auto`, `overflow-wrap: anywhere`) en vez de cortarse con puntos suspensivos, y su contenedor crece con el
-  texto, sin alto ni ancho fijo, con un radio que no recorta.
-- **PUBLICO-97** El encabezado es compacto: logo (si hay) y nombre del local a la izquierda, legibles sobre la
-  portada o el color de fondo en cualquier tema, con el estado de abierto/cerrado y la zona de entrega debajo.
+  `hyphens: auto`) en vez de cortarse con puntos suspensivos, y su contenedor crece con el texto, sin alto ni ancho
+  fijo, con un radio que no recorta. El nombre de un producto o promo va a todo el ancho de la tarjeta, debajo de la
+  imagen y encima de la descripción, y nunca se parte letra por letra.
+- **PUBLICO-97** El encabezado es liviano: una fila arriba con Volver a la izquierda e idioma y tema a la derecha;
+  debajo, el nombre del local directo sobre la portada (sin caja, con degradado y sombra, hasta dos líneas) con el
+  logo al lado si hay, y una línea chica "Abierto · zona". No hay pastillas sueltas; el buscador se mantiene.
 - **PUBLICO-83** Mientras carga el menú interactivo se ve un loader animado: una hamburguesa que se arma y debajo
   "SMA a la carta" que se va escribiendo; igual en las tres plantillas, en CSS y SVG propios, con los colores del
   local si ya se conocen, sin librerías y sin bloquear la carga; con `prefers-reduced-motion` queda quieto, con la

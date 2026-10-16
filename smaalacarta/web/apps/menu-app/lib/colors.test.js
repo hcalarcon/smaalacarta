@@ -106,6 +106,11 @@ describe("brandVariables — PUBLICO-15", () => {
     expect(brandVariables({ primary: "#111111", secondary: "#333333" })["--on-header-shadow"]).toMatch(/0, 0, 0/);
   });
 
+  it("el degradé detrás del nombre es oscuro con texto blanco y claro con texto oscuro", () => {
+    expect(brandVariables({ primary: "#ffe082", secondary: "#ffcc80" })["--header-scrim"]).toBe("#ffffff");
+    expect(brandVariables({ primary: "#111111", secondary: "#333333" })["--header-scrim"]).toBe("#000000");
+  });
+
   it("si falta uno de los colores usa el otro para todo", () => {
     const vars = brandVariables({ primary: "#111111" });
 

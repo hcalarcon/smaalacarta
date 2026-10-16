@@ -435,13 +435,46 @@ function buildLangSelector() {
   const box = document.getElementById("selector-idioma");
   if (!box) return;
 
+  // Botón compacto "ES" que abre la lista (solo lo muestra la cara de app; en Clásica siguen los tres botones).
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "idioma-toggle";
+  toggle.setAttribute("aria-haspopup", "true");
+  toggle.setAttribute("aria-expanded", "false");
+  const setOpen = (open) => {
+    box.classList.toggle("abierto", open);
+    toggle.setAttribute("aria-expanded", String(open));
+  };
+  toggle.addEventListener("click", () => setOpen(!box.classList.contains("abierto")));
+  box.appendChild(toggle);
+
+  const lista = document.createElement("div");
+  lista.className = "idioma-lista";
+  box.appendChild(lista);
+
   I18N.LANGS.forEach((lang) => {
     const b = document.createElement("button");
     b.type = "button";
+    b.className = "idioma-opcion";
     b.textContent = lang.toUpperCase();
     b.dataset.lang = lang;
-    b.addEventListener("click", () => setLang(lang));
-    box.appendChild(b);
+    b.addEventListener("click", () => {
+      const abierta = box.classList.contains("abierto");
+      setOpen(false);
+      setLang(lang);
+      if (abierta && getComputedStyle(toggle).display !== "none") toggle.focus();
+    });
+    lista.appendChild(b);
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!box.contains(e.target)) setOpen(false);
+  });
+  box.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || !box.classList.contains("abierto")) return;
+    e.stopPropagation();
+    setOpen(false);
+    toggle.focus();
   });
 }
 
@@ -462,9 +495,14 @@ function applyStaticTexts() {
   const box = document.getElementById("selector-idioma");
   if (box) {
     box.setAttribute("aria-label", tr("lang.label"));
-    box.querySelectorAll("button").forEach((b) => {
+    box.querySelectorAll("button[data-lang]").forEach((b) => {
       b.setAttribute("aria-pressed", String(b.dataset.lang === LANG));
     });
+    const toggle = box.querySelector(".idioma-toggle");
+    if (toggle) {
+      toggle.textContent = LANG.toUpperCase();
+      toggle.setAttribute("aria-label", `${tr("lang.label")}: ${LANG.toUpperCase()}`);
+    }
   }
 
   syncTema();
@@ -580,7 +618,8 @@ function renderHeader(c) {
   const descEl = document.querySelector("#descripcion-negocio");
   const estadoEl = document.querySelector("#estado-texto");
   const header = document.querySelector(".header");
-  const dot = document.querySelector(".badge-estado .dot");
+  const dots = document.querySelectorAll(".badge-estado .dot, .linea-estado .dot");
+  const lineaTexto = document.querySelector("#linea-estado-texto");
 
   if (nombreEl) nombreEl.textContent = c.nombre || "";
 
@@ -611,13 +650,13 @@ function renderHeader(c) {
 
   renderInfo(c, cierre, fueraDeHorario, currentPreorder(c, cierre));
 
-  if (estadoEl) {
-    estadoEl.textContent = tr(abierto ? "status.open" : "status.closed");
-  }
+  const estado = tr(abierto ? "status.open" : "status.closed");
+  if (estadoEl) estadoEl.textContent = estado;
+  if (lineaTexto) lineaTexto.textContent = c.descripcion ? `${estado} · ${c.descripcion}` : estado;
 
-  if (dot) {
+  dots.forEach((dot) => {
     dot.style.background = abierto ? "#4ade80" : "#ef4444";
-  }
+  });
 }
 
 // El ícono de cada red: mismo trazo que usa el menú estático (lib/info.js).

@@ -44,11 +44,36 @@ describe("barra de abajo (PUBLICO-92)", () => {
   });
 });
 
-describe("selector de idioma fijo (PUBLICO-91)", () => {
-  it("queda fijo arriba, sobre las solapas, con botones de al menos 44 px", () => {
-    expect(rule(".selector-idioma {")).toMatch(/position: fixed/);
-    expect(rule(".selector-idioma button {")).toMatch(/min-height: 44px/);
-    expect(rule(".header {")).toMatch(/z-index: 45/);
+describe("selector de idioma compacto (PUBLICO-91)", () => {
+  it("es un botón dentro del encabezado, no fijo: se va con el scroll y no queda sobre las categorías", () => {
+    expect(rule(".selector-idioma {")).not.toMatch(/position: fixed/);
+    expect(rule(".selector-idioma {")).toMatch(/position: relative/);
+    expect(rule(".selector-idioma .idioma-toggle {")).toMatch(/min-height: 44px/);
+    expect(rule(".selector-idioma .idioma-opcion {")).toMatch(/min-height: 44px/);
+    expect(app).toContain('toggle.className = "idioma-toggle"');
+    expect(app).toContain('lista.className = "idioma-lista"');
+  });
+
+  it("la Clásica sigue con los tres botones: el botón compacto está oculto en la base", () => {
+    expect(base).toMatch(/\.idioma-toggle\s*\{\s*display: none;/);
+  });
+});
+
+describe("encabezado liviano (PUBLICO-97)", () => {
+  it("el estado va en una línea chica con el nombre y no como pastilla suelta", () => {
+    expect(html).toContain('id="linea-estado"');
+    expect(rule(".header-top .badge-estado {")).toMatch(/display: none/);
+    expect(app).toContain("`${estado} · ${c.descripcion}`");
+  });
+
+  it("el nombre va sin caja, sobre la portada, en hasta dos líneas balanceadas", () => {
+    const marca = rule(".header .header-marca {");
+    expect(marca).not.toMatch(/border:|box-shadow|background: var\(--card\)/);
+    expect(marca).toMatch(/linear-gradient/);
+    const h1 = rule(".header .header-titulo h1 {");
+    expect(h1).toMatch(/text-wrap: balance/);
+    expect(h1).toMatch(/line-clamp: 2/);
+    expect(h1).toMatch(/text-shadow/);
   });
 });
 
@@ -81,9 +106,19 @@ describe("nombres largos y precio (PUBLICO-87 y 96)", () => {
   });
 
   it("el contenedor del nombre no tiene alto ni ancho fijo", () => {
-    for (const selector of [".header .header-marca {", ".header .header-titulo {", ".producto-abrir {"]) {
+    for (const selector of [".header .header-marca {", ".header .header-titulo {", ".producto .producto-abrir {"]) {
       expect(rule(selector)).not.toMatch(/(?<![-\w])(height|width):\s*[\d.]+(px|rem|em)\b/);
     }
+  });
+
+  it("el nombre que abre la hoja ocupa todo el ancho de la tarjeta y no hereda el botón redondo de agregar", () => {
+    const abrir = rule(".producto .producto-abrir {");
+    expect(abrir).toMatch(/width: 100%/);
+    expect(abrir).toMatch(/height: auto/);
+    expect(abrir).toMatch(/border-radius: 0/);
+    expect(abrir).toMatch(/background: none/);
+    expect(abrir).toMatch(/overflow-wrap: break-word/);
+    expect(abrir).not.toMatch(/anywhere/);
   });
 
   it("el precio va en una pastilla con fondo y texto calculados", () => {
