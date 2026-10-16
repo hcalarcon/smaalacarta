@@ -41,6 +41,88 @@ textarea {
   outline: none;
 }
 
+/* LOADER DE COMIDA (PUBLICO-83): igual en las tres plantillas. Los colores del local se usan si
+   ya llegaron; si no, los de la comida. Sin movimiento, queda la imagen armada. */
+.loader {
+  --loader-pan: var(--color-primary, #d9902f);
+  --loader-acento: var(--color-secondary, #e0523c);
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: var(--bg, #faf8f5);
+  color: var(--muted, #6b7280);
+}
+
+.loader-anim {
+  width: 120px;
+  height: 100px;
+  overflow: visible;
+}
+
+.loader[data-variant="hamburguesa"] .loader-cloche,
+.loader[data-variant="cloche"] .loader-hamburguesa {
+  display: none;
+}
+
+.loader-texto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .loader-capa {
+    animation: loader-caer 2.4s cubic-bezier(0.34, 1.4, 0.64, 1) infinite;
+    animation-delay: calc(var(--n) * 0.22s);
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .loader-capa-1 { --n: 0; }
+  .loader-capa-2 { --n: 1; }
+  .loader-capa-3 { --n: 2; }
+  .loader-capa-4 { --n: 3; }
+  .loader-capa-5 { --n: 4; }
+
+  .loader-tapa {
+    animation: loader-tapa 2.4s ease-in-out infinite;
+    transform-box: fill-box;
+    transform-origin: left bottom;
+  }
+
+  .loader-vapor {
+    opacity: 0;
+    animation: loader-vapor 2.4s ease-in-out infinite;
+  }
+  .loader-vapor-2 { animation-delay: 0.2s; }
+  .loader-vapor-3 { animation-delay: 0.4s; }
+}
+
+@keyframes loader-caer {
+  0% { opacity: 0; transform: translateY(-34px); }
+  25%, 80% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(0); }
+}
+
+@keyframes loader-tapa {
+  0%, 15% { transform: translateY(0) rotate(0); }
+  45%, 70% { transform: translateY(-16px) rotate(-10deg); }
+  100% { transform: translateY(0) rotate(0); }
+}
+
+@keyframes loader-vapor {
+  0%, 35% { opacity: 0; transform: translateY(8px); }
+  60% { opacity: 0.8; }
+  85%, 100% { opacity: 0; transform: translateY(-10px); }
+}
+
 body.loading {
   overflow: hidden;
 }

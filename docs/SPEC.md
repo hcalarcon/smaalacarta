@@ -376,6 +376,12 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
 - **PUBLICO-82** El checkout no confirma con envío si no hay una zona de la lista elegida, ni con "Mi barrio no está"
   aunque quede una zona cargada: avisa y no crea el pedido. Con barrios sin cargar no se exige zona. El servidor la
   valida igual (`create_public_order`).
+- **PUBLICO-83** Mientras carga el menú interactivo se ve un loader de comida animado (hamburguesa que se arma o
+  plato con tapa que se levanta), igual en las tres plantillas, en CSS y SVG propios, con los colores del local si ya
+  se conocen, sin librerías y sin bloquear la carga; con `prefers-reduced-motion` queda quieto y lleva un texto
+  accesible "Cargando…" (es/en/pt).
+- **PUBLICO-84** La variante del loader sale de `?loader=hamburguesa|cloche` y, si falta o no es válida, es la
+  hamburguesa (`loaderVariant`); es una prueba temporal hasta que Herni elija una.
 
 ## BUSQUEDA — Buscador
 
