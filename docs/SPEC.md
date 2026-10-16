@@ -376,6 +376,38 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
 - **PUBLICO-82** El checkout no confirma con envío si no hay una zona de la lista elegida, ni con "Mi barrio no está"
   aunque quede una zona cargada: avisa y no crea el pedido. Con barrios sin cargar no se exige zona. El servidor la
   valida igual (`create_public_order`).
+
+**Tarea 24 — Moderna y Minimalista con cara de app.** Todo lo de abajo aplica a las plantillas `moderno` y `minimal`;
+`clasico` queda como estaba.
+
+- **PUBLICO-86** `contrastText(fondo)` devuelve el texto (blanco u oscuro) que se lee sobre ese fondo con un
+  contraste WCAG de al menos 4.5:1, para cualquier color; si no es un color válido, devuelve `null`.
+- **PUBLICO-87** El precio va en una pastilla con fondo propio (el color principal del local) y texto calculado con
+  `contrastText`, con un borde fino que la separa de la tarjeta; se ve así en productos, promos, carrito y checkout,
+  sea cual sea el color elegido y en tema claro y oscuro.
+- **PUBLICO-88** `suggestLanguage(idiomaDelCelular, idiomasDelMenu, guardado)` devuelve `en` o `pt` cuando el idioma
+  del celular es inglés o portugués (por ejemplo `pt-BR`), el menú lo ofrece y no hay una elección guardada; en
+  cualquier otro caso devuelve `null`.
+- **PUBLICO-89** El menú interactivo arranca en el idioma de `?lang=`, si no en el que el visitante eligió la última
+  vez, y si no en español. Elegirlo se guarda en `localStorage` (con `try/catch`: sin almacenamiento, no se guarda).
+- **PUBLICO-90** Si corresponde sugerir un idioma (PUBLICO-88) y el menú está en español, aparece un aviso chico
+  ("¿Ver el menú en English?") con un botón para cambiar y otro para cerrar; cualquiera de los dos guarda la
+  elección y el aviso no vuelve.
+- **PUBLICO-91** El selector "ES · EN · PT" queda fijo arriba, siempre a la vista al desplazarse, con botones de al
+  menos 44 px de alto.
+- **PUBLICO-92** Abajo hay una barra fija con Menú, Promos y Carrito (el carrito con contador de unidades); cada
+  botón tiene `aria-label` y al menos 44 px de alto; Promos no aparece si el local no tiene promociones.
+- **PUBLICO-93** Las promos y los destacados van en un carrusel horizontal centrado con scroll suave y snap; con una
+  sola, va centrada y sin carrusel.
+- **PUBLICO-94** En el celular el checkout es una hoja que sube desde abajo, a pantalla completa, con scroll propio y
+  el botón de confirmar siempre visible; en escritorio es un modal que no desborda el ancho.
+- **PUBLICO-95** La hoja del checkout se cierra con Escape y con el gesto de atrás del celular, devuelve el foco a
+  quien la abrió y no deja desplazar la página de atrás.
+- **PUBLICO-96** Los nombres de productos, promos y del local se parten en líneas (`text-wrap: balance`,
+  `hyphens: auto`, `overflow-wrap: anywhere`) en vez de cortarse con puntos suspensivos, y su contenedor crece con el
+  texto, sin alto ni ancho fijo, con un radio que no recorta.
+- **PUBLICO-97** El encabezado es compacto: logo (si hay) y nombre del local a la izquierda, legibles sobre la
+  portada o el color de fondo en cualquier tema, con el estado de abierto/cerrado y la zona de entrega debajo.
 - **PUBLICO-83** Mientras carga el menú interactivo se ve un loader animado: una hamburguesa que se arma y debajo
   "SMA a la carta" que se va escribiendo; igual en las tres plantillas, en CSS y SVG propios, con los colores del
   local si ya se conocen, sin librerías y sin bloquear la carga; con `prefers-reduced-motion` queda quieto, con la
@@ -691,7 +723,8 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
   descripción, categorías, productos) no se traduce.
 - **IDIOMA-2** El idioma sale, en este orden, de `?lang=es|en|pt`, del idioma del
   navegador (`navigator.language`, por ejemplo `pt-BR` → `pt`) y, si no es ninguno de los
-  tres, es español.
+  tres, es español. En el menú interactivo el idioma del navegador ya no cambia el idioma
+  solo: solo lo sugiere (PUBLICO-88 a 90); el seguimiento y el menú estático siguen igual.
 - **IDIOMA-3** `t(clave, idioma)` devuelve el texto en ese idioma; si falta la clave en
   ese idioma cae al español, y si tampoco está, devuelve la clave. Los tres idiomas
   tienen las mismas claves.

@@ -49,6 +49,15 @@ export function readableOn(colors) {
   return worst(LIGHT_TEXT) >= worst(DARK_TEXT) ? LIGHT_TEXT : DARK_TEXT;
 }
 
+// Texto para un fondo (PUBLICO-86): blanco u oscuro, el que mejor contraste da. En los tonos
+// medios el #111 se queda un poco corto (4.4:1), y ahí se usa negro puro, que con el blanco
+// garantiza 4.5:1 sobre cualquier color.
+export function contrastText(background) {
+  const text = readableOn(background);
+  if (!text) return null;
+  return contrastRatio(background, text) >= MIN_CONTRAST ? text : "#000000";
+}
+
 // Versión del color apta para escribir texto sobre blanco: se oscurece sin cambiar de tono.
 export function ensureContrastOnWhite(color) {
   const channels = parseHex(color);
@@ -78,6 +87,9 @@ export function brandVariables(colores) {
       onHeader === DARK_TEXT ? "0 1px 2px rgba(255, 255, 255, 0.5)" : "0 1px 2px rgba(0, 0, 0, 0.35)",
     "--brand-ink": ensureContrastOnWhite(main),
   };
+  // Pastilla de precio (PUBLICO-87): fondo propio y el texto que se lee sobre él.
+  vars["--pill-bg"] = main;
+  vars["--pill-text"] = contrastText(main);
   if (primary) vars["--color-primary"] = primary;
   if (secondary) vars["--color-secondary"] = secondary;
   return vars;

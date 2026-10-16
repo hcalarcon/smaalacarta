@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   brandVariables,
+  contrastText,
   contrastRatio,
   ensureContrastOnWhite,
   readableOn,
@@ -125,5 +126,37 @@ describe("brandVariables — PUBLICO-15", () => {
 
     expect(Object.values(vars).join(" ")).not.toMatch(/[;()]\s*background|url\(/);
     expect(vars["--color-primary"]).toBeUndefined();
+  });
+});
+
+describe("contrastText — PUBLICO-86", () => {
+  it("elige blanco sobre fondos oscuros y oscuro sobre claros", () => {
+    expect(contrastText("#000000")).toBe("#ffffff");
+    expect(contrastText("#1e3a8a")).toBe("#ffffff");
+    expect(contrastText("#ffffff")).toBe("#111111");
+    expect(contrastText("#ffd60a")).toBe("#111111");
+    expect(contrastText("#fc0")).toBe("#111111");
+  });
+
+  it("llega a 4.5:1 con cualquier color de una barrida", () => {
+    for (let r = 0; r <= 255; r += 51) {
+      for (let g = 0; g <= 255; g += 51) {
+        for (let b = 0; b <= 255; b += 51) {
+          const hex = `#${[r, g, b].map((c) => c.toString(16).padStart(2, "0")).join("")}`;
+          expect(contrastRatio(hex, contrastText(hex))).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    }
+  });
+
+  it("devuelve null si no es un color", () => {
+    expect(contrastText("amarillo")).toBeNull();
+    expect(contrastText(undefined)).toBeNull();
+  });
+
+  it("brandVariables deja listos el fondo y el texto de la pastilla de precio", () => {
+    const vars = brandVariables({ primary: "#ffd60a" });
+    expect(vars["--pill-bg"]).toBe("#ffd60a");
+    expect(vars["--pill-text"]).toBe("#111111");
   });
 });
