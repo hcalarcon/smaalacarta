@@ -41,6 +41,184 @@ textarea {
   outline: none;
 }
 
+/* LOADER DE COMIDA (PUBLICO-83): igual en las tres plantillas. Los colores del local se usan si
+   ya llegaron; si no, los de la comida. Sin movimiento, queda la imagen armada. */
+.loader {
+  --loader-pan: var(--color-primary, #d9902f);
+  --loader-acento: var(--color-secondary, #e0523c);
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: #ffffff;
+  color: #6b7280;
+}
+
+/* El tema se conoce antes que la hoja de la plantilla: sin esto el loader destella claro y
+   recién después se pone oscuro. */
+:root[data-tema="oscuro"] .loader {
+  background: #15161a;
+  color: #9aa0ac;
+}
+
+:root[data-tema="oscuro"] .loader-marca {
+  color: #f2f2f4;
+}
+
+.loader-anim {
+  width: 120px;
+  height: 100px;
+  overflow: visible;
+}
+
+.loader-marca {
+  display: inline-block;
+  max-width: 90vw;
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 1.15rem;
+  font-weight: 700;
+  --loader-espaciado: 0.04em;
+  letter-spacing: var(--loader-espaciado);
+  color: #111827;
+}
+
+.loader-marca-texto {
+  display: inline-block;
+  vertical-align: bottom;
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 2px solid transparent;
+}
+
+.loader-texto {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .loader-capa {
+    animation: loader-caer 2.4s cubic-bezier(0.34, 1.4, 0.64, 1) infinite;
+    animation-delay: calc(var(--n) * 0.18s);
+    transform-box: fill-box;
+    transform-origin: center;
+  }
+  .loader-capa-1 { --n: 0; }
+  .loader-capa-2 { --n: 1; }
+  .loader-capa-3 { --n: 2; }
+  .loader-capa-4 { --n: 3; }
+  .loader-capa-5 { --n: 4; }
+  .loader-capa-6 { --n: 5; }
+
+  .loader {
+    transition: opacity 0.45s ease;
+  }
+
+  .loader-saliendo {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  body.entrando :is(header, nav, main, .cta-section) {
+    animation: menu-entra 0.5s ease-out backwards;
+  }
+
+  .loader-marca-texto {
+    width: 0;
+    border-right-color: var(--loader-acento, #e0523c);
+    animation: loader-escribir 2.4s steps(14, end) infinite;
+  }
+}
+
+@keyframes loader-caer {
+  0% { opacity: 0; transform: translateY(-34px); }
+  25%, 80% { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(0); }
+}
+
+@keyframes menu-entra {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes loader-escribir {
+  0% { width: 0; }
+  60%, 90% { width: calc(14ch + 14 * var(--loader-espaciado)); }
+  100% { width: calc(14ch + 14 * var(--loader-espaciado)); opacity: 0; }
+}
+
+/* Piezas que solo usan Moderna y Minimalista (cara-de-app.css). En Clásica no se ven ni cambian nada. */
+.carrito-panel:focus {
+  outline: none;
+}
+
+.header-marca,
+.header-titulo,
+.checkout-pie {
+  display: contents;
+}
+
+.logo-negocio,
+.barra-app,
+.checkout-total {
+  display: none;
+}
+
+/* Línea "Abierto · zona" y botón compacto de idioma: solo la cara de app los muestra. */
+.linea-estado,
+.idioma-toggle {
+  display: none;
+}
+
+/* Aviso de idioma (PUBLICO-90): chico y que se cierra. */
+.aviso-idioma {
+  position: fixed;
+  right: 12px;
+  bottom: 16px;
+  left: 12px;
+  z-index: 65;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 380px;
+  margin-inline: auto;
+  padding: 8px 8px 8px 14px;
+  border: 1px solid var(--border, rgba(127, 127, 127, 0.35));
+  border-radius: 16px;
+  background: var(--card, #fff);
+  color: var(--text, #111827);
+  font-size: 0.9rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+.aviso-idioma-texto {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.aviso-idioma button {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 12px;
+  font-weight: 700;
+  color: inherit;
+}
+
+.aviso-idioma .aviso-idioma-si {
+  padding: 0 14px;
+  background: var(--color-primary, var(--brand, var(--primary, #111)));
+  color: var(--on-brand, #fff);
+}
+
 body.loading {
   overflow: hidden;
 }
@@ -1051,4 +1229,178 @@ body.no-scroll-opciones {
   justify-content: center;
   color: var(--muted, #6b7280);
   cursor: pointer;
+}
+
+/* ==========================================================================
+   Zona de entrega al entrar (PUBLICO-73 a 78): tarjeta liviana y chip. Usan solo variables del
+   tema (--card, --text, --border, --brand), así se leen en claro y oscuro y en las tres plantillas.
+   ========================================================================== */
+.zona-chip {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 36px;
+  margin-top: 0.6rem;
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: inherit;
+  background: rgba(127, 127, 127, 0.22);
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.zona-chip[hidden],
+.zona-card[hidden] {
+  display: none;
+}
+
+/* El selector es un diálogo con el fondo oscurecido (PUBLICO-80): hoja desde abajo en el celular y centrado en
+   escritorio. El fondo es #zona-card; el contenido, .zona-dialogo. */
+.zona-card {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+}
+
+.zona-dialogo {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  width: 100%;
+  max-height: 85vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1.1rem 3.25rem max(1.25rem, env(safe-area-inset-bottom)) 1.1rem;
+  border-radius: 18px 18px 0 0;
+  background: var(--card, #fff);
+  color: var(--text, #111);
+  border: 1px solid var(--border, #eee);
+  box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.2);
+}
+
+@media (min-width: 640px) {
+  .zona-card {
+    align-items: center;
+    padding: 1.5rem;
+  }
+
+  .zona-dialogo {
+    width: min(28rem, 100%);
+    padding: 1.5rem 3.5rem 1.5rem 1.5rem;
+    border-radius: 18px;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+  }
+}
+
+body.zona-abierta {
+  overflow: hidden;
+}
+
+.zona-titulo {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.zona-cerrar {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
+  width: 44px;
+  height: 44px;
+  font-size: 1.5rem;
+  line-height: 1;
+  color: var(--muted, #6b7280);
+}
+
+.zona-acciones {
+  display: flex;
+  gap: 0.6rem;
+}
+
+.zona-acciones .zona-opcion {
+  flex: 1;
+  justify-content: center;
+}
+
+.zona-opcion,
+.zona-no-esta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 44px;
+  padding: 0.5rem 0.9rem;
+  border-radius: 12px;
+  font-weight: 600;
+  text-align: left;
+  color: var(--text, #111);
+  border: 1px solid var(--border, #ddd);
+  background: transparent;
+}
+
+.zona-acciones .zona-opcion:first-child {
+  background: var(--brand, #111);
+  border-color: var(--brand, #111);
+  color: var(--on-brand, #fff);
+}
+
+.zona-precio {
+  flex: none;
+  font-weight: 500;
+  color: var(--muted, #6b7280);
+}
+
+.zona-buscar {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.5rem 0.8rem;
+  border-radius: 12px;
+  font-size: 1rem; /* 16 px: iOS no hace zoom al enfocar */
+  color: var(--text, #111);
+  background: transparent;
+  border: 1px solid var(--border, #ddd);
+}
+
+.zona-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  max-height: 40vh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.zona-vacia {
+  margin: 0.4rem 0;
+  color: var(--muted, #6b7280);
+}
+
+.zona-no-esta {
+  border-style: dashed;
+}
+
+.zona-volver {
+  align-self: flex-start;
+  min-height: 44px;
+  padding: 0 0.25rem;
+  font-weight: 600;
+  color: var(--muted, #6b7280);
+  text-decoration: underline;
+}
+
+.zona-chip:focus-visible,
+.zona-card button:focus-visible,
+.zona-buscar:focus-visible {
+  outline: 2px solid var(--brand, #111);
+  outline-offset: 2px;
 }

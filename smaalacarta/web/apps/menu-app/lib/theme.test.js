@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { rememberTheme, resolveTheme } from "./theme.js";
+import { loaderThemeKey, rememberLoaderTheme, rememberTheme, resolveTheme, savedLoaderTheme } from "./theme.js";
 
 function fakeStorage(initial = {}) {
   const data = { ...initial };
@@ -56,5 +56,37 @@ describe("resolveTheme — PUBLICO-24", () => {
 
     expect(resolveTheme({ tema: "oscuro" }, roto, "ana")).toBe("oscuro");
     expect(() => rememberTheme(roto, "ana", "claro")).not.toThrow();
+  });
+});
+
+describe("tema del loader — PUBLICO-85", () => {
+  const memory = () => {
+    const data = new Map();
+    return { getItem: (k) => data.get(k) ?? null, setItem: (k, v) => data.set(k, v) };
+  };
+
+  it("la clave distingue negocio, demo y cliente de prueba", () => {
+    expect(loaderThemeKey("don-juan.smaalacarta.com.ar", "/", "")).not.toBe(
+      loaderThemeKey("ana.smaalacarta.com.ar", "/", ""),
+    );
+    expect(loaderThemeKey("localhost", "/", "?demo=moderno")).not.toBe(loaderThemeKey("localhost", "/", "?demo=clasico"));
+    expect(loaderThemeKey("localhost", "/moderno", "")).not.toBe(loaderThemeKey("localhost", "/clasico", ""));
+  });
+
+  it("recuerda el último tema para pintar el loader antes de saber el del negocio", () => {
+    const storage = memory();
+    const key = loaderThemeKey("ana.smaalacarta.com.ar", "/", "");
+    expect(savedLoaderTheme(storage, key)).toBeNull();
+    rememberLoaderTheme(storage, key, "oscuro");
+    expect(savedLoaderTheme(storage, key)).toBe("oscuro");
+  });
+
+  it("ignora un valor inválido y no falla sin almacenamiento", () => {
+    const storage = memory();
+    rememberLoaderTheme(storage, "k", "fucsia");
+    expect(savedLoaderTheme(storage, "k")).toBeNull();
+    const roto = { getItem: () => { throw new Error("bloqueado"); }, setItem: () => { throw new Error("bloqueado"); } };
+    expect(() => rememberLoaderTheme(roto, "k", "claro")).not.toThrow();
+    expect(savedLoaderTheme(roto, "k")).toBeNull();
   });
 });

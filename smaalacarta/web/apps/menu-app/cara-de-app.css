@@ -1,0 +1,708 @@
+/* CARA DE APP — solo Moderna y Minimalista (PUBLICO-86 a 97).
+   app.js carga esta hoja después de la plantilla y de desktop.css, y solo para esas dos: la Clásica
+   no la recibe y se ve como siempre. Por eso acá no hace falta filtrar por plantilla; las diferencias
+   entre Moderna y Minimalista sí llevan `html[data-template="…"]`.
+   Los colores salen de las variables de cada plantilla (--card, --text, --muted, --border) para que
+   se lea igual en tema claro y oscuro. */
+
+:root {
+  --app-bar-h: 62px;
+  /* Pastilla de precio (PUBLICO-87): app.js pone --pill-bg y --pill-text con los colores del local
+     (colors.js). Estos son los de respaldo, por si el local no eligió colores. */
+  --pill-bg: var(--brand, var(--primary, #111));
+  --pill-text: #fff;
+}
+
+body {
+  /* Lugar para la barra de abajo: el último producto no queda tapado. */
+  padding-bottom: calc(var(--app-bar-h) + 18px + env(safe-area-inset-bottom));
+}
+
+/* ---------- PRECIO EN PASTILLA (PUBLICO-87) ---------- */
+.producto-precio,
+.item-precio,
+.precio-pastilla,
+#carrito-total {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  max-width: 100%;
+  padding: 0.15rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--text) 24%, transparent);
+  background: var(--pill-bg);
+  color: var(--pill-text);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+
+.producto-precio {
+  margin-top: 6px;
+  font-size: 1rem;
+}
+
+.carrito-footer #carrito-total {
+  font-size: 1.05rem;
+}
+
+/* ---------- SELECTOR DE IDIOMA COMPACTO (PUBLICO-91) ---------- */
+/* Un solo botón "ES" dentro del encabezado: se va con el scroll y nunca queda encima de las
+   categorías. Al tocarlo abre la lista ES / EN / PT. */
+.selector-idioma {
+  position: relative;
+  display: block;
+  overflow: visible;
+  border: 0;
+  background: none;
+}
+
+.selector-idioma .idioma-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 0.7rem;
+  border: 1px solid color-mix(in srgb, currentColor 45%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 14%, transparent);
+  color: inherit;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+/* Al tocar "ES" la pastilla se estira hacia la izquierda y muestra los otros dos idiomas en la misma línea.
+   Solo se animan opacity, transform y clip-path: el layout no salta (la lista es absoluta). */
+.selector-idioma .idioma-lista {
+  position: absolute;
+  top: 0;
+  right: calc(100% + 4px);
+  z-index: 5;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 100%;
+  padding: 0 2px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
+  text-shadow: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(12px);
+  clip-path: inset(0 0 0 100% round 999px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    clip-path 0.2s ease,
+    visibility 0s linear 0.2s;
+}
+
+.selector-idioma.abierto .idioma-lista {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  clip-path: inset(0 0 0 0 round 999px);
+  transition-delay: 0s;
+}
+
+/* El idioma activo es el botón de la derecha: queda resaltado mientras está abierto. */
+.selector-idioma.abierto .idioma-toggle {
+  background: var(--pill-bg);
+  border-color: var(--pill-bg);
+  color: var(--pill-text);
+}
+
+.selector-idioma .idioma-opcion {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 0.6rem;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+
+.selector-idioma .idioma-opcion[aria-pressed="true"] {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .selector-idioma .idioma-lista {
+    transform: none;
+    transition: none;
+  }
+}
+
+.selector-idioma button,
+.barra-boton,
+.aviso-idioma button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.selector-idioma button:focus-visible,
+.barra-boton:focus-visible,
+.aviso-idioma button:focus-visible,
+.checkout-header button:focus-visible {
+  /* El color del texto, no el de la pastilla: el foco se ve aunque el local elija un color muy claro. */
+  outline: 3px solid var(--text);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 5px var(--card);
+}
+
+/* ---------- ENCABEZADO LIVIANO (PUBLICO-97) ---------- */
+.header {
+  /* Por encima de las solapas (z-index 40): la lista de idiomas se abre sobre lo que sigue. */
+  z-index: 45;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: calc(8px + env(safe-area-inset-top)) 12px 14px;
+}
+
+/* Una sola fila: Volver a la izquierda; idioma y tema a la derecha. El estado pasa a la línea de abajo. */
+.header-top {
+  flex-wrap: nowrap;
+  gap: 8px;
+  min-height: 44px;
+}
+
+.header-top .header-status {
+  margin-left: auto;
+  gap: 8px;
+}
+
+.header-top .badge-estado {
+  display: none;
+}
+
+.header-top .btn-volver,
+.header-top .btn-tema {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+}
+
+.header-top .btn-tema {
+  min-width: 44px;
+}
+
+/* Nombre del local directo sobre la portada, sin caja: un degradé suave y una sombra lo hacen legible. */
+.header .header-marca {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  margin: 0 -12px;
+  padding: 26px 12px 4px;
+  background: linear-gradient(to top, color-mix(in srgb, var(--header-scrim, #000) 50%, transparent), transparent);
+  color: var(--on-header, #fff);
+}
+
+.logo-negocio:not([hidden]) {
+  display: block;
+  flex: none;
+  width: 52px;
+  height: 52px;
+  border: 2px solid color-mix(in srgb, var(--on-header, #fff) 70%, transparent);
+  border-radius: 14px;
+  background: var(--bg);
+  object-fit: cover;
+}
+
+.header .header-titulo {
+  display: block;
+  flex: 1;
+  min-width: 0;
+}
+
+.header .header-titulo h1 {
+  margin: 0;
+  /* Hasta dos líneas, repartidas parejo; se achica un poco con nombres largos (PUBLICO-96). */
+  font-size: clamp(1.5rem, 8vw, 2.1rem);
+  line-height: 1.1;
+  color: var(--on-header, #fff);
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  line-clamp: 2;
+  overflow: hidden;
+  text-shadow:
+    0 1px 3px color-mix(in srgb, var(--header-scrim, #000) 55%, transparent),
+    0 2px 14px color-mix(in srgb, var(--header-scrim, #000) 45%, transparent);
+}
+
+/* La descripción va en la línea de estado ("Abierto · Arenal"); acá queda oculta. */
+.header .header-titulo #descripcion-negocio {
+  display: none;
+}
+
+.header .linea-estado {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  line-height: 1.3;
+  font-weight: 600;
+  opacity: 1;
+  color: var(--on-header, #fff);
+  text-shadow: 0 1px 6px color-mix(in srgb, var(--header-scrim, #000) 55%, transparent);
+}
+
+.header .linea-estado .dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #4ade80;
+}
+
+.header .linea-estado span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.header input#buscador {
+  margin-top: 0;
+  min-height: 44px;
+  font-size: 1rem;
+}
+
+/* Zona de entrega: el nombre del barrio se parte en líneas, no se corta con puntos suspensivos. */
+.zona-chip {
+  align-self: flex-start;
+  margin-top: 0;
+  min-height: 40px;
+  padding: 0.4rem 0.9rem;
+  border-radius: 1.25rem;
+  overflow: visible;
+  text-overflow: clip;
+  white-space: normal;
+  text-align: left;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- CATEGORÍAS ---------- */
+.categorias {
+  scroll-padding-inline: 12px;
+}
+
+.categorias button,
+.categorias a {
+  min-height: 40px;
+}
+
+/* ---------- NOMBRES LARGOS (PUBLICO-96) ---------- */
+.producto-info h3,
+.producto-abrir,
+.item-info h4,
+.categoria-titulo,
+.producto-info p {
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.producto-info h3,
+.producto-abrir,
+.item-info h4,
+.categoria-titulo {
+  text-wrap: balance;
+}
+
+.producto-info p {
+  text-wrap: pretty;
+}
+
+/* El nombre es un botón dentro de la tarjeta: tiene que pisar el estilo del botón redondo de agregar
+   (`.producto button` de la plantilla, 40 x 40) y ocupar todo el ancho de la tarjeta. */
+.producto .producto-abrir {
+  display: block;
+  flex: none;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: inherit;
+  font: inherit;
+  line-height: inherit;
+  text-align: left;
+  /* Solo corta una palabra que no entra sola en la línea; nunca letra por letra. */
+  overflow-wrap: break-word;
+  word-break: normal;
+  transform: none;
+}
+
+.item-info {
+  min-width: 0;
+  flex: 1;
+}
+
+/* La etiqueta de la promo cuelga del borde de arriba y puede partirse; el nombre no la pisa. */
+.producto[data-promo]::before {
+  max-width: 55%;
+  text-align: center;
+  line-height: 1.25;
+  border-radius: 0 0 10px 10px;
+}
+
+.producto[data-promo] .producto-info {
+  padding-top: 1.3rem;
+}
+
+.producto[data-promo] .producto-info h3 {
+  padding-right: 0;
+}
+
+/* ---------- PROMOS Y DESTACADOS: CARRUSEL CENTRADO (PUBLICO-93) ---------- */
+html body .categoria.categoria-ofertas .categoria-grid,
+html body .categoria.categoria-destacados .categoria-grid {
+  --tarjeta: min(78vw, 280px);
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 14px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  /* El relleno de los costados deja a la primera y a la última tarjeta en el centro. */
+  padding: 4px calc((100% - var(--tarjeta)) / 2) 16px;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+html body .categoria.categoria-ofertas .categoria-grid::-webkit-scrollbar,
+html body .categoria.categoria-destacados .categoria-grid::-webkit-scrollbar {
+  display: none;
+}
+
+html body .categoria.categoria-ofertas .producto,
+html body .categoria.categoria-destacados .producto {
+  flex: 0 0 var(--tarjeta);
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border-radius: 20px;
+  scroll-snap-align: center;
+}
+
+html body .categoria.categoria-ofertas .producto img,
+html body .categoria.categoria-destacados .producto img {
+  width: 100%;
+  height: 150px;
+  border-radius: 0;
+  object-fit: cover;
+}
+
+html body .categoria.categoria-ofertas .producto-info,
+html body .categoria.categoria-destacados .producto-info {
+  flex: 1 1 auto;
+  padding: 12px 14px 4px;
+}
+
+html body .categoria.categoria-ofertas .producto .btn-add,
+html body .categoria.categoria-destacados .producto .btn-add {
+  width: calc(100% - 28px);
+  height: 44px;
+  margin: 8px 14px 14px;
+  border-radius: 14px;
+}
+
+/* Minimalista: las tarjetas del carrusel llevan un borde fino, sin la raya de abajo de la lista. */
+html[data-template="minimal"] body .categoria.categoria-ofertas .producto,
+html[data-template="minimal"] body .categoria.categoria-destacados .producto {
+  border: 1px solid var(--border);
+  background: var(--card);
+}
+
+/* Una sola promo: va centrada y quieta, sin carrusel. */
+html body .categoria.categoria-ofertas .categoria-grid:has(> .producto:only-child),
+html body .categoria.categoria-destacados .categoria-grid:has(> .producto:only-child) {
+  justify-content: center;
+  overflow-x: visible;
+  padding-inline: 0;
+}
+
+@media (min-width: 640px) {
+  html body .categoria.categoria-ofertas .categoria-grid,
+  html body .categoria.categoria-destacados .categoria-grid {
+    justify-content: safe center;
+    padding-inline: 16px;
+  }
+}
+
+/* Con mouse no hay deslizar: se deja ver la barra para recorrer el carrusel. */
+@media (hover: hover) and (pointer: fine) {
+  html body .categoria.categoria-ofertas .categoria-grid,
+  html body .categoria.categoria-destacados .categoria-grid {
+    scrollbar-width: thin;
+  }
+}
+
+/* ---------- BARRA DE ABAJO (PUBLICO-92) ---------- */
+#btn-carrito {
+  display: none !important;
+}
+
+.barra-app {
+  position: fixed;
+  left: 50%;
+  bottom: calc(10px + env(safe-area-inset-bottom));
+  z-index: 70;
+  display: flex;
+  gap: 4px;
+  width: min(calc(100% - 20px), 560px);
+  padding: 5px;
+  transform: translateX(-50%);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--card) 92%, transparent);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.2);
+}
+
+.barra-boton {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 4px 6px;
+  border-radius: 19px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.barra-boton[hidden] {
+  display: none;
+}
+
+.barra-boton span:not(.barra-contador) {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.barra-boton[aria-current="true"] {
+  background: var(--pill-bg);
+  color: var(--pill-text);
+}
+
+.barra-contador {
+  position: absolute;
+  top: 1px;
+  left: calc(50% + 4px);
+  display: grid;
+  place-items: center;
+  min-width: 19px;
+  height: 19px;
+  padding: 0 5px;
+  border: 2px solid var(--card);
+  border-radius: 999px;
+  background: var(--pill-bg);
+  color: var(--pill-text);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.barra-contador[hidden] {
+  display: none;
+}
+
+/* Minimalista: barra plana, de borde a borde, con una raya sobre la solapa activa. */
+html[data-template="minimal"] .barra-app {
+  bottom: 0;
+  width: 100%;
+  max-width: none;
+  gap: 0;
+  padding: 0 0 env(safe-area-inset-bottom);
+  border-width: 1px 0 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: var(--card);
+}
+
+html[data-template="minimal"] .barra-boton {
+  border-radius: 0;
+}
+
+html[data-template="minimal"] .barra-boton[aria-current="true"] {
+  background: transparent;
+  color: var(--text);
+  box-shadow: inset 0 3px 0 var(--pill-bg);
+}
+
+html[data-template="minimal"] {
+  --app-bar-h: 56px;
+}
+
+/* ---------- AVISO DE IDIOMA: por encima de la barra ---------- */
+.aviso-idioma {
+  bottom: calc(var(--app-bar-h) + 24px + env(safe-area-inset-bottom));
+}
+
+/* ---------- CHECKOUT COMO HOJA (PUBLICO-94 y 95) ---------- */
+html[data-template] .checkout {
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  overflow: hidden;
+}
+
+html[data-template] .checkout:focus {
+  outline: none;
+}
+
+html[data-template] .checkout .checkout-header {
+  flex: none;
+  margin: 0;
+  padding: 10px 12px 10px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+html[data-template] .checkout-header h2 {
+  font-size: 1.25rem;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+html[data-template] .checkout-header button {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-size: 1.25rem;
+}
+
+/* Una sola zona con scroll: el formulario. El total y "Confirmar" se quedan abajo (sticky). */
+html[data-template] .checkout #form-pedido {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 18px 0;
+}
+
+html[data-template] .checkout > #gracias-pedido {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.checkout input,
+.checkout select,
+.checkout textarea {
+  min-height: 44px;
+  font-size: 1rem;
+}
+
+.checkout-pie {
+  position: sticky;
+  bottom: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  /* `auto` lo baja al fondo de la hoja cuando el formulario es corto. */
+  margin: auto -18px 0;
+  padding: 12px 18px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--border);
+  background: var(--card);
+  box-shadow: 0 -10px 16px -14px rgba(0, 0, 0, 0.4);
+}
+
+.checkout-total {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.checkout-total .precio-pastilla {
+  font-size: 1.05rem;
+}
+
+.checkout .checkout-pie button[type="submit"] {
+  flex: 1;
+  width: auto;
+  min-height: 50px;
+  margin: 0;
+  border-radius: 14px;
+}
+
+@media (max-width: 639px) {
+  /* En el celular la hoja sube desde abajo y ocupa casi toda la pantalla. */
+  html[data-template] .checkout {
+    top: calc(8px + env(safe-area-inset-top));
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-height: none;
+    border: 0;
+    border-radius: 22px 22px 0 0;
+    transform: translateY(100%);
+  }
+
+  html[data-template] .checkout.active {
+    transform: translateY(0);
+  }
+}
+
+@media (min-width: 640px) {
+  /* En escritorio sigue siendo un modal, con el ancho de la pantalla como tope. */
+  html[data-template] .checkout {
+    max-width: calc(100vw - 32px);
+    border-radius: 20px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html body .categoria.categoria-ofertas .categoria-grid,
+  html body .categoria.categoria-destacados .categoria-grid {
+    scroll-behavior: auto;
+  }
+}

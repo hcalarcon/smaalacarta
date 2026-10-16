@@ -304,7 +304,8 @@ describe("crear un pedido con envío — ENVIO-5, 6 y 7", () => {
       delivery_fee: "5000.00",
       customer_phone: "3515551234",
       delivery_address: "Av. Siempre Viva 742",
-      courier_status: "searching",
+      // La búsqueda se abre cuando el local acepta el pedido (ENVIO-155).
+      courier_status: "waiting",
       status: "pending",
     });
   });
@@ -582,6 +583,44 @@ describe("los dos caminos de estados — ENVIO-9 y 10", () => {
     expect((await courierStatus(REPA, o.id, "on_the_way")).ok).toBe(true);
   });
 
+  it("ADMIN-PEDIDOS-57: dos cambios seguidos con el mismo estado de origen avanzan un solo paso", async () => {
+    const o = await courierOrder();
+    await confirmAndTake(o.id);
+
+    const from = (user: string | null, to: string, f: string) =>
+      call(user, `select public.set_order_status('${o.id}', '${to}', null, '${f}')`);
+
+    expect((await from(ANA, "preparing", "confirmed")).ok).toBe(true);
+    // El segundo toque todavía creía que estaba en "confirmed": no hace nada y no da error.
+    expect((await from(ANA, "preparing", "confirmed")).ok).toBe(true);
+    expect((await from(ANA, "ready", "confirmed")).ok).toBe(true);
+    expect(await status(o.id)).toBe("preparing");
+
+    const events = await db.query<{ n: string }>(
+      "select count(*) as n from order_events where order_id = $1 and status = 'preparing'",
+      [o.id],
+    );
+    expect(Number(events.rows[0].n)).toBe(1);
+
+    expect((await from(ANA, "ready", "preparing")).ok).toBe(true);
+    expect(await status(o.id)).toBe("ready");
+  });
+
+  it("ADMIN-PEDIDOS-57: courier_set_status con el mismo estado de origen avanza un solo paso", async () => {
+    const o = await courierOrder();
+    await confirmAndTake(o.id);
+    for (const s of ["preparing", "ready", "handed_to_courier"]) await setStatus(ANA, o.id, s);
+
+    const from = (to: string, f: string) =>
+      call(REPA, `select public.courier_set_status('${o.id}', '${to}', '${f}')`);
+
+    expect((await from("on_the_way", "handed_to_courier")).ok).toBe(true);
+    // Un segundo toque sobre el mismo botón no lo entrega.
+    expect((await from("on_the_way", "handed_to_courier")).ok).toBe(true);
+    expect((await from("delivered", "handed_to_courier")).ok).toBe(true);
+    expect(await status(o.id)).toBe("on_the_way");
+  });
+
   it("courier_set_status no ve pedidos que no son del repartidor", async () => {
     const r = await order("beto", FERNET, { delivery: "delivery" });
     const id = await orderId(created(r)!.code);
@@ -764,7 +803,16 @@ describe("lo que ve el cliente — ENVIO-16 y 17", () => {
     };
 
     const a = await courierOrder();
-    // Desde que se crea ya busca (ENVIO-95), sin ofertas todavía.
+    // Hasta que el local lo acepta espera (ENVIO-155); al aceptarlo busca, sin ofertas todavía (ENVIO-95).
+    expect(await estado(a.code)).toEqual({
+      zona: "Cantera",
+      precio_lista: 5000,
+      precio: 5000,
+      estado: "waiting",
+      modo: "offers",
+    });
+
+    await setStatus(ANA, a.id, "confirmed");
     expect(await estado(a.code)).toEqual({
       zona: "Cantera",
       precio_lista: 5000,
@@ -773,9 +821,6 @@ describe("lo que ve el cliente — ENVIO-16 y 17", () => {
       modo: "offers",
       ofertas: [],
     });
-
-    await setStatus(ANA, a.id, "confirmed");
-    expect((await estado(a.code)).estado).toBe("searching");
 
     await call(ANA, `select public.business_self_delivery('${a.id}')`);
     const self = await estado(a.code);

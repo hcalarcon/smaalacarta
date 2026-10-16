@@ -734,6 +734,16 @@ ADMIN-CONFIG-49 y 50, SEGUIMIENTO-37 a 42). Migración `20261031000000_tiempo_de
       misma ventana y las mismas reglas de "aprox."
 - [ ] [por asignar] **Etapa 3**: hora total combinada (cocina + viaje) y aprendizaje de los tiempos reales
 - [ ] [por asignar] Avisar al cliente (push o aviso del seguimiento) cuando cambia el tiempo estimado
+- [x] [herni] **Circuito de tiempos del envío** (ENVIO-155 a 165): la búsqueda de repartidor se abre al aceptar el
+      pedido en los dos modos; el repartidor ve "Listo para retirar a las HH:MM · Demora X min" antes de tomar,
+      carga "llego al local" y "llego al cliente", recibe aviso 10 minutos antes y al marcar Listo, y si el local
+      cambia la demora le llega la hora nueva y puede devolverlo. Migración `20261105000000_circuito_de_tiempos.sql`.
+      Pendiente: probar a mano con dos repartidores que cubran Centro y con la app del repartidor cerrada
+- [x] [herni] **Vehículo del repartidor: moto o auto** (ENVIO-174 a 178): casillas Moto/Auto en "Mi perfil", "Necesita
+      auto" al aceptar un pedido (o después, sin repartidor), filtrado en el servidor al ver, tomar, ofertar y asignar
+      (`P0024`), íconos en la tarjeta del local, las ofertas y el seguimiento, y chip en la tarjeta del repartidor. Todo
+      detrás de un interruptor del superadmin, apagado de fábrica. Migración `20261113000000_vehiculo_del_repartidor.sql`
+      (a prod con `npx supabase db push --db-url "<prod>"` al mergear)
 
 ## Promociones con imagen y vigencia
 

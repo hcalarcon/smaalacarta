@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.18"
   }
   graphql_public: {
     Tables: {
@@ -422,6 +422,38 @@ export type Database = {
           },
         ]
       }
+      courier_preferences: {
+        Row: {
+          courier_id: string
+          note: string | null
+          seeks_orders: boolean
+          shops_on_the_way: boolean
+          updated_at: string
+        }
+        Insert: {
+          courier_id: string
+          note?: string | null
+          seeks_orders?: boolean
+          shops_on_the_way?: boolean
+          updated_at?: string
+        }
+        Update: {
+          courier_id?: string
+          note?: string | null
+          seeks_orders?: boolean
+          shops_on_the_way?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_preferences_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: true
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courier_users: {
         Row: {
           courier_id: string
@@ -478,22 +510,28 @@ export type Database = {
       couriers: {
         Row: {
           active: boolean
+          auto: boolean
           created_at: string
           id: string
+          moto: boolean
           name: string
           whatsapp: string | null
         }
         Insert: {
           active?: boolean
+          auto?: boolean
           created_at?: string
           id?: string
+          moto?: boolean
           name: string
           whatsapp?: string | null
         }
         Update: {
           active?: boolean
+          auto?: boolean
           created_at?: string
           id?: string
+          moto?: boolean
           name?: string
           whatsapp?: string | null
         }
@@ -834,6 +872,8 @@ export type Database = {
           active: boolean
           business_id: string
           code: string
+          courier_eta_dropoff_at: string | null
+          courier_eta_pickup_at: string | null
           courier_id: string | null
           courier_note: string | null
           courier_requested_at: string | null
@@ -854,6 +894,7 @@ export type Database = {
           delivery_zone_name: string | null
           id: string
           mp_payment_id: string | null
+          needs_car: boolean
           new_order_reminded_at: string | null
           new_order_reminders: number
           no_offers_alerted_at: string | null
@@ -862,10 +903,14 @@ export type Database = {
           order_number: string
           payment: string | null
           payment_status: string
+          pickup_reminder_sent_at: string | null
           preorder: boolean
           prep_ready_at: string | null
           prep_reason: string | null
           prep_updated_at: string | null
+          ready_was_at: string | null
+          returned_reason: string | null
+          returned_reason_kind: string | null
           scheduled_for: string | null
           settled_at: string | null
           settled_by: string | null
@@ -880,6 +925,8 @@ export type Database = {
           active?: boolean
           business_id: string
           code?: string
+          courier_eta_dropoff_at?: string | null
+          courier_eta_pickup_at?: string | null
           courier_id?: string | null
           courier_note?: string | null
           courier_requested_at?: string | null
@@ -900,6 +947,7 @@ export type Database = {
           delivery_zone_name?: string | null
           id?: string
           mp_payment_id?: string | null
+          needs_car?: boolean
           new_order_reminded_at?: string | null
           new_order_reminders?: number
           no_offers_alerted_at?: string | null
@@ -908,10 +956,14 @@ export type Database = {
           order_number: string
           payment?: string | null
           payment_status?: string
+          pickup_reminder_sent_at?: string | null
           preorder?: boolean
           prep_ready_at?: string | null
           prep_reason?: string | null
           prep_updated_at?: string | null
+          ready_was_at?: string | null
+          returned_reason?: string | null
+          returned_reason_kind?: string | null
           scheduled_for?: string | null
           settled_at?: string | null
           settled_by?: string | null
@@ -926,6 +978,8 @@ export type Database = {
           active?: boolean
           business_id?: string
           code?: string
+          courier_eta_dropoff_at?: string | null
+          courier_eta_pickup_at?: string | null
           courier_id?: string | null
           courier_note?: string | null
           courier_requested_at?: string | null
@@ -946,6 +1000,7 @@ export type Database = {
           delivery_zone_name?: string | null
           id?: string
           mp_payment_id?: string | null
+          needs_car?: boolean
           new_order_reminded_at?: string | null
           new_order_reminders?: number
           no_offers_alerted_at?: string | null
@@ -954,10 +1009,14 @@ export type Database = {
           order_number?: string
           payment?: string | null
           payment_status?: string
+          pickup_reminder_sent_at?: string | null
           preorder?: boolean
           prep_ready_at?: string | null
           prep_reason?: string | null
           prep_updated_at?: string | null
+          ready_was_at?: string | null
+          returned_reason?: string | null
+          returned_reason_kind?: string | null
           scheduled_for?: string | null
           settled_at?: string | null
           settled_by?: string | null
@@ -1076,6 +1135,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      platform_settings: {
+        Row: {
+          delivery_mode: string
+          id: boolean
+          updated_at: string
+          vehicle_enabled: boolean
+        }
+        Insert: {
+          delivery_mode?: string
+          id?: boolean
+          updated_at?: string
+          vehicle_enabled?: boolean
+        }
+        Update: {
+          delivery_mode?: string
+          id?: boolean
+          updated_at?: string
+          vehicle_enabled?: boolean
+        }
+        Relationships: []
       }
       product_option_groups: {
         Row: {
@@ -1317,24 +1397,6 @@ export type Database = {
           },
         ]
       }
-      platform_settings: {
-        Row: {
-          delivery_mode: string
-          id: boolean
-          updated_at: string
-        }
-        Insert: {
-          delivery_mode?: string
-          id?: boolean
-          updated_at?: string
-        }
-        Update: {
-          delivery_mode?: string
-          id?: boolean
-          updated_at?: string
-        }
-        Relationships: []
-      }
       push_subscriptions: {
         Row: {
           auth: string
@@ -1432,6 +1494,10 @@ export type Database = {
         Returns: string
       }
       courier_available_orders: { Args: never; Returns: Json }
+      courier_blocked_by_car: {
+        Args: { p_courier_id: string; p_order_id: string }
+        Returns: boolean
+      }
       courier_covers_my_zones: {
         Args: { p_courier_id: string }
         Returns: boolean
@@ -1450,18 +1516,35 @@ export type Database = {
       courier_offers_window: { Args: never; Returns: string }
       courier_orders: { Args: { p_since?: string }; Returns: Json }
       courier_return_order: {
-        Args: { p_order_id: string; p_reason: string }
+        Args: { p_kind: string; p_order_id: string; p_reason?: string }
         Returns: undefined
       }
-      courier_take_order: { Args: { p_order_id: string }; Returns: undefined }
+      courier_save_preferences: {
+        Args: {
+          p_note: string
+          p_seeks_orders: boolean
+          p_shops_on_the_way: boolean
+        }
+        Returns: undefined
+      }
+      courier_save_vehicles: {
+        Args: { p_auto: boolean; p_moto: boolean }
+        Returns: undefined
+      }
       courier_sees_order: {
         Args: { p_courier_id: string; p_order_id: string }
         Returns: boolean
       }
+      courier_set_eta: {
+        Args: { p_kind: string; p_minutes: number; p_order_id: string }
+        Returns: string
+      }
       courier_set_status: {
-        Args: { p_order_id: string; p_status: string }
+        Args: { p_from?: string; p_order_id: string; p_status: string }
         Returns: undefined
       }
+      courier_take_order: { Args: { p_order_id: string }; Returns: undefined }
+      courier_vehicles: { Args: { p_courier_id: string }; Returns: Json }
       courier_withdraw_offer: {
         Args: { p_order_id: string }
         Returns: undefined
@@ -1542,7 +1625,10 @@ export type Database = {
         Args: { p_endpoint: string }
         Returns: undefined
       }
-      effective_delivery_mode: { Args: { p_business_id: string }; Returns: string }
+      effective_delivery_mode: {
+        Args: { p_business_id: string }
+        Returns: string
+      }
       effective_favorite_courier: {
         Args: { p_business: string }
         Returns: string
@@ -1572,6 +1658,16 @@ export type Database = {
       next_order_number: { Args: { p_business_id: string }; Returns: number }
       no_offers_alert_window: { Args: never; Returns: string }
       normalize_words: { Args: { p_text: string }; Returns: string[] }
+      order_prep_minutes: {
+        Args: { o: Database["public"]["Tables"]["orders"]["Row"] }
+        Returns: number
+      }
+      order_ready_at: {
+        Args: { o: Database["public"]["Tables"]["orders"]["Row"] }
+        Returns: string
+      }
+      pickup_reminder_lead: { Args: never; Returns: string }
+      platform_searching_orders: { Args: never; Returns: number }
       preorder_window: {
         Args: { p_cutoffs: Json; p_now: string; p_schedule: Json }
         Returns: {
@@ -1598,7 +1694,6 @@ export type Database = {
         Args: { p_slug: string; p_via_path?: boolean }
         Returns: Json
       }
-      platform_searching_orders: { Args: never; Returns: number }
       public_choose_courier: {
         Args: { p_code: string; p_offer_id: string; p_price?: number }
         Returns: undefined
@@ -1710,6 +1805,10 @@ export type Database = {
         Args: { p_favorite: string }
         Returns: undefined
       }
+      set_order_needs_car: {
+        Args: { p_needs_car: boolean; p_order_id: string }
+        Returns: undefined
+      }
       set_order_prep: {
         Args: {
           p_order_id: string
@@ -1719,7 +1818,12 @@ export type Database = {
         Returns: string
       }
       set_order_status: {
-        Args: { p_note?: string; p_order_id: string; p_status: string }
+        Args: {
+          p_from?: string
+          p_note?: string
+          p_order_id: string
+          p_status: string
+        }
         Returns: undefined
       }
       set_product_option_groups: {
@@ -1749,6 +1853,7 @@ export type Database = {
         Args: { p_business_id: string }
         Returns: number
       }
+      vehicle_enabled: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

@@ -1,4 +1,4 @@
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import OrdersClient from "./OrdersClient";
@@ -559,6 +559,39 @@ describe("tiempo de preparación al aceptar — ADMIN-PEDIDOS-31 a 33", () => {
     );
   }
 
+  function withCar(orders: Order[], vehicleEnabled: boolean) {
+    return (
+      <OrdersClient
+        slug="demo"
+        orders={orders}
+        manualSetup={manualSetup}
+        serverNow="2026-09-30T10:00:00Z"
+        vehicleEnabled={vehicleEnabled}
+      />
+    );
+  }
+
+  it("Necesita auto: con el interruptor prendido y un envío con repartidor, se acepta pidiendo auto — ENVIO-176", async () => {
+    render(withCar([full("1", { courier_status: "waiting" })], true));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Necesita auto/ }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: /Aceptar con/ })));
+
+    expect(accept).toHaveBeenCalledWith("1", expect.any(Number), true);
+  });
+
+  it("Necesita auto no aparece con el interruptor apagado ni en un pedido sin envío con repartidor — ENVIO-175", async () => {
+    const { unmount } = render(withCar([full("1", { courier_status: "waiting" })], false));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
+    expect(screen.queryByRole("checkbox", { name: /Necesita auto/ })).toBeNull();
+    unmount();
+
+    render(withCar([full("2")], true));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
+    expect(screen.queryByRole("checkbox", { name: /Necesita auto/ })).toBeNull();
+  });
+
   it("el modal de pedido nuevo abre el selector con la sugerencia y acepta de un toque", async () => {
     render(withPrep([full("1")], { suggested: 22 }));
 
@@ -567,8 +600,69 @@ describe("tiempo de preparación al aceptar — ADMIN-PEDIDOS-31 a 33", () => {
 
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar con 22 min" })));
 
-    expect(accept).toHaveBeenCalledWith("1", 22);
+    expect(accept).toHaveBeenCalledWith("1", 22, false);
     expect(picker()).toBeNull();
+  });
+
+  it("al aceptar, el cartel de pedido nuevo se va en el momento, sin esperar al servidor (ADMIN-PEDIDOS-58)", async () => {
+    let finish: (value: { ok: true }) => void = () => {};
+    accept.mockReturnValueOnce(new Promise((resolve) => (finish = resolve)) as never);
+    render(withPrep([full("1")]));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: /Aceptar con/ })));
+
+    // La acción sigue en vuelo y el pedido sigue "pending" en las props: el cartel ya no está.
+    expect(modal()).toBeNull();
+
+    await act(async () => finish({ ok: true }));
+    expect(modal()).toBeNull();
+  });
+
+  it("si aceptar falla, el cartel vuelve y se muestra el error (ADMIN-PEDIDOS-58)", async () => {
+    accept.mockResolvedValueOnce({ ok: false, error: "No se pudo" } as never);
+    render(withPrep([full("1")]));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: /Aceptar con/ })));
+
+    expect(screen.getAllByText("No se pudo")).toBeTruthy();
+  });
+
+  it("con el selector abierto la tarjeta de pedido nuevo no queda debajo: un solo diálogo (ENVIO-168)", async () => {
+    render(withPrep([full("1")]));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
+
+    expect(picker()).toBeTruthy();
+    expect(modal()).toBeNull();
+    expect(screen.queryByRole("button", { name: "Aceptar" })).toBeNull();
+  });
+
+  it("dos toques en Aceptar dejan un solo selector y no aceptan nada (ENVIO-171)", async () => {
+    render(withPrep([full("1")]));
+    const button = screen.getByRole("button", { name: "Aceptar" });
+
+    await act(async () => {
+      fireEvent.click(button);
+      fireEvent.click(button);
+    });
+
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
+    expect(accept).not.toHaveBeenCalled();
+  });
+
+  it("dos toques en el botón de la tarjeta del tablero dejan un solo selector (ENVIO-171)", async () => {
+    render(withPrep([full("1", { created_at: "2026-09-30T10:00:00Z" })]));
+    fireEvent.click(screen.getByRole("button", { name: "Ver pedidos" }));
+    const button = screen.getByRole("button", { name: "avanzar 1" });
+
+    await act(async () => {
+      fireEvent.click(button);
+      fireEvent.click(button);
+    });
+
+    expect(screen.getAllByRole("dialog")).toHaveLength(1);
   });
 
   it("sin sugerencia ofrece el tiempo por defecto del negocio", async () => {
@@ -577,7 +671,7 @@ describe("tiempo de preparación al aceptar — ADMIN-PEDIDOS-31 a 33", () => {
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar con 35 min" })));
 
-    expect(accept).toHaveBeenCalledWith("1", 35);
+    expect(accept).toHaveBeenCalledWith("1", 35, false);
   });
 
   it("'Aceptar sin tiempo' confirma sin minutos", async () => {
@@ -586,7 +680,7 @@ describe("tiempo de preparación al aceptar — ADMIN-PEDIDOS-31 a 33", () => {
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar sin tiempo" })));
 
-    expect(accept).toHaveBeenCalledWith("1", null);
+    expect(accept).toHaveBeenCalledWith("1", null, false);
   });
 
   it("el botón de la tarjeta del tablero abre el mismo selector", async () => {
@@ -606,7 +700,7 @@ describe("tiempo de preparación al aceptar — ADMIN-PEDIDOS-31 a 33", () => {
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "avanzar 1" })));
 
     expect(picker()).toBeNull();
-    expect(setOrderStatusAction).toHaveBeenCalledWith("1", "confirmed", undefined);
+    expect(setOrderStatusAction).toHaveBeenCalledWith("1", "confirmed", undefined, "pending");
   });
 
   it("otros pasos de estado no pasan por el selector", async () => {
@@ -615,7 +709,7 @@ describe("tiempo de preparación al aceptar — ADMIN-PEDIDOS-31 a 33", () => {
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "preparar 1" })));
 
     expect(picker()).toBeNull();
-    expect(setOrderStatusAction).toHaveBeenCalledWith("1", "preparing", undefined);
+    expect(setOrderStatusAction).toHaveBeenCalledWith("1", "preparing", undefined, "confirmed");
   });
 
   it("un pedido aceptado sin tiempo lo carga después, sin 'Aceptar sin tiempo'", async () => {
@@ -798,5 +892,43 @@ describe("globito de pendientes — ADMIN-PEDIDOS-28", () => {
     unmount();
     expect(badge.clearAppBadgeSafe).toHaveBeenCalled();
     expect(badge.restoreFavicon).toHaveBeenCalled();
+  });
+});
+
+// ADMIN-PEDIDOS-54: lo urgente primero y las columnas como pestañas en el celular.
+describe("tablero por urgencia y pestañas — ADMIN-PEDIDOS-54", () => {
+  const columnOf = (title: string) =>
+    screen.getByRole("heading", { name: title }).closest("section") as HTMLElement;
+
+  const kitchen = (id: string, readyAt: string | null) =>
+    ({ ...order(id, "confirmed"), prep_ready_at: readyAt, scheduled_for: null, preorder: false }) as unknown as Order;
+
+  it("en curso: el atrasado va primero aunque haya llegado después", () => {
+    render(board([kitchen("1", "2026-09-30T10:40:00Z"), kitchen("2", "2026-09-30T09:50:00Z")]));
+
+    const text = columnOf("En curso").textContent ?? "";
+    expect(text.indexOf("pedido 2")).toBeLessThan(text.indexOf("pedido 1"));
+  });
+
+  it("el título dice cuántos son urgentes", () => {
+    render(board([kitchen("1", "2026-09-30T10:40:00Z"), kitchen("2", "2026-09-30T09:50:00Z")]));
+
+    expect(within(columnOf("En curso")).getByText("1 urgente")).toBeTruthy();
+    expect(within(columnOf("Nuevos")).queryByText(/urgente/)).toBeNull();
+  });
+
+  it("las pestañas muestran cada columna con su contador y cambian la que se ve", () => {
+    render(board([order("1", "pending"), order("2", "confirmed"), order("3", "confirmed")]));
+
+    const tabs = screen.getAllByRole("tab");
+    expect(tabs.map((tab) => tab.textContent)).toEqual(["Nuevos1", "En curso2", "Listos0"]);
+    expect(tabs[0].getAttribute("aria-selected")).toBe("true");
+    expect(columnOf("En curso").className).toContain("hidden");
+
+    fireEvent.click(tabs[1]);
+
+    expect(tabs[1].getAttribute("aria-selected")).toBe("true");
+    expect(columnOf("En curso").className).not.toMatch(/(^|\s)hidden(\s|$)/);
+    expect(columnOf("Nuevos").className).toMatch(/(^|\s)hidden(\s|$)/);
   });
 });

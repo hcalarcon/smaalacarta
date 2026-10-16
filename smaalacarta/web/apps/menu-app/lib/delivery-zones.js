@@ -85,6 +85,18 @@ export function zoneNoticeVars(zone, formatPrice) {
   return { barrio: zone.name, precio: formatPrice(zone.price) };
 }
 
+// ¿Se puede confirmar con esta entrega y esta zona? (PUBLICO-82). `null` si sí; si no, el motivo: `no_delivery`
+// ("Mi barrio no está": el envío está bloqueado) o `invalid_zone` (sin zona, o una que ya no está en la lista).
+// Sin barrios cargados no se exige zona. El servidor la valida igual (`create_public_order`).
+export function deliveryProblem({ zones, delivery, zoneId, blocked = false }) {
+  // Bloqueado y sin retiro elegido (p. ej. un local solo con envío, donde el select está oculto y vacío): no hay
+  // forma de confirmar.
+  if (blocked && delivery !== "retiro") return "no_delivery";
+  if (delivery !== "delivery") return null;
+  if (!needsCourier(zones, delivery)) return null;
+  return findZone(zones, zoneId) ? null : "invalid_zone";
+}
+
 // Lo que se suma a `createOrder` por el envío; vacío si el pedido no lleva envío con repartidor. El
 // teléfono no está acá: va en todos los pedidos (ENVIO-87).
 export function courierOrderFields({ zones, delivery, zoneId, address }) {

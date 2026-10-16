@@ -26,18 +26,32 @@ export default function PendingButton({
 }) {
   const [own, setPending] = useState(false);
   const pending = own || external;
-  // El estado se actualiza después del toque; el ref corta un segundo toque que llegue antes.
+  // El estado se actualiza después del toque; el ref corta un segundo toque que llegue antes, incluso en el
+  // mismo instante (ENVIO-168). Se cierra antes de llamar a la acción, no después.
   const locked = useRef(false);
 
   async function handleClick() {
     if (locked.current) return;
 
-    // Una acción que no espera nada (o que no hizo nada, p. ej. un formulario con errores) no pasa por la
-    // espera: el botón no parpadea.
-    const result = onClick();
-    if (!result || typeof (result as PromiseLike<unknown>).then !== "function") return;
-
     locked.current = true;
+
+    let result: unknown;
+    try {
+      result = onClick();
+    } catch (error) {
+      locked.current = false;
+      throw error;
+    }
+
+    // Una acción que no espera nada (o que no hizo nada, p. ej. un formulario con errores) no pasa por la
+    // espera: el botón no parpadea. Queda cerrado hasta que termina el toque, para cortar el segundo.
+    if (!result || typeof (result as PromiseLike<unknown>).then !== "function") {
+      queueMicrotask(() => {
+        locked.current = false;
+      });
+      return;
+    }
+
     setPending(true);
 
     try {

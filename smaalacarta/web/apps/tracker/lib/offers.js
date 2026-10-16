@@ -63,6 +63,7 @@ export function offerView(offer, listPrice, lang, money) {
     reason: changed && offer.reason ? offer.reason : null,
     list: changed ? money.format(listPrice) : null,
     recommended: offer.favorite === true,
+    vehicles: Array.isArray(offer.vehicles) ? offer.vehicles : [],
   };
 }
 

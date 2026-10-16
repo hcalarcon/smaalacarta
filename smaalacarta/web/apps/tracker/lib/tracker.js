@@ -4,6 +4,9 @@
 import { cssUrl } from "../../menu-app/lib/html.js";
 import { headerBackground, positionText } from "../../menu-app/lib/info.js";
 import { LANGS, LOCALES, t } from "../../menu-app/lib/i18n.js";
+import { TIME_ZONE } from "../../menu-app/lib/schedule.js";
+import { arrivalView } from "./prep.js";
+import { normalizeVehicles } from "./vehicles.js";
 
 const CODE = /^[0-9a-f]{20}$/;
 
@@ -255,6 +258,8 @@ function normalizeOffers(list) {
         price,
         reason: typeof offer.motivo === "string" && offer.motivo ? offer.motivo : null,
         favorite: offer.favorito === true,
+        // Moto y/o auto del que oferta; vacío con el interruptor apagado (ENVIO-178).
+        vehicles: normalizeVehicles(offer.vehiculo),
       },
     ];
   });
@@ -263,6 +268,19 @@ function normalizeOffers(list) {
 // El WhatsApp del repartidor es público (ENVIO-44): igual que el `CHECK` de `couriers`, de 8 a 15
 // dígitos; si no, no se usa (y nunca llega a un link).
 const COURIER_WHATSAPP = /^[0-9]{8,15}$/;
+
+// Lo que el repartidor asignado dejó dicho (SEGUIMIENTO-47), o null si no marcó ni escribió nada.
+function normalizeExtras(data) {
+  if (!data || typeof data !== "object") return null;
+
+  const extras = {
+    shop: data.compras_en_camino === true,
+    seek: data.busca_pedidos === true,
+    note: typeof data.texto === "string" ? data.texto.trim().slice(0, 140) : "",
+  };
+
+  return extras.shop || extras.seek || extras.note ? extras : null;
+}
 
 // Valida la respuesta de `public_order_delivery`; null si no es un envío reconocible. Nunca trae
 // teléfono ni dirección del cliente (ENVIO-17): esta página tampoco los muestra.
@@ -276,6 +294,8 @@ function normalizeDelivery(data) {
 
   return {
     courier: typeof data.repartidor === "string" ? data.repartidor : "",
+    // Moto y/o auto del repartidor asignado; vacío con el interruptor apagado (ENVIO-178).
+    vehicles: normalizeVehicles(data.vehiculo),
     whatsapp:
       typeof data.whatsapp === "string" && COURIER_WHATSAPP.test(data.whatsapp) ? data.whatsapp : null,
     zone: typeof data.zona === "string" ? data.zona : "",
@@ -283,6 +303,11 @@ function normalizeDelivery(data) {
     price: Number.isFinite(price) ? price : null,
     reason: typeof data.motivo_cambio === "string" && data.motivo_cambio ? data.motivo_cambio : null,
     state: data.estado,
+    // Lo que el repartidor asignado dejó dicho (SEGUIMIENTO-47): nulo si no marcó ni escribió nada.
+    extras: normalizeExtras(data.preferencias),
+    // A qué hora llega al cliente, según lo que cargó el repartidor al retirar (ENVIO-161).
+    arrivesAt:
+      typeof data.llega_a === "string" && !Number.isNaN(Date.parse(data.llega_a)) ? Date.parse(data.llega_a) : null,
     // Precio fijo (`fixed`) u ofertas (ENVIO-149): en precio fijo no hay ofertas ni cuenta regresiva.
     mode: data.modo === "fixed" ? "fixed" : "offers",
     note: typeof data.nota === "string" && data.nota ? data.nota : null,
@@ -345,12 +370,26 @@ function courierContact(delivery, lang) {
 // - `self`: "Lo lleva el local".
 // `money` formatea los precios en el idioma del cliente. Devuelve `{ kind, icon, title, lines, link? }`, o
 // null si no hay nada que mostrar (un estado que no se conoce, como los viejos `requested`/`rejected`).
-export function deliveryCard(delivery, lang, money) {
+// "Llega aprox. 21:55 · faltan 12 min" o "Unos minutos más", o null sin hora de llegada (SEGUIMIENTO-45).
+export function arrivalLine(delivery, lang, now = new Date()) {
+  const arrival = arrivalView(delivery?.arrivesAt ?? null, { now, lang });
+  if (!arrival) return null;
+
+  return arrival.hint ? `${arrival.text} · ${arrival.hint}` : arrival.text;
+}
+
+export function deliveryCard(delivery, lang, money, now = new Date()) {
   if (!delivery) return null;
 
   switch (delivery.state) {
-    // `waiting` ya no se usa (el pedido nace buscando), pero un pedido viejo se muestra igual.
+    // El local todavía no aceptó el pedido: la búsqueda se abre cuando lo acepta (ENVIO-155 y 165).
     case "waiting":
+      return {
+        kind: "waiting",
+        icon: "received",
+        title: t("tracker.delivery.waiting", lang),
+        lines: [t("tracker.delivery.waitingText", lang)],
+      };
     case "searching":
       return delivery.offers.length > 0
         ? { kind: "choose", icon: "choose", title: t("tracker.delivery.chooseTitle", lang), lines: [] }
@@ -379,6 +418,8 @@ export function deliveryCard(delivery, lang, money) {
   const lines = [];
 
   if (delivery.note) lines.push(delivery.note);
+  const arrival = arrivalLine(delivery, lang, now);
+  if (arrival) lines.push(arrival);
   if (delivery.price !== null) {
     lines.push(t("tracker.delivery.pay", lang, { precio: money.format(delivery.price) }));
   }
@@ -390,6 +431,24 @@ export function deliveryCard(delivery, lang, money) {
         ? t("tracker.delivery.was", lang, { precio, motivo: delivery.reason })
         : t("tracker.delivery.wasNoReason", lang, { precio }),
     );
+  }
+
+  // "Podés pedirle a {nombre} también: compras en el camino · buscar otros pedidos." y su texto, solo con
+  // repartidor asignado y si marcó algo (SEGUIMIENTO-47). El texto va a la pantalla con textContent.
+  if (delivery.extras) {
+    const things = [
+      ...(delivery.extras.shop ? [t("tracker.delivery.extras.shop", lang)] : []),
+      ...(delivery.extras.seek ? [t("tracker.delivery.extras.seek", lang)] : []),
+    ];
+
+    if (things.length > 0) {
+      lines.push(
+        delivery.courier
+          ? t("tracker.delivery.extras", lang, { repartidor: delivery.courier, cosas: things.join(" · ") })
+          : t("tracker.delivery.extrasAnon", lang, { cosas: things.join(" · ") }),
+      );
+    }
+    if (delivery.extras.note) lines.push(delivery.extras.note);
   }
 
   if (contact) lines.push(contact.line);

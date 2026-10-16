@@ -53,3 +53,11 @@ export async function take(
   if (!made.ok) return made;
   return choose(db, courierUser, orderId);
 }
+
+// Abre la búsqueda de un pedido que sigue pendiente. En la plataforma la abre el local al aceptarlo
+// (ENVIO-155); los tests del circuito de ofertas, que no son del local, arrancan con ella abierta.
+export async function openSearch(db: TestDb, orderId: string): Promise<void> {
+  await db.exec(
+    `update orders set courier_status = 'searching', offered_at = now() where id = '${orderId}' and courier_status = 'waiting'`,
+  );
+}

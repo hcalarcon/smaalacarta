@@ -39,8 +39,8 @@ describe("allowItemNotes — ADMIN-CONFIG-48", () => {
 });
 
 describe("tiempos de preparación — ADMIN-CONFIG-49 y 50", () => {
-  it("por defecto el tiempo no se muestra al cliente y el valor por defecto es 20", () => {
-    expect(DEFAULT_SETTINGS.showPrepTime).toBe(false);
+  it("por defecto el tiempo se muestra al cliente y el valor por defecto es 20", () => {
+    expect(DEFAULT_SETTINGS.showPrepTime).toBe(true);
     expect(DEFAULT_SETTINGS.defaultPrepMinutes).toBe(20);
   });
 

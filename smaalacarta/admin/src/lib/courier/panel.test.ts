@@ -13,7 +13,8 @@ import {
   sortAvailable,
   splitOrders,
   telLink,
-  validateReturnReason,
+  returnKindOptions,
+  validateReturn,
   type AvailableOrder,
   type CourierPanelOrder,
 } from "./panel";
@@ -156,16 +157,32 @@ describe("acciones del repartidor — ENVIO-77", () => {
   });
 });
 
-describe("motivo de la devolución — ENVIO-66", () => {
-  it("es obligatorio y se recorta", () => {
-    expect(validateReturnReason("  Se pinchó la moto ")).toEqual({ ok: true, reason: "Se pinchó la moto" });
-    expect(validateReturnReason("   ")).toMatchObject({ ok: false });
-    expect(validateReturnReason("")).toMatchObject({ ok: false });
+describe("motivo de la devolución — ENVIO-66 y 166", () => {
+  it("los motivos fijos no llevan texto", () => {
+    expect(validateReturn("delay_changed", "ignorado")).toEqual({ ok: true, kind: "delay_changed", reason: null });
+    expect(validateReturn("vehicle", "")).toEqual({ ok: true, kind: "vehicle", reason: null });
   });
 
-  it("admite hasta 200 caracteres", () => {
-    expect(validateReturnReason("x".repeat(200))).toMatchObject({ ok: true });
-    expect(validateReturnReason("x".repeat(201))).toMatchObject({ ok: false });
+  it("'Otro' exige texto de 3 a 140 caracteres y lo recorta", () => {
+    expect(validateReturn("other", "  Se pinchó la moto ")).toEqual({
+      ok: true,
+      kind: "other",
+      reason: "Se pinchó la moto",
+    });
+    expect(validateReturn("other", "   ")).toMatchObject({ ok: false });
+    expect(validateReturn("other", "ab")).toMatchObject({ ok: false });
+    expect(validateReturn("other", "x".repeat(140))).toMatchObject({ ok: true });
+    expect(validateReturn("other", "x".repeat(141))).toMatchObject({ ok: false });
+  });
+
+  it("sin tipo o con uno desconocido, no pasa", () => {
+    expect(validateReturn("", "motivo")).toMatchObject({ ok: false });
+    expect(validateReturn("otra", "motivo")).toMatchObject({ ok: false });
+  });
+
+  it("'Cambió la demora' va primero solo si hay un cambio sin ver", () => {
+    expect(returnKindOptions(true).map((o) => o.kind)).toEqual(["delay_changed", "vehicle", "other"]);
+    expect(returnKindOptions(false).map((o) => o.kind)).toEqual(["vehicle", "delay_changed", "other"]);
   });
 });
 

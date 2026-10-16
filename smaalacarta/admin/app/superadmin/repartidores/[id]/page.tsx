@@ -4,7 +4,9 @@ import { notFound } from "next/navigation";
 
 import CourierProfileForm from "../components/CourierProfileForm";
 import ResetPasswordButton from "../../components/ResetPasswordButton";
+import VehicleIcons from "@/components/ui/VehicleIcon";
 import { getCourier } from "@/lib/db/couriers";
+import { isVehicleEnabled } from "@/lib/db/vehicle";
 
 export const metadata: Metadata = { title: "Repartidor" };
 
@@ -16,6 +18,8 @@ export default async function CourierDetailPage({ params }: { params: Promise<{ 
 
   const courier = await getCourier(id);
   if (!courier) notFound();
+
+  const vehicleEnabled = await isVehicleEnabled();
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
@@ -31,6 +35,13 @@ export default async function CourierDetailPage({ params }: { params: Promise<{ 
           {courier.zoneCount === 1 ? "Cubre 1 zona" : `Cubre ${courier.zoneCount} zonas`}
           {courier.email ? ` · ${courier.email}` : " · sin cuenta"}
         </p>
+        {vehicleEnabled ? (
+          <p className="mt-1 flex items-center gap-1.5 text-stone-500">
+            Vehículo:
+            <VehicleIcons vehicles={[...(courier.moto ? ["moto"] : []), ...(courier.auto ? ["auto"] : [])]} />
+            {courier.moto && courier.auto ? "Moto y auto" : courier.auto ? "Auto" : "Moto"}
+          </p>
+        ) : null}
       </section>
 
       <section className="rounded-3xl border border-line bg-white p-6 shadow-sm">

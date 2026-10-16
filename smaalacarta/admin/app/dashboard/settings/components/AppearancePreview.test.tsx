@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AppearancePreview from "./AppearancePreview";
@@ -120,6 +120,8 @@ describe("AppearancePreview compacta — el menú real, con lo que no se guardó
     const post = vi.spyOn(compactFrame().contentWindow!, "postMessage");
     ready(compactFrame());
 
+    // El envío sale de un efecto después del aviso: se espera a que haya al menos una llamada antes de leerla.
+    await waitFor(() => expect(post).toHaveBeenCalled());
     const sent = lastSent(post);
     expect(sent.type).toBe("preview");
     expect(sent.menu).toEqual(saved.menu);

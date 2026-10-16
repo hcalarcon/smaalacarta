@@ -31,6 +31,13 @@ export type CourierOrder = {
   offered_at: string | null;
   // Cómo se reparte (ENVIO-146): `fixed` lo toma el primero que llega, `offers` se oferta.
   delivery_mode?: string | null;
+  // Cuándo llega al local, según lo que cargó el repartidor (ENVIO-157).
+  courier_eta_pickup_at?: string | null;
+  // Lo devolvió después de que el local cambió la demora (ENVIO-159).
+  returned_reason_kind?: string | null;
+  returned_reason?: string | null;
+  // El local pidió auto (ENVIO-176).
+  needs_car?: boolean;
 };
 
 // Una oferta de repartidor tal como la entrega `business_order_offers()` (ENVIO-111).
@@ -41,13 +48,22 @@ export type OrderOffer = {
   precio: number;
   motivo: string | null;
   favorito: boolean;
+  // Moto y/o auto del repartidor; falta con el interruptor apagado (ENVIO-178).
+  vehiculo?: string[];
 };
 
 // Las ofertas abiertas de un pedido que busca repartidor, con cuándo se elige sola (ENVIO-105).
 export type OrderOffers = { order_id: string; cierra_en: string | null; ofertas: OrderOffer[] };
 
 // Un repartidor activo que cubre alguna zona del local (`business_delivery_options()`).
-export type OrderCourier = { id: string; name: string; whatsapp: string | null; zone_ids: string[] };
+export type OrderCourier = {
+  id: string;
+  name: string;
+  whatsapp: string | null;
+  zone_ids: string[];
+  // Moto y/o auto; falta con el interruptor apagado (ENVIO-178).
+  vehiculo?: string[];
+};
 
 // Pasados estos minutos sin ninguna oferta, el panel lo destaca (ENVIO-118).
 export const SEARCH_WARNING_MINUTES = 10;
@@ -184,15 +200,50 @@ export function courierStatusLabel(
   }
 }
 
+// "Llega al local a las 21:40", si el repartidor cargó el tiempo y todavía no retiró el pedido (ENVIO-164).
+export function pickupEtaNotice(
+  order: Pick<CourierOrder, "courier_status" | "status" | "courier_eta_pickup_at">,
+): string | null {
+  if (order.courier_status !== "accepted") return null;
+  if (!["pending", "confirmed", "preparing", "ready"].includes(order.status)) return null;
+
+  const time = clockTime(order.courier_eta_pickup_at);
+  return time ? `Llega al local a las ${time}` : null;
+}
+
+// "Lo devolvió: {motivo}" mientras el pedido vuelve a buscar repartidor (ENVIO-164 y 166).
+export function returnedNotice(
+  order: Pick<CourierOrder, "courier_status" | "status" | "returned_reason_kind" | "returned_reason">,
+): string | null {
+  if (order.courier_status !== "searching") return null;
+  if (order.status === "delivered" || order.status === "cancelled") return null;
+
+  switch (order.returned_reason_kind) {
+    case "delay_changed":
+      return "Lo devolvió: cambió la demora";
+    case "vehicle":
+      return "Lo devolvió: problema con el vehículo";
+    case "other": {
+      const text = order.returned_reason?.trim();
+      return text ? `Lo devolvió: ${text}` : null;
+    }
+    default:
+      return null;
+  }
+}
+
 // Los repartidores activos que cubren la zona del pedido (los que se pueden asignar a mano), por nombre.
 export function couriersForOrder(
   couriers: OrderCourier[],
-  order: Pick<CourierOrder, "delivery_zone_id">,
+  order: Pick<CourierOrder, "delivery_zone_id" | "needs_car">,
 ): OrderCourier[] {
   if (!order.delivery_zone_id) return [];
 
+  // Si el pedido necesita auto, solo los que lo tienen. `vehiculo` solo llega con el interruptor prendido: sin él
+  // no hay con qué filtrar, y el servidor tampoco filtra (ENVIO-177).
   return couriers
     .filter((courier) => courier.zone_ids.includes(order.delivery_zone_id as string))
+    .filter((courier) => !order.needs_car || courier.vehiculo === undefined || courier.vehiculo.includes("auto"))
     .sort((a, b) => a.name.localeCompare(b.name, "es"));
 }
 

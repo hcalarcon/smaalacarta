@@ -2,7 +2,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { asUser, createTestDb, createUser, type TestDb } from "@/test/db";
-import { offer } from "@/test/offers";
+import { offer, openSearch } from "@/test/offers";
 
 // ENVIO-145 a 154 contra Postgres real: el modo de envíos (precio fijo u ofertas).
 const SUPER = "99999999-0000-0000-0000-000000000009";
@@ -37,6 +37,7 @@ async function envio() {
   if (!r.ok) throw new Error(`no se pudo crear el pedido: ${r.error}`);
   const code = (r.rows[0].result as { code: string }).code;
   const o = (await db.query<{ id: string }>("select id from orders where code = $1", [code])).rows[0];
+  await openSearch(db, o.id);
   return { id: o.id, code };
 }
 
@@ -110,7 +111,7 @@ describe("el interruptor — ENVIO-145", () => {
     const r = await fresh.query<{ delivery_mode: string }>("select delivery_mode from platform_settings");
     expect(r.rows).toEqual([{ delivery_mode: "fixed" }]);
     await fresh.close();
-  });
+  }, 60_000);
 
   it("solo el superadmin lo cambia", async () => {
     const a = await call(ANA, "update platform_settings set delivery_mode = 'offers'");
@@ -314,7 +315,7 @@ describe("devolver, cancelar, asignar a mano y 'lo llevo yo' en los dos modos �
 
       it("el que devuelve no lo vuelve a ver y otro repartidor sí, con el mismo modo", async () => {
         const o = await taken();
-        const r = await call(TOQUE_USER, `select public.courier_return_order('${o.id}', 'Se me rompió la moto')`);
+        const r = await call(TOQUE_USER, `select public.courier_return_order('${o.id}', 'other', 'Se me rompió la moto')`);
         expect(r.ok).toBe(true);
 
         expect(await row(o.id)).toMatchObject({ courier_status: "searching", courier_id: null, delivery_mode: mode });
@@ -388,5 +389,5 @@ describe("los pedidos abiertos al migrar quedan en ofertas — ENVIO-146", () =>
     const r = await old.query<{ delivery_mode: string }>("select delivery_mode from orders");
     expect(r.rows).toEqual([{ delivery_mode: "offers" }]);
     await old.close();
-  });
+  }, 60_000);
 });

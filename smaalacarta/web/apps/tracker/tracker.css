@@ -33,6 +33,10 @@ body {
   padding: 0.5rem 1rem;
 }
 
+.lang-bar[hidden] {
+  display: none;
+}
+
 .selector-idioma {
   display: inline-flex;
   border: 1px solid var(--line);
@@ -527,17 +531,19 @@ body {
   height: 1.8rem;
 }
 
-/* Tiempo estimado de preparación (SEGUIMIENTO-39 a 42). */
+/* Tiempo estimado de preparación (SEGUIMIENTO-39 a 42; el tamaño del texto, SEGUIMIENTO-51). */
 .status-prep {
-  margin: 0.9rem auto 0;
-  padding: 0.7rem 0.9rem;
+  margin: 0.7rem auto 0;
+  padding: 0.5rem 0.75rem;
   border-radius: 0.9rem;
   background: color-mix(in srgb, var(--accent) 14%, white);
   text-align: center;
 }
 
 .status-prep-text {
+  font-size: 1rem;
   font-weight: 700;
+  line-height: 1.35;
   color: var(--brand);
 }
 
@@ -844,4 +850,19 @@ body {
   font-size: 1.4rem;
   line-height: 1;
   cursor: pointer;
+}
+
+/* El vehículo del repartidor (ENVIO-178): íconos chicos junto al nombre. */
+.vehicle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+  color: var(--brand);
+}
+
+.vehicle .icon {
+  width: 1.05rem;
+  height: 1.05rem;
 }

@@ -8,13 +8,15 @@ import { SUPABASE } from "/apps/menu-app/supabase-config.js";
 import { nextAlerts, pollInterval, snapshotOf } from "/apps/tracker/lib/alerts.js";
 import { icon } from "/apps/tracker/lib/icons.js";
 import { confirmText, countdown, countdownText, offerView, sortOffers } from "/apps/tracker/lib/offers.js";
-import { prepView } from "/apps/tracker/lib/prep.js";
+import { vehicleLabel } from "/apps/tracker/lib/vehicles.js";
+import { etaView as buildEta } from "/apps/tracker/lib/prep.js";
 import { cancelReason, deliveryMode, progressSteps } from "/apps/tracker/lib/steps.js";
 import {
   fetchDelivery,
   fetchTracking,
   brandTheme,
   chooseCourier,
+  arrivalLine,
   deliveryCard,
   isFinalStatus,
   itemRow,
@@ -72,6 +74,8 @@ const langBar = document.getElementById("lang-bar");
 // se pierde cuando render() reemplaza el contenido cada 15 s.
 function dockLangSelector(header) {
   if (!langBox) return;
+  // Con el selector dentro del encabezado la barra de arriba queda vacía: sin ocultarla deja una franja en blanco.
+  if (langBar) langBar.hidden = Boolean(header);
   if (header) header.prepend(langBox);
   else if (langBox.parentElement !== langBar) langBar?.appendChild(langBox);
 }
@@ -319,6 +323,14 @@ function alertsCard() {
 // El último cambio de demora que vio esta página y el cliente todavía no cerró (SEGUIMIENTO-44).
 let prepNotice = false;
 
+// Lo que va grande debajo del estado (SEGUIMIENTO-45): con repartidor y su hora de llegada, "Llega aprox.";
+// si no, la hora de listo del local. `line` junta la hora y lo que falta en una sola frase.
+const ON_THE_WAY = ["handed_to_courier", "on_the_way"];
+
+function etaView(data, mode, now) {
+  return buildEta({ prep: data.pedido.prep, arrivesAt: ON_THE_WAY.includes(data.pedido.estado) ? (data.envio?.arrivesAt ?? null) : null }, { now, lang, pickup: mode === "pickup" });
+}
+
 function progressCard(data, mode, view) {
   const progress = progressSteps(data.pedido.estado, mode, lang);
 
@@ -344,12 +356,11 @@ function progressCard(data, mode, view) {
   if (scheduled) card.insertBefore(el("p", { className: "status-scheduled", text: scheduled }), card.firstChild);
 
   // El tiempo estimado del local (SEGUIMIENTO-39 a 42): solo llega si el negocio lo activó. Con textContent.
-  const prep = prepView(data.pedido.prep, { now: new Date(), lang, pickup: mode === "pickup" });
+  const prep = etaView(data, mode, new Date());
   if (prep) {
     card.appendChild(
-      el("div", { className: `status-prep status-prep-${prep.kind}` }, [
-        el("p", { className: "status-prep-text", text: prep.text }),
-        ...(prep.hint ? [el("p", { className: "status-prep-hint", text: prep.hint })] : []),
+      el("div", { className: `status-prep status-prep-${prep.kind}`, attrs: { "data-tick": "eta", "data-pickup": String(mode === "pickup") } }, [
+        el("p", { className: "status-prep-text", text: prep.line }),
         ...(prep.reason ? [el("p", { className: "status-prep-reason", text: prep.reason })] : []),
       ]),
     );
@@ -417,7 +428,23 @@ let countdownEl = null;
 // Vuelve a leer el pedido ya mismo; se completa en start().
 let refreshNow = null;
 
+// El vehículo del repartidor (ENVIO-178): ícono propio con su texto accesible en el idioma del cliente. Sin
+// vehículos (interruptor apagado) no hay nada.
+function vehicleBadge(vehicles) {
+  const list = Array.isArray(vehicles) ? vehicles : [];
+  if (list.length === 0) return document.createDocumentFragment();
+
+  const label = vehicleLabel(list, lang);
+  const badge = el("span", { className: "vehicle", attrs: { role: "img", "aria-label": label, title: label } });
+  for (const vehicle of list) badge.appendChild(icon(document, vehicle === "auto" ? "vehicleAuto" : "vehicleMoto"));
+
+  return badge;
+}
+
 function deliveryNode(data) {
+  // Un pedido cancelado antes de aceptarse vuelve a `waiting`: no hay nada que esperar (ENVIO-165).
+  if (data.pedido?.estado === "cancelled" && data.envio?.state === "waiting") return null;
+
   const card = deliveryCard(data.envio, lang, money);
   if (!card) return null;
 
@@ -425,8 +452,20 @@ function deliveryNode(data) {
     el("div", { className: `delivery-head ${card.kind === "searching" ? "moving" : ""}`.trim() }, [
       el("span", { className: "delivery-icon" }, [icon(document, card.icon)]),
       el("div", {}, [
-        el("h2", { className: "delivery-title", text: card.title }),
-        ...card.lines.map((line) => el("p", { className: "delivery-line", text: line })),
+        el("h2", { className: "delivery-title" }, [
+          document.createTextNode(card.title),
+          ...(card.kind === "accepted" ? [vehicleBadge(data.envio.vehicles)] : []),
+        ]),
+        ...card.lines
+          .filter((line) => !(etaView(data, "other", new Date())?.line && line === arrivalLine(data.envio, lang)))
+          .map((line) =>
+          el("p", {
+            className: "delivery-line",
+            text: line,
+            // La línea de llegada se repinta sola (SEGUIMIENTO-45).
+            attrs: line === arrivalLine(data.envio, lang) ? { "data-tick": "arrival" } : {},
+          }),
+        ),
       ]),
     ]),
   ]);
@@ -465,7 +504,7 @@ function offersNode(delivery) {
         ? [el("span", { className: "offer-badge", text: `⭐ ${t("tracker.delivery.recommended", lang)}` })]
         : []),
       el("div", { className: "offer-main" }, [
-        el("span", { className: "offer-name", text: view.name }),
+        el("span", { className: "offer-name" }, [document.createTextNode(view.name), vehicleBadge(view.vehicles)]),
         el("span", { className: "offer-price", text: view.price }),
       ]),
       ...(view.reason
@@ -525,6 +564,35 @@ function offersNode(delivery) {
   }
 
   return wrap;
+}
+
+// Descuenta "faltan N min" cambiando solo el texto de esos nodos (SEGUIMIENTO-45): sin rehacer la página no se
+// pierde el foco, el scroll ni lo que se esté tocando. Si cambió de fase (de "en unos minutos" a "unos minutos
+// más"), se repinta una vez.
+function tickTimes() {
+  if (current.kind !== "data") return;
+
+  const { data } = current;
+  const now = new Date();
+
+  const etaNode = document.querySelector('[data-tick="eta"]');
+  if (etaNode) {
+    const eta = etaView(data, etaNode.dataset.pickup === "true" ? "pickup" : "other", now);
+
+    if (!eta || !etaNode.classList.contains(`status-prep-${eta.kind}`)) {
+      paint();
+      return;
+    }
+
+    const text = etaNode.querySelector(".status-prep-text");
+    if (text && text.textContent !== eta.line) text.textContent = eta.line;
+  }
+
+  const arrivalNode = document.querySelector('[data-tick="arrival"]');
+  if (arrivalNode) {
+    const line = arrivalLine(data.envio, lang, now);
+    if (line && arrivalNode.textContent !== line) arrivalNode.textContent = line;
+  }
 }
 
 function tickCountdown() {
@@ -793,6 +861,16 @@ async function start() {
 
   await refresh();
   schedule();
+
+  // "faltan 12 min" se descuenta con la hora aunque no llegue una lectura nueva (SEGUIMIENTO-45).
+  const timesTimer = setInterval(() => {
+    // Con el pedido entregado o cancelado ya no hay nada que descontar.
+    if (finished) {
+      clearInterval(timesTimer);
+      return;
+    }
+    if (document.visibilityState === "visible") tickTimes();
+  }, 30_000);
 
   // Al volver a la pestaña se lee de inmediato, sin esperar al próximo turno.
   document.addEventListener("visibilitychange", () => {

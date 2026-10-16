@@ -389,12 +389,15 @@ describe("fetchDelivery — ENVIO-29", () => {
       ok: true,
       data: {
         courier: "Repartos al Toque",
+        vehicles: [],
         whatsapp: null,
         zone: "Cantera",
         listPrice: 5000,
         price: 6500,
         reason: "Fuera de zona",
         state: "accepted",
+        extras: null,
+        arrivesAt: null,
         mode: "offers",
         note: "Juan, 21:30",
         offers: [],
@@ -539,9 +542,33 @@ describe("fetchDelivery con ofertas — ENVIO-110 y SEGUIMIENTO-28", () => {
 
     expect(r.data.closesAt).toBe(Date.parse("2026-10-09T22:05:00Z"));
     expect(r.data.offers).toEqual([
-      { id: OFFER_A, courier: "Damián", price: 5000, reason: null, favorite: true },
-      { id: OFFER_B, courier: "Moto", price: 4500, reason: "Cerca", favorite: false },
+      { id: OFFER_A, courier: "Damián", price: 5000, reason: null, favorite: true, vehicles: [] },
+      { id: OFFER_B, courier: "Moto", price: 4500, reason: "Cerca", favorite: false, vehicles: [] },
     ]);
+  });
+
+  it("trae el vehículo de cada oferta y del repartidor asignado, y descarta lo que no es moto ni auto — ENVIO-178", async () => {
+    const searching = await fetchDelivery({
+      ...cfg,
+      code: CODE,
+      fetchImpl: answer({
+        ofertas: [
+          { id: OFFER_A, repartidor: "Damián", precio: 5000, favorito: false, vehiculo: ["moto", "auto"] },
+          { id: OFFER_B, repartidor: "Moto", precio: 4500, favorito: false, vehiculo: ["bici"] },
+        ],
+      }),
+    });
+    expect(searching.data.offers.map((offer) => offer.vehicles)).toEqual([["moto", "auto"], []]);
+
+    const assigned = await fetchDelivery({
+      ...cfg,
+      code: CODE,
+      fetchImpl: answer({ estado: "accepted", repartidor: "Damián", vehiculo: ["auto"] }),
+    });
+    expect(assigned.data.vehicles).toEqual(["auto"]);
+
+    const off = await fetchDelivery({ ...cfg, code: CODE, fetchImpl: answer({ estado: "accepted", repartidor: "Damián" }) });
+    expect(off.data.vehicles).toEqual([]);
   });
 
   it("descarta las ofertas mal formadas y no inventa ofertas sin buscar", async () => {
@@ -620,8 +647,45 @@ describe("deliveryCard — SEGUIMIENTO-27, ENVIO-29, 44 y 91", () => {
     });
   });
 
-  it("waiting (un pedido viejo) se muestra como buscando", () => {
-    expect(deliveryCard({ ...base, state: "waiting" }, "es", money).kind).toBe("searching");
+  it("waiting: el local todavía no aceptó, y lo dice en los tres idiomas — ENVIO-165", () => {
+    const waiting = { ...base, state: "waiting", courier: "", whatsapp: null };
+
+    expect(deliveryCard(waiting, "es", money)).toMatchObject({
+      kind: "waiting",
+      title: "Esperando que el local confirme",
+    });
+    expect(deliveryCard(waiting, "en", money).title).toBe("Waiting for the restaurant to confirm");
+    expect(deliveryCard(waiting, "pt", money).title).toBe("Aguardando o local confirmar");
+  });
+
+  it("accepted con tiempo de llegada: dice la hora aprox., y sin él no dice nada — ENVIO-165", () => {
+    // 2026-10-12T00:55:00Z es 21:55 en Argentina.
+    const at = Date.parse("2026-10-12T00:55:00Z");
+
+    const now = new Date("2026-10-12T00:43:00Z");
+
+    expect(deliveryCard({ ...base, arrivesAt: at }, "es", money, now).lines).toContain("Llega aprox. 21:55 · faltan 12 min");
+    expect(deliveryCard({ ...base, arrivesAt: at }, "en", money, now).lines).toContain("Arrives around 21:55 · 12 min to go");
+    expect(deliveryCard({ ...base, arrivesAt: at }, "pt", money, now).lines).toContain("Chega por volta das 21:55 · faltam 12 min");
+    // Pasada la hora: sin números negativos (SEGUIMIENTO-45).
+    expect(
+      deliveryCard({ ...base, arrivesAt: at }, "es", money, new Date("2026-10-12T01:30:00Z")).lines,
+    ).toContain("Unos minutos más");
+    expect(deliveryCard({ ...base, arrivesAt: null }, "es", money).lines.join(" ")).not.toContain("Llega aprox");
+  });
+
+  it("con repartidor asignado y preferencias, dice qué más se le puede pedir — SEGUIMIENTO-47", () => {
+    const extras = { shop: true, seek: true, note: "Hasta las 22" };
+
+    const lines = deliveryCard({ ...base, extras }, "es", money).lines;
+    expect(lines).toContain("Podés pedirle a Damián también: compras en el camino · buscar otros pedidos.");
+    expect(lines).toContain("Hasta las 22");
+
+    expect(
+      deliveryCard({ ...base, extras: { shop: false, seek: true, note: "" } }, "en", money).lines.join(" "),
+    ).toContain("picking up other orders");
+    // Sin nada marcado, no hay bloque.
+    expect(deliveryCard({ ...base, extras: null }, "es", money).lines.join(" ")).not.toContain("Podés pedirle");
   });
 
   it("self: dice que lo lleva el local", () => {

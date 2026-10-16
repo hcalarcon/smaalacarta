@@ -83,4 +83,9 @@ export const courierLinks: NavLink[] = [
     label: "Mis zonas",
     icon: "M12 21s-7-6.2-7-11a7 7 0 1114 0c0 4.8-7 11-7 11zM12 12a2 2 0 100-4 2 2 0 000 4z",
   },
+  {
+    href: "/repartidor/perfil",
+    label: "Mi perfil",
+    icon: "M12 11a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0",
+  },
 ];

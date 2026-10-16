@@ -69,6 +69,9 @@ async function recipients(deps: PushDeps, event: PushEvent, once: Once): Promise
       return deps.courierUserIds(unique(couriers));
     }
     case "courier_chosen":
+    case "courier_pickup_soon":
+    case "courier_order_ready":
+    case "courier_prep_changed":
       return order.courier_id ? deps.courierUserIds([order.courier_id]) : [];
     case "courier_not_chosen": {
       const offerers = await once(`offerers:${order.id}`, () => deps.offererCourierIds(order.id));
@@ -97,16 +100,22 @@ const assigned = (deps: PushDeps, order: OrderRecord, once: Once) =>
 async function deliver(deps: PushDeps, event: PushEvent, once: Once, result: PushResult) {
   const { order, kind } = event;
 
-  const userIds = unique(await recipients(deps, event, once));
-  if (userIds.length === 0) return;
-
-  const [businessName, courierName, assignedByLocal] = await Promise.all([
+  // Lo que el texto necesita se pide mientras se resuelve a quién avisar, no después (ENVIO-172): son
+  // consultas independientes y cada una es un viaje a la base.
+  const lookups = Promise.all([
     once(`business:${order.business_id}`, () => deps.businessName(order.business_id)),
     kind === "local_courier_chosen" && order.courier_id
       ? once(`courier:${order.courier_id}`, () => deps.courierName(order.courier_id as string))
       : Promise.resolve(null),
     kind === "courier_chosen" ? assigned(deps, order, once) : Promise.resolve(false),
   ]);
+  // Si no hay a quién avisar, o falla la búsqueda de destinatarios, la consulta ya en vuelo no queda sin atender.
+  lookups.catch(() => undefined);
+
+  const userIds = unique(await recipients(deps, event, once));
+  if (userIds.length === 0) return;
+
+  const [businessName, courierName, assignedByLocal] = await lookups;
 
   const message = buildMessage(kind, order, { businessName, courierName, assignedByLocal });
 

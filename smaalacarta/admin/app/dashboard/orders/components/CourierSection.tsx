@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import VehicleIcons from "@/components/ui/VehicleIcon";
 import { chatLink } from "@/lib/courier/panel";
 import type { Order } from "@/lib/db/orders";
 import {
@@ -11,6 +12,8 @@ import {
   feeSummary,
   acceptsOffers,
   offersLabel,
+  pickupEtaNotice,
+  returnedNotice,
   searchWarning,
   validateAssignNote,
   type OrderCourier,
@@ -32,7 +35,12 @@ export default function CourierSection({
   error,
   onAssign,
   onSelf,
+  vehicleEnabled = false,
+  onNeedsCar,
 }: {
+  // El interruptor del vehículo (ENVIO-175) y cómo prender o apagar "Necesita auto" (ENVIO-176).
+  vehicleEnabled?: boolean;
+  onNeedsCar?: (needsCar: boolean) => void;
   order: Order;
   now: Date;
   // Los repartidores activos que cubren alguna zona del local (`business_delivery_options()`).
@@ -55,6 +63,13 @@ export default function CourierSection({
   const searching = order.courier_status === "searching" && !isFinal(order.status);
   const warning = searchWarning(order, now, offers?.ofertas.length ?? 0);
   const candidates = couriersForOrder(couriers, order);
+  // Se pide o se saca el auto mientras nadie tenga el pedido (ENVIO-176).
+  const canToggleCar =
+    vehicleEnabled &&
+    Boolean(onNeedsCar) &&
+    !order.courier_id &&
+    (order.courier_status === "waiting" || order.courier_status === "searching") &&
+    !isFinal(order.status);
 
   const taker = order.courier_id ? couriers.find((courier) => courier.id === order.courier_id) : undefined;
   const takerChat = chatLink(
@@ -95,7 +110,12 @@ export default function CourierSection({
         </div>
         <div className="flex gap-2">
           <dt className="text-stone-400">Estado:</dt>
-          <dd className="font-medium">{courierStatusLabel(order, taker?.name)}</dd>
+          <dd className="font-medium">
+            {courierStatusLabel(order, taker?.name)}
+            {vehicleEnabled ? <VehicleIcons vehicles={taker?.vehiculo} className="ml-1.5" /> : null}
+            {returnedNotice(order) ? <span className="block font-semibold text-amber-800">{returnedNotice(order)}</span> : null}
+            {pickupEtaNotice(order) ? <span className="block">⏱ {pickupEtaNotice(order)}</span> : null}
+          </dd>
         </div>
         <div className="flex gap-2">
           <dt className="text-stone-400">Precio del envío:</dt>
@@ -130,6 +150,30 @@ export default function CourierSection({
         ) : null}
       </dl>
 
+      {canToggleCar ? (
+        <label className="mt-3 flex min-h-11 cursor-pointer items-start gap-3 rounded-xl bg-white px-3 py-2">
+          <input
+            type="checkbox"
+            checked={order.needs_car === true}
+            disabled={busy}
+            onChange={(event) => onNeedsCar?.(event.target.checked)}
+            className="mt-1 h-5 w-5 shrink-0 accent-brand"
+          />
+          <span>
+            <span className="block text-sm font-medium text-stone-800">Necesita auto</span>
+            <span className="block text-xs text-stone-500">
+              Pedido grande o una torta: solo lo ven los repartidores que tienen auto. Se puede cambiar hasta que
+              alguien lo lleve.
+            </span>
+          </span>
+        </label>
+      ) : vehicleEnabled && order.needs_car ? (
+        <p className="mt-3 inline-flex items-center gap-1 rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-sky-900">
+          <VehicleIcons vehicles={["auto"]} />
+          Necesita auto
+        </p>
+      ) : null}
+
       {searching && acceptsOffers(order) ? (
         <div className="mt-3">
           <p className="text-sm font-medium text-sky-900">{offersLabel(offers, now)}</p>
@@ -140,8 +184,9 @@ export default function CourierSection({
                   <span className="font-medium">
                     {offer.favorito ? "⭐ " : ""}
                     {offer.repartidor}
-                  </span>{" "}
-                  · {formatMoney(offer.precio)}
+                  </span>
+                  {vehicleEnabled ? <VehicleIcons vehicles={offer.vehiculo} className="mx-1" /> : null} ·{" "}
+                  {formatMoney(offer.precio)}
                   {offer.favorito ? <span className="text-xs text-stone-500"> · tu favorito</span> : null}
                   {offer.motivo ? <span className="block text-xs text-stone-500">{offer.motivo}</span> : null}
                 </li>

@@ -8,7 +8,7 @@ export function courierTab(param: string | null | undefined): CourierTab {
 }
 
 export type CourierBarItem = {
-  key: "pedidos" | "rendiciones" | "zonas";
+  key: "pedidos" | "rendiciones" | "zonas" | "perfil";
   href: string;
   label: string;
   // Trazo de un ícono de 24x24 (estilo outline).
@@ -20,7 +20,8 @@ export type CourierBarItem = {
 
 export function courierBarItems(pathname: string, tab: CourierTab, toSettleCount: number): CourierBarItem[] {
   const onZones = pathname.startsWith("/repartidor/zonas");
-  const onOrders = !onZones;
+  const onProfile = pathname.startsWith("/repartidor/perfil");
+  const onOrders = !onZones && !onProfile;
 
   return [
     {
@@ -46,6 +47,14 @@ export function courierBarItems(pathname: string, tab: CourierTab, toSettleCount
       icon: "M12 21s-7-6.2-7-11a7 7 0 1114 0c0 4.8-7 11-7 11zM12 12a2 2 0 100-4 2 2 0 000 4z",
       badge: 0,
       active: onZones,
+    },
+    {
+      key: "perfil",
+      href: "/repartidor/perfil",
+      label: "Mi perfil",
+      icon: "M12 11a4 4 0 100-8 4 4 0 000 8zM4 21a8 8 0 0116 0",
+      badge: 0,
+      active: onProfile,
     },
   ];
 }

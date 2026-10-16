@@ -1,4 +1,4 @@
-import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import AvailableOrderCard from "./AvailableOrderCard";
@@ -15,6 +15,7 @@ const mocks = vi.hoisted(() => ({
   giveBack: vi.fn(),
   advance: vi.fn(),
   settle: vi.fn(),
+  setEta: vi.fn(),
 }));
 
 vi.mock("next/navigation", () => ({
@@ -29,12 +30,22 @@ vi.mock("../actions", () => ({
   returnOrderAction: mocks.giveBack,
   advanceOrderAction: mocks.advance,
   markSettledAction: mocks.settle,
+  setEtaAction: mocks.setEta,
 }));
 beforeEach(() => {
   // Las pestañas dejan la URL al día (ADMIN-MOVIL-8): que un test no herede la del anterior.
   window.history.replaceState(null, "", "/");
   vi.clearAllMocks();
-  for (const fn of [mocks.offer, mocks.take, mocks.withdraw, mocks.decline, mocks.giveBack, mocks.advance, mocks.settle]) {
+  for (const fn of [
+    mocks.offer,
+    mocks.take,
+    mocks.withdraw,
+    mocks.decline,
+    mocks.giveBack,
+    mocks.advance,
+    mocks.settle,
+    mocks.setEta,
+  ]) {
     fn.mockResolvedValue({ ok: true });
   }
 });
@@ -127,15 +138,28 @@ const offerCard = (o: AvailableOrder, onOffer = vi.fn(), onDecline = vi.fn(), on
   );
 
 describe("pedido que ya tomó, en el panel del repartidor — ENVIO-31", () => {
+  it("lo más visible es adónde lleva el pedido y la plata va en una línea (ADMIN-REPARTIDOR-8)", () => {
+    const { container } = card(order("12", "preparing", "accepted"));
+
+    const pin = screen.getByText("📍");
+    expect(pin.parentElement?.textContent).toContain("Calle 123");
+    expect(pin.parentElement?.textContent).toMatch(/Retiro en/);
+    expect(container.textContent).toMatch(/Envío\s?\$/);
+    // Total, desglose y rendición, solo dentro de "Ver detalle".
+    const outsideDetail = container.cloneNode(true) as HTMLElement;
+    outsideDetail.querySelector("details")?.remove();
+    expect(outsideDetail.textContent).not.toMatch(/Cobrar al cliente/);
+  });
+
   it("muestra local, cliente, barrio, precio, total del local, pago y productos con opciones", () => {
     card(order("12", "preparing", "accepted"));
 
     expect(screen.getAllByText(/Ana Resto/).length).toBeGreaterThan(0);
     expect(screen.getByText("San Martín 100")).toBeTruthy();
     expect(screen.getByText("Cliente")).toBeTruthy();
-    expect(screen.getByText("Calle 123")).toBeTruthy();
+    expect(screen.getAllByText("Calle 123").length).toBeTruthy();
     expect(screen.getByText("3644277105")).toBeTruthy();
-    expect(screen.getByText("Cantera")).toBeTruthy();
+    expect(screen.getAllByText("Cantera").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/\$\s?8\.200/).length).toBeGreaterThan(0);
     expect(screen.getByText("Efectivo")).toBeTruthy();
     expect(screen.getByText("2 × Helado")).toBeTruthy();
@@ -194,7 +218,7 @@ describe("pedido disponible — ENVIO-71 y 113 a 115", () => {
 
     expect(screen.getAllByText(/Ana Resto/).length).toBeGreaterThan(0);
     expect(screen.getByText("San Martín 100")).toBeTruthy();
-    expect(screen.getByText("Cantera")).toBeTruthy();
+    expect(screen.getAllByText("Cantera").length).toBeGreaterThan(0);
     expect(screen.getAllByText(/\$\s?8\.200/).length).toBeGreaterThan(0);
     expect(screen.getByText("Efectivo")).toBeTruthy();
     expect(screen.getByText("2 ofertas")).toBeTruthy();
@@ -217,7 +241,7 @@ describe("pedido disponible — ENVIO-71 y 113 a 115", () => {
     expect(onOffer).toHaveBeenCalledWith({ price: "5000", reason: "" });
   });
 
-  it("Otro precio: con el de lista ya cargado, y un precio distinto exige motivo", () => {
+  it("Otro precio: con el de lista ya cargado, y un precio distinto exige motivo", async () => {
     const onOffer = vi.fn();
     offerCard(offer("12"), onOffer);
 
@@ -226,18 +250,18 @@ describe("pedido disponible — ENVIO-71 y 113 a 115", () => {
     expect(screen.queryByLabelText(/motivo del cambio/i)).toBeNull();
 
     fireEvent.change(screen.getByLabelText(/precio de tu oferta/i), { target: { value: "26000" } });
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar oferta" }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Confirmar oferta" })));
 
     expect(onOffer).not.toHaveBeenCalled();
     expect(screen.getByText(/por qué cambia el precio/i)).toBeTruthy();
 
     fireEvent.change(screen.getByLabelText(/motivo del cambio/i), { target: { value: "Fuera de zona" } });
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar oferta" }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Confirmar oferta" })));
 
     expect(onOffer).toHaveBeenCalledWith({ price: "26000", reason: "Fuera de zona" });
   });
 
-  it("con oferta hecha: 'Tu oferta', Cambiar y Retirar", () => {
+  it("con oferta hecha: 'Tu oferta', Cambiar y Retirar", async () => {
     const onOffer = vi.fn();
     const onWithdraw = vi.fn();
     offerCard(
@@ -250,13 +274,13 @@ describe("pedido disponible — ENVIO-71 y 113 a 115", () => {
     expect(screen.getByText(/Tu oferta: \$\s?6\.000,00, esperando al cliente/)).toBeTruthy();
     expect(screen.queryByRole("button", { name: /^Ofertar/ })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Retirar" }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Retirar" })));
     expect(onWithdraw).toHaveBeenCalledTimes(1);
 
     fireEvent.click(screen.getByRole("button", { name: "Cambiar" }));
     expect((screen.getByLabelText(/precio de tu oferta/i) as HTMLInputElement).value).toBe("6000");
     fireEvent.change(screen.getByLabelText(/precio de tu oferta/i), { target: { value: "5000" } });
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar oferta" }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Confirmar oferta" })));
     expect(onOffer).toHaveBeenCalledWith({ price: "5000", reason: "Llueve" });
   });
 
@@ -294,19 +318,34 @@ describe("pedido disponible — ENVIO-71 y 113 a 115", () => {
 });
 
 describe("acciones sobre lo que tomó — ENVIO-77", () => {
-  it("antes de la entrega del local se puede devolver, con motivo obligatorio", () => {
+  it("antes de la entrega del local se puede devolver, con motivo obligatorio", async () => {
     const onReturn = vi.fn();
     card(order("12", "preparing", "accepted"), onReturn);
 
     fireEvent.click(screen.getByRole("button", { name: "Devolver" }));
-    fireEvent.click(screen.getByRole("button", { name: "Confirmar devolución" }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Confirmar devolución" })));
     expect(onReturn).not.toHaveBeenCalled();
-    expect(screen.getByText(/por qué devolvés/i)).toBeTruthy();
+    expect(screen.getByText(/Elegí por qué devolvés/i)).toBeTruthy();
 
-    fireEvent.change(screen.getByLabelText(/motivo de la devolución/i), { target: { value: "Se pinchó la moto" } });
+    fireEvent.click(screen.getByRole("button", { name: "Otro" }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Confirmar devolución" })));
+    expect(onReturn).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText(/contá el motivo/i), { target: { value: "Se pinchó la moto" } });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Confirmar devolución" })));
+
+    expect(onReturn).toHaveBeenCalledWith("other", "Se pinchó la moto");
+  });
+
+  it("un motivo fijo se devuelve sin texto", () => {
+    const onReturn = vi.fn();
+    card(order("12", "preparing", "accepted"), onReturn);
+
+    fireEvent.click(screen.getByRole("button", { name: "Devolver" }));
+    fireEvent.click(screen.getByRole("button", { name: "Problema con el vehículo" }));
     fireEvent.click(screen.getByRole("button", { name: "Confirmar devolución" }));
 
-    expect(onReturn).toHaveBeenCalledWith("Se pinchó la moto");
+    expect(onReturn).toHaveBeenCalledWith("vehicle", null);
   });
 
   it("entregado al repartidor ofrece En camino y ya no Devolver; en camino ofrece Entregado", () => {
@@ -350,6 +389,46 @@ describe("tablero del repartidor — ENVIO-76 a 78", () => {
     expect(section("Historial").textContent).toContain("#3 ");
     expect(section("Historial").textContent).toContain("#4 ");
     expect(section("Disponibles").textContent).not.toContain("#2 ");
+  });
+
+  it("sin envíos en curso no hay caja vacía y el primer pedido es un disponible — ADMIN-REPARTIDOR-7", () => {
+    render(<CourierOrdersClient serverNow="2026-10-09T22:05:00Z" available={[offer("1")]} orders={[]} />);
+
+    expect(screen.queryByRole("region", { name: "Mis envíos en curso" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Historial" })).toBeNull();
+
+    const regions = screen.getAllByRole("region") as HTMLElement[];
+    expect(regions[0].textContent).toContain("#1 ");
+    // Sin textos de ayuda largos ni avisos de pantalla abierta.
+    expect(screen.queryByText(/Se actualiza solo/)).toBeNull();
+    expect(screen.queryByText(/Mantené esta pantalla abierta/)).toBeNull();
+  });
+
+  it("la tarjeta lleva precio, hora y acción sin abrir nada; el contacto está en 'Ver detalle' — ADMIN-REPARTIDOR-6", () => {
+    card(
+      order("5", "ready", "accepted", {
+        tiempos: {
+          listo_a: "2026-10-09T22:30:00Z",
+          demora_min: 25,
+          listo_antes: null,
+          llega_local_a: null,
+          llega_cliente_a: null,
+        },
+      }),
+    );
+
+    const article = screen.getByRole("article");
+    const summary = screen.getByText("Ver detalle");
+    const details = summary.closest("details") as HTMLElement;
+
+    // A la vista: cobro y envío, hora de listo, de dónde a dónde.
+    expect(article.textContent).toContain("Envío");
+    expect(article.textContent).toContain("Listo para retirar");
+    expect(article.textContent).toContain("Retiro");
+    // En el detalle: teléfono y WhatsApp del cliente.
+    expect(within(details).getByRole("link", { name: "Llamar" })).toBeTruthy();
+    expect(within(details).getByRole("link", { name: "WhatsApp del cliente" })).toBeTruthy();
+    expect(details.hasAttribute("open")).toBe(false);
   });
 
   it("sin pedidos disponibles lo dice", () => {
@@ -478,10 +557,11 @@ describe("tablero del repartidor — ENVIO-76 a 78", () => {
     render(<CourierOrdersClient serverNow="2026-10-09T22:05:00Z" available={[]} orders={[order("1", "ready", "accepted")]} />);
 
     fireEvent.click(screen.getByRole("button", { name: "Devolver" }));
-    fireEvent.change(screen.getByLabelText(/motivo de la devolución/i), { target: { value: "No llego" } });
+    fireEvent.click(screen.getByRole("button", { name: "Otro" }));
+    fireEvent.change(screen.getByLabelText(/contá el motivo/i), { target: { value: "No llego" } });
     fireEvent.click(screen.getByRole("button", { name: "Confirmar devolución" }));
 
-    await waitFor(() => expect(mocks.giveBack).toHaveBeenCalledWith("1", "No llego"));
+    await waitFor(() => expect(mocks.giveBack).toHaveBeenCalledWith("1", "other", "No llego"));
   });
 
   it("si la acción falla, el error se ve en ese pedido", async () => {
@@ -643,5 +723,154 @@ describe("cuánto cobrar y rendiciones — ENVIO-41 y 42", () => {
     render(<CourierOrdersClient serverNow="2026-10-09T23:30:00Z" orders={[...old, pending]} />);
 
     expect((screen.getByRole("region", { name: "Historial" }) as HTMLElement).textContent).toContain("#1 ");
+  });
+});
+
+describe("circuito de tiempos — ENVIO-163", () => {
+  // 2026-10-10T00:35:00Z es 21:35 en Argentina; 00:05Z, 21:05.
+  const times = (extra: Partial<NonNullable<CourierPanelOrder["tiempos"]>> = {}) => ({
+    listo_a: "2026-10-10T00:35:00Z",
+    demora_min: 45,
+    listo_antes: null,
+    llega_local_a: null,
+    llega_cliente_a: null,
+    ...extra,
+  });
+
+  const timedCard = (o: CourierPanelOrder, onAdvance = vi.fn(), onSetEta = vi.fn()) =>
+    render(
+      <CourierOrderCard
+        order={o}
+        now={now}
+        busy={false}
+        error={null}
+        onReturn={vi.fn()}
+        onAdvance={onAdvance}
+        onSetEta={onSetEta}
+        onSettle={vi.fn()}
+      />,
+    );
+
+  it("un pedido disponible muestra la hora de listo y la demora antes de tomarlo", () => {
+    offerCard(offer("12", { listo_a: "2026-10-10T00:35:00Z", demora_min: 45 }));
+
+    expect(screen.getByText(/Listo para retirar a las 21:35 · Demora 45 min/)).toBeTruthy();
+  });
+
+  it("sin hora cargada no inventa una", () => {
+    offerCard(offer("12"));
+
+    expect(screen.queryByText(/Listo para retirar/)).toBeNull();
+  });
+
+  it("recién tomado pide 'Llego al local en…' con los botones rápidos, y manda el tipo y los minutos", async () => {
+    const onSetEta = vi.fn();
+    timedCard(order("12", "confirmed", "accepted", { tiempos: times() }), vi.fn(), onSetEta);
+
+    expect(screen.getByText("Llego al local en…")).toBeTruthy();
+    for (const minutes of [5, 10, 15, 20, 30]) {
+      expect(screen.getByRole("button", { name: `${minutes} min` })).toBeTruthy();
+    }
+
+    fireEvent.click(screen.getByRole("button", { name: "15 min" }));
+    await waitFor(() => expect(onSetEta).toHaveBeenCalledWith("pickup", 15));
+  });
+
+  it("el campo libre valida de 1 a 120", async () => {
+    const onSetEta = vi.fn();
+    timedCard(order("12", "confirmed", "accepted", { tiempos: times() }), vi.fn(), onSetEta);
+
+    fireEvent.change(screen.getByLabelText(/otro tiempo/i), { target: { value: "121" } });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Guardar" })));
+    expect(screen.getByRole("alert").textContent).toMatch(/1 a 120/);
+    expect(onSetEta).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText(/otro tiempo/i), { target: { value: "45" } });
+    fireEvent.click(screen.getByRole("button", { name: "Guardar" }));
+    await waitFor(() => expect(onSetEta).toHaveBeenCalledWith("pickup", 45));
+  });
+
+  it("con el tiempo cargado muestra a qué hora llega y deja cambiarlo", () => {
+    timedCard(
+      order("12", "confirmed", "accepted", { tiempos: times({ llega_local_a: "2026-10-10T00:15:00Z" }) }),
+    );
+
+    expect(screen.getByText("Llegás al local a las 21:15")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Cambiar" }));
+    expect(screen.getByText("Llego al local en…")).toBeTruthy();
+  });
+
+  it("si el local cambió la demora, marca 'Cambió' con la hora vieja tachada", () => {
+    timedCard(order("12", "confirmed", "accepted", { tiempos: times({ listo_antes: "2026-10-10T00:05:00Z" }) }));
+
+    expect(screen.getByText("Cambió")).toBeTruthy();
+    const old = screen.getByText("21:05");
+    expect(old.tagName).toBe("S");
+    expect(screen.getByRole("button", { name: "Devolver" })).toBeTruthy();
+  });
+
+  it("con un cambio de demora sin ver, 'Cambió la demora' es el primer botón al devolver", () => {
+    timedCard(order("12", "confirmed", "accepted", { tiempos: times({ listo_antes: "2026-10-10T00:05:00Z" }) }));
+    fireEvent.click(screen.getByRole("button", { name: "Devolver" }));
+
+    const labels = screen
+      .getAllByRole("button", { pressed: false })
+      .map((b) => b.textContent)
+      .filter((t) => ["Cambió la demora", "Problema con el vehículo", "Otro"].includes(t ?? ""));
+    expect(labels).toEqual(["Cambió la demora", "Problema con el vehículo", "Otro"]);
+  });
+
+  it("sin cambio de demora, 'Cambió la demora' no va primero", () => {
+    timedCard(order("12", "confirmed", "accepted", { tiempos: times() }));
+    fireEvent.click(screen.getByRole("button", { name: "Devolver" }));
+
+    const labels = screen
+      .getAllByRole("button", { pressed: false })
+      .map((b) => b.textContent)
+      .filter((t) => ["Cambió la demora", "Problema con el vehículo", "Otro"].includes(t ?? ""));
+    expect(labels[0]).toBe("Problema con el vehículo");
+  });
+
+  it("al marcar En camino puede cargar 'Llego al cliente en…', y también salir sin tiempo", async () => {
+    const onAdvance = vi.fn();
+    timedCard(order("12", "handed_to_courier", "accepted", { tiempos: times() }), onAdvance);
+
+    expect(screen.getByText(/llego en…/)).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "20 min" }));
+    await waitFor(() => expect(onAdvance).toHaveBeenCalledWith("on_the_way", 20));
+
+    onAdvance.mockClear();
+    fireEvent.click(screen.getByRole("button", { name: "En camino" }));
+    await waitFor(() => expect(onAdvance).toHaveBeenCalledWith("on_the_way"));
+  });
+
+  it("ya en camino sin tiempo al cliente lo pide, con el tipo dropoff", async () => {
+    const onSetEta = vi.fn();
+    timedCard(order("12", "on_the_way", "accepted", { tiempos: times() }), vi.fn(), onSetEta);
+
+    expect(screen.getByText("Llego al cliente en…")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "10 min" }));
+    await waitFor(() => expect(onSetEta).toHaveBeenCalledWith("dropoff", 10));
+  });
+
+  it("un pedido entregado no pide ningún tiempo", () => {
+    timedCard(order("12", "delivered", "accepted", { tiempos: times() }));
+
+    expect(screen.queryByText(/Llego al/)).toBeNull();
+    expect(screen.queryByText(/Listo para retirar/)).toBeNull();
+  });
+});
+
+describe("Necesita auto en la tarjeta del repartidor — ENVIO-178", () => {
+  it("el chip aparece cuando el pedido lo pide", () => {
+    offerCard(offer("1", { necesita_auto: true }));
+
+    expect(screen.getByText("Necesita auto")).toBeTruthy();
+  });
+
+  it("sin la marca no hay chip", () => {
+    offerCard(offer("1"));
+
+    expect(screen.queryByText("Necesita auto")).toBeNull();
   });
 });

@@ -20,6 +20,11 @@ function clock(date, lang) {
   }).format(date);
 }
 
+// "faltan 12 min", con su singular ("falta 1 min").
+function minutesLeft(n, lang) {
+  return n === 1 ? t("tracker.prep.in1", lang) : t("tracker.prep.in", lang, { n });
+}
+
 // Qué mostrar con el `pedido.prep` que entrega `public_order_tracking`, o null si no hay nada que mostrar:
 // - `kind`: `range` (todavía dentro de lo previsto) o `late` (ya pasó el fin de la ventana).
 // - `text`: la línea principal. `hint`: "en unos N min" o "Falta poco" (null si se demora).
@@ -50,7 +55,32 @@ export function prepView(prep, { now = new Date(), lang = "es", pickup = false }
   return {
     kind: "range",
     text,
-    hint: minutes > 0 ? t("tracker.prep.in", lang, { n: minutes }) : t("tracker.prep.soon", lang),
+    hint: minutes > 0 ? minutesLeft(minutes, lang) : t("tracker.prep.soon", lang),
     reason,
   };
+}
+
+// La hora a la que llega el repartidor (`envio.arrivesAt`, en ms) y cuánto falta (SEGUIMIENTO-45). Misma regla
+// que el tiempo del local: "aprox.", se descuenta con la hora y, pasada, dice "Unos minutos más" (nunca negativos).
+export function arrivalView(arrivesAt, { now = new Date(), lang = "es" } = {}) {
+  if (typeof arrivesAt !== "number" || !Number.isFinite(arrivesAt)) return null;
+
+  const minutes = Math.ceil((arrivesAt - now.getTime()) / 60_000);
+
+  if (minutes <= 0) return { kind: "late", text: t("tracker.delivery.late", lang), hint: null };
+
+  return {
+    kind: "range",
+    text: t("tracker.delivery.arrives", lang, { hora: clock(new Date(arrivesAt), lang) }),
+    hint: minutesLeft(minutes, lang),
+  };
+}
+
+// Lo que va grande debajo del estado (SEGUIMIENTO-45): con la hora de llegada del repartidor, "Llega aprox.";
+// si no, la hora de listo del local. `line` junta la hora y lo que falta en una sola frase.
+export function etaView({ prep, arrivesAt }, { now = new Date(), lang = "es", pickup = false } = {}) {
+  const arrival = arrivalView(arrivesAt ?? null, { now, lang });
+  const view = arrival ? { ...arrival, reason: null } : prepView(prep, { now, lang, pickup });
+
+  return view ? { ...view, line: view.hint ? `${view.text} · ${view.hint}` : view.text } : null;
 }

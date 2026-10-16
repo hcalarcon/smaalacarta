@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 import {
   courierOrderFields,
   courierWhatsappLines,
+  deliveryProblem,
   fetchDeliveryZones,
   findZone,
   isValidPhone,
@@ -198,5 +199,37 @@ describe("courierWhatsappLines — ENVIO-22 y 88", () => {
     expect(text).not.toMatch(/Tel/);
     expect(text).not.toContain("3644277105");
     expect(text).not.toContain("Repartos al Toque");
+  });
+});
+
+
+describe("deliveryProblem — PUBLICO-82", () => {
+  const zones = { zones: [{ id: "a", name: "Centro", price: 1000 }] };
+
+  it("el envío a una zona de la lista no tiene problema", () => {
+    expect(deliveryProblem({ zones, delivery: "delivery", zoneId: "a" })).toBeNull();
+  });
+
+  it("el envío sin zona, o a una que ya no está, no deja confirmar", () => {
+    expect(deliveryProblem({ zones, delivery: "delivery", zoneId: "" })).toBe("invalid_zone");
+    expect(deliveryProblem({ zones, delivery: "delivery", zoneId: "z" })).toBe("invalid_zone");
+  });
+
+  it("'Mi barrio no está' no deja confirmar con envío aunque la zona sea válida", () => {
+    expect(deliveryProblem({ zones, delivery: "delivery", zoneId: "a", blocked: true })).toBe("no_delivery");
+  });
+
+  it("bloqueado y sin entrega elegida (local solo con envío) tampoco deja confirmar", () => {
+    expect(deliveryProblem({ zones, delivery: "", zoneId: "", blocked: true })).toBe("no_delivery");
+    expect(deliveryProblem({ zones, delivery: null, zoneId: "", blocked: true })).toBe("no_delivery");
+  });
+
+  it("el retiro nunca tiene problema, ni con el envío bloqueado", () => {
+    expect(deliveryProblem({ zones, delivery: "retiro", zoneId: "", blocked: true })).toBeNull();
+  });
+
+  it("sin barrios cargados no se exige zona", () => {
+    expect(deliveryProblem({ zones: { zones: [] }, delivery: "delivery", zoneId: "" })).toBeNull();
+    expect(deliveryProblem({ zones: null, delivery: "delivery", zoneId: "" })).toBeNull();
   });
 });

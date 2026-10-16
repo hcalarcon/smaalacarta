@@ -17,13 +17,14 @@ describe("courierTab — ADMIN-MOVIL-8", () => {
 });
 
 describe("courierBarItems — ADMIN-MOVIL-7", () => {
-  it("tiene Pedidos, Rendiciones y Mis zonas, en ese orden y con sus direcciones", () => {
+  it("tiene Pedidos, Rendiciones, Mis zonas y Mi perfil, en ese orden y con sus direcciones", () => {
     const items = courierBarItems("/repartidor", "pedidos", 0);
 
     expect(items.map((item) => [item.label, item.href])).toEqual([
       ["Pedidos", "/repartidor"],
       ["Rendiciones", "/repartidor?tab=rendiciones"],
       ["Mis zonas", "/repartidor/zonas"],
+      ["Mi perfil", "/repartidor/perfil"],
     ]);
   });
 
@@ -38,10 +39,11 @@ describe("courierBarItems — ADMIN-MOVIL-7", () => {
     expect(active("/repartidor/zonas", "pedidos")).toEqual(["Mis zonas"]);
     // La pestaña de la URL no cuenta fuera de /repartidor.
     expect(active("/repartidor/zonas", "rendiciones")).toEqual(["Mis zonas"]);
+    expect(active("/repartidor/perfil", "pedidos")).toEqual(["Mi perfil"]);
   });
 
   it("el contador de pendientes de rendir va solo en Rendiciones y solo si hay", () => {
-    expect(courierBarItems("/repartidor", "pedidos", 3).map((item) => item.badge)).toEqual([0, 3, 0]);
-    expect(courierBarItems("/repartidor", "pedidos", 0).map((item) => item.badge)).toEqual([0, 0, 0]);
+    expect(courierBarItems("/repartidor", "pedidos", 3).map((item) => item.badge)).toEqual([0, 3, 0, 0]);
+    expect(courierBarItems("/repartidor", "pedidos", 0).map((item) => item.badge)).toEqual([0, 0, 0, 0]);
   });
 });

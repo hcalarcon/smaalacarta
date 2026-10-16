@@ -52,14 +52,17 @@ export default function PushToggle({ variant = "header" }: { variant?: "header" 
     return (
       <section
         aria-label="Avisos"
-        className="mb-4 flex flex-col gap-3 rounded-2xl border border-accent bg-accent-soft p-4 sm:flex-row sm:items-center sm:justify-between"
+        className="mb-3 flex items-center justify-between gap-2 rounded-xl border border-accent bg-accent-soft px-3 py-1.5"
       >
-        <div className="text-sm text-stone-800">
-          <p className="font-semibold">{COURIER_BANNER_TEXT}</p>
-          {pushControl === "blocked" ? <p className="mt-1">{BLOCKED_TEXT}</p> : null}
-          {pushControl === "install-first" ? <p className="mt-1">{INSTALL_FIRST_TEXT}</p> : null}
+        <div className="min-w-0 text-sm text-stone-800">
+          <p className="flex items-center gap-2 font-medium">
+            <BellIcon />
+            <span className="truncate">{COURIER_BANNER_TEXT}</span>
+          </p>
+          {pushControl === "blocked" ? <p className="text-xs">{BLOCKED_TEXT}</p> : null}
+          {pushControl === "install-first" ? <p className="text-xs">{INSTALL_FIRST_TEXT}</p> : null}
           {error ? (
-            <p role="alert" className="mt-1 text-red-700">
+            <p role="alert" className="text-xs text-red-700">
               {error}
             </p>
           ) : null}
@@ -70,7 +73,7 @@ export default function PushToggle({ variant = "header" }: { variant?: "header" 
             type="button"
             disabled={busy}
             onClick={() => void enablePush()}
-            className="shrink-0 rounded-xl bg-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-accent-hover disabled:opacity-60"
+            className="min-h-11 shrink-0 rounded-lg bg-accent px-3 text-sm font-semibold text-white transition hover:bg-accent-hover disabled:opacity-60"
           >
             {busy ? "Activando…" : "Activar avisos"}
           </button>

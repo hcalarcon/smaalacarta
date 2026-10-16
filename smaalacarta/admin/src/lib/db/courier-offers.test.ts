@@ -2,7 +2,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { applyMigration, asUser, createTestDb, createUser, type TestDb } from "@/test/db";
-import { choose, offer } from "@/test/offers";
+import { choose, offer, openSearch } from "@/test/offers";
 
 // ENVIO-95 a 112 contra Postgres real: el repartidor oferta y el cliente elige.
 const ANA = "aaaaaaaa-0000-0000-0000-000000000001"; // dueña de un negocio con envío
@@ -40,6 +40,7 @@ async function envio(slug = "ana", zone = "Cantera") {
   if (!r.ok) throw new Error(`no se pudo crear el pedido: ${r.error}`);
   const c = (r.rows[0].result as { code: string }).code;
   const id = (await db.query<{ id: string }>("select id from orders where code = $1", [c])).rows[0].id;
+  await openSearch(db, id);
   return { id, code: c };
 }
 
@@ -626,7 +627,7 @@ describe("devolver, cancelar y resolver desde el local — ENVIO-107 a 109", () 
     // Pasaron 20 minutos desde las ofertas originales.
     await age(o.id, 20);
 
-    const r = await call(TOQUE_USER, `select public.courier_return_order('${o.id}', 'Se me pinchó la moto')`);
+    const r = await call(TOQUE_USER, `select public.courier_return_order('${o.id}', 'other', 'Se me pinchó la moto')`);
     expect(r.ok).toBe(true);
 
     expect(await row(o.id)).toMatchObject({ courier_id: null, courier_status: "searching", delivery_fee: "5000.00" });
@@ -652,7 +653,7 @@ describe("devolver, cancelar y resolver desde el local — ENVIO-107 a 109", () 
     const o = await envio();
     await offer(db, TOQUE_USER, o.id);
     await choose(db, TOQUE_USER, o.id);
-    await call(TOQUE_USER, `select public.courier_return_order('${o.id}', 'No llego')`);
+    await call(TOQUE_USER, `select public.courier_return_order('${o.id}', 'other', 'No llego')`);
     expect(code(await offer(db, TOQUE_USER, o.id))).toBe("P0020");
     expect((await offer(db, MOTO_USER, o.id)).ok).toBe(true);
   });
@@ -873,7 +874,15 @@ describe("anticipados y programados: se ofrecen al confirmar — ENVIO-121 a 125
     const sql = `select public.create_public_order('ana', 'Cliente Prueba', 'delivery', 'efectivo', null,
          '${items}'::jsonb${extra}, p_delivery_zone => '${await zoneId("Cantera")}'::uuid,
          p_customer_phone => '351 555-1234', p_delivery_address => 'Av. Siempre Viva 742') as result`;
-    if (kind === "programado") vi.useFakeTimers({ toFake: ["Date"], now: NOON });
+    if (kind === "programado") {
+      // Con el reloj fijo en el pasado, los pedidos de los tests anteriores quedan "en el futuro" de la
+      // base y el freno de 20 por minuto los cuenta a todos: se envejecen antes de fijar el reloj.
+      await db.exec(
+        `update orders set created_at = created_at - interval '1 year'
+         where created_at > '${new Date(NOON.getTime() - 2 * 60_000).toISOString()}'`,
+      );
+      vi.useFakeTimers({ toFake: ["Date"], now: NOON });
+    }
     let r: Awaited<ReturnType<typeof call>>;
     try {
       r = await call(null, sql);

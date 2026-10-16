@@ -38,6 +38,35 @@ describe("botón con espera — ADMIN-PEDIDOS-51", () => {
     expect(screen.getByRole("button", { name: "Aceptar" })).toBeTruthy();
   });
 
+  it("dos toques en el mismo instante llaman una sola vez, aunque la acción no devuelva una promesa (ENVIO-168)", () => {
+    const onClick = vi.fn(() => undefined);
+
+    render(<PendingButton onClick={onClick} pendingLabel="Aceptando…">Aceptar</PendingButton>);
+
+    const button = screen.getByRole("button", { name: "Aceptar" });
+    act(() => {
+      button.click();
+      button.click();
+    });
+
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("dos toques en el mismo instante con una acción que devuelve promesa llaman una sola vez (ENVIO-168)", () => {
+    const wait = deferred();
+    const onClick = vi.fn(() => wait.promise);
+
+    render(<PendingButton onClick={onClick} pendingLabel="Aceptando…">Aceptar</PendingButton>);
+
+    const button = screen.getByRole("button", { name: "Aceptar" });
+    act(() => {
+      button.click();
+      button.click();
+    });
+
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
   it("si la acción falla vuelve a estar activo", async () => {
     const onClick = vi.fn(() => Promise.reject(new Error("falló")));
 

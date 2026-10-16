@@ -120,4 +120,49 @@ describe("selector de tiempo al aceptar — ADMIN-PEDIDOS-31 y 32", () => {
 
     expect(onClose).toHaveBeenCalledTimes(2);
   });
+
+  it("el segundo click de un doble click rápido no confirma lo que quedó debajo (ENVIO-171)", () => {
+    const handlers = picker();
+
+    fireEvent.click(screen.getByRole("button", { name: "Aceptar con 20 min" }), { detail: 2 });
+    fireEvent.click(screen.getByRole("button", { name: "Aceptar sin tiempo" }), { detail: 2 });
+    fireEvent.click(screen.getByRole("button", { name: "Cancelar" }), { detail: 2 });
+
+    expect(handlers.onConfirm).not.toHaveBeenCalled();
+    expect(handlers.onAcceptWithout).not.toHaveBeenCalled();
+    expect(handlers.onClose).not.toHaveBeenCalled();
+  });
+
+  it("un toque normal sí confirma (ENVIO-171)", () => {
+    const handlers = picker();
+
+    fireEvent.click(screen.getByRole("button", { name: "Aceptar con 20 min" }), { detail: 1 });
+
+    expect(handlers.onConfirm).toHaveBeenCalledWith(20);
+  });
+});
+
+describe("Necesita auto en el diálogo de aceptar — ENVIO-176", () => {
+  it("no aparece si no hay con qué manejarlo (interruptor apagado o pedido sin envío)", () => {
+    picker();
+
+    expect(screen.queryByRole("checkbox", { name: /Necesita auto/ })).toBeNull();
+  });
+
+  it("aparece apagado y avisa cuando se prende", () => {
+    const onNeedsCarChange = vi.fn();
+    picker({ needsCar: false, onNeedsCarChange });
+
+    const box = screen.getByRole("checkbox", { name: /Necesita auto/ }) as HTMLInputElement;
+    expect(box.checked).toBe(false);
+
+    fireEvent.click(box);
+    expect(onNeedsCarChange).toHaveBeenCalledWith(true);
+  });
+
+  it("no aparece al cargar el tiempo de un pedido ya aceptado", () => {
+    picker({ mode: "set", onNeedsCarChange: vi.fn() });
+
+    expect(screen.queryByRole("checkbox", { name: /Necesita auto/ })).toBeNull();
+  });
 });

@@ -1,6 +1,8 @@
 import { cache } from "react";
 
 import type { AvailableOrder, CourierPanelOrder } from "@/lib/courier/panel";
+import { fromRow, type CourierPreferences } from "@/lib/courier/profile";
+import { fromRow as fromVehicleRow, type CourierVehicles } from "@/lib/courier/vehicle";
 import { createClient } from "@/lib/supabase-server";
 
 // Datos del panel del repartidor (ENVIO-31 a 38, 57 y 62 a 66). Todo corre con la sesión del repartidor: lo que
@@ -84,10 +86,18 @@ export async function courierDeclineOrder(orderId: string): Promise<{ ok: true }
 }
 
 // Devuelve un pedido que había tomado, con motivo (ENVIO-66).
-export async function courierReturnOrder(orderId: string, reason: string): Promise<{ ok: true } | DbFailure> {
+export async function courierReturnOrder(
+  orderId: string,
+  kind: "delay_changed" | "vehicle" | "other",
+  reason: string | null,
+): Promise<{ ok: true } | DbFailure> {
   const supabase = await createClient();
 
-  const { error } = await supabase.rpc("courier_return_order", { p_order_id: orderId, p_reason: reason });
+  const { error } = await supabase.rpc("courier_return_order", {
+    p_order_id: orderId,
+    p_kind: kind,
+    ...(reason === null ? {} : { p_reason: reason }),
+  });
 
   return error ? { error: { code: error.code, message: error.message } } : { ok: true };
 }
@@ -96,13 +106,29 @@ export async function courierReturnOrder(orderId: string, reason: string): Promi
 export async function courierSetStatus(
   orderId: string,
   status: "on_the_way" | "delivered",
+  from?: string,
 ): Promise<{ ok: true } | DbFailure> {
   const supabase = await createClient();
 
   const { error } = await supabase.rpc("courier_set_status", {
     p_order_id: orderId,
     p_status: status,
+    p_from: from ?? null,
   });
+
+  return error ? { error: { code: error.code, message: error.message } } : { ok: true };
+}
+
+// Carga "llego al local en X" o "llego al cliente en X" (ENVIO-157). La base exige que el pedido sea suyo, el
+// rango de 1 a 120 y el estado que corresponde.
+export async function courierSetEta(
+  orderId: string,
+  kind: "pickup" | "dropoff",
+  minutes: number,
+): Promise<{ ok: true } | DbFailure> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("courier_set_eta", { p_order_id: orderId, p_kind: kind, p_minutes: minutes });
 
   return error ? { error: { code: error.code, message: error.message } } : { ok: true };
 }
@@ -171,6 +197,57 @@ export async function setZoneCoverage(
         .from("courier_zone_coverage")
         .upsert({ courier_id: courierId, zone_id: zoneId }, { onConflict: "courier_id,zone_id", ignoreDuplicates: true })
     : await supabase.from("courier_zone_coverage").delete().eq("courier_id", courierId).eq("zone_id", zoneId);
+
+  return error ? { error: { code: error.code, message: error.message } } : { ok: true };
+}
+
+// Las preferencias del repartidor (ADMIN-REPARTIDOR-1): las lee con su sesión; el RLS solo le deja las suyas.
+export async function getCourierPreferences(): Promise<CourierPreferences> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("courier_preferences")
+    .select("shops_on_the_way, seeks_orders, note")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return fromRow(data);
+}
+
+// Se guardan con la función de la base, que toma al repartidor de la sesión (no hay escritura directa).
+export async function saveCourierPreferences(value: CourierPreferences): Promise<{ ok: true } | DbFailure> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("courier_save_preferences", {
+    p_shops_on_the_way: value.shopsOnTheWay,
+    p_seeks_orders: value.seeksOrders,
+    p_note: value.note,
+  });
+
+  return error ? { error: { code: error.code, message: error.message } } : { ok: true };
+}
+
+// El vehículo del repartidor (ENVIO-174): moto, auto o los dos. Lo lee con su sesión; el RLS solo le deja el suyo.
+export async function getCourierVehicles(): Promise<CourierVehicles> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.from("couriers").select("moto, auto").maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return fromVehicleRow(data);
+}
+
+// Se guarda con la función de la base, que toma al repartidor de la sesión y exige al menos un vehículo.
+export async function saveCourierVehicles(value: CourierVehicles): Promise<{ ok: true } | DbFailure> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("courier_save_vehicles", { p_moto: value.moto, p_auto: value.auto });
 
   return error ? { error: { code: error.code, message: error.message } } : { ok: true };
 }

@@ -13,6 +13,8 @@ import {
   hasDelivery,
   acceptsOffers,
   offersLabel,
+  pickupEtaNotice,
+  returnedNotice,
   searchWarning,
   validateAssignNote,
   validateOffer,
@@ -233,6 +235,20 @@ describe("repartidores que se pueden asignar a mano — ENVIO-81", () => {
     expect(couriersForOrder(list, order()).map((c) => c.name)).toEqual(["Álvaro", "Zeta"]);
   });
 
+  it("un pedido que necesita auto solo se asigna a quien tiene auto — ENVIO-177", () => {
+    const withVehicle = (id: string, name: string, vehiculo?: string[]) => ({ ...courier(id, name, [ZONA]), vehiculo });
+    const list = [withVehicle("1", "Solo moto", ["moto"]), withVehicle("2", "Con auto", ["moto", "auto"])];
+
+    expect(couriersForOrder(list, order({ needs_car: true })).map((c) => c.name)).toEqual(["Con auto"]);
+    expect(couriersForOrder(list, order({ needs_car: false })).map((c) => c.name)).toEqual(["Con auto", "Solo moto"]);
+  });
+
+  it("con el interruptor apagado (sin vehículo en los datos) no se filtra a nadie — ENVIO-175", () => {
+    const list = [courier("1", "Zeta", [ZONA]), courier("2", "Alfa", [ZONA])];
+
+    expect(couriersForOrder(list, order({ needs_car: true })).map((c) => c.name)).toEqual(["Alfa", "Zeta"]);
+  });
+
   it("un pedido sin zona no tiene a quién asignar", () => {
     expect(couriersForOrder([courier("1", "Zeta", [ZONA])], order({ delivery_zone_id: null }))).toEqual([]);
   });
@@ -325,5 +341,34 @@ describe("la oferta del repartidor — ENVIO-98", () => {
       ok: true,
       price: 5000.5,
     });
+  });
+});
+
+describe("tiempos del envío en el panel del local — ENVIO-164", () => {
+  it("dice a qué hora llega al local, hasta que lo retira", () => {
+    // 2026-10-12T00:40:00Z es 21:40 en Argentina.
+    const accepted = order({ courier_status: "accepted", courier_eta_pickup_at: "2026-10-12T00:40:00Z" });
+    expect(pickupEtaNotice(accepted)).toBe("Llega al local a las 21:40");
+    expect(pickupEtaNotice({ ...accepted, status: "handed_to_courier" })).toBeNull();
+    expect(pickupEtaNotice({ ...accepted, courier_eta_pickup_at: null })).toBeNull();
+    expect(pickupEtaNotice({ ...accepted, courier_status: "searching" })).toBeNull();
+  });
+
+  it("dice el motivo que eligió el repartidor mientras vuelve a buscar (ENVIO-166)", () => {
+    const back = order({ courier_status: "searching", returned_reason_kind: "delay_changed" });
+    expect(returnedNotice(back)).toBe("Lo devolvió: cambió la demora");
+    expect(courierStatusLabel(back)).toMatch(/^Buscando repartidor desde las/);
+    expect(returnedNotice({ ...back, returned_reason_kind: "vehicle" })).toBe("Lo devolvió: problema con el vehículo");
+    expect(returnedNotice({ ...back, returned_reason_kind: "other", returned_reason: "Me quedé sin nafta" })).toBe(
+      "Lo devolvió: Me quedé sin nafta",
+    );
+  });
+
+  it("no lo dice si no hay motivo, ya lo tomó otro o el pedido terminó", () => {
+    const back = order({ courier_status: "searching", returned_reason_kind: "vehicle" });
+    expect(returnedNotice({ ...back, courier_status: "accepted" })).toBeNull();
+    expect(returnedNotice({ ...back, returned_reason_kind: null })).toBeNull();
+    expect(returnedNotice({ ...back, returned_reason_kind: "other", returned_reason: null })).toBeNull();
+    expect(returnedNotice({ ...back, status: "cancelled" })).toBeNull();
   });
 });

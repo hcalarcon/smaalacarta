@@ -158,7 +158,7 @@ describe("cambio de demora — SEGUIMIENTO-44", () => {
       {
         kind: "prep",
         title: "El local actualizó la demora",
-        body: "Listo entre 19:45 y 19:55 (aprox.)",
+        body: "Listo aprox. 19:45",
       },
     ]);
   });

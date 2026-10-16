@@ -25,6 +25,11 @@ export type OrderRecord = {
   total: number | null;
   // Cuántos recordatorios de pedido sin atender mandó `run_order_timers()` (ADMIN-PWA-33).
   new_order_reminders: number;
+  // La hora de listo que cargó el local y la marca del aviso previo para retirar (ENVIO-158 y 159).
+  prep_ready_at: string | null;
+  pickup_reminder_sent_at: string | null;
+  // Cuándo cambió por última vez: solo para medir cuánto tarda el webhook en llegar (ENVIO-172).
+  updated_at?: string;
 };
 
 export type WebhookPayload = {
@@ -40,6 +45,9 @@ export type PushEventKind =
   | "courier_chosen"
   | "courier_not_chosen"
   | "order_cancelled"
+  | "courier_pickup_soon"
+  | "courier_order_ready"
+  | "courier_prep_changed"
   // Al local
   | "local_new_order"
   | "local_new_order_reminder"
@@ -47,6 +55,20 @@ export type PushEventKind =
   | "local_no_offers";
 
 export type PushEvent = { kind: PushEventKind; order: OrderRecord };
+
+// Dos horas son la misma si son el mismo instante, aunque vengan escritas distinto (`+00:00` o `Z`, con o
+// sin milisegundos, otra zona horaria): comparar el texto avisaría de un cambio que no existe (ENVIO-167).
+function isDifferentInstant(a: string, b: string | null): boolean {
+  if (b === null) return true;
+
+  // Postgres puede escribir la zona como `+00`, que `Date` no entiende: se completa a `+00:00`.
+  const instant = (value: string) => new Date(value.replace(/([T ]\d\d:\d\d(?::\d\d(?:\.\d+)?)?[+-]\d\d)$/, "$1:00")).getTime();
+  const left = instant(a);
+  const right = instant(b);
+
+  if (Number.isNaN(left) || Number.isNaN(right)) return a !== b;
+  return left !== right;
+}
 
 // ¿Los repartidores pueden verlo y ofertar? Es la misma regla que `courier_sees_order` en la base, sin lo
 // que depende de cada repartidor (zona que cubre, rechazos): buscando, sin elegido, abierto y, si es de
@@ -99,6 +121,36 @@ export function detectEvents(payload: WebhookPayload): PushEvent[] {
   }
 
   if (order.status === "cancelled" && before.status !== "cancelled") add("order_cancelled");
+
+  // Avisos al repartidor que ya tiene el pedido (ENVIO-158 a 160). Un pedido cerrado no avisa más.
+  const withCourier =
+    order.courier_id !== null &&
+    order.courier_status === "accepted" &&
+    order.status !== "cancelled" &&
+    order.status !== "delivered";
+
+  if (withCourier) {
+    // El cron suma la marca 10 minutos antes de la hora de listo; que se borre (se rearma) no avisa.
+    if (
+      order.pickup_reminder_sent_at !== null &&
+      before.pickup_reminder_sent_at === null &&
+      (order.status === "confirmed" || order.status === "preparing")
+    ) {
+      add("courier_pickup_soon");
+    }
+
+    if (order.status === "ready" && before.status !== "ready") add("courier_order_ready");
+
+    if (
+      order.prep_ready_at !== null &&
+      isDifferentInstant(order.prep_ready_at, before.prep_ready_at) &&
+      order.status !== "ready" &&
+      order.status !== "handed_to_courier" &&
+      order.status !== "on_the_way"
+    ) {
+      add("courier_prep_changed");
+    }
+  }
 
   // El cron suma un recordatorio mientras el pedido por menú sigue sin atender; si ya lo atendieron en el
   // medio, el aviso no tiene sentido.

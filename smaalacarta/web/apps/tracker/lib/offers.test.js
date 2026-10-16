@@ -66,6 +66,7 @@ describe("offerView y confirmText — SEGUIMIENTO-28", () => {
       reason: null,
       list: null,
       recommended: false,
+      vehicles: [],
     });
 
     expect(offerView(offer({ price: 6500, reason: "Fuera de zona", favorite: true }), 5000, "es", money)).toEqual({
@@ -75,7 +76,10 @@ describe("offerView y confirmText — SEGUIMIENTO-28", () => {
       reason: "Fuera de zona",
       list: "$5000",
       recommended: true,
+      vehicles: [],
     });
+
+    expect(offerView(offer({ vehicles: ["moto", "auto"] }), 5000, "es", money).vehicles).toEqual(["moto", "auto"]);
   });
 
   it("sin nombre no inventa uno", () => {

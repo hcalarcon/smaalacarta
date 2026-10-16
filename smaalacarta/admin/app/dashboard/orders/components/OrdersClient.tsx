@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useOrderChanges } from "@/lib/realtime/useOrderChanges";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import ManualOrderDialog from "./ManualOrderDialog";
@@ -17,6 +18,7 @@ import {
   confirmSettlementAction,
   adjustPrepAction,
   selfDeliveryAction,
+  setNeedsCarAction,
   setOrderStatusAction,
   setPrepAction,
 } from "../actions";
@@ -47,8 +49,8 @@ import {
 } from "@/lib/orders/urgent-alert";
 import { acceptsPrepTime } from "@/lib/orders/prep";
 import { readLastPrep, saveLastPrep } from "@/lib/orders/prep-last";
-import { compareForBoard } from "@/lib/orders/scheduled";
 import { boardColumn, type BoardColumn } from "@/lib/orders/status";
+import { compareByUrgency, orderUrgency } from "@/lib/orders/urgency";
 import { formatMoney } from "@/lib/promotions/pricing";
 
 // "Terminados" (entregados o cancelados) no es una columna más del tablero:
@@ -88,6 +90,7 @@ export default function OrdersClient({
   offers = [],
   suggestedPrepMinutes = null,
   defaultPrepMinutes = 20,
+  vehicleEnabled = false,
 }: {
   slug: string;
   orders: Order[];
@@ -103,8 +106,12 @@ export default function OrdersClient({
   // defecto del negocio, para preseleccionar el selector.
   suggestedPrepMinutes?: number | null;
   defaultPrepMinutes?: number;
+  // El interruptor del vehículo del repartidor (ENVIO-175): apagado, no se ve nada de moto/auto.
+  vehicleEnabled?: boolean;
 }) {
   const router = useRouter();
+  // Un cambio en la base trae los datos nuevos al instante (ENVIO-172); la consulta de abajo queda de respaldo.
+  useOrderChanges(() => router.refresh());
 
   // La hora arranca con la del servidor para que el primer render coincida en los dos
   // lados; después se actualiza sola.
@@ -113,6 +120,8 @@ export default function OrdersClient({
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
+  // En el celular las tres columnas son pestañas; desde `lg` se ven las tres juntas (ADMIN-PEDIDOS-54).
+  const [tab, setTab] = useState<BoardColumn>("nuevos");
   // Pedido cuya rendición se está por confirmar como recibida (ENVIO-43).
   const [receivingId, setReceivingId] = useState<string | null>(null);
   // El selector del tiempo estimado (ADMIN-PEDIDOS-31): al aceptar, o para cargarlo después.
@@ -121,6 +130,8 @@ export default function OrdersClient({
   );
   // Un cambio a la vez: un segundo toque que llegue antes de que vuelva la respuesta no hace nada
   // (ADMIN-PEDIDOS-51). El servidor es idempotente igual; esto evita ni siquiera pedirlo.
+  // "Necesita auto" del diálogo de aceptar (ENVIO-176): arranca apagado en cada pedido.
+  const [acceptNeedsCar, setAcceptNeedsCar] = useState(false);
   const inFlight = useRef(false);
 
   // Sonido: la preferencia se lee en el navegador (no en el servidor) para que el primer
@@ -136,6 +147,9 @@ export default function OrdersClient({
   const [mutedUntil, setMutedUntil] = useState<number | null>(null);
   // Pedidos cuya tarjeta se cerró con "Ver pedidos": no vuelve a aparecer por ellos.
   const [dismissedIds, setDismissedIds] = useState<Set<string>>(() => new Set());
+  // Pedidos que se acaban de aceptar y el servidor todavía no confirmó: dejan de contar como sin atender en
+  // el momento (actualización optimista). Si la acción falla, vuelven.
+  const [acceptedIds, setAcceptedIds] = useState<Set<string>>(() => new Set());
   const [blinkPhase, setBlinkPhase] = useState(true);
   const reducedMotion = useSyncExternalStore(subscribeReducedMotion, reducedMotionSnapshot, () => false);
 
@@ -154,7 +168,7 @@ export default function OrdersClient({
     soundOnRef.current = soundOn;
   }, [soundOn]);
 
-  const unattended = unattendedOrders(orders);
+  const unattended = unattendedOrders(orders).filter((order) => !acceptedIds.has(order.id));
   const count = unattended.length;
   const ordersRef = useRef(orders);
   const alarmActive = soundOn && audioReady && count > 0 && mutedUntil === null;
@@ -355,21 +369,32 @@ export default function OrdersClient({
   );
   const alertOrder = byAge.find((order) => !dismissedIds.has(order.id)) ?? null;
 
+  function markAccepted(orderId: string, accepted: boolean) {
+    setAcceptedIds((current) => {
+      const next = new Set(current);
+      if (accepted) next.add(orderId);
+      else next.delete(orderId);
+      return next;
+    });
+  }
+
   function viewOrders() {
     setDismissedIds((current) => new Set([...current, ...unattended.map((order) => order.id)]));
   }
 
   // Aceptar un pedido pendiente (con hora de entrega ya marcada o no) pasa por el selector del tiempo; lo
   // programado y anticipado ya tiene su hora y se confirma directo (ADMIN-PEDIDOS-31).
-  function requestStatus(order: Order, status: string, note?: string) {
+  // Devuelve la promesa de la acción para que el botón que la llamó espere (ENVIO-168).
+  function requestStatus(order: Order, status: string, note?: string): Promise<void> | undefined {
     if (status === "confirmed" && order.status === "pending" && acceptsPrepTime(order)) {
       setError(null);
+      setAcceptNeedsCar(false);
       // `last`: el último tiempo que usó el local en este navegador (ADMIN-PEDIDOS-52), leído al abrir.
       setPrepPicker({ orderId: order.id, mode: "accept", last: readLastPrep(slug) });
       return;
     }
 
-    void changeStatus(order.id, status, note);
+    return changeStatus(order.id, status, note, order.status, order.status === "pending" && status === "confirmed");
   }
 
   async function submitPrep(minutes: number | null) {
@@ -379,17 +404,22 @@ export default function OrdersClient({
     inFlight.current = true;
     setError(null);
     setBusyId(orderId);
+    if (mode === "accept") markAccepted(orderId, true);
 
     try {
       const result =
-        mode === "accept" ? await acceptOrderAction(orderId, minutes) : await setPrepAction(orderId, minutes ?? 0, null);
+        mode === "accept" ? await acceptOrderAction(orderId, minutes, vehicleEnabled && acceptNeedsCar) : await setPrepAction(orderId, minutes ?? 0, null);
 
       if (result.ok) {
         setPrepPicker(null);
         if (minutes !== null) saveLastPrep(slug, minutes);
-      } else setError(result.error);
+      } else {
+        setError(result.error);
+        if (mode === "accept") markAccepted(orderId, false);
+      }
     } catch {
       setError("No pudimos guardar el cambio. Probá de nuevo.");
+      if (mode === "accept") markAccepted(orderId, false);
     } finally {
       inFlight.current = false;
       setBusyId(null);
@@ -397,18 +427,25 @@ export default function OrdersClient({
     }
   }
 
-  async function changeStatus(orderId: string, status: string, note?: string) {
+  // `from`: el estado que el usuario veía al tocar; la base solo aplica el cambio si el pedido sigue ahí, así un
+  // doble click o dos pestañas nunca avanzan dos pasos.
+  async function changeStatus(orderId: string, status: string, note?: string, from?: string, accepting = false) {
     if (inFlight.current) return;
 
     inFlight.current = true;
     setError(null);
     setBusyId(orderId);
+    if (accepting) markAccepted(orderId, true);
 
     try {
-      const result = await setOrderStatusAction(orderId, status, note);
-      if (!result.ok) setError(result.error);
+      const result = await setOrderStatusAction(orderId, status, note, from);
+      if (!result.ok) {
+        setError(result.error);
+        if (accepting) markAccepted(orderId, false);
+      }
     } catch {
       setError("No pudimos guardar el cambio. Probá de nuevo.");
+      if (accepting) markAccepted(orderId, false);
     } finally {
       inFlight.current = false;
       setBusyId(null);
@@ -467,11 +504,13 @@ export default function OrdersClient({
 
   const byColumn = (key: BoardColumn) => {
     const list = orders.filter((order) => boardColumn(order.status) === key);
-    // Los nuevos y en curso, del más viejo al más nuevo (el más urgente primero) y, en
-    // los programados, por la hora para la que son; los terminados, los más recientes.
+    // Lo que pide atención primero (atrasado, sin repartidor, sin atender) y, a igual urgencia, del más
+    // viejo al más nuevo y los programados por su hora; los terminados, los más recientes.
     return key === "cerrados"
       ? list.slice(0, CLOSED_SHOWN)
-      : [...list].sort(compareForBoard);
+      : [...list].sort((a, b) =>
+          compareByUrgency(a, b, now, (order) => offersByOrder.get(order.id)?.ofertas.length ?? 0),
+        );
   };
 
   return (
@@ -536,22 +575,64 @@ export default function OrdersClient({
         </div>
       ) : (
         <div className="space-y-6">
+          <div role="tablist" aria-label="Columnas del tablero" className="flex gap-1.5 rounded-2xl bg-cream/70 p-1.5 lg:hidden">
+            {COLUMNS.map((column) => {
+              const total = orders.filter((o) => boardColumn(o.status) === column.key).length;
+              const selectedTab = tab === column.key;
+
+              return (
+                <button
+                  key={column.key}
+                  type="button"
+                  role="tab"
+                  aria-selected={selectedTab}
+                  onClick={() => setTab(column.key)}
+                  className={`flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-xl px-2 text-sm font-semibold transition ${
+                    selectedTab ? "bg-brand text-white shadow-sm" : "text-brand hover:bg-white"
+                  }`}
+                >
+                  {column.title}
+                  <span
+                    className={`rounded-full px-1.5 text-xs font-medium ${
+                      selectedTab ? "bg-white/20 text-white" : "bg-white text-stone-600"
+                    }`}
+                  >
+                    {total}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
           <div className="grid gap-5 lg:grid-cols-3">
             {COLUMNS.map((column) => {
               const list = byColumn(column.key);
               const total = orders.filter((o) => boardColumn(o.status) === column.key).length;
+              const urgent = list.filter(
+                (o) => orderUrgency(o, now, offersByOrder.get(o.id)?.ofertas.length ?? 0) > 0,
+              ).length;
 
               return (
-                <section key={column.key} className="rounded-3xl bg-cream/70 p-4">
-                  <header className="mb-3 flex items-baseline justify-between">
+                <section
+                  key={column.key}
+                  className={`rounded-3xl bg-cream/70 p-4 lg:block ${tab === column.key ? "" : "hidden"}`}
+                >
+                  <header className="mb-3 flex items-baseline justify-between gap-2">
                     <h2 className="font-semibold text-brand">{column.title}</h2>
-                    <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-stone-600">
-                      {total}
+                    <span className="flex items-center gap-1.5">
+                      {urgent > 0 ? (
+                        <span className="rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                          {urgent} urgente{urgent === 1 ? "" : "s"}
+                        </span>
+                      ) : null}
+                      <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-stone-600">
+                        {total}
+                      </span>
                     </span>
                   </header>
                   <p className="mb-3 text-xs text-stone-500">{column.hint}</p>
 
-                  <div className="max-h-[65vh] space-y-3 overflow-y-auto pr-1">
+                  <div className="space-y-3 lg:max-h-[65vh] lg:overflow-y-auto lg:pr-1">
                     {list.length === 0 ? (
                       <p className="rounded-2xl border border-dashed border-line-strong p-4 text-center text-sm text-stone-400">
                         Sin pedidos
@@ -575,6 +656,7 @@ export default function OrdersClient({
                           onConfirmSettlement={() => setReceivingId(order.id)}
                           couriers={couriers}
                           offers={offersByOrder.get(order.id)}
+                          vehicleEnabled={vehicleEnabled}
                         />
                       ))
                     )}
@@ -608,6 +690,10 @@ export default function OrdersClient({
           selected && resolveDelivery(selected.id, () => assignCourierAction(selected.id, courierId, note))
         }
         onSelfDelivery={() => selected && resolveDelivery(selected.id, () => selfDeliveryAction(selected.id))}
+        vehicleEnabled={vehicleEnabled}
+        onNeedsCar={(needsCar) =>
+          selected && resolveDelivery(selected.id, () => setNeedsCarAction(selected.id, needsCar))
+        }
         onConfirmSettlement={() => selected && setReceivingId(selected.id)}
       />
 
@@ -626,7 +712,8 @@ export default function OrdersClient({
         loading={busyId === receivingId && receivingId !== null}
       />
 
-      {alertOrder ? (
+      {/* Con el selector abierto la tarjeta no queda debajo: un solo diálogo (ENVIO-168). */}
+      {alertOrder && !activePicker ? (
         <NewOrderAlert
           order={alertOrder}
           moreCount={count - 1}
@@ -652,6 +739,10 @@ export default function OrdersClient({
           onConfirm={(minutes) => submitPrep(minutes)}
           onAcceptWithout={() => submitPrep(null)}
           onClose={() => setPrepPicker(null)}
+          needsCar={acceptNeedsCar}
+          onNeedsCarChange={
+            vehicleEnabled && prepOrder.courier_status ? (value) => setAcceptNeedsCar(value) : undefined
+          }
         />
       ) : null}
 

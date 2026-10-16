@@ -11,6 +11,8 @@ const NO_STORE = { "cache-control": "no-store" };
 // navegador: no hay sesión ni CORS, y el secreto del encabezado es lo único que lo autentica (el proxy no
 // toca esta ruta). La lógica está en `src/lib/push/`; esto es solo el conector.
 export async function POST(request: NextRequest) {
+  const startedAt = Date.now();
+
   // Primero el secreto: sin él no se lee el cuerpo ni se abre la base.
   if (!secretMatches(request.headers.get("x-webhook-secret"), process.env.PUSH_WEBHOOK_SECRET)) {
     return NextResponse.json({ error: "unauthorized" }, { status: 401, headers: NO_STORE });
@@ -34,5 +36,14 @@ export async function POST(request: NextRequest) {
   // 200 aunque algún aparato falle: el webhook no tiene que reintentar por eso (ADMIN-PWA-26).
   const result = await handlePushWebhook(deps, payload);
 
-  return NextResponse.json({ ok: true, ...result }, { headers: NO_STORE });
+  // Para medir (ENVIO-172): `lagMs` es lo que pasó entre el cambio en la base y la llegada del webhook (incluye
+  // el arranque de la función); `handlerMs`, lo que tardó acá en consultar y mandar los avisos.
+  const updatedAt = payload.record?.updated_at ? Date.parse(payload.record.updated_at) : NaN;
+  const timings = {
+    lagMs: Number.isNaN(updatedAt) ? null : startedAt - updatedAt,
+    handlerMs: Date.now() - startedAt,
+  };
+  console.info("push/order", { type: payload.type, ...result, ...timings });
+
+  return NextResponse.json({ ok: true, ...result, ...timings }, { headers: NO_STORE });
 }

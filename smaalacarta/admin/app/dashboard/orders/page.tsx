@@ -5,6 +5,7 @@ import OrdersClient from "./components/OrdersClient";
 import { getDeliveryOptions } from "@/lib/db/delivery-zones";
 import { getManualOrderMenu, getSuggestedPrepMinutes, listOrderOffers, listOrders } from "@/lib/db/orders";
 import { getPrepSettings } from "@/lib/db/settings";
+import { isVehicleEnabled } from "@/lib/db/vehicle";
 import { requireBusiness } from "@/lib/get-current-business";
 import { manualDeliveryContext } from "@/lib/orders/manual-context";
 import { hasOrders } from "@/lib/plan-access";
@@ -29,7 +30,7 @@ export default async function OrdersPage() {
   // que se leen después ya la ven.
   const offers = business.courier_delivery ? await listOrderOffers() : [];
 
-  const [orders, menu, delivery, suggestedPrep, prepSettings] = await Promise.all([
+  const [orders, menu, delivery, suggestedPrep, prepSettings, vehicleEnabled] = await Promise.all([
     listOrders(business.id),
     // El menú con sus opciones, para cargar un pedido a mano con el precio de la base (ADMIN-PEDIDOS-47).
     getManualOrderMenu(business.id),
@@ -38,6 +39,8 @@ export default async function OrdersPage() {
     // Para el selector del tiempo al aceptar (ADMIN-PEDIDOS-32): la sugerencia y el tiempo por defecto.
     getSuggestedPrepMinutes(business.id),
     getPrepSettings(business.id),
+    // Si la plataforma tiene prendido el vehículo del repartidor (ENVIO-175): "Necesita auto" y los íconos.
+    business.courier_delivery ? isVehicleEnabled() : Promise.resolve(false),
   ]);
 
   return (
@@ -56,6 +59,7 @@ export default async function OrdersPage() {
       offers={offers}
       suggestedPrepMinutes={suggestedPrep}
       defaultPrepMinutes={prepSettings.defaultPrepMinutes}
+      vehicleEnabled={vehicleEnabled}
     />
   );
 }

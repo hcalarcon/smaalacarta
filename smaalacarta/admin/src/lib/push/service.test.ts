@@ -163,3 +163,69 @@ describe("fallas — ADMIN-PWA-26", () => {
     expect(d.sent.map((s) => s.title)).toEqual(["Pedido nuevo #0042", "Pedido nuevo #0042"]);
   });
 });
+
+describe("circuito de tiempos — ENVIO-158 a 160", () => {
+  const taken = { courier_status: "accepted", courier_id: "c-moto", status: "confirmed" };
+
+  it("el aviso previo, Listo y el cambio de demora van solo al repartidor del pedido", async () => {
+    const d = deps();
+    await handlePushWebhook(
+      d,
+      update({ ...taken, pickup_reminder_sent_at: null }, { ...taken, pickup_reminder_sent_at: "2026-10-12T15:20:00Z" }),
+    );
+    await handlePushWebhook(d, update({ ...taken, status: "preparing" }, { ...taken, status: "ready" }));
+    await handlePushWebhook(
+      d,
+      update({ ...taken, prep_ready_at: "2026-10-12T15:30:00Z" }, { ...taken, prep_ready_at: "2026-10-12T16:00:00Z" }),
+    );
+
+    expect(d.sent).toHaveLength(3);
+    expect(usersOf(d)).toEqual(["u-c-moto", "u-c-moto", "u-c-moto"]);
+    expect(d.sent.every((s) => s.url === "/admin/repartidor")).toBe(true);
+  });
+});
+
+describe("rapidez del aviso — ENVIO-172", () => {
+  it("busca el nombre del local mientras resuelve a quién avisar, no después", async () => {
+    let release: (ids: string[]) => void = () => undefined;
+    const d = deps({
+      courierUserIds: vi.fn(() => new Promise<string[]>((resolve) => (release = resolve))),
+    });
+
+    const run = handlePushWebhook(
+      d,
+      update(
+        { status: "confirmed", courier_status: "accepted", courier_id: "c-moto" },
+        { status: "ready", courier_status: "accepted", courier_id: "c-moto" },
+      ),
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(d.businessName).toHaveBeenCalled();
+    expect(d.send).not.toHaveBeenCalled();
+
+    release(["u-c-moto"]);
+    const result = await run;
+
+    expect(result.sent).toBe(1);
+  });
+
+  it("un aviso sin destinatarios no deja una consulta fallida sin atender", async () => {
+    const d = deps({
+      courierUserIds: vi.fn(async () => []),
+      businessName: vi.fn(async () => {
+        throw new Error("caída");
+      }),
+    });
+
+    const result = await handlePushWebhook(
+      d,
+      update(
+        { status: "confirmed", courier_status: "accepted", courier_id: "c-moto" },
+        { status: "ready", courier_status: "accepted", courier_id: "c-moto" },
+      ),
+    );
+
+    expect(result.sent).toBe(0);
+  });
+});

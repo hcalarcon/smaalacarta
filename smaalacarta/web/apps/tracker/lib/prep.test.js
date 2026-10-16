@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { DICTIONARY, LANGS } from "../../menu-app/lib/i18n.js";
-import { PREP_WINDOW_MINUTES, prepView } from "./prep.js";
+import { PREP_WINDOW_MINUTES, arrivalView, etaView, prepView } from "./prep.js";
 
 // 21:30 y 21:40 en Argentina (UTC-3).
 const DESDE = "2026-10-13T00:30:00Z";
@@ -20,23 +20,23 @@ describe("antes de la ventana — SEGUIMIENTO-39", () => {
     const view = prepView(prep(), { now: at("2026-10-13T00:18:00Z"), lang: "es" });
 
     expect(view.kind).toBe("range");
-    expect(view.text).toBe("Listo entre 21:30 y 21:40 (aprox.)");
-    expect(view.hint).toBe("en unos 12 min");
+    expect(view.text).toBe("Listo aprox. 21:30");
+    expect(view.hint).toBe("faltan 12 min");
   });
 
   it("para retirar, dice desde qué hora puede pasar", () => {
     const view = prepView(prep(), { now: at("2026-10-13T00:18:00Z"), lang: "es", pickup: true });
 
     expect(view.text).toBe("Podés pasar a retirar desde las 21:30 (aprox.)");
-    expect(view.hint).toBe("en unos 12 min");
+    expect(view.hint).toBe("faltan 12 min");
   });
 
   it("la cuenta se actualiza con la hora y redondea hacia arriba", () => {
     const early = prepView(prep(), { now: at("2026-10-13T00:29:01Z"), lang: "es" });
-    expect(early.hint).toBe("en unos 1 min");
+    expect(early.hint).toBe("falta 1 min");
 
     const before = prepView(prep(), { now: at("2026-10-13T00:00:00Z"), lang: "es" });
-    expect(before.hint).toBe("en unos 30 min");
+    expect(before.hint).toBe("faltan 30 min");
   });
 
   it("dentro de la ventana no muestra un número: dice que falta poco", () => {
@@ -48,12 +48,12 @@ describe("antes de la ventana — SEGUIMIENTO-39", () => {
 
   it("en inglés y en portugués, con la hora de Argentina", () => {
     const en = prepView(prep(), { now: at("2026-10-13T00:18:00Z"), lang: "en" });
-    expect(en.text).toBe("Ready between 21:30 and 21:40 (approx.)");
-    expect(en.hint).toBe("in about 12 min");
+    expect(en.text).toBe("Ready around 21:30");
+    expect(en.hint).toBe("12 min to go");
 
     const pt = prepView(prep(), { now: at("2026-10-13T00:18:00Z"), lang: "pt" });
-    expect(pt.text).toBe("Pronto entre 21:30 e 21:40 (aprox.)");
-    expect(pt.hint).toBe("em cerca de 12 min");
+    expect(pt.text).toBe("Pronto por volta das 21:30");
+    expect(pt.hint).toBe("faltam 12 min");
   });
 });
 
@@ -62,7 +62,7 @@ describe("pasada la ventana — SEGUIMIENTO-40", () => {
     const view = prepView(prep(), { now: at("2026-10-13T00:55:00Z"), lang: "es" });
 
     expect(view.kind).toBe("late");
-    expect(view.text).toBe("Se está demorando un poco más de lo previsto");
+    expect(view.text).toBe("Unos minutos más");
     expect(view.hint).toBeNull();
     expect(view.text).not.toMatch(/\d/);
   });
@@ -122,5 +122,57 @@ describe("lo que no es válido — SEGUIMIENTO-42", () => {
         expect(DICTIONARY[lang][key], `${lang} ${key}`).toBeTruthy();
       }
     }
+  });
+});
+
+describe("la hora de llegada del repartidor — SEGUIMIENTO-45", () => {
+  // Llega a las 21:55 (Argentina).
+  const LLEGA = Date.parse("2026-10-13T00:55:00Z");
+
+  it("dice a qué hora llega y cuánto falta, y se va descontando", () => {
+    const view = arrivalView(LLEGA, { now: at("2026-10-13T00:43:00Z"), lang: "es" });
+    expect(view).toEqual({ kind: "range", text: "Llega aprox. 21:55", hint: "faltan 12 min" });
+
+    expect(arrivalView(LLEGA, { now: at("2026-10-13T00:54:30Z"), lang: "es" }).hint).toBe("falta 1 min");
+  });
+
+  it("pasada la hora dice 'Unos minutos más', sin números negativos", () => {
+    for (const now of ["2026-10-13T00:55:00Z", "2026-10-13T01:20:00Z"]) {
+      const view = arrivalView(LLEGA, { now: at(now), lang: "es" });
+      expect(view).toEqual({ kind: "late", text: "Unos minutos más", hint: null });
+      expect(view.text).not.toMatch(/[-d]/);
+    }
+  });
+
+  it("sin hora válida no muestra nada, y está en los tres idiomas", () => {
+    expect(arrivalView(null, { now: new Date(), lang: "es" })).toBeNull();
+    expect(arrivalView(Number.NaN, { now: new Date(), lang: "es" })).toBeNull();
+    expect(arrivalView(LLEGA, { now: at("2026-10-13T00:43:00Z"), lang: "en" }).text).toBe("Arrives around 21:55");
+    expect(arrivalView(LLEGA, { now: at("2026-10-13T00:43:00Z"), lang: "pt" }).hint).toBe("faltam 12 min");
+  });
+});
+
+describe("lo que se ve debajo del estado — SEGUIMIENTO-45", () => {
+  it("pedido aceptado con demora: 'Listo aprox. HH:MM · faltan X min' en una sola línea", () => {
+    const view = etaView({ prep: prep(), arrivesAt: null }, { now: at("2026-10-13T00:18:00Z"), lang: "es" });
+
+    expect(view.kind).toBe("range");
+    expect(view.line).toBe("Listo aprox. 21:30 · faltan 12 min");
+  });
+
+  it("con repartidor y su hora de llegada, manda la llegada", () => {
+    const view = etaView(
+      { prep: prep(), arrivesAt: Date.parse("2026-10-13T00:55:00Z") },
+      { now: at("2026-10-13T00:43:00Z"), lang: "es" },
+    );
+
+    expect(view.line).toBe("Llega aprox. 21:55 · faltan 12 min");
+  });
+
+  it("sin demora ni llegada no hay nada; pasada la hora dice 'Unos minutos más'", () => {
+    expect(etaView({ prep: undefined, arrivesAt: null }, { now: new Date(), lang: "es" })).toBeNull();
+    expect(etaView({ prep: prep(), arrivesAt: null }, { now: at("2026-10-13T01:00:00Z"), lang: "es" }).line).toBe(
+      "Unos minutos más",
+    );
   });
 });

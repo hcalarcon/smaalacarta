@@ -20,6 +20,8 @@ export const ORDER: OrderRecord = {
   created_at: "2026-10-12T15:00:00.000Z",
   total: 12500,
   new_order_reminders: 0,
+  prep_ready_at: null,
+  pickup_reminder_sent_at: null,
 };
 
 export const insert = (record: Partial<OrderRecord> = {}): WebhookPayload => ({

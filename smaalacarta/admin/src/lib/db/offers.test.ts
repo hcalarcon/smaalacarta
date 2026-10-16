@@ -152,19 +152,24 @@ afterAll(async () => {
   await db.close();
 });
 
-describe("la búsqueda está abierta desde que se crea — ENVIO-59 y 95", () => {
-  it("el pedido con envío nace sin repartidor y buscando, y ya lo ven los repartidores", async () => {
+describe("la búsqueda se abre al confirmar — ENVIO-59, 95 y 155", () => {
+  it("el pedido con envío nace sin repartidor y esperando: los repartidores no lo ven hasta que el local lo acepta", async () => {
     const o = await envio();
     const r = await row(o.id);
-    expect(r).toMatchObject({ courier_id: null, courier_status: "searching", status: "pending" });
-    expect(r.offered_at).not.toBeNull();
+    expect(r).toMatchObject({ courier_id: null, courier_status: "waiting", status: "pending" });
+    expect(r.offered_at).toBeNull();
+    expect(await sees(TOQUE_USER, o.id)).toBe(false);
+
+    expect((await confirm(o.id)).ok).toBe(true);
+    expect((await row(o.id)).courier_status).toBe("searching");
+    expect((await row(o.id)).offered_at).not.toBeNull();
     expect(await sees(TOQUE_USER, o.id)).toBe(true);
   });
 
-  it("confirmarlo no cambia la búsqueda: offered_at queda", async () => {
+  it("después de abrirse, seguir el pedido no cambia la búsqueda: offered_at queda", async () => {
     const o = await envio();
-    const antes = await row(o.id);
     expect((await confirm(o.id)).ok).toBe(true);
+    const antes = await row(o.id);
     await setStatus(ANA, o.id, "preparing");
     const despues = await row(o.id);
     expect(despues.courier_status).toBe("searching");
@@ -180,9 +185,10 @@ describe("la búsqueda está abierta desde que se crea — ENVIO-59 y 95", () =>
     expect(r).toMatchObject({ courier_id: null, courier_status: null, offered_at: null });
   });
 
-  it("el pedido programado se ofrece apenas se crea, con su hora", async () => {
+  it("el pedido programado se ofrece al aceptarlo, con su hora", async () => {
     const o = await envio();
     await db.exec(`update orders set scheduled_for = now() + interval '1 day' where id = '${o.id}'`);
+    expect((await confirm(o.id)).ok).toBe(true);
 
     const lista = await available(TOQUE_USER);
     const found = lista.find((x) => x.id === o.id);
@@ -258,12 +264,12 @@ describe("rechazar y devolver — ENVIO-65 y 66", () => {
     const o = await searching();
     await take(MOTO_USER, o.id, 7000, "Lluvia");
 
-    const sinMotivo = await call(MOTO_USER, `select public.courier_return_order('${o.id}', '  ')`);
+    const sinMotivo = await call(MOTO_USER, `select public.courier_return_order('${o.id}', 'other', '  ')`);
     expect(!sinMotivo.ok && sinMotivo.code).toBe("22023");
     expect((await row(o.id)).courier_id).toBe(MOTO);
 
     const antes = new Date((await row(o.id)).offered_at as string).getTime();
-    const ok = await call(MOTO_USER, `select public.courier_return_order('${o.id}', 'Se me pinchó la moto')`);
+    const ok = await call(MOTO_USER, `select public.courier_return_order('${o.id}', 'other', 'Se me pinchó la moto')`);
     expect(ok.ok).toBe(true);
 
     const r = await row(o.id);
@@ -303,15 +309,15 @@ describe("rechazar y devolver — ENVIO-65 y 66", () => {
     const o = await searching();
     await take(TOQUE_USER, o.id);
 
-    const otro = await call(MOTO_USER, `select public.courier_return_order('${o.id}', 'x')`);
+    const otro = await call(MOTO_USER, `select public.courier_return_order('${o.id}', 'vehicle')`);
     expect(!otro.ok && otro.code).toBe("P0002");
-    const local = await call(ANA, `select public.courier_return_order('${o.id}', 'x')`);
+    const local = await call(ANA, `select public.courier_return_order('${o.id}', 'vehicle')`);
     expect(local.ok).toBe(false);
-    const anon = await call(null, `select public.courier_return_order('${o.id}', 'x')`);
+    const anon = await call(null, `select public.courier_return_order('${o.id}', 'vehicle')`);
     expect(anon.ok).toBe(false);
 
     await setStatus(ANA, o.id, "handed_to_courier");
-    const tarde = await call(TOQUE_USER, `select public.courier_return_order('${o.id}', 'Ya lo tengo')`);
+    const tarde = await call(TOQUE_USER, `select public.courier_return_order('${o.id}', 'other', 'Ya lo tengo')`);
     expect(!tarde.ok && tarde.code).toBe("P0004");
     expect((await row(o.id)).courier_id).toBe(TOQUE);
   });
@@ -320,7 +326,7 @@ describe("rechazar y devolver — ENVIO-65 y 66", () => {
     const o = await searching();
     await take(TOQUE_USER, o.id);
     await setStatus(ANA, o.id, "ready");
-    const r = await call(TOQUE_USER, `select public.courier_return_order('${o.id}', 'No llego')`);
+    const r = await call(TOQUE_USER, `select public.courier_return_order('${o.id}', 'other', 'No llego')`);
     expect(r.ok).toBe(true);
     expect((await row(o.id)).status).toBe("ready");
     expect(await sees(MOTO_USER, o.id)).toBe(true);
@@ -607,5 +613,5 @@ describe("la migración convierte los pedidos abiertos de antes — ENVIO-74", (
     } finally {
       await old.close();
     }
-  });
+  }, 60_000);
 });

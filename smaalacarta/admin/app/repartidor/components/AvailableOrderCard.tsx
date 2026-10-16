@@ -1,7 +1,7 @@
 "use client";
 
 import { paymentLabel } from "@/lib/orders/labels";
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import {
   myOfferLabel,
@@ -9,11 +9,13 @@ import {
   resultNotice,
   type AvailableOrder,
 } from "@/lib/courier/panel";
+import { readyLine } from "@/lib/courier/times";
 import { collectionInfo, validateOffer, type OfferInput } from "@/lib/orders/courier";
 import { formatDateTime, timeAgo } from "@/lib/orders/format";
 import { preorderLabel, scheduledLabel } from "@/lib/orders/scheduled";
 import { formatMoney } from "@/lib/promotions/pricing";
 import PendingButton from "@/components/ui/PendingButton";
+import VehicleIcons from "@/components/ui/VehicleIcon";
 import ConfirmDeleteDialog from "../../dashboard/components/ConfirmDeleteDialog";
 
 type Errors = Partial<Record<"price" | "reason", string>>;
@@ -21,6 +23,32 @@ type Errors = Partial<Record<"price" | "reason", string>>;
 // Un pedido por el que el repartidor puede ofertar (ENVIO-71 y 113 a 115): local, barrio, precio de lista,
 // hora y cuántas ofertas hay; sin nada del cliente hasta que lo eligen. Si su oferta se cerró, muestra el
 // aviso en lugar de las acciones. Todo texto del local se escribe como texto, nunca como HTML.
+// Lo secundario de cada pedido (otro precio, retirar la oferta, rechazar) se abre aparte: a la vista queda
+// solo la acción principal (ADMIN-REPARTIDOR-3).
+function MoreOptions({ children }: { children: ReactNode }) {
+  return (
+    <details className="w-full rounded-xl border border-line">
+      <summary className="flex min-h-11 cursor-pointer items-center px-3 text-sm font-semibold text-stone-700">
+        Más opciones
+      </summary>
+      <div className="flex flex-wrap gap-2 px-3 pb-3">{children}</div>
+    </details>
+  );
+}
+
+function RejectButton({ busy, onClick }: { busy: boolean; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      disabled={busy}
+      onClick={onClick}
+      className="min-h-11 rounded-xl border border-red-200 px-5 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
+    >
+      Rechazar
+    </button>
+  );
+}
+
 export default function AvailableOrderCard({
   order,
   now,
@@ -55,6 +83,8 @@ export default function AvailableOrderCard({
   const collection = collectionInfo({ payment: order.pago, total: order.total, fee: listPrice });
   const when = order.anticipado ? preorderLabel(order.programado) : scheduledLabel(order.programado);
   const since = order.ofrecido_el ?? order.creado;
+  // La hora de listo y la demora que cargó el local (ENVIO-163): se ve antes de tomar u ofertar.
+  const ready = notice ? null : readyLine(order.listo_a, order.demora_min);
 
   // ¿El precio escrito es distinto del de lista? Entonces el motivo es obligatorio.
   const typed = validateOffer({ price, reason: "-" }, listPrice);
@@ -74,17 +104,19 @@ export default function AvailableOrderCard({
 
   return (
     <article
-      className={`rounded-2xl border p-4 shadow-sm ${notice ? "border-stone-200 bg-stone-50" : "border-line bg-white"}`}
+      className={`rounded-2xl border p-3 shadow-sm ${notice ? "border-stone-200 bg-stone-50" : "border-line bg-white"}`}
     >
-      <header className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <p className="text-base font-semibold text-brand">
-            #{order.numero} · {order.negocio.nombre}
-          </p>
-          <p className="text-xs text-stone-500">
-            Pedido de las {formatDateTime(order.creado)} · {timeAgo(since, now)}
-          </p>
-        </div>
+      <header className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
+        <p className="min-w-0 break-words text-base font-semibold text-brand">
+          #{order.numero} · {order.negocio.nombre}
+        </p>
+
+        {order.necesita_auto ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-900">
+            <VehicleIcons vehicles={["auto"]} />
+            Necesita auto
+          </span>
+        ) : null}
 
         {order.pago_estado === "not_required" || order.pago_estado === "paid" ? null : (
           <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-semibold text-stone-600">
@@ -92,7 +124,6 @@ export default function AvailableOrderCard({
           </span>
         )}
       </header>
-
       {notice ? (
         <p role="status" className="mt-3 rounded-xl bg-stone-200 px-3 py-2 text-sm font-semibold text-stone-800">
           {notice}
@@ -105,52 +136,24 @@ export default function AvailableOrderCard({
         </p>
       ) : null}
 
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <section>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Retirar en</h3>
-          <p className="mt-1 text-sm font-medium text-stone-900">{order.negocio.nombre}</p>
-          {order.negocio.direccion ? (
-            <p className="break-words text-sm text-stone-600">{order.negocio.direccion}</p>
-          ) : null}
-        </section>
-
-        <section>
-          <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Entregar en</h3>
-          <p className="mt-1 text-sm font-medium text-stone-900">{order.envio.zona ?? "-"}</p>
-          <p className="text-xs text-stone-500">
-            Los datos del cliente los ves cuando te eligen.
-          </p>
-        </section>
-      </div>
-
-      <dl className="mt-3 space-y-1 rounded-xl bg-cream p-3 text-sm text-stone-700">
-        <div className="flex gap-2">
-          <dt className="text-stone-500">{fixed ? "Precio del envío:" : "Precio de lista del envío:"}</dt>
-          <dd className="font-medium">{formatMoney(listPrice)}</dd>
-        </div>
-        <div className="flex gap-2">
-          <dt className="text-stone-500">Total del pedido (lo cobra el local):</dt>
-          <dd className="font-medium">{formatMoney(Number(order.total))}</dd>
-        </div>
-        <div className="flex gap-2">
-          <dt className="text-stone-500">Pago:</dt>
-          <dd>{paymentLabel(order.pago) || "-"}</dd>
-        </div>
-        {notice || fixed ? null : (
-          <div className="flex gap-2">
-            <dt className="text-stone-500">Ofertas:</dt>
-            <dd className="font-medium">{offersCountLabel(order.ofertas)}</dd>
-          </div>
-        )}
-      </dl>
-
       {notice ? null : (
         <p
-          className={`mt-3 rounded-xl px-3 py-2 text-sm font-semibold ${
+          className={`mt-2 rounded-xl px-3 py-2 text-sm font-semibold ${
             collection.cash ? "bg-amber-100 text-amber-900" : "bg-sky-50 text-sky-900"
           }`}
         >
           💵 {collection.text}
+        </p>
+      )}
+
+      {ready ? (
+        <p className="mt-3 rounded-xl bg-brand-soft px-3 py-2 text-sm font-semibold text-brand">⏱ {ready}</p>
+      ) : null}
+
+      {notice ? null : (
+        <p className="mt-2 break-words text-sm text-stone-700">
+          <span className="text-stone-500">Retiro</span> {order.negocio.direccion || order.negocio.nombre}{" "}
+          <span aria-hidden="true">→</span> <span className="text-stone-500">Entrega</span> {order.envio.zona ?? "-"}
         </p>
       )}
 
@@ -170,14 +173,9 @@ export default function AvailableOrderCard({
           >
             Tomar {formatMoney(listPrice)}
           </PendingButton>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => setDeclining(true)}
-            className="min-h-11 rounded-xl border border-red-200 px-5 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
-          >
-            Rechazar
-          </button>
+          <MoreOptions>
+            <RejectButton busy={busy} onClick={() => setDeclining(true)} />
+          </MoreOptions>
         </div>
       ) : mine && !editing ? (
         <div className="mt-3 space-y-2">
@@ -194,22 +192,17 @@ export default function AvailableOrderCard({
             >
               Cambiar
             </button>
-            <PendingButton
-              busy={busy}
-              pendingLabel="Retirando…"
-              onClick={onWithdraw}
-              className="min-h-11 rounded-xl border border-line-strong bg-white px-5 py-2 text-sm font-semibold text-stone-700 transition hover:bg-cream disabled:opacity-60"
-            >
-              Retirar
-            </PendingButton>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setDeclining(true)}
-              className="min-h-11 rounded-xl border border-red-200 px-5 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
-            >
-              Rechazar
-            </button>
+            <MoreOptions>
+              <PendingButton
+                busy={busy}
+                pendingLabel="Retirando…"
+                onClick={onWithdraw}
+                className="min-h-11 rounded-xl border border-line-strong bg-white px-5 py-2 text-sm font-semibold text-stone-700 transition hover:bg-cream disabled:opacity-60"
+              >
+                Retirar
+              </PendingButton>
+              <RejectButton busy={busy} onClick={() => setDeclining(true)} />
+            </MoreOptions>
           </div>
         </div>
       ) : editing ? (
@@ -270,24 +263,69 @@ export default function AvailableOrderCard({
           >
             Ofertar {formatMoney(listPrice)}
           </PendingButton>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => setEditing(true)}
-            className="min-h-11 rounded-xl border border-line-strong bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-cream disabled:opacity-60"
-          >
-            Otro precio
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            onClick={() => setDeclining(true)}
-            className="min-h-11 rounded-xl border border-red-200 px-5 py-2 text-sm font-semibold text-red-700 transition hover:bg-red-50 disabled:opacity-60"
-          >
-            Rechazar
-          </button>
+          <MoreOptions>
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => setEditing(true)}
+              className="min-h-11 rounded-xl border border-line-strong bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-cream disabled:opacity-60"
+            >
+              Otro precio
+            </button>
+            <RejectButton busy={busy} onClick={() => setDeclining(true)} />
+          </MoreOptions>
         </div>
       )}
+
+      <details className="mt-3 rounded-xl border border-line">
+        <summary className="flex min-h-11 cursor-pointer items-center px-3 text-sm font-semibold text-brand">
+          Ver detalle
+        </summary>
+        <div className="px-3 pb-3">
+          <p className="mt-1 text-xs text-stone-500">
+            Pedido de las {formatDateTime(order.creado)} · {timeAgo(since, now)}
+          </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Retirar en</h3>
+              <p className="mt-1 text-sm font-medium text-stone-900">{order.negocio.nombre}</p>
+              {order.negocio.direccion ? (
+                <p className="break-words text-sm text-stone-600">{order.negocio.direccion}</p>
+              ) : null}
+            </section>
+
+            <section>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-stone-500">Entregar en</h3>
+              <p className="mt-1 text-sm font-medium text-stone-900">{order.envio.zona ?? "-"}</p>
+              <p className="text-xs text-stone-500">
+                Los datos del cliente los ves cuando te eligen.
+              </p>
+            </section>
+          </div>
+
+              <dl className="mt-3 space-y-1 rounded-xl bg-cream p-3 text-sm text-stone-700">
+            <div className="flex gap-2">
+              <dt className="text-stone-500">{fixed ? "Precio del envío:" : "Precio de lista del envío:"}</dt>
+              <dd className="font-medium">{formatMoney(listPrice)}</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="text-stone-500">Total del pedido (lo cobra el local):</dt>
+              <dd className="font-medium">{formatMoney(Number(order.total))}</dd>
+            </div>
+            <div className="flex gap-2">
+              <dt className="text-stone-500">Pago:</dt>
+              <dd>{paymentLabel(order.pago) || "-"}</dd>
+            </div>
+            {notice || fixed ? null : (
+              <div className="flex gap-2">
+                <dt className="text-stone-500">Ofertas:</dt>
+                <dd className="font-medium">{offersCountLabel(order.ofertas)}</dd>
+              </div>
+            )}
+          </dl>
+
+            </div>
+      </details>
 
       <ConfirmDeleteDialog
         open={declining}

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import DashboardNav from "./DashboardNav";
 import MobileMenu from "./MobileMenu";
@@ -13,6 +13,7 @@ import PushEndpointField from "@/components/pwa/PushEndpointField";
 import PushToggle from "@/components/pwa/PushToggle";
 import ServiceWorkerRegister from "@/components/pwa/ServiceWorkerRegister";
 import { signOutAction } from "../../../app/(auth)/actions";
+import { readCollapsed, subscribeCollapsed, writeCollapsed } from "@/lib/layout/sidebar-pref";
 
 type DashboardShellProps = {
   title: string;
@@ -60,6 +61,8 @@ export default function DashboardShell({
   children,
 }: DashboardShellProps) {
   const [menuOpen, setMenuOpen] = useState(false);
+  // Menú lateral de escritorio achicado a solo íconos (ADMIN-PEDIDOS-55). En el servidor, abierto.
+  const collapsed = useSyncExternalStore(subscribeCollapsed, readCollapsed, () => false);
 
   // Escape cierra el menú móvil.
   useEffect(() => {
@@ -75,15 +78,48 @@ export default function DashboardShell({
 
   return (
     <div className="min-h-screen bg-cream text-stone-900">
-      {/* Escritorio: barra lateral fija. */}
-      <aside className="fixed inset-y-0 left-0 hidden w-60 flex-col border-r border-line bg-white lg:flex">
-        <div className="border-b border-line p-6">
-          <Logo />
-          <p className="mt-2 text-sm text-stone-500">{sidebarSubtitle}</p>
+      {/* Escritorio: barra lateral fija, que se achica a solo íconos. */}
+      <aside
+        className={`fixed inset-y-0 left-0 hidden flex-col border-r border-line bg-white transition-[width] motion-reduce:transition-none lg:flex ${
+          collapsed ? "w-16" : "w-60"
+        }`}
+      >
+        <div
+          className={`flex border-b border-line ${
+            collapsed ? "justify-center p-2" : "items-start justify-between p-6"
+          }`}
+        >
+          {collapsed ? null : (
+            <div>
+              <Logo />
+              <p className="mt-2 text-sm text-stone-500">{sidebarSubtitle}</p>
+            </div>
+          )}
+          <button
+            type="button"
+            onClick={() => writeCollapsed(!collapsed)}
+            aria-label={collapsed ? "Expandir menú lateral" : "Achicar menú lateral"}
+            aria-expanded={!collapsed}
+            title={collapsed ? "Expandir menú" : "Achicar menú"}
+            className="grid size-11 shrink-0 place-items-center rounded-lg text-stone-500 transition hover:bg-brand-soft hover:text-brand"
+          >
+            <svg
+              aria-hidden="true"
+              viewBox="0 0 24 24"
+              className={`h-5 w-5 transition-transform ${collapsed ? "rotate-180" : ""}`}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M15 6l-6 6 6 6" />
+            </svg>
+          </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-4">
-          <DashboardNav links={links} />
+        <div className={`flex-1 overflow-y-auto ${collapsed ? "p-2" : "p-4"}`}>
+          <DashboardNav links={links} collapsed={collapsed} />
         </div>
       </aside>
 
@@ -120,7 +156,7 @@ export default function DashboardShell({
         </div>
       ) : null}
 
-      <div className="lg:pl-60">
+      <div className={`transition-[padding] motion-reduce:transition-none ${collapsed ? "lg:pl-16" : "lg:pl-60"}`}>
         <header className="sticky top-0 z-30 border-b border-line bg-white/90 backdrop-blur">
           {alertBar}
           <div className="flex items-center justify-between gap-4 px-4 py-3 md:px-6 lg:px-8">

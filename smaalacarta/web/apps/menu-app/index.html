@@ -16,9 +16,33 @@
   </head>
   <body class="loading">
     <!-- LOADER -->
-    <div id="loader" class="loader">
-      <div class="spinner"></div>
+    <div id="loader" class="loader" role="status">
+      <!-- Hamburguesa que se arma (PUBLICO-83) -->
+      <svg class="loader-anim loader-hamburguesa" viewBox="0 0 120 100" aria-hidden="true">
+        <g class="loader-capa loader-capa-1"><path d="M26 76h68v6a10 10 0 0 1-10 10H36a10 10 0 0 1-10-10z" fill="var(--loader-pan, #d9902f)" /></g>
+        <g class="loader-capa loader-capa-2"><rect x="22" y="62" width="76" height="15" rx="7.5" fill="#5b3a29" /><path d="M30 66q4 3 8 0M52 68q4 3 8 0M76 66q4 3 8 0" stroke="#7a5239" stroke-width="2" fill="none" stroke-linecap="round" /></g>
+        <g class="loader-capa loader-capa-3"><path d="M20 58q10 9 20 0t20 0 20 0 20 0v-5H20z" fill="#5fae4e" /></g>
+        <g class="loader-capa loader-capa-4"><path d="M26 49h68l-8 12-10-6-12 8-12-8-10 6z" fill="#f6c343" /></g>
+        <g class="loader-capa loader-capa-5"><rect x="26" y="42" width="68" height="9" rx="4.5" fill="var(--loader-acento, #e0523c)" /></g>
+        <g class="loader-capa loader-capa-6">
+          <path d="M24 42a36 30 0 0 1 72 0z" fill="var(--loader-pan, #d9902f)" />
+          <path d="M34 30a28 22 0 0 1 14-9" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".45" />
+          <ellipse cx="50" cy="26" rx="3" ry="1.6" fill="#fff3d6" transform="rotate(-20 50 26)" /><ellipse cx="64" cy="19" rx="3" ry="1.6" fill="#fff3d6" /><ellipse cx="78" cy="27" rx="3" ry="1.6" fill="#fff3d6" transform="rotate(20 78 27)" /><ellipse cx="60" cy="32" rx="3" ry="1.6" fill="#fff3d6" transform="rotate(8 60 32)" />
+        </g>
+      </svg>
+      <span class="loader-marca" aria-hidden="true"><span class="loader-marca-texto">SMA a la carta</span></span>
+      <span class="loader-texto" data-i18n="loader.loading">Cargando…</span>
     </div>
+
+    <!-- Tema del loader (PUBLICO-85): el último que tuvo este menú, antes de que llegue la configuración -->
+    <script type="module">
+      import { loaderThemeKey, savedLoaderTheme } from "/apps/menu-app/lib/theme.js";
+      try {
+        const key = loaderThemeKey(location.hostname, location.pathname, location.search);
+        const saved = savedLoaderTheme(window.localStorage, key);
+        if (saved) document.documentElement.dataset.tema = saved;
+      } catch {}
+    </script>
 
     <!-- HEADER -->
     <header class="header sticky-header">
@@ -51,12 +75,29 @@
           </span>
         </div>
       </div>
-      <h1 id="nombre-negocio">...</h1>
-      <p id="descripcion-negocio"></p>
+      <!-- Logo y nombre (PUBLICO-97): en Clásica no cambia nada, en Moderna y Minimalista es la tarjeta de identidad -->
+      <div class="header-marca">
+        <img id="logo-negocio" class="logo-negocio" alt="" width="52" height="52" hidden />
+        <div class="header-titulo">
+          <h1 id="nombre-negocio">...</h1>
+          <p id="descripcion-negocio"></p>
+          <!-- Estado y zona en una línea chica (PUBLICO-97): solo Moderna y Minimalista; la completa app.js -->
+          <p id="linea-estado" class="linea-estado">
+            <span class="dot"></span>
+            <span id="linea-estado-texto"></span>
+          </p>
+        </div>
+      </div>
+
+      <!-- ZONA DE ENTREGA (PUBLICO-78): lo muestra app.js solo en locales con envío -->
+      <button id="zona-chip" class="zona-chip" type="button" hidden></button>
 
       <!-- BUSCADOR -->
       <input id="buscador" placeholder="Buscar..." data-i18n-placeholder="search" />
     </header>
+
+    <!-- ZONA DE ENTREGA (PUBLICO-73 a 77): tarjeta que arma app.js -->
+    <section id="zona-card" class="zona-card" aria-labelledby="zona-titulo" hidden></section>
 
     <!-- CATEGORÍAS -->
     <nav id="categorias" class="categorias sticky-categorias"></nav>
@@ -77,6 +118,33 @@
       </a>
     </section>
 
+    <!-- BARRA DE ABAJO (PUBLICO-92): solo la muestran Moderna y Minimalista; app.js la completa -->
+    <nav id="barra-app" class="barra-app" aria-label="Navegación del menú" data-i18n-aria-label="nav.label">
+      <button type="button" id="barra-menu" class="barra-boton" aria-label="Menú" data-i18n-aria-label="nav.menu">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M4 7h16M4 12h16M4 17h10" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        </svg>
+        <span data-i18n="nav.menu">Menú</span>
+      </button>
+      <button type="button" id="barra-promos" class="barra-boton" aria-label="Promos" data-i18n-aria-label="nav.promos" hidden>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M20 12l-8 8-9-9V4h7z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+          <circle cx="8" cy="8" r="1.5" fill="currentColor" />
+        </svg>
+        <span data-i18n="nav.promos">Promos</span>
+      </button>
+      <button type="button" id="barra-carrito" class="barra-boton" aria-label="Carrito" data-i18n-aria-label="nav.cart">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M6 6h15l-1.5 9h-12z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+          <path d="M6 6L5 3H2" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+          <circle cx="9" cy="20" r="1.5" fill="currentColor" />
+          <circle cx="18" cy="20" r="1.5" fill="currentColor" />
+        </svg>
+        <span data-i18n="nav.cart">Carrito</span>
+        <span id="barra-carrito-count" class="barra-contador" aria-hidden="true" hidden>0</span>
+      </button>
+    </nav>
+
     <!-- BOTÓN CARRITO -->
     <button id="btn-carrito" class="btn-carrito">
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -87,7 +155,7 @@
     </button>
 
     <!-- CARRITO -->
-    <div id="carrito-panel" class="carrito-panel">
+    <div id="carrito-panel" class="carrito-panel" role="dialog" aria-modal="true" aria-label="Tu pedido" data-i18n-aria-label="cart.title" tabindex="-1">
       <div class="carrito-header">
         <h2 data-i18n="cart.title">Tu pedido</h2>
         <button id="cerrar-carrito">✕</button>
@@ -104,10 +172,10 @@
     <div id="overlay" class="overlay"></div>
 
     <!-- CHECKOUT -->
-    <div id="checkout" class="checkout">
+    <div id="checkout" class="checkout" role="dialog" aria-modal="true" aria-labelledby="checkout-titulo" tabindex="-1">
       <div class="checkout-header">
-        <h2 data-i18n="checkout.title">Finalizar pedido</h2>
-        <button id="cerrar-checkout">✕</button>
+        <h2 id="checkout-titulo" data-i18n="checkout.title">Finalizar pedido</h2>
+        <button id="cerrar-checkout" type="button" aria-label="Cerrar" data-i18n-aria-label="checkout.close">✕</button>
       </div>
 
       <form id="form-pedido">
@@ -121,6 +189,7 @@
           <option value="retiro" data-i18n="checkout.pickup">Retiro en el local</option>
         </select>
         <p id="aviso-entrega" class="aviso-entrega" hidden></p>
+        <p id="aviso-sin-envio" class="aviso-entrega" role="status" hidden></p>
         <!-- Envío con repartidor: solo con entrega "delivery" y barrios disponibles (ENVIO-20). -->
         <div id="envio-repartidor" class="envio-repartidor" hidden>
           <select name="barrio" disabled>
@@ -152,7 +221,11 @@
         </select>
         <div id="datos-transferencia" class="datos-transferencia" hidden></div>
         <textarea name="notas" placeholder="Notas" data-i18n-placeholder="checkout.notes"></textarea>
-        <button type="submit" data-i18n="checkout.submit">Confirmar pedido</button>
+        <!-- Total y confirmar (PUBLICO-94): en Moderna y Minimalista quedan fijos abajo de la hoja -->
+        <div class="checkout-pie">
+          <p class="checkout-total"><span data-i18n="cart.total">Total</span> <span id="checkout-total" class="precio-pastilla">$0</span></p>
+          <button type="submit" data-i18n="checkout.submit">Confirmar pedido</button>
+        </div>
       </form>
     </div>
     <script src="/apps/menu-app/lightbox.js"></script>

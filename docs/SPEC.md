@@ -351,6 +351,71 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   pedir (como con `out_of_stock`), así el carrito se limpia solo.
 - **PUBLICO-72** Los textos están en es, en y pt (`promo.validUntil`, `promo.lastUnits`, `promo.lastOne`) y se ven bien en
   tema claro y oscuro en las tres plantillas.
+- **PUBLICO-73** Solo en locales con envío (entrega "delivery" habilitada y `public_delivery_zones` con al menos un
+  barrio), al entrar el menú muestra una tarjeta liviana que se puede cerrar: "¿Para envío o para retirar?". En los demás
+  locales (y en los menús de un JSON) no aparece nada nuevo.
+- **PUBLICO-74** "Retirar" cierra la tarjeta y deja el checkout en "Retiro en el local". "Envío" muestra las zonas del
+  local con un buscador que ignora acentos y mayúsculas.
+- **PUBLICO-75** Elegir una zona muestra "Enviamos a {zona} · ${precio} aprox." (precio de referencia de
+  `public_delivery_zones`) y deja el checkout con entrega "delivery" y esa zona preseleccionada. El checkout valida la zona
+  como siempre: la tarjeta solo ayuda.
+- **PUBLICO-76** "Mi barrio no está" muestra "No hay envío a tu barrio. Podés retirar en el local." (sin la segunda frase si
+  el local no ofrece retiro) y ofrece retirar; además bloquea el envío (ver PUBLICO-80).
+- **PUBLICO-77** La elección se guarda en `localStorage` por negocio (slug), con `try/catch`; si falla, el menú anda igual.
+  Al volver no se pregunta de nuevo. Una zona guardada que ya no está en la lista se borra y se vuelve a preguntar.
+- **PUBLICO-78** Un chip arriba del menú ("📍 {zona}" o "Retiro") vuelve a abrir la tarjeta para cambiar la elección.
+- **PUBLICO-79** Los textos están en es, en y pt, los nombres de barrio se pintan con `textContent` y se ve bien en las
+  tres plantillas y a 360 px.
+- **PUBLICO-80** El selector de zona es un diálogo con el fondo oscurecido detrás: hoja desde abajo en el celular y
+  centrado en escritorio (≥ 640 px), con el scroll de la página bloqueado mientras está abierto. Elegir "Mi barrio no
+  está" bloquea el envío: el checkout queda solo en retiro, la opción "Envío" se ve deshabilitada y un aviso dice "No
+  hay envío a tu barrio. Podés retirar en el local." (es/en/pt); el chip dice "Sin envío a tu barrio". Elegir una zona
+  de la lista con el chip vuelve a habilitar el envío. Esta elección no se guarda: al volver se pregunta de nuevo.
+- **PUBLICO-81** El diálogo de zona atrapa el foco (Tab y Shift+Tab dan la vuelta), se cierra con Escape, con × o
+  tocando el fondo, enfoca el buscador (o la primera opción) al abrirse y devuelve el foco a quien lo abrió.
+- **PUBLICO-82** El checkout no confirma con envío si no hay una zona de la lista elegida, ni con "Mi barrio no está"
+  aunque quede una zona cargada: avisa y no crea el pedido. Con barrios sin cargar no se exige zona. El servidor la
+  valida igual (`create_public_order`).
+
+**Tarea 24 — Moderna y Minimalista con cara de app.** Todo lo de abajo aplica a las plantillas `moderno` y `minimal`;
+`clasico` queda como estaba.
+
+- **PUBLICO-86** `contrastText(fondo)` devuelve el texto (blanco u oscuro) que se lee sobre ese fondo con un
+  contraste WCAG de al menos 4.5:1, para cualquier color; si no es un color válido, devuelve `null`.
+- **PUBLICO-87** El precio va en una pastilla con fondo propio (el color principal del local) y texto calculado con
+  `contrastText`, con un borde fino que la separa de la tarjeta; se ve así en productos, promos, carrito y checkout,
+  sea cual sea el color elegido y en tema claro y oscuro.
+- **PUBLICO-88** `suggestLanguage(idiomaDelCelular, idiomasDelMenu, guardado)` devuelve `en` o `pt` cuando el idioma
+  del celular es inglés o portugués (por ejemplo `pt-BR`), el menú lo ofrece y no hay una elección guardada; en
+  cualquier otro caso devuelve `null`.
+- **PUBLICO-89** El menú interactivo arranca en el idioma de `?lang=`, si no en el que el visitante eligió la última
+  vez, y si no en español. Elegirlo se guarda en `localStorage` (con `try/catch`: sin almacenamiento, no se guarda).
+- **PUBLICO-90** Si corresponde sugerir un idioma (PUBLICO-88) y el menú está en español, aparece un aviso chico
+  ("¿Ver el menú en English?") con un botón para cambiar y otro para cerrar; cualquiera de los dos guarda la
+  elección y el aviso no vuelve.
+- **PUBLICO-91** El idioma es un solo botón compacto ("ES") dentro del encabezado, que al tocarlo se estira hacia la izquierda y muestra los otros idiomas en la misma línea (animación de ~200 ms, sin ella con `prefers-reduced-motion`; `aria-expanded`; se cierra al elegir, al tocar afuera o con Escape);
+  se va con el desplazamiento y nunca queda encima de las categorías. Botones de al menos 44 px de alto.
+- **PUBLICO-92** Abajo hay una barra fija con Menú, Promos y Carrito (el carrito con contador de unidades); cada
+  botón tiene `aria-label` y al menos 44 px de alto; Promos no aparece si el local no tiene promociones.
+- **PUBLICO-93** Las promos y los destacados van en un carrusel horizontal centrado con scroll suave y snap; con una
+  sola, va centrada y sin carrusel.
+- **PUBLICO-94** En el celular el checkout es una hoja que sube desde abajo, a pantalla completa, con scroll propio y
+  el botón de confirmar siempre visible; en escritorio es un modal que no desborda el ancho.
+- **PUBLICO-95** La hoja del checkout se cierra con Escape y con el gesto de atrás del celular, devuelve el foco a
+  quien la abrió y no deja desplazar la página de atrás.
+- **PUBLICO-96** Los nombres de productos, promos y del local se parten en líneas (`text-wrap: balance`,
+  `hyphens: auto`) en vez de cortarse con puntos suspensivos, y su contenedor crece con el texto, sin alto ni ancho
+  fijo, con un radio que no recorta. El nombre de un producto o promo va a todo el ancho de la tarjeta, debajo de la
+  imagen y encima de la descripción, y nunca se parte letra por letra.
+- **PUBLICO-97** El encabezado es liviano: una fila arriba con Volver a la izquierda e idioma y tema a la derecha;
+  debajo, el nombre del local directo sobre la portada (sin caja, con degradado y sombra, hasta dos líneas) con el
+  logo al lado si hay, y una línea chica "Abierto · zona". No hay pastillas sueltas; el buscador se mantiene.
+- **PUBLICO-83** Mientras carga el menú interactivo se ve un loader animado: una hamburguesa que se arma y debajo
+  "SMA a la carta" que se va escribiendo; igual en las tres plantillas, en CSS y SVG propios, con los colores del
+  local si ya se conocen, sin librerías y sin bloquear la carga; con `prefers-reduced-motion` queda quieto, con la
+  marca completa, y lleva un texto accesible "Cargando…" (es/en/pt).
+- **PUBLICO-85** Al terminar de cargar, el loader se desvanece mientras el menú aparece con un fade suave (sin
+  corte), y en tema oscuro el loader ya se ve oscuro; con `prefers-reduced-motion` el cambio es inmediato.
 
 ## BUSQUEDA — Buscador
 
@@ -485,13 +550,13 @@ llegando al negocio por WhatsApp.
   retirar" y "Retirado" solo en un pedido para retirar.
 - **SEGUIMIENTO-36** `public_order_tracking` entrega `nota` en cada ítem que la tiene; el seguimiento la muestra bajo el
   ítem con `textContent`, como lo que el cliente pidió.
-- **SEGUIMIENTO-37** `public_order_tracking` entrega `pedido.prep` (`desde`, `hasta`, `actualizado` y `motivo`) solo si el
-  negocio tiene `show_prep_time`, el pedido está en Confirmado o En preparación, no es programado ni anticipado y el
-  local cargó el tiempo; `desde` es `prep_ready_at` y `hasta` es `desde` + `PREP_WINDOW_MINUTES` (10). Sin eso no trae
+- **SEGUIMIENTO-37** `public_order_tracking` entrega `pedido.prep` (`desde`, `hasta`, `actualizado` y `motivo`) si el
+  negocio tiene `show_prep_time` (encendido por defecto), el local cargó el tiempo ("Aceptar sin tiempo" no muestra
+  nada), el pedido está en Confirmado o En preparación, no es programado ni anticipado; `desde` es `prep_ready_at` y `hasta` es `desde` + `PREP_WINDOW_MINUTES` (10). Sin eso no trae
   la clave, y nunca trae datos de otro negocio.
 - **SEGUIMIENTO-38** `PREP_WINDOW_MINUTES` (10) es una sola constante: la de `admin/src/lib/orders/prep.ts` y la de
   `web/apps/tracker/lib/prep.js` valen lo mismo, y un test las compara.
-- **SEGUIMIENTO-39** Con `prep`, el seguimiento dice "Listo entre 21:30 y 21:40 (aprox.)" y, antes de `hasta`, "en unos N min"
+- **SEGUIMIENTO-39** Con `prep`, el seguimiento dice "Listo aprox. a las 21:30" (ENVIO-169) y, antes de `hasta`, "en unos N min"
   (se renueva con la página); nunca un número negativo. Para retirar dice "Podés pasar a retirar desde las 21:30".
 - **SEGUIMIENTO-40** Pasado `hasta` el seguimiento dice "Se está demorando un poco más de lo previsto", sin horas ni números.
 - **SEGUIMIENTO-41** Si el local dejó un motivo (`busy`, `weather`, `supply`, `other`), se muestra como texto amable ("por
@@ -505,6 +570,52 @@ llegando al negocio por WhatsApp.
   seguimiento muestra "El local actualizó la demora" con la hora nueva, en es, en y pt, hasta que el cliente lo cierra o
   cambia el estado. Se detecta comparando con la última lectura de la página (no hay nada guardado): la primera lectura
   y la primera vez que aparece la hora no avisan. Con los avisos activados suena y vibra igual que un cambio de estado.
+- **SEGUIMIENTO-45** El seguimiento dice el resultado y no la demora en minutos: "Listo aprox. 21:40" (con envío ya
+  tomado, "Llega aprox. 21:55" con la hora del repartidor) y "faltan 12 min", que se descuenta con la hora aunque no
+  haya lecturas nuevas (se repinta cada 30 s con la pestaña visible). Pasada la hora dice "Unos minutos más", sin horas
+  ni números negativos (con 1 minuto, "falta 1 min"). Se repinta cambiando solo el texto de esos nodos, sin rehacer la
+  página, y el reloj se detiene al entregarse o cancelarse el pedido. Se actualiza solo cuando el local cambia la demora, por la lectura periódica (SEGUIMIENTO-32;
+  sin Realtime, que exigiría abrir las políticas de `orders` a `anon`). En es, en y pt.
+- **SEGUIMIENTO-46** Con el selector de idioma dentro del encabezado, la barra de arriba se oculta: no queda una franja
+  en blanco sobre el seguimiento.
+- **SEGUIMIENTO-47** Con repartidor asignado (nunca mientras se busca), el seguimiento dice "Podés pedirle a {nombre}
+  también: compras en el camino · buscar otros pedidos." y el texto del repartidor, solo con lo que marcó o escribió; sin
+  nada, no hay bloque. Sale de `preferencias` en `public_order_delivery`, que lee solo las del repartidor de ese pedido.
+  El texto se escribe con `textContent`. En es, en y pt.
+- **SEGUIMIENTO-48** Con el pedido entregado o cancelado, `preferencias` ya no se entrega: el link del seguimiento
+  queda en manos del cliente y el texto que el repartidor cambie después no se tiene que ver en un pedido cerrado.
+- **ADMIN-REPARTIDOR-1** Las preferencias del repartidor viven en `courier_preferences` (una fila por repartidor):
+  "Compro cosas en el camino", "Busco otros pedidos" y un texto de hasta 140 caracteres, opcional. Con RLS: cada
+  repartidor lee la suya y nadie escribe directo; se guardan con `courier_save_preferences`, que toma al repartidor de
+  la sesión y recorta el texto.
+- **ADMIN-REPARTIDOR-2** La pantalla "Mi perfil" (`/repartidor/perfil`) las edita, con botón que espera a la base
+  (`PendingButton`) y botones de al menos 44 px. Un texto de más de 140 caracteres se rechaza.
+- **ADMIN-REPARTIDOR-3** En la tarjeta de cada pedido del repartidor la acción principal siempre está a la vista y
+  arriba: Ofertar / Tomar en los disponibles; "llego en…", En camino y Entregado (y Rendido) en los envíos en curso.
+- **ADMIN-REPARTIDOR-4** Lo secundario va al abrir: Devolver, Otro precio, Retirar la oferta y Rechazar, bajo "Más
+  opciones", y los productos, el barrio y las notas, bajo "Detalle del pedido". Cerrado es el estado de partida.
+- **ADMIN-REPARTIDOR-5** El panel muestra primero los envíos en curso (lo que hay que hacer ahora), después los
+  disponibles y al final el historial. "Mi perfil" aparece en la barra de abajo del celular y en el menú lateral.
+- **ADMIN-REPARTIDOR-6** La tarjeta de un pedido entra casi entera en 360 px: línea 1 con número, local y estado; línea
+  2 destacada con lo que cobra y el precio del envío, y la hora de listo; línea 3 "Retiro → Entrega" (local → barrio y
+  dirección); y la acción principal. Teléfonos, WhatsApp, datos del cliente, pago y productos van en "Ver detalle",
+  cerrado de partida.
+- **ADMIN-REPARTIDOR-7** Lo primero en pantalla son los pedidos: sin título grande ni textos de ayuda, con el sonido
+  como un botón chico y el aviso de activar notificaciones en una tira de una línea. "Mis envíos en curso" no se
+  muestra si está vacío; "Disponibles" sí dice que no hay nada. El historial va plegado, una línea por pedido, salvo lo
+  que sigue sin rendir, que conserva su tarjeta.
+- **SEGUIMIENTO-49** El tiempo del local se ve grande, debajo del estado, en una sola línea ("Listo aprox. 13:40 ·
+  faltan 25 min", o "Llega aprox." con la hora del repartidor), siempre que el local haya cargado una hora y el negocio
+  tenga `show_prep_time` encendido.
+- **SEGUIMIENTO-50** `show_prep_time` es `true` por defecto (migración `20261111000000`, que también lo enciende en los
+  negocios existentes y en `save_business_settings` cuando la fila nace sin él). Si el local lo apaga, `public_order_tracking`
+  no entrega `pedido.prep` aunque la hora esté cargada y el cliente no ve el tiempo; al volver a encenderlo, sí.
+- **SEGUIMIENTO-51** La línea de la hora ("Listo aprox. 13:40 · faltan 25 min") se muestra en un tamaño de texto normal
+  destacado (1 rem, negrita), sin competir con el estado del pedido.
+- **ADMIN-REPARTIDOR-8** La tarjeta del pedido del repartidor, en orden: #número · local · estado, **destino** (ícono
+  de ubicación, barrio y dirección de entrega en grande), retiro en {local} más chico, hora de listo, la plata en una sola
+  línea chica (lo que cobra por el envío y un chip "Cobrar $X" si tiene que cobrar al cliente) y la acción principal.
+  Total, desglose y lo que se rinde, solo en "Ver detalle".
 
 
 ## PWA — Instalar el menú en el celular
@@ -614,7 +725,8 @@ se prueban además en `admin/src/lib/menu/translations.test.ts` y `admin/src/lib
   descripción, categorías, productos) no se traduce.
 - **IDIOMA-2** El idioma sale, en este orden, de `?lang=es|en|pt`, del idioma del
   navegador (`navigator.language`, por ejemplo `pt-BR` → `pt`) y, si no es ninguno de los
-  tres, es español.
+  tres, es español. En el menú interactivo el idioma del navegador ya no cambia el idioma
+  solo: solo lo sugiere (PUBLICO-88 a 90); el seguimiento y el menú estático siguen igual.
 - **IDIOMA-3** `t(clave, idioma)` devuelve el texto en ese idioma; si falta la clave en
   ese idioma cae al español, y si tampoco está, devuelve la clave. Los tres idiomas
   tienen las mismas claves.
@@ -1123,8 +1235,8 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
 - **ADMIN-CONFIG-48** Configuración tiene el interruptor "Permitir notas en cada producto" (`allow_item_notes`, activo
   por defecto), en Entrega y pago; se guarda con "Guardar cambios" y `save_business_settings` lo recibe en
   `p_allow_item_notes`.
-- **ADMIN-CONFIG-49** Configuración tiene la sección "Tiempos de preparación" con el interruptor "Mostrar el tiempo
-  estimado a mis clientes" (`show_prep_time`, apagado por defecto) y la aclaración de que siempre es aproximado; se
+- **ADMIN-CONFIG-49** Configuración tiene la sección "Tiempos de preparación" con el interruptor "Tus clientes ven
+  a qué hora sale su pedido" (`show_prep_time`, encendido por defecto) y la aclaración de que siempre es aproximado; se
   guarda con "Guardar cambios" y `save_business_settings` lo recibe en `p_show_prep_time`.
 - **ADMIN-CONFIG-50** La misma sección tiene "Tiempo de preparación por defecto" (`default_prep_minutes`, 20 por
   defecto): un entero de 5 a 180, validado en `validateSettings` y en la base; es lo que el selector de Aceptar
@@ -1306,6 +1418,28 @@ contradiga: ahora entra a los envíos, lleva opciones y nace confirmado)
   minutos, bajar de más deja 5), un "Otro valor…" que abre el selector para escribir los minutos y un motivo opcional.
   Un salto que no es de la lista se rechaza. El selector de Aceptar arranca con el último tiempo que usó el local en ese
   navegador ("Último que usaste: N min"), después con la sugerencia de la base y, si no, con el tiempo por defecto.
+- **ADMIN-PEDIDOS-53** La tarjeta del tablero tiene una estructura fija: arriba `#número · nombre`, hace cuánto llegó y
+  el reloj de la demora; una cinta de cinco tramos (Nuevo, Aceptado, Cocina, Listo, Entrega) que marca el paso
+  (`stepIndex`, `src/lib/orders/urgency.ts`); los productos en dos líneas como máximo con "y N más…"; y un pie con el
+  botón principal a todo el ancho y "Detalle" (⋯). Tocar la tarjeta también abre el detalle. El teléfono y, buscando
+  repartidor, el resumen de ofertas siguen en la tarjeta (ENVIO-117 y el teléfono de cualquier pedido).
+- **ADMIN-PEDIDOS-54** Dentro de cada columna, lo que pide atención va primero (`orderUrgency` y `compareByUrgency`):
+  alta (borde rojo) si el pedido pasó la hora de la demora o lleva 10 minutos buscando repartidor sin ofertas; media
+  (borde ámbar) si faltan 5 minutos o menos para la demora o un pendiente espera hace 5 minutos o más. A igual
+  urgencia, el orden de siempre. El título de cada columna dice cuántos son urgentes. En el celular las tres
+  columnas son pestañas (Nuevos, En curso, Listos) con su contador.
+- **ADMIN-PEDIDOS-55** "Cambiar demora" ya no estira la tarjeta: el reloj de la demora (o ⋯) abre un panel superpuesto
+  con los saltos, los motivos opcionales y "Otro valor…". Al elegir un salto se aplica y el panel se cierra solo;
+  también cierran la ✕, tocar fuera y Escape. Los botones son los de espera de ADMIN-PEDIDOS-51.
+- **ADMIN-PEDIDOS-56** El menú lateral de escritorio se achica a solo íconos con el nombre en el tooltip, y el contenido
+  usa todo el ancho. La elección se recuerda en el navegador (`localStorage`, con `try/catch`, `src/lib/layout/sidebar-pref.ts`).
+  En el celular sigue la hamburguesa.
+- **ADMIN-PEDIDOS-57** Todo cambio de estado lleva el estado que la persona veía (`from`; `p_from` en
+  `set_order_status` y `courier_set_status`, migración `20261112000000`) y solo se aplica si el pedido sigue ahí: si no,
+  la base no hace nada, no registra evento y no da error. Un doble click, dos pestañas o Realtime nunca avanzan dos pasos.
+  Aceptar manda `from = pending`. En el panel del repartidor, un segundo toque sobre el mismo pedido no lanza otra acción.
+- **ADMIN-PEDIDOS-58** Al confirmar la aceptación (con tiempo o sin él), el cartel de "Nuevo pedido" y la cuenta de sin
+  atender se van en el momento, sin esperar al servidor; si la acción falla, vuelven y se muestra el error.
 
 
 ## MP — Cobro con Mercado Pago (Checkout Pro)
@@ -1877,6 +2011,92 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
 - **ENVIO-154** Panel del local, pedido `fixed` buscando: "Buscando repartidor desde las HH:MM" (sin conteo de ofertas)
   y, a los 10 minutos, "Nadie lo tomó todavía". Seguimiento `fixed`: "Buscando repartidor" y después quien lo tomó,
   con el precio de lista, sin lista de ofertas ni cuenta regresiva (es/en/pt).
+- **ENVIO-155** La búsqueda de repartidor se abre cuando el local acepta el pedido (`pending → confirmed`), en los dos
+  modos y sea común, anticipado o programado. Mientras está pendiente el pedido con envío queda `waiting`: ningún
+  repartidor lo ve, lo toma ni oferta. El pedido manual, que nace confirmado, busca al crearse. Los 10 minutos de
+  "nadie lo tomó" cuentan desde que se abre la búsqueda. Los que hoy buscan en `pending`, sin repartidor, vuelven a
+  `waiting` y se les borran las ofertas.
+- **ENVIO-156** Cada pedido que ve el repartidor trae `listo_a` (la hora estimada de listo) y `demora_min`. Salen de
+  lo que cargó el local; si no cargó nada, de `default_prep_minutes` desde que aceptó. Un pedido programado o
+  anticipado muestra su hora y sin demora.
+- **ENVIO-157** El repartidor carga dos tiempos con `courier_set_eta()`: "Llego al local en X min" (pedido suyo, antes
+  de retirar) y "Llego al cliente en X min" (ya retirado). De 1 a 120 minutos; un pedido ajeno da P0002, un rango
+  fuera de lugar o un tipo desconocido, 22023, y un estado que no corresponde, P0004. Se borran al devolver el pedido.
+- **ENVIO-158** Aviso previo: 10 minutos antes de la hora estimada de listo, `run_order_timers()` marca una sola vez
+  `pickup_reminder_sent_at` en el pedido con repartidor que todavía no está listo; esa marca dispara el aviso push
+  "Pasá a retirar". Si el local cambia la demora, la marca se reinicia y el aviso se rearma. La constante es
+  `pickup_reminder_lead()`.
+- **ENVIO-159** Si el local cambia la demora de un pedido con repartidor, queda el evento de la demora, la base guarda
+  la hora anterior (`ready_was_at`) y al repartidor le llega "El local cambió la demora: listo a las HH:MM". Si no le
+  sirve, lo devuelve y vuelve a aparecerles a los otros repartidores.
+- **ENVIO-160** Cuando el local marca Listo un pedido con repartidor, le llega "Listo para retirar en {local}".
+- **ENVIO-161** `public_order_delivery()` trae `llega_a` (la hora que cargó el repartidor para llegar al cliente) una vez
+  retirado el pedido; no trae ningún dato del repartidor que no mostrara.
+- **ENVIO-162** Los miembros del local no escriben `courier_eta_pickup_at`, `courier_eta_dropoff_at`,
+  `pickup_reminder_sent_at` ni `ready_was_at`: solo las funciones del circuito y el cron.
+- **ENVIO-163** `/repartidor`: cada pedido disponible muestra "Listo para retirar a las HH:MM · Demora 45 min"; al
+  tomarlo (o ser elegido) pide "Llego al local en…" con 5, 10, 15, 20 y 30 minutos más un campo libre de 1 a 120; en
+  curso muestra la hora de listo y, si cambió, "Cambió" con la anterior tachada; al marcar En camino pide "Llego al
+  cliente en…". Los botones tienen espera.
+- **ENVIO-164** Panel del local: el pedido con repartidor muestra "Llega al local a las HH:MM" si lo cargó; si el
+  repartidor lo devolvió, dice el motivo que eligió (ENVIO-166) y vuelve a "Buscando repartidor".
+- **ENVIO-165** Seguimiento: pendiente con envío, "Esperando que el local confirme"; en camino, "Llega aprox. a las
+  HH:MM" si el repartidor cargó el tiempo (es/en/pt).
+- **ENVIO-166** *Reemplaza la deducción de ENVIO-164.* Al tocar Devolver, el repartidor elige "Cambió la demora",
+  "Problema con el vehículo" u "Otro" (con texto de 3 a 140 caracteres). `courier_return_order(pedido, tipo, texto)`
+  guarda `orders.returned_reason_kind` (`delay_changed`, `vehicle`, `other`) y `returned_reason` (solo con "Otro");
+  un tipo inválido o "Otro" sin texto da `22023`, y solo devuelve el repartidor asignado (`P0002`). El local ve "Lo
+  devolvió: cambió la demora", "Lo devolvió: problema con el vehículo" o "Lo devolvió: {texto}" mientras el pedido
+  vuelve a buscar; al tomarlo otro repartidor el motivo se limpia. Si el repartidor tiene un cambio de demora sin
+  ver, "Cambió la demora" es el primer botón. `returned_prep_changed` se elimina.
+- **ENVIO-167** El aviso "El local cambió la demora" compara las horas como instantes (`timestamptz`), no como
+  texto: la misma hora escrita distinto (`Z` o `+00:00`, con o sin milisegundos, otra zona) no avisa.
+- **ENVIO-168** Aceptar un pedido es **un solo diálogo**: mientras el selector de la demora está abierto, la tarjeta
+  de "Nuevo pedido" no queda debajo, y el único botón principal es "Aceptar con X min". `PendingButton` se bloquea en
+  el mismo toque, con una marca sincrónica y antes de llamar a la acción, aunque la acción no devuelva una promesa:
+  dos toques seguidos en el mismo instante llaman una sola vez. Vale en el panel del local y en el del repartidor.
+- **ENVIO-169** El seguimiento dice "Listo aprox. a las HH:MM" (es/en/pt), con la hora marcada por el local (ver
+  SEGUIMIENTO-39); cuando el local la cambia, la hora nueva. Sigue dependiendo de `show_prep_time` del negocio.
+- **ENVIO-170** Con el panel abierto, al repartidor le avisan (sonido y cartel) tres cambios del local en un pedido
+  que ya tomó: Listo, otra demora (otro instante, no otro texto) y cancelado. Los demás cambios de estado no avisan,
+  y un pedido que ya estaba al abrir no cuenta. Son los mismos que el push (ENVIO-159, 160 y `order_cancelled`), y en
+  el service worker suenan y vibran aunque haya un aviso anterior en pantalla.
+- **ENVIO-171** El segundo toque de un doble click rápido no hace nada en el selector de la demora: el botón que lo
+  abre no abre un segundo (hay un solo selector por pedido) y el toque que llega al selector dentro de los primeros
+  600 ms como segundo click de una misma secuencia (`event.detail > 1`) no confirma ni cierra. Un toque deliberado
+  después sí cuenta.
+- **ENVIO-172** Con el panel abierto, el del local y el del repartidor piden los datos nuevos apenas la base cambia un
+  pedido (`orders`) o una oferta (`courier_offers`), por Supabase Realtime, juntando los cambios que llegan casi a
+  la vez (250 ms) en una sola actualización; no esperan a la consulta periódica, que queda de respaldo. Los avisos
+  que suenan siguen saliendo de comparar lo que la pantalla ya tenía con lo nuevo. El RLS decide qué cambios llegan
+  a cada uno. Si el canal no se puede abrir, la pantalla funciona igual.
+- **ENVIO-173** El webhook de avisos pide el nombre del local, el del repartidor y si lo asignó el local **mientras**
+  resuelve a quién avisar, no después, y responde (y registra) `lagMs` (del cambio en la base a la llegada del
+  webhook) y `handlerMs` (lo que tardó en resolver y mandar). Los avisos por cambio de estado (Listo, demora,
+  cancelado) salen del webhook sobre `orders` en el momento del `UPDATE`; `pg_cron` solo marca los plazos
+  (elección automática, sin ofertas, recordatorios y "10 minutos antes de retirar").
+- **ENVIO-174** El repartidor carga su vehículo en "Mi perfil": casillas **Moto** y **Auto**, una o las dos, al
+  menos una (`couriers.moto`, `couriers.auto`, con `CHECK`). Los repartidores que ya existían quedan con Moto. Solo
+  el propio repartidor lo cambia (`courier_save_vehicles()`); el superadmin lo ve. No cambia el precio: zonas y
+  ofertas siguen igual. Solo hay moto y auto.
+- **ENVIO-175** El superadmin tiene el interruptor "Vehículo del repartidor (moto/auto)" en `platform_settings`
+  (`vehicle_enabled`), junto al modo de envíos. **Arranca apagado.** Lo lee el servidor con `vehicle_enabled()`,
+  no solo la pantalla, y solo el superadmin lo cambia. Apagado: no se ven las casillas del perfil, ni "Necesita
+  auto", ni los íconos, y el servidor ignora `needs_car` (no filtra a nadie). Los datos cargados se conservan.
+- **ENVIO-176** Al aceptar un pedido con envío, el local puede prender "Necesita auto" (`orders.needs_car`, por
+  defecto apagado). Se carga antes de confirmar, para que la búsqueda nazca ya filtrada, y se puede cambiar
+  mientras no haya repartidor asignado (`set_order_needs_car()`); con repartidor, o en un pedido cerrado o sin
+  envío con repartidor, da error. Solo lo cambia un miembro del negocio del pedido: ni el cliente ni el repartidor.
+- **ENVIO-177** Con el interruptor prendido, un pedido que necesita auto **solo lo ve el repartidor que marcó
+  Auto**: en la lista de pedidos disponibles, al tomarlo (precio fijo), al ofertar y en la asignación a mano del
+  local. Lo decide el servidor (`courier_sees_order()`, `courier_take_order()`, `courier_make_offer()`,
+  `business_assign_courier()`): un repartidor sin auto recibe el error `P0024` ("Este pedido necesita auto"). Los
+  avisos push de "pedido nuevo" tampoco le llegan. Si nadie con auto cubre la zona, el aviso de "sin ofertas" a los
+  10 minutos sale igual.
+- **ENVIO-178** Con el interruptor prendido se ve el vehículo del repartidor con un ícono propio (SVG, no emoji):
+  junto a su nombre en la tarjeta y el detalle del pedido del local, en cada oferta, y en el seguimiento del cliente
+  (`public_order_delivery()` suma `vehiculo` del repartidor asignado y de cada oferta). En la tarjeta del
+  repartidor, el chip "Necesita auto" cuando el pedido lo pide. El texto accesible del seguimiento va en es/en/pt.
 
 
 
@@ -2230,6 +2450,19 @@ precios en 0; no existe "incluye N y el resto cuesta X".
   empujar el ancho, y los títulos de página son más chicos (`text-2xl`, `text-3xl` desde `sm`).
 - **ADMIN-MOVIL-12** El detalle del pedido sube como hoja desde abajo en el celular, con scroll interno y el
   botón de cerrar de 44 px; desde `sm` sigue siendo un diálogo centrado.
+
+---
+
+## WEB-ENTORNO — Los menús leen la base según el entorno de Vercel
+
+*Aplicado por `web/apps/menu-app/lib/supabase-env.js`, `web/api/supabase-config.js` y
+`web/apps/menu-app/supabase-config.js`. Cubierto por `supabase-env.test.js`. Solo URL y publishable key.*
+
+- **WEB-ENTORNO-1** Con `NEXT_PUBLIC_SUPABASE_URL` y `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` definidas, la
+  configuración de Supabase usa esos valores (en Preview, la base de prueba).
+- **WEB-ENTORNO-2** Sin las variables (o si falta una), usa los de producción, sin mezclar bases.
+- **WEB-ENTORNO-3** En el navegador, `supabase-config.js` pide `/api/supabase-config`; si falla o la
+  respuesta no es válida, usa los de producción. Las funciones de `api/` leen `process.env` directo.
 
 ---
 

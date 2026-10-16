@@ -10,7 +10,12 @@ import {
   saveDeliveryZoneOrder,
   updateDeliveryZone,
 } from "@/lib/db/delivery-zones";
-import { DELIVERY_MODES, setDeliveryMode, type DeliveryMode } from "@/lib/db/platform-settings";
+import {
+  DELIVERY_MODES,
+  setDeliveryMode,
+  setVehicleSwitch,
+  type DeliveryMode,
+} from "@/lib/db/platform-settings";
 import { validateZone } from "@/lib/superadmin/zones";
 
 export type ZoneActionResult =
@@ -45,6 +50,23 @@ export async function setDeliveryModeAction(mode: DeliveryMode): Promise<ZoneAct
   if ("error" in result) return { ok: false, error: GENERIC };
 
   revalidatePath("/superadmin/zonas");
+  return { ok: true };
+}
+
+// El interruptor "Vehículo del repartidor (moto/auto)" (ENVIO-175): apagado, nada de lo del vehículo se ve ni
+// filtra; los datos cargados se conservan.
+export async function setVehicleSwitchAction(enabled: boolean): Promise<ZoneActionResult> {
+  await requireSuperAdmin();
+
+  if (typeof enabled !== "boolean") return { ok: false, error: GENERIC };
+
+  const result = await setVehicleSwitch(enabled);
+  if ("error" in result) return { ok: false, error: GENERIC };
+
+  // Cambia lo que ven el local y el repartidor.
+  revalidatePath("/superadmin/zonas");
+  revalidatePath("/dashboard/orders");
+  revalidatePath("/repartidor");
   return { ok: true };
 }
 

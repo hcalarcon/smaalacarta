@@ -1,6 +1,8 @@
 import { whatsappDigits } from "@/lib/orders/courier";
 import type { OrderItemOption } from "@/lib/orders/item-options";
 
+import type { CourierTimes } from "./times";
+
 // Panel del repartidor (ENVIO-76 a 79 y 113 a 116): qué grupo y qué acciones le corresponden a cada
 // pedido. Reglas puras; los componentes solo pintan. La base exige lo mismo (`courier_make_offer`,
 // `courier_return_order` y `courier_set_status`).
@@ -23,8 +25,13 @@ export type AvailableOrder = {
   creado: string;
   // Cuándo se abrió la búsqueda.
   ofrecido_el: string | null;
+  // La hora estimada de listo y la demora que cargó el local (ENVIO-156). La demora falta en un programado.
+  listo_a?: string | null;
+  demora_min?: number | null;
   programado: string | null;
   anticipado: boolean;
+  // El local pidió auto (ENVIO-176); la base solo lo manda con el interruptor del vehículo prendido.
+  necesita_auto?: boolean;
   negocio: { nombre: string; direccion: string | null };
   // Total del pedido: lo que cobra el local (el envío se paga aparte, al repartidor).
   total: number;
@@ -67,6 +74,8 @@ export type CourierPanelOrder = {
     consultado_el: string | null;
     respondido_el: string | null;
   };
+  // La hora de listo y los dos "llego en X" (ENVIO-157).
+  tiempos?: CourierTimes;
   // Rendición del efectivo (ENVIO-40): cuándo la marcó el repartidor y cuándo la confirmó el local.
   rendicion: { rendido_el: string | null; recibido_el: string | null };
 };
@@ -179,20 +188,46 @@ export function availableActions(order: Pick<CourierPanelOrder, "estado" | "envi
   return none;
 }
 
-export const RETURN_REASON_MAX = 200;
+export const RETURN_REASON_MIN = 3;
+export const RETURN_REASON_MAX = 140;
 
-// El motivo de devolver un pedido: obligatorio, hasta 200 caracteres (ENVIO-66).
-export function validateReturnReason(
+// Por qué devuelve el pedido (ENVIO-166): dos motivos fijos y "Otro", que lleva texto.
+export type ReturnKind = "delay_changed" | "vehicle" | "other";
+
+export const RETURN_KINDS: { kind: ReturnKind; label: string }[] = [
+  { kind: "delay_changed", label: "Cambió la demora" },
+  { kind: "vehicle", label: "Problema con el vehículo" },
+  { kind: "other", label: "Otro" },
+];
+
+// Los botones en el orden en que se muestran: si el local cambió la demora y el repartidor todavía no lo
+// resolvió, "Cambió la demora" va primero; si no, queda en el medio.
+export function returnKindOptions(delayChanged: boolean) {
+  const [delay, vehicle, other] = RETURN_KINDS;
+  return delayChanged ? [delay, vehicle, other] : [vehicle, delay, other];
+}
+
+// El motivo de devolver un pedido: un tipo, y con "Otro" un texto de 3 a 140 caracteres (ENVIO-166).
+export function validateReturn(
+  kind: string,
   reason: string,
-): { ok: true; reason: string } | { ok: false; error: string } {
+): { ok: true; kind: ReturnKind; reason: string | null } | { ok: false; error: string } {
+  if (kind !== "delay_changed" && kind !== "vehicle" && kind !== "other") {
+    return { ok: false, error: "Elegí por qué devolvés el pedido." };
+  }
+
+  if (kind !== "other") return { ok: true, kind, reason: null };
+
   const value = reason.trim();
 
-  if (value === "") return { ok: false, error: "Contá por qué devolvés el pedido." };
+  if (value.length < RETURN_REASON_MIN) {
+    return { ok: false, error: `Contá el motivo, con al menos ${RETURN_REASON_MIN} letras.` };
+  }
   if (value.length > RETURN_REASON_MAX) {
     return { ok: false, error: `El motivo admite hasta ${RETURN_REASON_MAX} caracteres.` };
   }
 
-  return { ok: true, reason: value };
+  return { ok: true, kind, reason: value };
 }
 
 // Abre un chat de WhatsApp con ese número (con un texto de entrada, si se pasa), o null si no hay número.

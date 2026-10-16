@@ -115,6 +115,22 @@ describe("service worker del panel — ADMIN-PWA-10", () => {
     expect(options.tag).toBeTruthy();
   });
 
+  it.each(["courier_order_ready", "courier_prep_changed", "order_cancelled"])(
+    "%s al repartidor suena y vibra aunque haya un aviso anterior (ENVIO-168)",
+    async (kind) => {
+      await sw.dispatch(
+        "push",
+        push({ title: "Listo para retirar", body: "#0042", tag: `order-1-${kind}`, kind, urgent: false }),
+      );
+
+      const options = sw.showNotification.mock.calls[0][1] as Record<string, unknown>;
+      expect(options.renotify).toBe(true);
+      expect(options.silent).toBe(false);
+      expect(options.tag).toBe(`order-1-${kind}`);
+      expect(options).not.toHaveProperty("requireInteraction");
+    },
+  );
+
   it("los demás avisos se muestran como siempre, sin insistir (ADMIN-PWA-36)", async () => {
     await sw.dispatch(
       "push",

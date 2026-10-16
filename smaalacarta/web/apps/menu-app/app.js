@@ -27,12 +27,25 @@ let OPTIONS_SHEET = null;
 let CART_LINES = null;
 let NOTES = null;
 let PROMO_INFO;
+let LANGUAGE = null;
 // Envío con repartidor (ENVIO-20): los barrios del negocio, o null si no tiene o falló.
 let DZ = null;
 let COURIER_ZONES = null;
+// Zona del cliente al entrar (PUBLICO-73 a 78): `ZONE_ON` es si el local la pregunta; `ZONE_STEP` es
+// qué muestra la tarjeta (ask, zones, notListed, confirmed o null si está cerrada).
+let ZONE = null;
+let ZONE_ON = false;
+let ZONE_CHOICE = null;
+let ZONE_STEP = null;
+let ZONE_PICKUP = true;
+let ZONE_QUERY = "";
+// Quién tenía el foco al abrirse el diálogo de la zona: vuelve ahí al cerrarlo (PUBLICO-81).
+let ZONE_RETURN_FOCUS = null;
 
 // Idioma de la interfaz (IDIOMA-1 a 4) y el menú tal como vino, sin las secciones armadas.
 let LANG = "es";
+let SAVED_LANG = null;
+let CART_COUNT = 0;
 let BASE_MENU = null;
 let LAST_THANKS = null;
 let syncTema = () => {};
@@ -61,6 +74,37 @@ async function fetchJSON(path) {
     console.error("Fetch error:", path, err);
     return null;
   }
+}
+
+// El loader de la próxima visita se pinta con el tema que se ve ahora, sea el del negocio o el que
+// eligió el visitante con el switch (PUBLICO-85).
+function rememberLoaderTheme() {
+  THEME.rememberLoaderTheme(
+    window.localStorage,
+    THEME.loaderThemeKey(location.hostname, location.pathname, location.search),
+    document.documentElement.dataset.tema,
+  );
+}
+
+// Termina la carga con un fade (PUBLICO-85): el menú entra (`entrando`) mientras el loader se
+// desvanece y recién después se saca de la página. Si no hay transición (movimiento reducido)
+// se saca enseguida.
+function finishLoading() {
+  const loader = document.getElementById("loader");
+  document.body.classList.add("entrando");
+  document.body.classList.remove("loading");
+  if (!loader) return;
+
+  const remove = () => loader.remove();
+  const calm = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  if (calm) {
+    remove();
+    return;
+  }
+  loader.classList.add("loader-saliendo");
+  loader.addEventListener("transitionend", remove, { once: true });
+  setTimeout(remove, 800);
+  setTimeout(() => document.body.classList.remove("entrando"), 1000);
 }
 
 // Sin negocio (ni en Supabase ni en los JSON): antes se quedaba trabado en el
@@ -215,6 +259,9 @@ async function init() {
     NOTES = await import("/apps/menu-app/lib/item-notes.js");
     // Vigencia y últimas unidades de las promociones (PUBLICO-68 y 69).
     PROMO_INFO = await import("/apps/menu-app/lib/promo-info.js");
+    // Idioma elegido y sugerencia según el celular (PUBLICO-88 a 90).
+    LANGUAGE = await import("/apps/menu-app/lib/language.js");
+    ZONE = await import("/apps/menu-app/lib/zone-choice.js");
     DZ = deliveryZonesLib;
     OPTIONS = optionsLib;
     OPTIONS_SHEET = optionsSheetLib;
@@ -228,9 +275,12 @@ async function init() {
     MERCADOPAGO = mercadopagoLib;
     COLORS = colorsLib;
     I18N = i18nLib;
+    // El idioma del celular ya no cambia el menú solo: se sugiere (PUBLICO-89 y 90). Vale ?lang=, lo que
+    // el visitante eligió la última vez o el español.
+    SAVED_LANG = PREVIEW ? null : LANGUAGE.readSavedLang(window.localStorage, I18N.LANGS);
     LANG = I18N.resolveLang({
       search: window.location.search,
-      navigatorLanguage: navigator.language,
+      navigatorLanguage: SAVED_LANG ?? "",
     });
     SCHEDULE = schedule;
     PWA = pwa;
@@ -291,12 +341,14 @@ async function init() {
     }
     applyCheckoutOptions(config);
     initCourierFields();
+    initZoneChoice(config, slug);
     renderScheduleChoice();
     renderDeliveryNotice();
     renderTransferInfo();
     document.documentElement.dataset.template = config.template || "";
     // El tema por defecto es el del negocio; si el visitante eligió otro, vale el suyo (PUBLICO-24).
     document.documentElement.dataset.tema = THEME.resolveTheme(config, window.localStorage, slug);
+    rememberLoaderTheme();
 
     // App instalable: manifest, ícono y color del negocio (PWA-1 a 3).
     PWA.applyPwa(document, { type, slug, config });
@@ -332,6 +384,7 @@ async function init() {
         const next = document.documentElement.dataset.tema === "oscuro" ? "claro" : "oscuro";
         document.documentElement.dataset.tema = next;
         THEME.rememberTheme(window.localStorage, slug, next);
+        rememberLoaderTheme();
         syncTema();
       });
     }
@@ -369,10 +422,8 @@ async function init() {
     dropSoldOutFromCart(enhancedMenu);
     restoreThanks();
 
-    // 🧹 Ocultar loader correctamente
-    document.body.classList.remove("loading");
-    const loader = document.getElementById("loader");
-    if (loader) loader.style.display = "none";
+    finishLoading();
+    maybeSuggestLanguage();
   } catch (err) {
     console.error("Error en init:", err);
     document.body.innerHTML = `<h2>${I18N ? tr("error.unexpected") : "Error inesperado"}</h2>`;
@@ -384,13 +435,46 @@ function buildLangSelector() {
   const box = document.getElementById("selector-idioma");
   if (!box) return;
 
+  // Botón compacto "ES" que abre la lista (solo lo muestra la cara de app; en Clásica siguen los tres botones).
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "idioma-toggle";
+  toggle.setAttribute("aria-haspopup", "true");
+  toggle.setAttribute("aria-expanded", "false");
+  const setOpen = (open) => {
+    box.classList.toggle("abierto", open);
+    toggle.setAttribute("aria-expanded", String(open));
+  };
+  toggle.addEventListener("click", () => setOpen(!box.classList.contains("abierto")));
+  box.appendChild(toggle);
+
+  const lista = document.createElement("div");
+  lista.className = "idioma-lista";
+  box.appendChild(lista);
+
   I18N.LANGS.forEach((lang) => {
     const b = document.createElement("button");
     b.type = "button";
+    b.className = "idioma-opcion";
     b.textContent = lang.toUpperCase();
     b.dataset.lang = lang;
-    b.addEventListener("click", () => setLang(lang));
-    box.appendChild(b);
+    b.addEventListener("click", () => {
+      const abierta = box.classList.contains("abierto");
+      setOpen(false);
+      setLang(lang);
+      if (abierta && getComputedStyle(toggle).display !== "none") toggle.focus();
+    });
+    lista.appendChild(b);
+  });
+
+  document.addEventListener("click", (e) => {
+    if (!box.contains(e.target)) setOpen(false);
+  });
+  box.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape" || !box.classList.contains("abierto")) return;
+    e.stopPropagation();
+    setOpen(false);
+    toggle.focus();
   });
 }
 
@@ -404,24 +488,39 @@ function applyStaticTexts() {
   document.querySelectorAll("[data-i18n-placeholder]").forEach((node) => {
     node.placeholder = tr(node.dataset.i18nPlaceholder);
   });
+  document.querySelectorAll("[data-i18n-aria-label]").forEach((node) => {
+    node.setAttribute("aria-label", tr(node.dataset.i18nAriaLabel));
+  });
 
   const box = document.getElementById("selector-idioma");
   if (box) {
     box.setAttribute("aria-label", tr("lang.label"));
-    box.querySelectorAll("button").forEach((b) => {
+    box.querySelectorAll("button[data-lang]").forEach((b) => {
       b.setAttribute("aria-pressed", String(b.dataset.lang === LANG));
     });
+    const toggle = box.querySelector(".idioma-toggle");
+    if (toggle) {
+      toggle.textContent = LANG.toUpperCase();
+      toggle.setAttribute("aria-label", `${tr("lang.label")}: ${LANG.toUpperCase()}`);
+    }
   }
 
   syncTema();
   renderDeliveryNotice();
   renderTransferInfo();
   renderCourierFields();
+  renderZone();
+  syncBarraCarrito(CART_COUNT);
 }
 
 function setLang(lang) {
   if (lang === LANG || !I18N.LANGS.includes(lang)) return;
   LANG = lang;
+  if (!PREVIEW) {
+    LANGUAGE.rememberLang(window.localStorage, lang);
+    SAVED_LANG = lang;
+  }
+  closeLangNotice();
 
   const url = new URL(window.location.href);
   url.searchParams.set("lang", lang);
@@ -443,6 +542,8 @@ function setLang(lang) {
 
 // Las hojas de la plantilla llevan `data-menu-template`: al cambiar de plantilla (vista previa) se
 // reemplazan por las nuevas en cuanto cargan, sin que la página se quede un momento sin estilo.
+const APP_SHELL_TEMPLATES = ["moderno", "minimal"];
+
 function loadTemplate(template) {
   return new Promise((resolve, reject) => {
     if (!template) {
@@ -462,6 +563,25 @@ function loadTemplate(template) {
     link.href = `/templates/carrito/${template}/styles.css`;
     link.dataset.menuTemplate = template;
 
+    // La cara de app (barra de abajo, hoja de checkout, pastilla de precio) es solo de Moderna y
+    // Minimalista, y va al final para ganarle a las demás hojas (PUBLICO-86 a 97).
+    const addShell = () => {
+      if (!APP_SHELL_TEMPLATES.includes(template)) {
+        previous.forEach((old) => old.remove());
+        resolve();
+        return;
+      }
+      const shell = document.createElement("link");
+      shell.rel = "stylesheet";
+      shell.href = "/apps/menu-app/cara-de-app.css";
+      shell.dataset.menuTemplate = template;
+      shell.onload = shell.onerror = () => {
+        previous.forEach((old) => old.remove());
+        resolve();
+      };
+      document.head.appendChild(shell);
+    };
+
     // Después de la plantilla, y solo en pantallas anchas, el ajuste de escritorio
     // (PUBLICO-14). Si no carga, el menú se ve como antes.
     const addDesktop = () => {
@@ -470,10 +590,7 @@ function loadTemplate(template) {
       desktop.href = "/apps/menu-app/desktop.css";
       desktop.media = "(min-width: 1024px)";
       desktop.dataset.menuTemplate = template;
-      desktop.onload = desktop.onerror = () => {
-        previous.forEach((old) => old.remove());
-        resolve();
-      };
+      desktop.onload = desktop.onerror = addShell;
       document.head.appendChild(desktop);
     };
 
@@ -501,9 +618,24 @@ function renderHeader(c) {
   const descEl = document.querySelector("#descripcion-negocio");
   const estadoEl = document.querySelector("#estado-texto");
   const header = document.querySelector(".header");
-  const dot = document.querySelector(".badge-estado .dot");
+  const dots = document.querySelectorAll(".badge-estado .dot, .linea-estado .dot");
+  const lineaTexto = document.querySelector("#linea-estado-texto");
 
   if (nombreEl) nombreEl.textContent = c.nombre || "";
+
+  // Logo del local junto al nombre (PUBLICO-97); lo muestran Moderna y Minimalista.
+  const logoEl = document.querySelector("#logo-negocio");
+  if (logoEl) {
+    const logo = HTML.safeHttpUrl(c.logo);
+    logoEl.onerror = () => logoEl.setAttribute("hidden", "");
+    if (logo) {
+      logoEl.src = logo;
+      logoEl.removeAttribute("hidden");
+    } else {
+      logoEl.removeAttribute("src");
+      logoEl.setAttribute("hidden", "");
+    }
+  }
   if (descEl) descEl.textContent = c.descripcion || "";
 
   if (header) {
@@ -518,13 +650,13 @@ function renderHeader(c) {
 
   renderInfo(c, cierre, fueraDeHorario, currentPreorder(c, cierre));
 
-  if (estadoEl) {
-    estadoEl.textContent = tr(abierto ? "status.open" : "status.closed");
-  }
+  const estado = tr(abierto ? "status.open" : "status.closed");
+  if (estadoEl) estadoEl.textContent = estado;
+  if (lineaTexto) lineaTexto.textContent = c.descripcion ? `${estado} · ${c.descripcion}` : estado;
 
-  if (dot) {
+  dots.forEach((dot) => {
     dot.style.background = abierto ? "#4ade80" : "#ef4444";
-  }
+  });
 }
 
 // El ícono de cada red: mismo trazo que usa el menú estático (lib/info.js).
@@ -754,6 +886,8 @@ function renderMenu(menu) {
 
     menuContainer.appendChild(sec);
   });
+
+  syncBarra();
 }
 
 function initSearch() {
@@ -986,6 +1120,10 @@ function updateCart() {
 
   totalEl.textContent = `$${total}`;
   countEl.textContent = count;
+  const checkoutTotal = document.querySelector("#checkout-total");
+  if (checkoutTotal) checkoutTotal.textContent = `$${total}`;
+  CART_COUNT = count;
+  syncBarraCarrito(count);
 
   // 🔥 IMPORTANTE: persistencia SIEMPRE actualizada
   saveCart();
@@ -1051,11 +1189,81 @@ function loadCart() {
 // UI (más moderno + seguro)
 const $ = (sel) => document.querySelector(sel);
 
-$("#btn-carrito")?.addEventListener("click", () => {
+// Quien abrió el carrito o el checkout: el foco vuelve ahí al cerrarlos (PUBLICO-95).
+let LAYER_OPENER = null;
+// Hay una entrada puesta en el historial mientras el carrito o el checkout están abiertos, para que el
+// gesto de atrás del celular los cierre en vez de salir del menú (PUBLICO-95).
+let LAYER_ENTRY = false;
+
+function pushLayer() {
+  if (PREVIEW || LAYER_ENTRY) return;
+  try {
+    history.pushState({ smaCapa: true }, "");
+    LAYER_ENTRY = true;
+  } catch {
+    // Sin historial: se cierra con la X y con Escape.
+  }
+}
+
+window.addEventListener("popstate", () => {
+  if (!LAYER_ENTRY) return;
+  LAYER_ENTRY = false;
+  closeAll();
+});
+
+// Escape cierra el carrito y el checkout, salvo que haya arriba un diálogo con su propio Escape (la zona).
+document.addEventListener("keydown", (e) => {
+  // Un diálogo abierto arriba (zona, hoja de producto, foto ampliada) tiene su propio Escape: ese se cierra primero.
+  if (e.key !== "Escape" || document.querySelector(".zona-dialogo, .opciones-hoja, .lightbox")) return;
+  if ($("#checkout")?.classList.contains("active") || $("#carrito-panel")?.classList.contains("active")) {
+    closeAll();
+  }
+});
+
+// Se sale de la página con la entrada del carrito reemplazada y no sumada: al volver con "atrás" desde el
+// seguimiento o desde el pago no queda una entrada de más del menú (PUBLICO-95).
+function goTo(url) {
+  if (LAYER_ENTRY) {
+    LAYER_ENTRY = false;
+    window.location.replace(url);
+  } else {
+    window.location.href = url;
+  }
+}
+
+// Mientras el carrito o el checkout están abiertos, el resto de la página no recibe foco ni lectura
+// (`inert`): el diálogo es modal de verdad y Tab no se escapa a lo de atrás.
+const LAYER_IDS = ["carrito-panel", "checkout", "overlay", "loader", "aviso-idioma"];
+
+function setBackgroundInert(on) {
+  for (const node of document.body.children) {
+    if (node.tagName === "SCRIPT" || LAYER_IDS.includes(node.id)) continue;
+    node.inert = on;
+  }
+}
+
+function openCart() {
+  LAYER_OPENER = document.activeElement;
+  pushLayer();
+  setBackgroundInert(true);
   $("#carrito-panel")?.classList.add("active");
   $("#overlay")?.classList.add("active");
   document.body.classList.add("no-scroll");
-});
+  $("#carrito-panel")?.focus({ preventScroll: true });
+}
+
+function openCheckout() {
+  LAYER_OPENER ??= document.activeElement;
+  pushLayer();
+  setBackgroundInert(true);
+  $("#overlay")?.classList.add("active");
+  $("#checkout")?.classList.add("active");
+  document.body.classList.add("no-scroll");
+  // El foco entra a la hoja sin abrir el teclado del celular.
+  $("#checkout")?.focus({ preventScroll: true });
+}
+
+$("#btn-carrito")?.addEventListener("click", openCart);
 
 $("#cerrar-carrito")?.addEventListener("click", closeAll);
 $("#overlay")?.addEventListener("click", closeAll);
@@ -1068,6 +1276,14 @@ function closeAll() {
   $("#overlay")?.classList.remove("active");
   $("#checkout")?.classList.remove("active");
   document.body.classList.remove("no-scroll");
+  setBackgroundInert(false);
+
+  if (LAYER_ENTRY) {
+    LAYER_ENTRY = false;
+    history.back();
+  }
+  if (LAYER_OPENER?.isConnected) LAYER_OPENER.focus?.({ preventScroll: true });
+  LAYER_OPENER = null;
 }
 
 $("#btn-finalizar")?.addEventListener("click", () => {
@@ -1075,10 +1291,116 @@ $("#btn-finalizar")?.addEventListener("click", () => {
   renderScheduleChoice();
   $("#carrito-panel")?.classList.remove("active");
   // El fondo sigue activo: tocar afuera del checkout lo cierra (closeAll).
-  $("#checkout")?.classList.add("active");
+  openCheckout();
 });
 
 $("#cerrar-checkout")?.addEventListener("click", closeAll);
+
+// BARRA DE ABAJO (PUBLICO-92): Menú, Promos y Carrito. Solo la muestran Moderna y Minimalista.
+const calmMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+function scrollToSection(node) {
+  node?.scrollIntoView({ behavior: calmMotion() ? "auto" : "smooth", block: "start" });
+}
+
+function syncBarra() {
+  const promos = $("#barra-promos");
+  if (promos) promos.hidden = !document.querySelector("#menu .categoria-ofertas");
+  updateBarraActive();
+}
+
+function syncBarraCarrito(count) {
+  const badge = $("#barra-carrito-count");
+  if (badge) {
+    badge.textContent = count;
+    badge.hidden = count === 0;
+  }
+  $("#barra-carrito")?.setAttribute("aria-label", count > 0 ? `${tr("nav.cart")} (${count})` : tr("nav.cart"));
+}
+
+// Marca en la barra dónde está el visitante: en las promos o en el resto del menú.
+function updateBarraActive() {
+  // Las solapas de categorías quedaron fijas arriba: pasan por debajo del selector de idioma.
+  const nav = document.querySelector("#categorias");
+  document.body.classList.toggle("categorias-fijas", !!nav && nav.getBoundingClientRect().top <= 0.5);
+
+  const promos = document.querySelector("#menu .categoria-ofertas");
+  const rect = promos?.getBoundingClientRect();
+  const middle = window.innerHeight * 0.4;
+  const onPromos = !!rect && rect.top < middle && rect.bottom > middle;
+  const set = (id, active) => {
+    const node = $(id);
+    if (!node) return;
+    if (active) node.setAttribute("aria-current", "true");
+    else node.removeAttribute("aria-current");
+  };
+  set("#barra-menu", !onPromos);
+  set("#barra-promos", onPromos);
+}
+
+let BARRA_FRAME = 0;
+const onScrollOrResize = () => {
+  if (BARRA_FRAME) return;
+  BARRA_FRAME = requestAnimationFrame(() => {
+    BARRA_FRAME = 0;
+    updateBarraActive();
+  });
+};
+window.addEventListener("scroll", onScrollOrResize, { passive: true });
+// Girar el celular o cambiar el tamaño reacomoda las solapas: se vuelve a calcular.
+window.addEventListener("resize", onScrollOrResize);
+
+$("#barra-menu")?.addEventListener("click", () => {
+  scrollToSection(
+    document.querySelector("#menu .categoria:not(.categoria-ofertas):not(.categoria-destacados)") ?? $("#menu"),
+  );
+});
+$("#barra-promos")?.addEventListener("click", () => {
+  scrollToSection(document.querySelector("#menu .categoria-ofertas"));
+});
+$("#barra-carrito")?.addEventListener("click", openCart);
+
+// SUGERENCIA DE IDIOMA (PUBLICO-88 a 90): un aviso chico, que se cierra y no vuelve.
+function closeLangNotice() {
+  document.getElementById("aviso-idioma")?.remove();
+}
+
+function maybeSuggestLanguage() {
+  if (PREVIEW || LANG !== I18N.DEFAULT_LANG || new URLSearchParams(window.location.search).has("lang")) return;
+  const suggested = LANGUAGE.suggestLanguage(navigator.language, I18N.LANGS, SAVED_LANG);
+  if (!suggested || document.getElementById("aviso-idioma")) return;
+
+  // El aviso habla el idioma que se sugiere: es el que entiende quien lo tiene que leer.
+  const box = document.createElement("div");
+  box.id = "aviso-idioma";
+  box.className = "aviso-idioma";
+  box.setAttribute("role", "status");
+  box.lang = suggested;
+
+  const text = document.createElement("span");
+  text.className = "aviso-idioma-texto";
+  text.textContent = I18N.t("lang.suggest", suggested, { idioma: LANGUAGE.LANG_NAMES[suggested] });
+
+  const yes = document.createElement("button");
+  yes.type = "button";
+  yes.className = "aviso-idioma-si";
+  yes.textContent = I18N.t("lang.suggestYes", suggested);
+  yes.addEventListener("click", () => setLang(suggested));
+
+  const no = document.createElement("button");
+  no.type = "button";
+  no.className = "aviso-idioma-cerrar";
+  no.textContent = "✕";
+  no.setAttribute("aria-label", I18N.t("lang.suggestClose", suggested));
+  no.addEventListener("click", () => {
+    LANGUAGE.rememberLang(window.localStorage, LANG);
+    SAVED_LANG = LANG;
+    closeLangNotice();
+  });
+
+  box.append(text, yes, no);
+  document.body.appendChild(box);
+}
 
 // WHATSAPP
 $("#form-pedido")?.addEventListener("submit", async (e) => {
@@ -1108,6 +1430,28 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
   const phone = String(f.get("telefono") ?? "").trim();
   if (DZ && !DZ.isValidPhone(phone)) {
     alert(tr("error.invalidPhone"));
+    return;
+  }
+
+  // El envío solo se confirma a una zona de la lista, y no con "Mi barrio no está" (PUBLICO-82).
+  const deliveryProblem = DZ
+    ? DZ.deliveryProblem({
+        zones: COURIER_ZONES,
+        delivery: f.get("entrega"),
+        zoneId: f.get("barrio"),
+        blocked: Boolean(ZONE_ON && ZONE?.deliveryBlocked(ZONE_CHOICE)),
+      })
+    : null;
+  if (deliveryProblem) {
+    alert(
+      tr(
+        deliveryProblem === "no_delivery"
+          ? ZONE_PICKUP
+            ? "zone.noDelivery"
+            : "zone.noDeliveryOnly"
+          : "error.invalidZone",
+      ),
+    );
     return;
   }
 
@@ -1313,7 +1657,7 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     // repartidor y, si quiere, se manda también por WhatsApp (el link queda guardado, es opcional).
     ORDERS.rememberHandoff(window.localStorage, saved.code, whatsappUrl);
     WA_WINDOW?.discardPlaceholder(placeholder);
-    window.location.href = link;
+    goTo(link);
     return;
   }
 
@@ -1349,17 +1693,17 @@ async function payOnline(form, code, trackingLink) {
 
   const pay = await MERCADOPAGO.createPayment({ code });
   if (pay.ok) {
-    window.location.href = pay.url;
+    goTo(pay.url);
     return;
   }
 
   alert(tr("error.mpFailed"));
-  window.location.href = trackingLink;
+  goTo(trackingLink);
 }
 
 function openWhatsAppUrl(placeholder, url) {
   if (WA_WINDOW) return WA_WINDOW.openWhatsApp(placeholder, url, window);
-  window.location.href = url;
+  goTo(url);
   return "same-tab";
 }
 
@@ -1512,6 +1856,275 @@ function initCourierFields() {
   document.querySelector('#form-pedido select[name="entrega"]')?.addEventListener("change", renderCourierFields);
   document.querySelector('#form-pedido select[name="barrio"]')?.addEventListener("change", renderZoneNotice);
   renderCourierFields();
+}
+
+// Zona del cliente al entrar (PUBLICO-73 a 78). Solo con envío y barrios; la tarjeta ayuda, pero
+// el checkout valida la zona como siempre. Los nombres de barrio van con textContent.
+function initZoneChoice(config, slug) {
+  const options = CHECKOUT?.checkoutOptions(config).delivery.options;
+  ZONE_ON = Boolean(MENU_SOURCE && ZONE.askZone({ zones: COURIER_ZONES, deliveryOptions: options }));
+  if (!ZONE_ON) return;
+
+  ZONE_PICKUP = options.includes("retiro");
+  const raw = ZONE.readChoice(window.localStorage, slug);
+  ZONE_CHOICE = ZONE.validateChoice(raw, COURIER_ZONES, { pickup: ZONE_PICKUP });
+  if (raw && !ZONE_CHOICE) ZONE.clearChoice(window.localStorage, slug);
+
+  ZONE_STEP = ZONE_CHOICE ? null : "ask";
+  if (ZONE_CHOICE) applyZoneToCheckout(ZONE_CHOICE);
+  renderZone();
+
+  // Si el cliente cambia la entrega o el barrio en el checkout, el chip y lo guardado lo siguen.
+  const sync = () => syncZoneFromCheckout(slug);
+  document.querySelector('#form-pedido select[name="entrega"]')?.addEventListener("change", sync);
+  document.querySelector('#form-pedido select[name="barrio"]')?.addEventListener("change", sync);
+
+  document.addEventListener("keydown", onZoneKeydown);
+  // Tocar el fondo oscurecido cierra el diálogo, como Escape.
+  // Solo si el toque empezó y terminó en el fondo: arrastrar una selección desde el buscador no lo cierra.
+  let pressedBackdrop = false;
+  document.querySelector("#zona-card")?.addEventListener("pointerdown", (event) => {
+    pressedBackdrop = event.target === event.currentTarget;
+  });
+  document.querySelector("#zona-card")?.addEventListener("click", (event) => {
+    if (pressedBackdrop && event.target === event.currentTarget) closeZoneDialog();
+    pressedBackdrop = false;
+  });
+
+  document.querySelector("#zona-chip")?.addEventListener("click", () => {
+    ZONE_STEP = "ask";
+    renderZone();
+    document.querySelector("#zona-card")?.scrollIntoView({ block: "nearest" });
+  });
+}
+
+function syncZoneFromCheckout(slug) {
+  const entrega = document.querySelector('#form-pedido select[name="entrega"]')?.value;
+  const barrio = document.querySelector('#form-pedido select[name="barrio"]')?.value;
+  // Con el envío bloqueado el checkout no cambia la elección: se sale con el chip (PUBLICO-80).
+  if (ZONE.deliveryBlocked(ZONE_CHOICE)) return;
+  let next = null;
+  if (entrega === "retiro") next = { type: "pickup" };
+  else if (entrega === "delivery" && barrio && DZ.findZone(COURIER_ZONES, barrio)) {
+    next = { type: "zone", zoneId: barrio };
+  }
+  if (!next) return;
+
+  ZONE_CHOICE = next;
+  ZONE.saveChoice(window.localStorage, slug, next);
+  if (ZONE_STEP === "confirmed") ZONE_STEP = null;
+  renderZone();
+}
+
+// Deja el checkout con el envío y la zona elegidos, o con el retiro.
+function applyZoneToCheckout(choice) {
+  const entrega = document.querySelector('#form-pedido select[name="entrega"]');
+  if (!entrega) return;
+
+  const value = choice.type === "zone" ? "delivery" : "retiro";
+  if (![...entrega.options].some((option) => option.value === value)) return;
+
+  entrega.value = value;
+  renderCourierFields();
+
+  if (choice.type === "zone") {
+    const barrio = document.querySelector('#form-pedido select[name="barrio"]');
+    if (barrio) barrio.value = choice.zoneId;
+    renderZoneNotice();
+  }
+}
+
+function chooseZone(choice) {
+  ZONE_CHOICE = choice;
+  // "Mi barrio no está" no se recuerda: al volver se pregunta de nuevo (PUBLICO-80).
+  if (choice.type !== "notListed") ZONE.saveChoice(window.localStorage, MENU_SOURCE.slug, choice);
+  applyZoneToCheckout(choice);
+  ZONE_STEP = choice.type === "zone" ? "confirmed" : choice.type === "notListed" ? "notListed" : null;
+  renderZone();
+}
+
+function zoneButton(text, onClick, className = "zona-opcion") {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = className;
+  button.textContent = text;
+  button.addEventListener("click", onClick);
+  return button;
+}
+
+function renderZoneList(list, query) {
+  list.replaceChildren();
+  const found = ZONE.filterZones(COURIER_ZONES.zones, query);
+  if (found.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "zona-vacia";
+    empty.textContent = tr("zone.empty");
+    list.append(empty);
+    return;
+  }
+  found.forEach((zone) => {
+    const button = zoneButton(zone.name, () => chooseZone({ type: "zone", zoneId: zone.id }));
+    const price = document.createElement("span");
+    price.className = "zona-precio";
+    price.textContent = `$${PRICE.formatPrice(zone.price)}`;
+    button.append(price);
+    list.append(button);
+  });
+}
+
+// Cierra el diálogo de la zona sin cambiar la elección (×, Escape o tocar el fondo).
+function closeZoneDialog() {
+  ZONE_STEP = null;
+  renderZone();
+}
+
+// Con "Mi barrio no está" el checkout queda solo en retiro: la opción de envío se ve deshabilitada y el aviso
+// dice por qué (PUBLICO-80). Al elegir una zona de la lista, vuelve a estar habilitada.
+function applyDeliveryBlock() {
+  const blocked = Boolean(ZONE_ON && ZONE?.deliveryBlocked(ZONE_CHOICE));
+  const entrega = document.querySelector('#form-pedido select[name="entrega"]');
+  const notice = document.querySelector("#aviso-sin-envio");
+
+  const option = entrega?.querySelector('option[value="delivery"]');
+  if (entrega && option) {
+    option.disabled = blocked;
+    if (blocked && entrega.value === "delivery") {
+      entrega.value = ZONE_PICKUP && entrega.querySelector('option[value="retiro"]') ? "retiro" : "";
+      renderCourierFields();
+    }
+  }
+
+  if (notice) {
+    notice.hidden = !blocked;
+    notice.textContent = blocked ? tr(ZONE_PICKUP ? "zone.noDelivery" : "zone.noDeliveryOnly") : "";
+  }
+}
+
+// El diálogo atrapa el foco y bloquea el scroll de atrás (PUBLICO-81). Al cerrarse, el foco vuelve a quien lo abrió.
+function onZoneKeydown(event) {
+  const card = document.querySelector("#zona-card");
+  if (!card || card.hidden) return;
+
+  if (event.key === "Escape") {
+    event.preventDefault();
+    closeZoneDialog();
+    return;
+  }
+  if (event.key !== "Tab") return;
+
+  const focusables = [...card.querySelectorAll("button, input")].filter((el) => !el.disabled && !el.hidden);
+  if (focusables.length === 0) return;
+
+  const next = ZONE.nextFocusIndex(focusables.indexOf(document.activeElement), focusables.length, event.shiftKey);
+  event.preventDefault();
+  focusables[next].focus();
+}
+
+function renderZone() {
+  const card = document.querySelector("#zona-card");
+  const chip = document.querySelector("#zona-chip");
+  if (!card || !chip || !ZONE) return;
+
+  const wasOpen = !card.hidden;
+  chip.hidden = !ZONE_ON;
+  card.hidden = !ZONE_ON || !ZONE_STEP;
+  if (!wasOpen && !card.hidden) ZONE_RETURN_FOCUS = document.activeElement;
+
+  if (ZONE_ON) {
+    const zone = ZONE_CHOICE?.type === "zone" ? DZ.findZone(COURIER_ZONES, ZONE_CHOICE.zoneId) : null;
+    chip.textContent = zone
+      ? `📍 ${zone.name}`
+      : ZONE_CHOICE?.type === "pickup"
+        ? `📍 ${tr("zone.chipPickup")}`
+        : ZONE_CHOICE?.type === "notListed"
+          ? `📍 ${tr("zone.chipNoDelivery")}`
+          : `📍 ${tr("zone.change")}`;
+    chip.setAttribute("aria-label", tr("zone.change"));
+  }
+
+  applyDeliveryBlock();
+  document.body.classList.toggle("zona-abierta", !card.hidden);
+
+  if (card.hidden) {
+    if (wasOpen && ZONE_RETURN_FOCUS?.isConnected) ZONE_RETURN_FOCUS.focus?.();
+    ZONE_RETURN_FOCUS = null;
+    return;
+  }
+
+  card.replaceChildren();
+  // En el celular es una hoja desde abajo; en escritorio, un diálogo centrado con el fondo oscurecido (PUBLICO-80).
+  const panel = document.createElement("div");
+  panel.className = "zona-dialogo";
+  panel.setAttribute("role", "dialog");
+  panel.setAttribute("aria-modal", "true");
+  panel.setAttribute("aria-labelledby", "zona-titulo");
+
+  const title = document.createElement("h2");
+  title.id = "zona-titulo";
+  title.className = "zona-titulo";
+  const close = zoneButton("×", closeZoneDialog, "zona-cerrar");
+  close.setAttribute("aria-label", tr("zone.close"));
+  const back = () =>
+    zoneButton(
+      tr("zone.back"),
+      () => {
+        ZONE_STEP = "ask";
+        renderZone();
+      },
+      "zona-volver",
+    );
+
+  if (ZONE_STEP === "ask") {
+    title.textContent = tr("zone.question");
+    const row = document.createElement("div");
+    row.className = "zona-acciones";
+    row.append(
+      zoneButton(tr("zone.delivery"), () => {
+        ZONE_QUERY = "";
+        ZONE_STEP = "zones";
+        renderZone();
+      }),
+    );
+    if (ZONE_PICKUP) row.append(zoneButton(tr("zone.pickup"), () => chooseZone({ type: "pickup" })));
+    panel.append(close, title, row);
+  } else if (ZONE_STEP === "zones") {
+    title.textContent = tr("zone.delivery");
+    const search = document.createElement("input");
+    search.type = "search";
+    search.className = "zona-buscar";
+    search.placeholder = tr("zone.search");
+    search.setAttribute("aria-label", tr("zone.search"));
+    search.autocomplete = "off";
+    const list = document.createElement("div");
+    list.className = "zona-lista";
+    search.value = ZONE_QUERY;
+    renderZoneList(list, ZONE_QUERY);
+    search.addEventListener("input", () => {
+      ZONE_QUERY = search.value;
+      renderZoneList(list, ZONE_QUERY);
+    });
+    // "Mi barrio no está" bloquea el envío al instante (PUBLICO-80).
+    const notListed = zoneButton(tr("zone.notListed"), () => chooseZone({ type: "notListed" }), "zona-no-esta");
+    panel.append(close, title, search, list, notListed, back());
+  } else if (ZONE_STEP === "notListed") {
+    title.textContent = tr(ZONE_PICKUP ? "zone.noDelivery" : "zone.noDeliveryOnly");
+    panel.append(close, title);
+    if (ZONE_PICKUP) panel.append(zoneButton(tr("zone.pickupOffer"), () => chooseZone({ type: "pickup" })));
+    panel.append(back());
+  } else if (ZONE_STEP === "confirmed") {
+    const zone = DZ.findZone(COURIER_ZONES, ZONE_CHOICE?.zoneId);
+    if (!zone) {
+      ZONE_STEP = null;
+      renderZone();
+      return;
+    }
+    title.textContent = tr("zone.available", ZONE.zoneLabel(zone, PRICE.formatPrice));
+    panel.append(close, title);
+  }
+
+  card.append(panel);
+  // El foco entra al diálogo: el buscador si hay, si no la primera opción.
+  (panel.querySelector(".zona-buscar") ?? panel.querySelector(".zona-opcion") ?? panel.querySelector("button"))?.focus();
 }
 
 // Para cuándo es el pedido (PUBLICO-30): con un menú de Supabase que acepta pedidos
@@ -1672,9 +2285,7 @@ function restoreThanks() {
     whatsappUrl,
     transfer: CHECKOUT?.transferDetails(CONFIG, last.payment) ?? null,
   });
-  $("#overlay")?.classList.add("active");
-  $("#checkout")?.classList.add("active");
-  document.body.classList.add("no-scroll");
+  openCheckout();
 }
 
 // Vuelve el checkout a su estado normal (formulario visible, sin el "gracias").
@@ -1744,9 +2355,7 @@ async function startPreview() {
     applyStaticTexts();
     renderHeader(config);
 
-    document.body.classList.remove("loading");
-    const loader = document.getElementById("loader");
-    if (loader) loader.style.display = "none";
+    finishLoading();
 
     if (firstDraw && typeof ResizeObserver !== "undefined") {
       new ResizeObserver(reportHeader).observe(document.body);

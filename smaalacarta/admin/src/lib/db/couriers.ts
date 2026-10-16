@@ -12,6 +12,9 @@ export type CourierSummary = {
   zoneCount: number;
   // El email de su cuenta, si la tiene.
   email: string | null;
+  // Moto y/o auto (ENVIO-174).
+  moto: boolean;
+  auto: boolean;
 };
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
@@ -21,11 +24,13 @@ type CourierRow = {
   name: string;
   whatsapp: string | null;
   active: boolean;
+  moto: boolean;
+  auto: boolean;
   courier_zone_coverage: { count: number }[];
   courier_users: { user_id: string }[];
 };
 
-const SELECT = "id, name, whatsapp, active, courier_zone_coverage(count), courier_users(user_id)";
+const SELECT = "id, name, whatsapp, active, moto, auto, courier_zone_coverage(count), courier_users(user_id)";
 
 // `courier_users.user_id` apunta a `auth.users`, no a `profiles`: los emails se piden aparte.
 async function withEmails(supabase: Supabase, rows: CourierRow[]): Promise<CourierSummary[]> {
@@ -42,6 +47,8 @@ async function withEmails(supabase: Supabase, rows: CourierRow[]): Promise<Couri
     name: row.name,
     whatsapp: row.whatsapp,
     active: row.active,
+    moto: row.moto,
+    auto: row.auto,
     zoneCount: row.courier_zone_coverage[0]?.count ?? 0,
     email: row.courier_users[0] ? (emails.get(row.courier_users[0].user_id) ?? null) : null,
   }));

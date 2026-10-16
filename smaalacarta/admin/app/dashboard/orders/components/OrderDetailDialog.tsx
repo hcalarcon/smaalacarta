@@ -32,7 +32,12 @@ export default function OrderDetailDialog({
   onAssignCourier,
   onSelfDelivery,
   onConfirmSettlement,
+  vehicleEnabled = false,
+  onNeedsCar,
 }: {
+  // El interruptor del vehículo (ENVIO-175) y "Necesita auto" (ENVIO-176).
+  vehicleEnabled?: boolean;
+  onNeedsCar?: (needsCar: boolean) => void;
   order: Order | null;
   slug: string;
   busy: boolean;
@@ -186,6 +191,8 @@ export default function OrderDetailDialog({
             error={error}
             onAssign={onAssignCourier}
             onSelf={onSelfDelivery}
+            vehicleEnabled={vehicleEnabled}
+            onNeedsCar={onNeedsCar}
           />
         ) : null}
 
