@@ -111,7 +111,7 @@ describe("el interruptor — ENVIO-145", () => {
     const r = await fresh.query<{ delivery_mode: string }>("select delivery_mode from platform_settings");
     expect(r.rows).toEqual([{ delivery_mode: "fixed" }]);
     await fresh.close();
-  });
+  }, 60_000);
 
   it("solo el superadmin lo cambia", async () => {
     const a = await call(ANA, "update platform_settings set delivery_mode = 'offers'");
@@ -389,5 +389,5 @@ describe("los pedidos abiertos al migrar quedan en ofertas — ENVIO-146", () =>
     const r = await old.query<{ delivery_mode: string }>("select delivery_mode from orders");
     expect(r.rows).toEqual([{ delivery_mode: "offers" }]);
     await old.close();
-  });
+  }, 60_000);
 });

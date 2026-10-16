@@ -874,7 +874,15 @@ describe("anticipados y programados: se ofrecen al confirmar — ENVIO-121 a 125
     const sql = `select public.create_public_order('ana', 'Cliente Prueba', 'delivery', 'efectivo', null,
          '${items}'::jsonb${extra}, p_delivery_zone => '${await zoneId("Cantera")}'::uuid,
          p_customer_phone => '351 555-1234', p_delivery_address => 'Av. Siempre Viva 742') as result`;
-    if (kind === "programado") vi.useFakeTimers({ toFake: ["Date"], now: NOON });
+    if (kind === "programado") {
+      // Con el reloj fijo en el pasado, los pedidos de los tests anteriores quedan "en el futuro" de la
+      // base y el freno de 20 por minuto los cuenta a todos: se envejecen antes de fijar el reloj.
+      await db.exec(
+        `update orders set created_at = created_at - interval '1 year'
+         where created_at > '${new Date(NOON.getTime() - 2 * 60_000).toISOString()}'`,
+      );
+      vi.useFakeTimers({ toFake: ["Date"], now: NOON });
+    }
     let r: Awaited<ReturnType<typeof call>>;
     try {
       r = await call(null, sql);

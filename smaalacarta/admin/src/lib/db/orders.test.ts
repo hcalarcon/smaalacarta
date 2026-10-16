@@ -640,11 +640,13 @@ describe("pedidos manuales — ADMIN-PEDIDOS-3", () => {
     const c = r.ok ? (r.rows[0].result as { code: string }) : null;
 
     const t = await asUser(db, null, `select public.public_order_tracking('${c!.code}') as t`);
-    // Nace confirmado: entró (pendiente) y el local lo aceptó (ADMIN-PEDIDOS-39).
-    expect(t.ok && (t.rows[0].t as { eventos: { estado: string }[] }).eventos.map((e) => e.estado)).toEqual([
-      "pending",
-      "confirmed",
-    ]);
+    // Nace confirmado: entró (pendiente) y el local lo aceptó (ADMIN-PEDIDOS-39). PGlite mide el reloj en
+    // milisegundos: los dos eventos pueden caer en el mismo y el desempate es el id, así que el orden
+    // exacto no se prueba acá; sí que están los dos y que el aceptado no es anterior al pendiente.
+    const eventos = t.ok ? (t.rows[0].t as { eventos: { estado: string; fecha: string }[] }).eventos : [];
+    expect(eventos.map((e) => e.estado).sort()).toEqual(["confirmed", "pending"]);
+    const fecha = (estado: string) => Date.parse(eventos.find((e) => e.estado === estado)!.fecha);
+    expect(fecha("confirmed")).toBeGreaterThanOrEqual(fecha("pending"));
   });
 
   it.each([

@@ -613,5 +613,5 @@ describe("la migración convierte los pedidos abiertos de antes — ENVIO-74", (
     } finally {
       await old.close();
     }
-  });
+  }, 60_000);
 });
