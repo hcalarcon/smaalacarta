@@ -88,6 +88,33 @@ describe("encabezado liviano (PUBLICO-97)", () => {
   });
 });
 
+describe("header compacto de Moderna (PUBLICO-98)", () => {
+  it("tiene buscador desplegable accesible y un nombre compacto para la fila fija", () => {
+    expect(html).toContain('id="btn-buscar"');
+    expect(html).toContain('aria-controls="buscador"');
+    expect(html).toMatch(/id="header-sticky-title"[^>]*hidden/);
+    expect(html).toContain('id="nombre-negocio-mini"');
+    expect(html).toContain('id="header-sticky-title"');
+    expect(app).toContain('btnBuscar.setAttribute("aria-expanded", String(abierto))');
+    expect(app).toContain('input.addEventListener("keydown"');
+  });
+
+  it("deja pasar la fila de controles y fija solo el nombre compacto sobre las tabs", () => {
+    expect(shell).toMatch(/html\[data-template="moderno"\]\s+\.header-top\s*\{[^}]*position:\s*relative/);
+    expect(shell).toMatch(/html\[data-template="moderno"\]\s+\.header\s*\{[^}]*height:\s*120px/);
+    expect(shell).toMatch(/html\[data-template="moderno"\]\s+\.header-sticky-title\s*\{[^}]*display:\s*none/);
+    expect(shell).toMatch(/html\[data-template="moderno"\]\s+body\.header-scrolled\s+\.header-sticky-title\s*\{[^}]*position:\s*sticky;[^}]*display:\s*flex/);
+    expect(shell).toMatch(/html\[data-template="moderno"\]\s+\.categorias\s*\{[^}]*top:\s*36px/);
+  });
+
+  it("abre la lupa sin altura permanente, muestra foco y reduce el movimiento", () => {
+    expect(shell).toMatch(/html\[data-template="moderno"\]\s+#buscador\s*\{[^}]*display:\s*none/);
+    expect(shell).toMatch(/html\[data-template="moderno"\]\s+body\.buscador-abierto\s+#buscador\s*\{[^}]*display:\s*block/);
+    expect(shell).toMatch(/\.btn-buscar:focus-visible/);
+    expect(shell).toMatch(/prefers-reduced-motion:\s*reduce/);
+  });
+});
+
 describe("hoja del checkout (PUBLICO-94 y 95)", () => {
   it("es un diálogo con el total y confirmar fijos abajo", () => {
     expect(html).toContain('role="dialog"');

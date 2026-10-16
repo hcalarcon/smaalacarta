@@ -706,3 +706,158 @@ html[data-template] .checkout > #gracias-pedido {
     scroll-behavior: auto;
   }
 }
+
+/* ---------- HEADER COMPACTO DE MODERNA (PUBLICO-98) ---------- */
+@media (max-width: 639px) {
+  html[data-template="moderno"] .header-top {
+    position: relative;
+    min-height: 44px;
+    padding: 0 12px;
+    background: transparent;
+  }
+
+  html[data-template="moderno"] .header {
+    box-sizing: border-box;
+    height: 120px;
+    padding: calc(8px + env(safe-area-inset-top)) 12px 10px;
+    background-color: var(--brand);
+  }
+
+  html[data-template="moderno"] .header .header-marca {
+    position: absolute;
+    right: 12px;
+    bottom: 10px;
+    left: 12px;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+    background: none;
+  }
+
+  html[data-template="moderno"] .logo-negocio:not([hidden]) {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+  }
+
+  html[data-template="moderno"] .header .header-titulo h1 {
+    font-size: clamp(1.15rem, 5.8vw, 1.4rem);
+    line-height: 1.05;
+  }
+
+  html[data-template="moderno"] .header .linea-estado {
+    gap: 4px;
+    margin-top: 2px;
+    font-size: 0.72rem;
+    line-height: 1.15;
+  }
+
+  html[data-template="moderno"] .header .linea-estado #zona-chip {
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    width: auto;
+    min-width: 0;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+    color: inherit;
+    font: inherit;
+    line-height: inherit;
+    white-space: nowrap;
+  }
+
+  html[data-template="moderno"] .header .linea-estado #zona-chip[hidden] {
+    display: none;
+  }
+
+  html[data-template="moderno"] .header .linea-estado #zona-chip:not([hidden])::before {
+    content: "·";
+    margin: 0 4px;
+  }
+
+  html[data-template="moderno"] .header-top .btn-tema,
+  html[data-template="moderno"] .header-top .btn-buscar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 40px;
+    min-width: 44px;
+    height: 40px;
+    min-height: 44px;
+    padding: 0;
+  }
+
+  html[data-template="moderno"] .header-top .btn-tema svg,
+  html[data-template="moderno"] .header-top .btn-buscar svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  html[data-template="moderno"] .header-sticky-title {
+    display: none;
+    box-sizing: border-box;
+    min-height: 36px;
+    align-items: center;
+    padding: 0 12px;
+    background: var(--card);
+    color: var(--text);
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12);
+  }
+
+  html[data-template="moderno"] .header-mini-title {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--text);
+    font-size: 0.85rem;
+    font-weight: 700;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  html[data-template="moderno"] body.header-scrolled .header-sticky-title {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    display: flex;
+  }
+
+  html[data-template="moderno"] #buscador {
+    position: fixed;
+    top: calc(44px + env(safe-area-inset-top) + 8px);
+    right: 12px;
+    left: 12px;
+    z-index: 70;
+    display: none;
+    box-sizing: border-box;
+    width: auto;
+    min-height: 44px;
+    margin: 0;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.2);
+  }
+
+  html[data-template="moderno"] body.buscador-abierto #buscador {
+    display: block;
+  }
+
+  html[data-template="moderno"] .categorias {
+    top: 36px;
+  }
+
+  html[data-template="moderno"] .btn-buscar:focus-visible,
+  html[data-template="moderno"] #buscador:focus-visible {
+    outline: 3px solid var(--text);
+    outline-offset: 2px;
+    box-shadow: 0 0 0 5px var(--card);
+  }
+}

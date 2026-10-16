@@ -410,6 +410,10 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
 - **PUBLICO-97** El encabezado es liviano: una fila arriba con Volver a la izquierda e idioma y tema a la derecha;
   debajo, el nombre del local directo sobre la portada (sin caja, con degradado y sombra, hasta dos líneas) con el
   logo al lado si hay, y una línea chica "Abierto · zona". No hay pastillas sueltas; el buscador se mantiene.
+- **PUBLICO-98** En la plantilla Moderna, en celular la portada del encabezado mide entre 120 y 140 px; al
+  desplazarse, la portada y su fila de controles desaparecen; quedan fijas una fila compacta solo con el nombre del
+  local y las tabs. La lupa abre el buscador sin aumentar el alto permanente; el foco es visible, se respeta
+  `prefers-reduced-motion` y Clásica y Minimalista no cambian.
 - **PUBLICO-83** Mientras carga el menú interactivo se ve un loader animado: una hamburguesa que se arma y debajo
   "SMA a la carta" que se va escribiendo; igual en las tres plantillas, en CSS y SVG propios, con los colores del
   local si ya se conocen, sin librerías y sin bloquear la carga; con `prefers-reduced-motion` queda quieto, con la

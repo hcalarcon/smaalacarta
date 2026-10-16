@@ -69,6 +69,21 @@
             aria-label="Cambiar a tema oscuro"
             hidden
           ></button>
+          <button
+            id="btn-buscar"
+            class="btn-buscar"
+            type="button"
+            aria-label="Buscar..."
+            aria-controls="buscador"
+            aria-expanded="false"
+            data-i18n-aria-label="search"
+            hidden
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="7"></circle>
+              <path d="m20 20-4-4"></path>
+            </svg>
+          </button>
           <span class="badge-estado">
             <span class="dot"></span>
             <span id="estado-texto" data-i18n="status.open">Abierto</span>
@@ -93,8 +108,18 @@
       <button id="zona-chip" class="zona-chip" type="button" hidden></button>
 
       <!-- BUSCADOR -->
-      <input id="buscador" placeholder="Buscar..." data-i18n-placeholder="search" />
+      <input
+        id="buscador"
+        placeholder="Buscar..."
+        data-i18n-placeholder="search"
+        aria-label="Buscar..."
+        data-i18n-aria-label="search"
+      />
     </header>
+
+    <div id="header-sticky-title" class="header-sticky-title" aria-hidden="true" hidden>
+      <span id="nombre-negocio-mini" class="header-mini-title"></span>
+    </div>
 
     <!-- ZONA DE ENTREGA (PUBLICO-73 a 77): tarjeta que arma app.js -->
     <section id="zona-card" class="zona-card" aria-labelledby="zona-titulo" hidden></section>
