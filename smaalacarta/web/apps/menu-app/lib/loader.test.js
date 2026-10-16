@@ -45,6 +45,11 @@ describe("loader en la página (PUBLICO-83)", () => {
     expect(css).not.toMatch(/body\.entrando :is\([^)]*btn-carrito/);
   });
 
+  it("el loader recuerda el tema al cargar y cuando el visitante lo cambia (PUBLICO-85)", () => {
+    const app = read("../app.js");
+    expect(app.match(/rememberLoaderTheme\(\);/g)).toHaveLength(2);
+  });
+
   it("el texto está en es, en y pt", () => {
     for (const lang of LANGS) expect(DICTIONARY[lang]["loader.loading"]).toBeTruthy();
   });
