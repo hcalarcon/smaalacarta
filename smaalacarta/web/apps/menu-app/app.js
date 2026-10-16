@@ -27,6 +27,7 @@ let OPTIONS_SHEET = null;
 let CART_LINES = null;
 let NOTES = null;
 let PROMO_INFO;
+let LANGUAGE = null;
 // Envío con repartidor (ENVIO-20): los barrios del negocio, o null si no tiene o falló.
 let DZ = null;
 let COURIER_ZONES = null;
@@ -43,6 +44,8 @@ let ZONE_RETURN_FOCUS = null;
 
 // Idioma de la interfaz (IDIOMA-1 a 4) y el menú tal como vino, sin las secciones armadas.
 let LANG = "es";
+let SAVED_LANG = null;
+let CART_COUNT = 0;
 let BASE_MENU = null;
 let LAST_THANKS = null;
 let syncTema = () => {};
@@ -256,6 +259,8 @@ async function init() {
     NOTES = await import("/apps/menu-app/lib/item-notes.js");
     // Vigencia y últimas unidades de las promociones (PUBLICO-68 y 69).
     PROMO_INFO = await import("/apps/menu-app/lib/promo-info.js");
+    // Idioma elegido y sugerencia según el celular (PUBLICO-88 a 90).
+    LANGUAGE = await import("/apps/menu-app/lib/language.js");
     ZONE = await import("/apps/menu-app/lib/zone-choice.js");
     DZ = deliveryZonesLib;
     OPTIONS = optionsLib;
@@ -270,9 +275,12 @@ async function init() {
     MERCADOPAGO = mercadopagoLib;
     COLORS = colorsLib;
     I18N = i18nLib;
+    // El idioma del celular ya no cambia el menú solo: se sugiere (PUBLICO-89 y 90). Vale ?lang=, lo que
+    // el visitante eligió la última vez o el español.
+    SAVED_LANG = PREVIEW ? null : LANGUAGE.readSavedLang(window.localStorage, I18N.LANGS);
     LANG = I18N.resolveLang({
       search: window.location.search,
-      navigatorLanguage: navigator.language,
+      navigatorLanguage: SAVED_LANG ?? "",
     });
     SCHEDULE = schedule;
     PWA = pwa;
@@ -415,6 +423,7 @@ async function init() {
     restoreThanks();
 
     finishLoading();
+    maybeSuggestLanguage();
   } catch (err) {
     console.error("Error en init:", err);
     document.body.innerHTML = `<h2>${I18N ? tr("error.unexpected") : "Error inesperado"}</h2>`;
@@ -446,6 +455,9 @@ function applyStaticTexts() {
   document.querySelectorAll("[data-i18n-placeholder]").forEach((node) => {
     node.placeholder = tr(node.dataset.i18nPlaceholder);
   });
+  document.querySelectorAll("[data-i18n-aria-label]").forEach((node) => {
+    node.setAttribute("aria-label", tr(node.dataset.i18nAriaLabel));
+  });
 
   const box = document.getElementById("selector-idioma");
   if (box) {
@@ -460,11 +472,17 @@ function applyStaticTexts() {
   renderTransferInfo();
   renderCourierFields();
   renderZone();
+  syncBarraCarrito(CART_COUNT);
 }
 
 function setLang(lang) {
   if (lang === LANG || !I18N.LANGS.includes(lang)) return;
   LANG = lang;
+  if (!PREVIEW) {
+    LANGUAGE.rememberLang(window.localStorage, lang);
+    SAVED_LANG = lang;
+  }
+  closeLangNotice();
 
   const url = new URL(window.location.href);
   url.searchParams.set("lang", lang);
@@ -486,6 +504,8 @@ function setLang(lang) {
 
 // Las hojas de la plantilla llevan `data-menu-template`: al cambiar de plantilla (vista previa) se
 // reemplazan por las nuevas en cuanto cargan, sin que la página se quede un momento sin estilo.
+const APP_SHELL_TEMPLATES = ["moderno", "minimal"];
+
 function loadTemplate(template) {
   return new Promise((resolve, reject) => {
     if (!template) {
@@ -505,6 +525,25 @@ function loadTemplate(template) {
     link.href = `/templates/carrito/${template}/styles.css`;
     link.dataset.menuTemplate = template;
 
+    // La cara de app (barra de abajo, hoja de checkout, pastilla de precio) es solo de Moderna y
+    // Minimalista, y va al final para ganarle a las demás hojas (PUBLICO-86 a 97).
+    const addShell = () => {
+      if (!APP_SHELL_TEMPLATES.includes(template)) {
+        previous.forEach((old) => old.remove());
+        resolve();
+        return;
+      }
+      const shell = document.createElement("link");
+      shell.rel = "stylesheet";
+      shell.href = "/apps/menu-app/cara-de-app.css";
+      shell.dataset.menuTemplate = template;
+      shell.onload = shell.onerror = () => {
+        previous.forEach((old) => old.remove());
+        resolve();
+      };
+      document.head.appendChild(shell);
+    };
+
     // Después de la plantilla, y solo en pantallas anchas, el ajuste de escritorio
     // (PUBLICO-14). Si no carga, el menú se ve como antes.
     const addDesktop = () => {
@@ -513,10 +552,7 @@ function loadTemplate(template) {
       desktop.href = "/apps/menu-app/desktop.css";
       desktop.media = "(min-width: 1024px)";
       desktop.dataset.menuTemplate = template;
-      desktop.onload = desktop.onerror = () => {
-        previous.forEach((old) => old.remove());
-        resolve();
-      };
+      desktop.onload = desktop.onerror = addShell;
       document.head.appendChild(desktop);
     };
 
@@ -547,6 +583,20 @@ function renderHeader(c) {
   const dot = document.querySelector(".badge-estado .dot");
 
   if (nombreEl) nombreEl.textContent = c.nombre || "";
+
+  // Logo del local junto al nombre (PUBLICO-97); lo muestran Moderna y Minimalista.
+  const logoEl = document.querySelector("#logo-negocio");
+  if (logoEl) {
+    const logo = HTML.safeHttpUrl(c.logo);
+    logoEl.onerror = () => logoEl.setAttribute("hidden", "");
+    if (logo) {
+      logoEl.src = logo;
+      logoEl.removeAttribute("hidden");
+    } else {
+      logoEl.removeAttribute("src");
+      logoEl.setAttribute("hidden", "");
+    }
+  }
   if (descEl) descEl.textContent = c.descripcion || "";
 
   if (header) {
@@ -797,6 +847,8 @@ function renderMenu(menu) {
 
     menuContainer.appendChild(sec);
   });
+
+  syncBarra();
 }
 
 function initSearch() {
@@ -1029,6 +1081,10 @@ function updateCart() {
 
   totalEl.textContent = `$${total}`;
   countEl.textContent = count;
+  const checkoutTotal = document.querySelector("#checkout-total");
+  if (checkoutTotal) checkoutTotal.textContent = `$${total}`;
+  CART_COUNT = count;
+  syncBarraCarrito(count);
 
   // 🔥 IMPORTANTE: persistencia SIEMPRE actualizada
   saveCart();
@@ -1094,11 +1150,55 @@ function loadCart() {
 // UI (más moderno + seguro)
 const $ = (sel) => document.querySelector(sel);
 
-$("#btn-carrito")?.addEventListener("click", () => {
+// Quien abrió el carrito o el checkout: el foco vuelve ahí al cerrarlos (PUBLICO-95).
+let LAYER_OPENER = null;
+// Hay una entrada puesta en el historial mientras el carrito o el checkout están abiertos, para que el
+// gesto de atrás del celular los cierre en vez de salir del menú (PUBLICO-95).
+let LAYER_ENTRY = false;
+
+function pushLayer() {
+  if (PREVIEW || LAYER_ENTRY) return;
+  try {
+    history.pushState({ smaCapa: true }, "");
+    LAYER_ENTRY = true;
+  } catch {
+    // Sin historial: se cierra con la X y con Escape.
+  }
+}
+
+window.addEventListener("popstate", () => {
+  if (!LAYER_ENTRY) return;
+  LAYER_ENTRY = false;
+  closeAll();
+});
+
+// Escape cierra el carrito y el checkout, salvo que haya arriba un diálogo con su propio Escape (la zona).
+document.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape" || document.querySelector(".zona-dialogo")) return;
+  if ($("#checkout")?.classList.contains("active") || $("#carrito-panel")?.classList.contains("active")) {
+    closeAll();
+  }
+});
+
+function openCart() {
+  LAYER_OPENER = document.activeElement;
+  pushLayer();
   $("#carrito-panel")?.classList.add("active");
   $("#overlay")?.classList.add("active");
   document.body.classList.add("no-scroll");
-});
+}
+
+function openCheckout() {
+  LAYER_OPENER ??= document.activeElement;
+  pushLayer();
+  $("#overlay")?.classList.add("active");
+  $("#checkout")?.classList.add("active");
+  document.body.classList.add("no-scroll");
+  // El foco entra a la hoja sin abrir el teclado del celular.
+  $("#checkout")?.focus({ preventScroll: true });
+}
+
+$("#btn-carrito")?.addEventListener("click", openCart);
 
 $("#cerrar-carrito")?.addEventListener("click", closeAll);
 $("#overlay")?.addEventListener("click", closeAll);
@@ -1111,6 +1211,13 @@ function closeAll() {
   $("#overlay")?.classList.remove("active");
   $("#checkout")?.classList.remove("active");
   document.body.classList.remove("no-scroll");
+
+  if (LAYER_ENTRY) {
+    LAYER_ENTRY = false;
+    history.back();
+  }
+  if (LAYER_OPENER?.isConnected) LAYER_OPENER.focus?.({ preventScroll: true });
+  LAYER_OPENER = null;
 }
 
 $("#btn-finalizar")?.addEventListener("click", () => {
@@ -1118,10 +1225,117 @@ $("#btn-finalizar")?.addEventListener("click", () => {
   renderScheduleChoice();
   $("#carrito-panel")?.classList.remove("active");
   // El fondo sigue activo: tocar afuera del checkout lo cierra (closeAll).
-  $("#checkout")?.classList.add("active");
+  openCheckout();
 });
 
 $("#cerrar-checkout")?.addEventListener("click", closeAll);
+
+// BARRA DE ABAJO (PUBLICO-92): Menú, Promos y Carrito. Solo la muestran Moderna y Minimalista.
+const calmMotion = () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
+function scrollToSection(node) {
+  node?.scrollIntoView({ behavior: calmMotion() ? "auto" : "smooth", block: "start" });
+}
+
+function syncBarra() {
+  const promos = $("#barra-promos");
+  if (promos) promos.hidden = !document.querySelector("#menu .categoria-ofertas");
+  updateBarraActive();
+}
+
+function syncBarraCarrito(count) {
+  const badge = $("#barra-carrito-count");
+  if (badge) {
+    badge.textContent = count;
+    badge.hidden = count === 0;
+  }
+  $("#barra-carrito")?.setAttribute("aria-label", count > 0 ? `${tr("nav.cart")} (${count})` : tr("nav.cart"));
+}
+
+// Marca en la barra dónde está el visitante: en las promos o en el resto del menú.
+function updateBarraActive() {
+  // Las solapas de categorías quedaron fijas arriba: pasan por debajo del selector de idioma.
+  const nav = document.querySelector("#categorias");
+  document.body.classList.toggle("categorias-fijas", !!nav && nav.getBoundingClientRect().top <= 0.5);
+
+  const promos = document.querySelector("#menu .categoria-ofertas");
+  const rect = promos?.getBoundingClientRect();
+  const middle = window.innerHeight * 0.4;
+  const onPromos = !!rect && rect.top < middle && rect.bottom > middle;
+  const set = (id, active) => {
+    const node = $(id);
+    if (!node) return;
+    if (active) node.setAttribute("aria-current", "true");
+    else node.removeAttribute("aria-current");
+  };
+  set("#barra-menu", !onPromos);
+  set("#barra-promos", onPromos);
+}
+
+let BARRA_FRAME = 0;
+window.addEventListener(
+  "scroll",
+  () => {
+    if (BARRA_FRAME) return;
+    BARRA_FRAME = requestAnimationFrame(() => {
+      BARRA_FRAME = 0;
+      updateBarraActive();
+    });
+  },
+  { passive: true },
+);
+
+$("#barra-menu")?.addEventListener("click", () => {
+  scrollToSection(
+    document.querySelector("#menu .categoria:not(.categoria-ofertas):not(.categoria-destacados)") ?? $("#menu"),
+  );
+});
+$("#barra-promos")?.addEventListener("click", () => {
+  scrollToSection(document.querySelector("#menu .categoria-ofertas"));
+});
+$("#barra-carrito")?.addEventListener("click", openCart);
+
+// SUGERENCIA DE IDIOMA (PUBLICO-88 a 90): un aviso chico, que se cierra y no vuelve.
+function closeLangNotice() {
+  document.getElementById("aviso-idioma")?.remove();
+}
+
+function maybeSuggestLanguage() {
+  if (PREVIEW || LANG !== I18N.DEFAULT_LANG || new URLSearchParams(window.location.search).has("lang")) return;
+  const suggested = LANGUAGE.suggestLanguage(navigator.language, I18N.LANGS, SAVED_LANG);
+  if (!suggested || document.getElementById("aviso-idioma")) return;
+
+  // El aviso habla el idioma que se sugiere: es el que entiende quien lo tiene que leer.
+  const box = document.createElement("div");
+  box.id = "aviso-idioma";
+  box.className = "aviso-idioma";
+  box.setAttribute("role", "status");
+  box.lang = suggested;
+
+  const text = document.createElement("span");
+  text.className = "aviso-idioma-texto";
+  text.textContent = I18N.t("lang.suggest", suggested, { idioma: LANGUAGE.LANG_NAMES[suggested] });
+
+  const yes = document.createElement("button");
+  yes.type = "button";
+  yes.className = "aviso-idioma-si";
+  yes.textContent = I18N.t("lang.suggestYes", suggested);
+  yes.addEventListener("click", () => setLang(suggested));
+
+  const no = document.createElement("button");
+  no.type = "button";
+  no.className = "aviso-idioma-cerrar";
+  no.textContent = "✕";
+  no.setAttribute("aria-label", I18N.t("lang.suggestClose", suggested));
+  no.addEventListener("click", () => {
+    LANGUAGE.rememberLang(window.localStorage, LANG);
+    SAVED_LANG = LANG;
+    closeLangNotice();
+  });
+
+  box.append(text, yes, no);
+  document.body.appendChild(box);
+}
 
 // WHATSAPP
 $("#form-pedido")?.addEventListener("submit", async (e) => {
@@ -2006,9 +2220,7 @@ function restoreThanks() {
     whatsappUrl,
     transfer: CHECKOUT?.transferDetails(CONFIG, last.payment) ?? null,
   });
-  $("#overlay")?.classList.add("active");
-  $("#checkout")?.classList.add("active");
-  document.body.classList.add("no-scroll");
+  openCheckout();
 }
 
 // Vuelve el checkout a su estado normal (formulario visible, sin el "gracias").

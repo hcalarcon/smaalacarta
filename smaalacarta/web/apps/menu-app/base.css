@@ -154,6 +154,61 @@ textarea {
   100% { width: calc(14ch + 14 * var(--loader-espaciado)); opacity: 0; }
 }
 
+/* Piezas que solo usan Moderna y Minimalista (cara-de-app.css). En Clásica no se ven ni cambian nada. */
+.header-marca,
+.header-titulo,
+.checkout-pie {
+  display: contents;
+}
+
+.logo-negocio,
+.barra-app,
+.checkout-total {
+  display: none;
+}
+
+/* Aviso de idioma (PUBLICO-90): chico y que se cierra. */
+.aviso-idioma {
+  position: fixed;
+  right: 12px;
+  bottom: 16px;
+  left: 12px;
+  z-index: 65;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 380px;
+  margin-inline: auto;
+  padding: 8px 8px 8px 14px;
+  border: 1px solid var(--border, rgba(127, 127, 127, 0.35));
+  border-radius: 16px;
+  background: var(--card, #fff);
+  color: var(--text, #111827);
+  font-size: 0.9rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+}
+
+.aviso-idioma-texto {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
+}
+
+.aviso-idioma button {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 12px;
+  font-weight: 700;
+  color: inherit;
+}
+
+.aviso-idioma .aviso-idioma-si {
+  padding: 0 14px;
+  background: var(--color-primary, var(--brand, var(--primary, #111)));
+  color: var(--on-brand, #fff);
+}
+
 body.loading {
   overflow: hidden;
 }

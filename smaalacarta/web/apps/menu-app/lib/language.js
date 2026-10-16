@@ -1,6 +1,8 @@
 // Idioma del menú interactivo (PUBLICO-88 a 90). El idioma del celular no cambia el menú solo:
 // se sugiere con un aviso, y lo que el visitante elige (o descarta) queda guardado.
 
+export const LANG_NAMES = { es: "Español", en: "English", pt: "Português" };
+
 const KEY = "sma-idioma";
 const SUGGESTED = ["en", "pt"];
 
