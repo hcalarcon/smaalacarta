@@ -414,6 +414,8 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   desplazarse, la portada y su fila de controles desaparecen; quedan fijas una fila compacta solo con el nombre del
   local y las tabs. La lupa abre el buscador sin aumentar el alto permanente; el foco es visible, se respeta
   `prefers-reduced-motion` y Clásica y Minimalista no cambian.
+- **PUBLICO-99** El loader del menú muestra, además de la marca SMA a la carta, el nombre del negocio que está
+  cargando, en texto escapado mediante `textContent` y sin cortarlo en celulares.
 - **PUBLICO-83** Mientras carga el menú interactivo se ve un loader animado: una hamburguesa que se arma y debajo
   "SMA a la carta" que se va escribiendo; igual en las tres plantillas, en CSS y SVG propios, con los colores del
   local si ya se conocen, sin librerías y sin bloquear la carga; con `prefers-reduced-motion` queda quieto, con la
@@ -436,6 +438,10 @@ _Sin requisitos todavía._
 - **CARRITO-1** En las plantillas de cara de app, la pastilla del precio de cada producto en el carrito conserva el
   ancho necesario para contener el importe y su relleno, aunque el espacio del nombre esté reducido por los
   controles de cantidad.
+- **CARRITO-2** En las plantillas de cara de app, el nombre del producto en el carrito dispone de una línea propia
+  por encima de los controles de cantidad, puede ocupar varias líneas y no se corta ni se parte letra por letra.
+- **CARRITO-3** El carrito se guarda y se carga en `localStorage` con una clave que incluye el slug del negocio; al
+  cambiar de negocio nunca se muestran ni se sobrescriben los productos del carrito de otro negocio.
 
 ## PEDIDO — Envío del pedido por WhatsApp
 

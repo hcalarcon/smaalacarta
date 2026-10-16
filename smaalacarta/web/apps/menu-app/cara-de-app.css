@@ -361,6 +361,31 @@ body {
   flex: 1;
 }
 
+.carrito-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+  gap: 8px;
+}
+
+.carrito-item .item-info {
+  grid-column: 1;
+  width: 100%;
+  flex: none;
+}
+
+.carrito-item .item-info h4 {
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: auto;
+  text-wrap: balance;
+}
+
+.carrito-item .item-controls {
+  grid-column: 1;
+  justify-self: end;
+}
+
 /* La etiqueta de la promo cuelga del borde de arriba y puede partirse; el nombre no la pisa. */
 .producto[data-promo]::before {
   max-width: 55%;

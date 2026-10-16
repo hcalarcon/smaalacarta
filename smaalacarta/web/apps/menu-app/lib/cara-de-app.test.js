@@ -124,6 +124,18 @@ describe("precio de los productos en el carrito (CARRITO-1)", () => {
   });
 });
 
+describe("nombre del producto en el carrito (CARRITO-2)", () => {
+  it("usa una línea propia antes de los controles y no se parte letra por letra", () => {
+    const item = rule(".carrito-item {");
+    const name = rule(".carrito-item .item-info h4 {");
+    expect(item).toMatch(/display:\s*grid/);
+    expect(item).toMatch(/grid-template-columns:\s*minmax\(0,\s*1fr\)/);
+    expect(name).toMatch(/overflow-wrap:\s*break-word/);
+    expect(name).toMatch(/word-break:\s*normal/);
+    expect(name).toMatch(/text-wrap:\s*balance/);
+  });
+});
+
 describe("hoja del checkout (PUBLICO-94 y 95)", () => {
   it("es un diálogo con el total y confirmar fijos abajo", () => {
     expect(html).toContain('role="dialog"');

@@ -50,6 +50,8 @@ let BASE_MENU = null;
 let LAST_THANKS = null;
 let syncTema = () => {};
 let HEADER_LAYOUT_READY = false;
+let CART_STORAGE = null;
+let CART_SLUG = null;
 
 // Texto de la interfaz en el idioma elegido. Solo el mensaje de WhatsApp al negocio
 // no pasa por acá: queda siempre en español (IDIOMA-5).
@@ -233,6 +235,7 @@ async function init() {
       optionsSheetLib,
       cartLinesLib,
       deliveryZonesLib,
+      cartStorageLib,
     ] = await Promise.all([
       import("/apps/menu-app/lib/hostname.js"),
       import("/apps/menu-app/lib/html.js"),
@@ -255,6 +258,7 @@ async function init() {
       import("/apps/menu-app/lib/options-sheet.js"),
       import("/apps/menu-app/lib/cart-lines.js"),
       import("/apps/menu-app/lib/delivery-zones.js"),
+      import("/apps/menu-app/lib/cart-storage.js"),
     ]);
     // Nota por producto (PUBLICO-65): la limpieza y las reglas puras viven en lib/item-notes.js.
     NOTES = await import("/apps/menu-app/lib/item-notes.js");
@@ -267,6 +271,7 @@ async function init() {
     OPTIONS = optionsLib;
     OPTIONS_SHEET = optionsSheetLib;
     CART_LINES = cartLinesLib;
+    CART_STORAGE = cartStorageLib;
     PRICE = priceLib;
     WA_WINDOW = waWindow;
     CHECKOUT = checkoutLib;
@@ -303,6 +308,7 @@ async function init() {
     }
 
     const { slug, type } = result;
+    CART_SLUG = slug;
 
     const basePath = type === "cliente" ? "/data/clientes" : "/data/demos";
 
@@ -332,6 +338,12 @@ async function init() {
         showNotFound();
         return;
       }
+    }
+
+    const loaderNegocio = document.querySelector("#loader-negocio");
+    if (loaderNegocio) {
+      loaderNegocio.textContent = config.nombre || "";
+      loaderNegocio.hidden = !config.nombre;
     }
 
     window.CONFIG = config;
@@ -1227,7 +1239,7 @@ function updateCart() {
 // PERSISTENCIA
 function saveCart() {
   if (PREVIEW) return; // la vista previa no toca el almacenamiento
-  localStorage.setItem("cart", JSON.stringify(cart));
+  CART_STORAGE.saveCart(window.localStorage, CART_SLUG, cart);
 }
 
 // Quita del carrito lo que quedó sin stock (por ejemplo, un carrito guardado de otra visita) y
@@ -1261,8 +1273,7 @@ async function refreshMenu() {
 
 function loadCart() {
   if (PREVIEW) return;
-  const c = localStorage.getItem("cart");
-  if (c) cart = JSON.parse(c);
+  cart = CART_STORAGE.loadCart(window.localStorage, CART_SLUG);
   updateCart();
 }
 

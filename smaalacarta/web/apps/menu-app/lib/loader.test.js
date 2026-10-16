@@ -19,6 +19,13 @@ describe("loader en la página (PUBLICO-83)", () => {
     expect(html).not.toContain("loader-cloche");
   });
 
+  it("muestra el nombre del negocio que está cargando sin interpretar su contenido", () => {
+    expect(html).toMatch(/id="loader-negocio"[^>]*class="loader-negocio"[^>]*hidden/);
+    expect(read("../app.js")).toMatch(/loaderNegocio\.textContent\s*=\s*config\.nombre\s*\|\|\s*""/);
+    expect(read("../app.js")).toContain('loaderNegocio.hidden = !config.nombre');
+    expect(css).toMatch(/\.loader-negocio\s*\{[^}]*text-wrap:\s*balance;[^}]*overflow-wrap:\s*anywhere/);
+  });
+
   it("anima solo si el visitante no pidió menos movimiento", () => {
     expect(css).toMatch(/@media \(prefers-reduced-motion: no-preference\)\s*\{[^@]*loader-capa/);
     expect(css).toMatch(/@media \(prefers-reduced-motion: no-preference\)\s*\{[^@]*loader-marca/);
