@@ -6,6 +6,7 @@ import { headerBackground, positionText } from "../../menu-app/lib/info.js";
 import { LANGS, LOCALES, t } from "../../menu-app/lib/i18n.js";
 import { TIME_ZONE } from "../../menu-app/lib/schedule.js";
 import { arrivalView } from "./prep.js";
+import { normalizeVehicles } from "./vehicles.js";
 
 const CODE = /^[0-9a-f]{20}$/;
 
@@ -257,6 +258,8 @@ function normalizeOffers(list) {
         price,
         reason: typeof offer.motivo === "string" && offer.motivo ? offer.motivo : null,
         favorite: offer.favorito === true,
+        // Moto y/o auto del que oferta; vacío con el interruptor apagado (ENVIO-178).
+        vehicles: normalizeVehicles(offer.vehiculo),
       },
     ];
   });
@@ -291,6 +294,8 @@ function normalizeDelivery(data) {
 
   return {
     courier: typeof data.repartidor === "string" ? data.repartidor : "",
+    // Moto y/o auto del repartidor asignado; vacío con el interruptor apagado (ENVIO-178).
+    vehicles: normalizeVehicles(data.vehiculo),
     whatsapp:
       typeof data.whatsapp === "string" && COURIER_WHATSAPP.test(data.whatsapp) ? data.whatsapp : null,
     zone: typeof data.zona === "string" ? data.zona : "",

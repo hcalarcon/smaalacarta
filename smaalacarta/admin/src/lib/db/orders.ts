@@ -30,6 +30,8 @@ export type OrderDelivery = {
   courier_eta_pickup_at?: string | null;
   returned_reason_kind?: string | null;
   returned_reason?: string | null;
+  // El local pidió auto (ENVIO-176).
+  needs_car?: boolean;
   courier_id: string | null;
   delivery_zone_id: string | null;
   delivery_zone_name: string | null;
@@ -81,7 +83,7 @@ export type OrderPrep = {
 
 const SELECT =
   "id, order_number, status, total, notes, customer_name, delivery, payment, payment_status, source, scheduled_for, preorder, code, created_at, updated_at, " +
-  "courier_id, delivery_zone_id, delivery_zone_name, delivery_fee_list, delivery_fee, delivery_fee_reason, delivery_fee_changed_at, customer_phone, delivery_address, courier_status, courier_note, courier_responded_at, offered_at, delivery_mode, courier_eta_pickup_at, returned_reason_kind, returned_reason, settled_at, settlement_received_at, prep_ready_at, prep_reason, prep_updated_at, " +
+  "courier_id, delivery_zone_id, delivery_zone_name, delivery_fee_list, delivery_fee, delivery_fee_reason, delivery_fee_changed_at, customer_phone, delivery_address, courier_status, courier_note, courier_responded_at, offered_at, delivery_mode, courier_eta_pickup_at, returned_reason_kind, returned_reason, needs_car, settled_at, settlement_received_at, prep_ready_at, prep_reason, prep_updated_at, " +
   "order_items(name, quantity, unit_price, sort_order, options, note), order_events(kind, status, created_at, note)";
 
 // Los pedidos más recientes del negocio, con su detalle y su línea de tiempo. El RLS
@@ -149,7 +151,7 @@ export async function setOrderStatus(
 
 // Lo que hace falta saber de un pedido para decidir si se le carga tiempo (ADMIN-PEDIDOS-33). `order` es
 // nulo si el pedido no es del negocio: el filtro y el RLS lo dejan afuera.
-export type OrderPrepState = Pick<Order, "status" | "scheduled_for" | "preorder" | "prep_ready_at">;
+export type OrderPrepState = Pick<Order, "status" | "scheduled_for" | "preorder" | "prep_ready_at" | "courier_status">;
 
 export async function getOrderPrepState(
   businessId: string,
@@ -159,7 +161,7 @@ export async function getOrderPrepState(
 
   const { data, error } = await supabase
     .from("orders")
-    .select("status, scheduled_for, preorder, prep_ready_at")
+    .select("status, scheduled_for, preorder, prep_ready_at, courier_status")
     .eq("id", orderId)
     .eq("business_id", businessId)
     .maybeSingle();
@@ -283,4 +285,14 @@ export async function getManualOrderMenu(businessId: string): Promise<ManualMenu
   if (error) return parseManualMenu(null);
 
   return parseManualMenu(data);
+}
+
+// "Necesita auto" (ENVIO-176): el local lo prende o lo apaga mientras el pedido no tiene repartidor. La base
+// exige que sea del negocio y que siga buscando (`P0004` si no).
+export async function setOrderNeedsCar(orderId: string, needsCar: boolean): Promise<{ ok: true } | DbFailure> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("set_order_needs_car", { p_order_id: orderId, p_needs_car: needsCar });
+
+  return error ? { error: { code: error.code, message: error.message } } : { ok: true };
 }

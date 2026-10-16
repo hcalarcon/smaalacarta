@@ -872,3 +872,45 @@ describe("tarjeta del tablero — ADMIN-PEDIDOS-53 a 55", () => {
     release();
   });
 });
+
+describe("vehículo del repartidor en la tarjeta — ENVIO-178", () => {
+  const searching = (extra: Partial<Order> = {}) =>
+    order({
+      payment: "efectivo",
+      payment_status: "not_required",
+      status: "confirmed",
+      courier_status: "searching",
+      offered_at: "2026-10-08T10:00:00Z",
+      delivery_zone_name: "Cantera",
+      delivery_fee_list: 5000,
+      delivery_fee: 5000,
+      ...extra,
+    });
+
+  const cardWith = (o: Order, props: Partial<React.ComponentProps<typeof OrderCard>> = {}) =>
+    render(<OrderCard order={o} now={now} busy={false} onAdvance={vi.fn()} onOpen={vi.fn()} {...props} />);
+
+  it("prendido, un pedido que necesita auto lleva el chip", () => {
+    cardWith(searching({ needs_car: true }), { vehicleEnabled: true });
+
+    expect(screen.getByText("Necesita auto")).toBeTruthy();
+  });
+
+  it("apagado, el chip no se ve aunque el pedido lo tenga marcado", () => {
+    cardWith(searching({ needs_car: true }), { vehicleEnabled: false });
+
+    expect(screen.queryByText("Necesita auto")).toBeNull();
+  });
+
+  it("el repartidor que lo tomó lleva su ícono, solo con el interruptor prendido", () => {
+    const taken = searching({ courier_status: "accepted", courier_id: "c1" });
+    const couriers = [{ id: "c1", name: "Moto Express", whatsapp: null, zone_ids: [], vehiculo: ["moto", "auto"] }];
+
+    const { unmount } = cardWith(taken, { vehicleEnabled: true, couriers });
+    expect(screen.getByRole("img", { name: "Moto y auto" })).toBeTruthy();
+    unmount();
+
+    cardWith(taken, { vehicleEnabled: false, couriers });
+    expect(screen.queryByRole("img", { name: "Moto y auto" })).toBeNull();
+  });
+});

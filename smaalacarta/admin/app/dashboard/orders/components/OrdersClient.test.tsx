@@ -559,6 +559,39 @@ describe("tiempo de preparación al aceptar — ADMIN-PEDIDOS-31 a 33", () => {
     );
   }
 
+  function withCar(orders: Order[], vehicleEnabled: boolean) {
+    return (
+      <OrdersClient
+        slug="demo"
+        orders={orders}
+        manualSetup={manualSetup}
+        serverNow="2026-09-30T10:00:00Z"
+        vehicleEnabled={vehicleEnabled}
+      />
+    );
+  }
+
+  it("Necesita auto: con el interruptor prendido y un envío con repartidor, se acepta pidiendo auto — ENVIO-176", async () => {
+    render(withCar([full("1", { courier_status: "waiting" })], true));
+
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Necesita auto/ }));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: /Aceptar con/ })));
+
+    expect(accept).toHaveBeenCalledWith("1", expect.any(Number), true);
+  });
+
+  it("Necesita auto no aparece con el interruptor apagado ni en un pedido sin envío con repartidor — ENVIO-175", async () => {
+    const { unmount } = render(withCar([full("1", { courier_status: "waiting" })], false));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
+    expect(screen.queryByRole("checkbox", { name: /Necesita auto/ })).toBeNull();
+    unmount();
+
+    render(withCar([full("2")], true));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
+    expect(screen.queryByRole("checkbox", { name: /Necesita auto/ })).toBeNull();
+  });
+
   it("el modal de pedido nuevo abre el selector con la sugerencia y acepta de un toque", async () => {
     render(withPrep([full("1")], { suggested: 22 }));
 
@@ -567,7 +600,7 @@ describe("tiempo de preparación al aceptar — ADMIN-PEDIDOS-31 a 33", () => {
 
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar con 22 min" })));
 
-    expect(accept).toHaveBeenCalledWith("1", 22);
+    expect(accept).toHaveBeenCalledWith("1", 22, false);
     expect(picker()).toBeNull();
   });
 
@@ -638,7 +671,7 @@ describe("tiempo de preparación al aceptar — ADMIN-PEDIDOS-31 a 33", () => {
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar con 35 min" })));
 
-    expect(accept).toHaveBeenCalledWith("1", 35);
+    expect(accept).toHaveBeenCalledWith("1", 35, false);
   });
 
   it("'Aceptar sin tiempo' confirma sin minutos", async () => {
@@ -647,7 +680,7 @@ describe("tiempo de preparación al aceptar — ADMIN-PEDIDOS-31 a 33", () => {
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar" })));
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Aceptar sin tiempo" })));
 
-    expect(accept).toHaveBeenCalledWith("1", null);
+    expect(accept).toHaveBeenCalledWith("1", null, false);
   });
 
   it("el botón de la tarjeta del tablero abre el mismo selector", async () => {

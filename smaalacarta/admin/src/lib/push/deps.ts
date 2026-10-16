@@ -6,6 +6,7 @@ import { createAdminClient } from "@/lib/supabase-admin";
 
 import { pushPayload, ttlSeconds } from "./messages";
 import type { PushDeps, PushSubscriptionRow } from "./service";
+import { withCarIfNeeded } from "./vehicle";
 
 // Las dependencias reales de `service.ts`: la base con la clave de servicio (solo servidor) y `web-push`.
 // Se arma por llamada, nunca al cargar el módulo, y lanza si falta alguna clave (ADMIN-PWA-27).
@@ -52,14 +53,21 @@ export function buildPushDeps(): PushDeps {
       );
       if (covering.length === 0) return [];
 
-      const [active, declined] = await Promise.all([
-        rows(supabase.from("couriers").select("id").in("id", covering).eq("active", true)),
+      const [active, declined, order, platform] = await Promise.all([
+        rows(supabase.from("couriers").select("id, auto").in("id", covering).eq("active", true)),
         // Los que lo rechazaron o lo devolvieron (`kind`) no vuelven a verlo.
         rows(supabase.from("courier_order_declines").select("courier_id").eq("order_id", orderId)),
+        // Si el pedido pide auto y el vehículo está prendido, solo avisa a quien lo tiene (ENVIO-177).
+        rows(supabase.from("orders").select("needs_car").eq("id", orderId)),
+        rows(supabase.from("platform_settings").select("vehicle_enabled")),
       ]);
       const out = new Set(ids(declined, "courier_id"));
+      const eligible = withCarIfNeeded(
+        active.map((row) => ({ id: row.id as string, auto: row.auto === true })),
+        { needsCar: order[0]?.needs_car === true, enabled: platform[0]?.vehicle_enabled === true },
+      );
 
-      return ids(active, "id").filter((id) => !out.has(id));
+      return eligible.map((courier) => courier.id).filter((id) => !out.has(id));
     },
 
     async courierUserIds(courierIds) {

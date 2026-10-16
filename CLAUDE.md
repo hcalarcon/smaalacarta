@@ -266,6 +266,10 @@ negocio nuevo funciona apenas existe y está publicado, sin tocar código.
   corre cada minuto con pg_cron para todos los pedidos vencidos (así el aviso llega aunque
   nadie mire); los 5 minutos viven solo en `courier_offers_window()`. El favorito del local (`favorite_courier_id`) solo ordena y
   desempata; ya no hay ventana exclusiva.
+- **Vehículo del repartidor** (`couriers.moto`/`auto`, `orders.needs_car`): detrás de `platform_settings.vehicle_enabled`
+  (superadmin, apagado de fábrica), que el servidor lee con `vehicle_enabled()`. Apagado, `needs_car` se ignora y no
+  se muestra nada. La regla de quién ve un pedido que necesita auto vive en `courier_sees_order()` (más el error
+  claro `P0024` en tomar, ofertar y asignar) y se repite en el aviso push (`src/lib/push/vehicle.ts`).
 - **Panel instalable y avisos push** (`ADMIN-PWA-*`): `app/manifest.ts`, `public/sw.js`
   (en `/admin/sw.js`, sin caché: solo muestra avisos y abre el panel al tocarlos) y los
   botones **Instalar app** y **Activar avisos** del header (`DashboardShell` con

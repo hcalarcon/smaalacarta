@@ -2,19 +2,34 @@
 
 import { useState } from "react";
 
-import { savePreferencesAction } from "../../actions";
+import { savePreferencesAction, saveVehiclesAction } from "../../actions";
 import PendingButton from "@/components/ui/PendingButton";
+import VehicleIcons from "@/components/ui/VehicleIcon";
 import { NOTE_MAX, type CourierPreferences } from "@/lib/courier/profile";
+import { validateVehicles, type CourierVehicles } from "@/lib/courier/vehicle";
 
 // Mi perfil (ADMIN-REPARTIDOR-1 a 3): lo que el cliente ve en su seguimiento cuando el pedido es mío.
-export default function ProfileClient({ initial }: { initial: CourierPreferences }) {
+// El vehículo (ENVIO-174) solo aparece con el interruptor de la plataforma prendido (ENVIO-175).
+export default function ProfileClient({
+  initial,
+  vehicles,
+  vehicleEnabled = false,
+}: {
+  initial: CourierPreferences;
+  vehicles: CourierVehicles;
+  vehicleEnabled?: boolean;
+}) {
   const [value, setValue] = useState(initial);
   const [saved, setSaved] = useState(initial);
+  const [vehicle, setVehicle] = useState(vehicles);
+  const [savedVehicle, setSavedVehicle] = useState(vehicles);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
-  const dirty =
+  const prefsDirty =
     value.shopsOnTheWay !== saved.shopsOnTheWay || value.seeksOrders !== saved.seeksOrders || value.note.trim() !== saved.note;
+  const vehicleDirty = vehicleEnabled && (vehicle.moto !== savedVehicle.moto || vehicle.auto !== savedVehicle.auto);
+  const dirty = prefsDirty || vehicleDirty;
 
   function change(patch: Partial<CourierPreferences>) {
     setValue((current) => ({ ...current, ...patch }));
@@ -22,18 +37,48 @@ export default function ProfileClient({ initial }: { initial: CourierPreferences
     setError(null);
   }
 
+  function changeVehicle(patch: Partial<CourierVehicles>) {
+    setVehicle((current) => ({ ...current, ...patch }));
+    setDone(false);
+    setError(null);
+  }
+
   async function save() {
     setError(null);
 
-    try {
-      const result = await savePreferencesAction(value);
+    // Al menos un vehículo: la base lo exige igual, pero acá se avisa antes de ir a buscarla.
+    if (vehicleDirty) {
+      const check = validateVehicles(vehicle);
 
-      if (!result.ok) {
-        setError(result.error);
+      if (!check.ok) {
+        setError(check.error);
         return;
       }
+    }
 
-      setSaved({ ...value, note: value.note.trim() });
+    try {
+      if (prefsDirty) {
+        const result = await savePreferencesAction(value);
+
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
+
+        setSaved({ ...value, note: value.note.trim() });
+      }
+
+      if (vehicleDirty) {
+        const result = await saveVehiclesAction(vehicle);
+
+        if (!result.ok) {
+          setError(result.error);
+          return;
+        }
+
+        setSavedVehicle(vehicle);
+      }
+
       setDone(true);
     } catch {
       setError("No pudimos guardar el cambio. Probá de nuevo.");
@@ -58,6 +103,34 @@ export default function ProfileClient({ initial }: { initial: CourierPreferences
         <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
         </div>
+      ) : null}
+
+      {vehicleEnabled ? (
+        <section className="rounded-3xl border border-line bg-white p-5 shadow-sm" aria-labelledby="vehicle-title">
+          <h2 id="vehicle-title" className="font-semibold text-stone-800">
+            Mi vehículo
+          </h2>
+          <p className="text-sm text-stone-500">
+            Marcá con qué hacés los envíos; podés marcar los dos. Si un pedido necesita auto, solo lo ven quienes lo
+            tienen. No cambia tus precios.
+          </p>
+          <div className="mt-2 grid gap-1 sm:grid-cols-2">
+            {(["moto", "auto"] as const).map((key) => (
+              <label key={key} className="flex min-h-11 cursor-pointer items-center gap-3 py-2">
+                <input
+                  type="checkbox"
+                  checked={vehicle[key]}
+                  onChange={(event) => changeVehicle({ [key]: event.target.checked })}
+                  className="h-5 w-5 shrink-0 accent-brand"
+                />
+                <span className="flex items-center gap-1.5 font-medium text-stone-800">
+                  <VehicleIcons vehicles={[key]} />
+                  {key === "moto" ? "Moto" : "Auto"}
+                </span>
+              </label>
+            ))}
+          </div>
+        </section>
       ) : null}
 
       <section className="space-y-4 rounded-3xl border border-line bg-white p-5 shadow-sm">

@@ -18,6 +18,7 @@ import {
   confirmSettlementAction,
   adjustPrepAction,
   selfDeliveryAction,
+  setNeedsCarAction,
   setOrderStatusAction,
   setPrepAction,
 } from "../actions";
@@ -89,6 +90,7 @@ export default function OrdersClient({
   offers = [],
   suggestedPrepMinutes = null,
   defaultPrepMinutes = 20,
+  vehicleEnabled = false,
 }: {
   slug: string;
   orders: Order[];
@@ -104,6 +106,8 @@ export default function OrdersClient({
   // defecto del negocio, para preseleccionar el selector.
   suggestedPrepMinutes?: number | null;
   defaultPrepMinutes?: number;
+  // El interruptor del vehículo del repartidor (ENVIO-175): apagado, no se ve nada de moto/auto.
+  vehicleEnabled?: boolean;
 }) {
   const router = useRouter();
   // Un cambio en la base trae los datos nuevos al instante (ENVIO-172); la consulta de abajo queda de respaldo.
@@ -126,6 +130,8 @@ export default function OrdersClient({
   );
   // Un cambio a la vez: un segundo toque que llegue antes de que vuelva la respuesta no hace nada
   // (ADMIN-PEDIDOS-51). El servidor es idempotente igual; esto evita ni siquiera pedirlo.
+  // "Necesita auto" del diálogo de aceptar (ENVIO-176): arranca apagado en cada pedido.
+  const [acceptNeedsCar, setAcceptNeedsCar] = useState(false);
   const inFlight = useRef(false);
 
   // Sonido: la preferencia se lee en el navegador (no en el servidor) para que el primer
@@ -382,6 +388,7 @@ export default function OrdersClient({
   function requestStatus(order: Order, status: string, note?: string): Promise<void> | undefined {
     if (status === "confirmed" && order.status === "pending" && acceptsPrepTime(order)) {
       setError(null);
+      setAcceptNeedsCar(false);
       // `last`: el último tiempo que usó el local en este navegador (ADMIN-PEDIDOS-52), leído al abrir.
       setPrepPicker({ orderId: order.id, mode: "accept", last: readLastPrep(slug) });
       return;
@@ -401,7 +408,7 @@ export default function OrdersClient({
 
     try {
       const result =
-        mode === "accept" ? await acceptOrderAction(orderId, minutes) : await setPrepAction(orderId, minutes ?? 0, null);
+        mode === "accept" ? await acceptOrderAction(orderId, minutes, vehicleEnabled && acceptNeedsCar) : await setPrepAction(orderId, minutes ?? 0, null);
 
       if (result.ok) {
         setPrepPicker(null);
@@ -649,6 +656,7 @@ export default function OrdersClient({
                           onConfirmSettlement={() => setReceivingId(order.id)}
                           couriers={couriers}
                           offers={offersByOrder.get(order.id)}
+                          vehicleEnabled={vehicleEnabled}
                         />
                       ))
                     )}
@@ -682,6 +690,10 @@ export default function OrdersClient({
           selected && resolveDelivery(selected.id, () => assignCourierAction(selected.id, courierId, note))
         }
         onSelfDelivery={() => selected && resolveDelivery(selected.id, () => selfDeliveryAction(selected.id))}
+        vehicleEnabled={vehicleEnabled}
+        onNeedsCar={(needsCar) =>
+          selected && resolveDelivery(selected.id, () => setNeedsCarAction(selected.id, needsCar))
+        }
         onConfirmSettlement={() => selected && setReceivingId(selected.id)}
       />
 
@@ -727,6 +739,10 @@ export default function OrdersClient({
           onConfirm={(minutes) => submitPrep(minutes)}
           onAcceptWithout={() => submitPrep(null)}
           onClose={() => setPrepPicker(null)}
+          needsCar={acceptNeedsCar}
+          onNeedsCarChange={
+            vehicleEnabled && prepOrder.courier_status ? (value) => setAcceptNeedsCar(value) : undefined
+          }
         />
       ) : null}
 

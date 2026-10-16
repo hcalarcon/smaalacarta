@@ -30,6 +30,8 @@ export type AvailableOrder = {
   demora_min?: number | null;
   programado: string | null;
   anticipado: boolean;
+  // El local pidió auto (ENVIO-176); la base solo lo manda con el interruptor del vehículo prendido.
+  necesita_auto?: boolean;
   negocio: { nombre: string; direccion: string | null };
   // Total del pedido: lo que cobra el local (el envío se paga aparte, al repartidor).
   total: number;

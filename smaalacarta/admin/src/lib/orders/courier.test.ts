@@ -235,6 +235,20 @@ describe("repartidores que se pueden asignar a mano — ENVIO-81", () => {
     expect(couriersForOrder(list, order()).map((c) => c.name)).toEqual(["Álvaro", "Zeta"]);
   });
 
+  it("un pedido que necesita auto solo se asigna a quien tiene auto — ENVIO-177", () => {
+    const withVehicle = (id: string, name: string, vehiculo?: string[]) => ({ ...courier(id, name, [ZONA]), vehiculo });
+    const list = [withVehicle("1", "Solo moto", ["moto"]), withVehicle("2", "Con auto", ["moto", "auto"])];
+
+    expect(couriersForOrder(list, order({ needs_car: true })).map((c) => c.name)).toEqual(["Con auto"]);
+    expect(couriersForOrder(list, order({ needs_car: false })).map((c) => c.name)).toEqual(["Con auto", "Solo moto"]);
+  });
+
+  it("con el interruptor apagado (sin vehículo en los datos) no se filtra a nadie — ENVIO-175", () => {
+    const list = [courier("1", "Zeta", [ZONA]), courier("2", "Alfa", [ZONA])];
+
+    expect(couriersForOrder(list, order({ needs_car: true })).map((c) => c.name)).toEqual(["Alfa", "Zeta"]);
+  });
+
   it("un pedido sin zona no tiene a quién asignar", () => {
     expect(couriersForOrder([courier("1", "Zeta", [ZONA])], order({ delivery_zone_id: null }))).toEqual([]);
   });

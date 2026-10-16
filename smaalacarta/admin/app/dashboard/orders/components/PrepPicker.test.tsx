@@ -141,3 +141,28 @@ describe("selector de tiempo al aceptar — ADMIN-PEDIDOS-31 y 32", () => {
     expect(handlers.onConfirm).toHaveBeenCalledWith(20);
   });
 });
+
+describe("Necesita auto en el diálogo de aceptar — ENVIO-176", () => {
+  it("no aparece si no hay con qué manejarlo (interruptor apagado o pedido sin envío)", () => {
+    picker();
+
+    expect(screen.queryByRole("checkbox", { name: /Necesita auto/ })).toBeNull();
+  });
+
+  it("aparece apagado y avisa cuando se prende", () => {
+    const onNeedsCarChange = vi.fn();
+    picker({ needsCar: false, onNeedsCarChange });
+
+    const box = screen.getByRole("checkbox", { name: /Necesita auto/ }) as HTMLInputElement;
+    expect(box.checked).toBe(false);
+
+    fireEvent.click(box);
+    expect(onNeedsCarChange).toHaveBeenCalledWith(true);
+  });
+
+  it("no aparece al cargar el tiempo de un pedido ya aceptado", () => {
+    picker({ mode: "set", onNeedsCarChange: vi.fn() });
+
+    expect(screen.queryByRole("checkbox", { name: /Necesita auto/ })).toBeNull();
+  });
+});

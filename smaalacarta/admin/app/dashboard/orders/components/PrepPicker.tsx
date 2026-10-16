@@ -28,7 +28,13 @@ export default function PrepPicker({
   onConfirm,
   onAcceptWithout,
   onClose,
+  needsCar = false,
+  onNeedsCarChange,
 }: {
+  // "Necesita auto" (ENVIO-176): solo en un pedido con envío con repartidor y con el interruptor prendido. Lo
+  // maneja quien abre el selector; sin `onNeedsCarChange` no se muestra.
+  needsCar?: boolean;
+  onNeedsCarChange?: (needsCar: boolean) => void;
   orderNumber: string;
   // `accept`: el pedido está pendiente y se acepta con o sin tiempo. `set`: ya está aceptado.
   mode: "accept" | "set";
@@ -135,6 +141,24 @@ export default function PrepPicker({
             className="mt-1 block w-full rounded-xl border border-line px-3 py-2 text-base"
           />
         </label>
+
+        {mode === "accept" && onNeedsCarChange ? (
+          <label className="mt-4 flex min-h-11 cursor-pointer items-start gap-3 rounded-xl border border-line px-3 py-2">
+            <input
+              type="checkbox"
+              checked={needsCar}
+              disabled={busy}
+              onChange={(event) => onNeedsCarChange(event.target.checked)}
+              className="mt-1 h-5 w-5 shrink-0 accent-brand"
+            />
+            <span>
+              <span className="block text-sm font-medium text-stone-800">Necesita auto</span>
+              <span className="block text-xs text-stone-500">
+                Por ejemplo, un pedido grande o una torta: solo lo ven los repartidores que tienen auto.
+              </span>
+            </span>
+          </label>
+        ) : null}
 
         {!validation.ok ? (
           <p className="mt-1.5 text-sm text-red-600">

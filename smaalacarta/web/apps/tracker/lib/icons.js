@@ -49,6 +49,14 @@ const ICONS = {
     ["path", { d: "M5 9v11h14V9M9 20v-6h6v6" }],
   ],
   check: [["path", { d: "M5 12.5l4.5 4.5L19 7.5" }]],
+  // El vehículo del repartidor (ENVIO-178): la misma moto de la línea de pasos y un auto de la misma familia.
+  vehicleMoto: MOTO,
+  vehicleAuto: [
+    ["path", { d: "M5 11l1.6-4.2A2 2 0 0 1 8.5 5.5h7a2 2 0 0 1 1.9 1.3L19 11" }],
+    ["path", { d: "M4 11h16a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z" }],
+    ["circle", { cx: 7.5, cy: 17.5, r: 1.6 }],
+    ["circle", { cx: 16.5, cy: 17.5, r: 1.6 }],
+  ],
 };
 
 export const ICON_KEYS = Object.keys(ICONS);

@@ -389,6 +389,7 @@ describe("fetchDelivery — ENVIO-29", () => {
       ok: true,
       data: {
         courier: "Repartos al Toque",
+        vehicles: [],
         whatsapp: null,
         zone: "Cantera",
         listPrice: 5000,
@@ -541,9 +542,33 @@ describe("fetchDelivery con ofertas — ENVIO-110 y SEGUIMIENTO-28", () => {
 
     expect(r.data.closesAt).toBe(Date.parse("2026-10-09T22:05:00Z"));
     expect(r.data.offers).toEqual([
-      { id: OFFER_A, courier: "Damián", price: 5000, reason: null, favorite: true },
-      { id: OFFER_B, courier: "Moto", price: 4500, reason: "Cerca", favorite: false },
+      { id: OFFER_A, courier: "Damián", price: 5000, reason: null, favorite: true, vehicles: [] },
+      { id: OFFER_B, courier: "Moto", price: 4500, reason: "Cerca", favorite: false, vehicles: [] },
     ]);
+  });
+
+  it("trae el vehículo de cada oferta y del repartidor asignado, y descarta lo que no es moto ni auto — ENVIO-178", async () => {
+    const searching = await fetchDelivery({
+      ...cfg,
+      code: CODE,
+      fetchImpl: answer({
+        ofertas: [
+          { id: OFFER_A, repartidor: "Damián", precio: 5000, favorito: false, vehiculo: ["moto", "auto"] },
+          { id: OFFER_B, repartidor: "Moto", precio: 4500, favorito: false, vehiculo: ["bici"] },
+        ],
+      }),
+    });
+    expect(searching.data.offers.map((offer) => offer.vehicles)).toEqual([["moto", "auto"], []]);
+
+    const assigned = await fetchDelivery({
+      ...cfg,
+      code: CODE,
+      fetchImpl: answer({ estado: "accepted", repartidor: "Damián", vehiculo: ["auto"] }),
+    });
+    expect(assigned.data.vehicles).toEqual(["auto"]);
+
+    const off = await fetchDelivery({ ...cfg, code: CODE, fetchImpl: answer({ estado: "accepted", repartidor: "Damián" }) });
+    expect(off.data.vehicles).toEqual([]);
   });
 
   it("descarta las ofertas mal formadas y no inventa ofertas sin buscar", async () => {

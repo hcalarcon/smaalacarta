@@ -8,6 +8,7 @@ import { SUPABASE } from "/apps/menu-app/supabase-config.js";
 import { nextAlerts, pollInterval, snapshotOf } from "/apps/tracker/lib/alerts.js";
 import { icon } from "/apps/tracker/lib/icons.js";
 import { confirmText, countdown, countdownText, offerView, sortOffers } from "/apps/tracker/lib/offers.js";
+import { vehicleLabel } from "/apps/tracker/lib/vehicles.js";
 import { etaView as buildEta } from "/apps/tracker/lib/prep.js";
 import { cancelReason, deliveryMode, progressSteps } from "/apps/tracker/lib/steps.js";
 import {
@@ -427,6 +428,19 @@ let countdownEl = null;
 // Vuelve a leer el pedido ya mismo; se completa en start().
 let refreshNow = null;
 
+// El vehículo del repartidor (ENVIO-178): ícono propio con su texto accesible en el idioma del cliente. Sin
+// vehículos (interruptor apagado) no hay nada.
+function vehicleBadge(vehicles) {
+  const list = Array.isArray(vehicles) ? vehicles : [];
+  if (list.length === 0) return document.createDocumentFragment();
+
+  const label = vehicleLabel(list, lang);
+  const badge = el("span", { className: "vehicle", attrs: { role: "img", "aria-label": label, title: label } });
+  for (const vehicle of list) badge.appendChild(icon(document, vehicle === "auto" ? "vehicleAuto" : "vehicleMoto"));
+
+  return badge;
+}
+
 function deliveryNode(data) {
   // Un pedido cancelado antes de aceptarse vuelve a `waiting`: no hay nada que esperar (ENVIO-165).
   if (data.pedido?.estado === "cancelled" && data.envio?.state === "waiting") return null;
@@ -438,7 +452,10 @@ function deliveryNode(data) {
     el("div", { className: `delivery-head ${card.kind === "searching" ? "moving" : ""}`.trim() }, [
       el("span", { className: "delivery-icon" }, [icon(document, card.icon)]),
       el("div", {}, [
-        el("h2", { className: "delivery-title", text: card.title }),
+        el("h2", { className: "delivery-title" }, [
+          document.createTextNode(card.title),
+          ...(card.kind === "accepted" ? [vehicleBadge(data.envio.vehicles)] : []),
+        ]),
         ...card.lines
           .filter((line) => !(etaView(data, "other", new Date())?.line && line === arrivalLine(data.envio, lang)))
           .map((line) =>
@@ -487,7 +504,7 @@ function offersNode(delivery) {
         ? [el("span", { className: "offer-badge", text: `⭐ ${t("tracker.delivery.recommended", lang)}` })]
         : []),
       el("div", { className: "offer-main" }, [
-        el("span", { className: "offer-name", text: view.name }),
+        el("span", { className: "offer-name" }, [document.createTextNode(view.name), vehicleBadge(view.vehicles)]),
         el("span", { className: "offer-price", text: view.price }),
       ]),
       ...(view.reason

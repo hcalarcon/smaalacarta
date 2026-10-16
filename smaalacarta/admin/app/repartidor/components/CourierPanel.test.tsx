@@ -860,3 +860,17 @@ describe("circuito de tiempos — ENVIO-163", () => {
     expect(screen.queryByText(/Listo para retirar/)).toBeNull();
   });
 });
+
+describe("Necesita auto en la tarjeta del repartidor — ENVIO-178", () => {
+  it("el chip aparece cuando el pedido lo pide", () => {
+    offerCard(offer("1", { necesita_auto: true }));
+
+    expect(screen.getByText("Necesita auto")).toBeTruthy();
+  });
+
+  it("sin la marca no hay chip", () => {
+    offerCard(offer("1"));
+
+    expect(screen.queryByText("Necesita auto")).toBeNull();
+  });
+});

@@ -2,6 +2,7 @@ import { cache } from "react";
 
 import type { AvailableOrder, CourierPanelOrder } from "@/lib/courier/panel";
 import { fromRow, type CourierPreferences } from "@/lib/courier/profile";
+import { fromRow as fromVehicleRow, type CourierVehicles } from "@/lib/courier/vehicle";
 import { createClient } from "@/lib/supabase-server";
 
 // Datos del panel del repartidor (ENVIO-31 a 38, 57 y 62 a 66). Todo corre con la sesión del repartidor: lo que
@@ -225,6 +226,28 @@ export async function saveCourierPreferences(value: CourierPreferences): Promise
     p_seeks_orders: value.seeksOrders,
     p_note: value.note,
   });
+
+  return error ? { error: { code: error.code, message: error.message } } : { ok: true };
+}
+
+// El vehículo del repartidor (ENVIO-174): moto, auto o los dos. Lo lee con su sesión; el RLS solo le deja el suyo.
+export async function getCourierVehicles(): Promise<CourierVehicles> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.from("couriers").select("moto, auto").maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return fromVehicleRow(data);
+}
+
+// Se guarda con la función de la base, que toma al repartidor de la sesión y exige al menos un vehículo.
+export async function saveCourierVehicles(value: CourierVehicles): Promise<{ ok: true } | DbFailure> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("courier_save_vehicles", { p_moto: value.moto, p_auto: value.auto });
 
   return error ? { error: { code: error.code, message: error.message } } : { ok: true };
 }

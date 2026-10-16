@@ -6,6 +6,7 @@ import { requireCourier } from "@/lib/auth/courier";
 import { validateReturn } from "@/lib/courier/panel";
 import { validatePreferences, type CourierPreferences } from "@/lib/courier/profile";
 import { validateEta, type EtaKind } from "@/lib/courier/times";
+import { validateVehicles, type CourierVehicles } from "@/lib/courier/vehicle";
 import {
   courierDeclineOrder,
   courierMakeOffer,
@@ -15,6 +16,7 @@ import {
   courierSetStatus,
   courierTakeOrder,
   saveCourierPreferences,
+  saveCourierVehicles,
   courierWithdrawOffer,
   setZoneCoverage,
 } from "@/lib/db/courier";
@@ -31,8 +33,10 @@ const GENERIC = "No pudimos guardar el cambio. Probá de nuevo.";
 // Todas las acciones empiezan por `requireCourier()`: el repartidor sale de la sesión, nunca del
 // navegador (ENVIO-3). La base vuelve a comprobar de quién es cada pedido y cada barrio.
 
-// P0019: lo tomó otro; P0020: ya no recibe ofertas; P0023: el pedido es del otro modo.
-const isClosed = (code?: string) => code === "P0020" || code === "P0019" || code === "P0023";
+// P0019: lo tomó otro; P0020: ya no recibe ofertas; P0023: el pedido es del otro modo; P0024: necesita auto y
+// este repartidor no lo tiene (el pedido no es para él: sale de su lista).
+const isClosed = (code?: string) =>
+  code === "P0020" || code === "P0019" || code === "P0023" || code === "P0024";
 
 // Tomar un pedido de precio fijo (ENVIO-147): al precio de lista, sin precio ni motivo. Si lo tomó otro
 // antes, la base da P0019 y la respuesta lleva `closed` para que el panel lo saque de la lista.
@@ -213,6 +217,21 @@ export async function savePreferencesAction(input: CourierPreferences): Promise<
   if (!validation.ok) return { ok: false, error: validation.error };
 
   const result = await saveCourierPreferences(validation.value);
+  if ("error" in result) return { ok: false, error: GENERIC };
+
+  revalidatePath("/repartidor/perfil");
+  return { ok: true };
+}
+
+// Su vehículo (ENVIO-174): moto, auto o los dos, al menos uno. El repartidor sale de la sesión; la base vuelve a
+// exigir lo mismo. No cambia el precio ni las zonas.
+export async function saveVehiclesAction(input: CourierVehicles): Promise<CourierActionResult> {
+  await requireCourier();
+
+  const validation = validateVehicles(input);
+  if (!validation.ok) return { ok: false, error: validation.error };
+
+  const result = await saveCourierVehicles(validation.value);
   if ("error" in result) return { ok: false, error: GENERIC };
 
   revalidatePath("/repartidor/perfil");

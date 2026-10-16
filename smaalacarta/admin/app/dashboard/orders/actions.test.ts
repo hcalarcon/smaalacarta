@@ -11,6 +11,7 @@ const { requireBusiness, ordersDb } = vi.hoisted(() => ({
     setOrderStatus: vi.fn(),
     getOrderPrepState: vi.fn(),
     setOrderPrep: vi.fn(),
+    setOrderNeedsCar: vi.fn(),
   },
 }));
 
@@ -18,7 +19,13 @@ vi.mock("@/lib/get-current-business", () => ({ requireBusiness: () => requireBus
 vi.mock("@/lib/db/orders", () => ordersDb);
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-import { acceptOrderAction, createManualOrderAction, adjustPrepAction, setPrepAction } from "./actions";
+import {
+  acceptOrderAction,
+  createManualOrderAction,
+  adjustPrepAction,
+  setNeedsCarAction,
+  setPrepAction,
+} from "./actions";
 
 const BUSINESS = "a1a1a1a1-0000-0000-0000-000000000001";
 const ORDER = "11111111-1111-1111-1111-111111111111";
@@ -32,6 +39,7 @@ beforeEach(() => {
   ordersDb.getOrderPrepState.mockResolvedValue({ ok: true, order: pending });
   ordersDb.setOrderStatus.mockResolvedValue({ ok: true });
   ordersDb.setOrderPrep.mockResolvedValue({ ok: true });
+  ordersDb.setOrderNeedsCar.mockResolvedValue({ ok: true });
 });
 
 describe("sin sesión de un negocio no llega a la base — ADMIN-PEDIDOS-33", () => {
@@ -293,5 +301,61 @@ describe("pedido manual — ADMIN-PEDIDOS-39 a 46", () => {
     const r = await createManualOrderAction(input);
 
     expect(r).toEqual({ ok: false, error: "Un producto está sin stock." });
+  });
+});
+
+describe("Necesita auto — ENVIO-176", () => {
+  const withDelivery = { ...pending, courier_status: "waiting" };
+
+  it("al aceptar con el auto pedido, lo carga antes de confirmar", async () => {
+    ordersDb.getOrderPrepState.mockResolvedValue({ ok: true, order: withDelivery });
+
+    const r = await acceptOrderAction(ORDER, 20, true);
+
+    expect(r).toEqual({ ok: true });
+    expect(ordersDb.setOrderNeedsCar).toHaveBeenCalledWith(ORDER, true);
+    expect(ordersDb.setOrderNeedsCar.mock.invocationCallOrder[0]).toBeLessThan(
+      ordersDb.setOrderStatus.mock.invocationCallOrder[0],
+    );
+  });
+
+  it("si no se pudo pedir el auto, no confirma el pedido", async () => {
+    ordersDb.getOrderPrepState.mockResolvedValue({ ok: true, order: withDelivery });
+    ordersDb.setOrderNeedsCar.mockResolvedValue({ error: { code: "P0004" } });
+
+    const r = await acceptOrderAction(ORDER, 20, true);
+
+    expect(r.ok).toBe(false);
+    expect(ordersDb.setOrderStatus).not.toHaveBeenCalled();
+  });
+
+  it("sin pedir auto no toca nada del auto", async () => {
+    ordersDb.getOrderPrepState.mockResolvedValue({ ok: true, order: withDelivery });
+
+    await acceptOrderAction(ORDER, 20);
+
+    expect(ordersDb.setOrderNeedsCar).not.toHaveBeenCalled();
+  });
+
+  it("un pedido sin envío con repartidor no pide auto aunque llegue la marca", async () => {
+    ordersDb.getOrderPrepState.mockResolvedValue({ ok: true, order: { ...pending, courier_status: null } });
+
+    const r = await acceptOrderAction(ORDER, 20, true);
+
+    expect(r).toEqual({ ok: true });
+    expect(ordersDb.setOrderNeedsCar).not.toHaveBeenCalled();
+  });
+
+  it("cambiarlo después usa la sesión y devuelve el error de la base en español", async () => {
+    expect(await setNeedsCarAction(ORDER, true)).toEqual({ ok: true });
+    expect(ordersDb.setOrderNeedsCar).toHaveBeenCalledWith(ORDER, true);
+
+    ordersDb.setOrderNeedsCar.mockResolvedValue({ error: { code: "P0004" } });
+    expect((await setNeedsCarAction(ORDER, false)).ok).toBe(false);
+  });
+
+  it("rechaza un id que no es un id", async () => {
+    expect((await setNeedsCarAction("nope", true)).ok).toBe(false);
+    expect(ordersDb.setOrderNeedsCar).not.toHaveBeenCalled();
   });
 });

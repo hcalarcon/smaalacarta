@@ -739,6 +739,11 @@ ADMIN-CONFIG-49 y 50, SEGUIMIENTO-37 a 42). Migración `20261031000000_tiempo_de
       carga "llego al local" y "llego al cliente", recibe aviso 10 minutos antes y al marcar Listo, y si el local
       cambia la demora le llega la hora nueva y puede devolverlo. Migración `20261105000000_circuito_de_tiempos.sql`.
       Pendiente: probar a mano con dos repartidores que cubran Centro y con la app del repartidor cerrada
+- [x] [herni] **Vehículo del repartidor: moto o auto** (ENVIO-174 a 178): casillas Moto/Auto en "Mi perfil", "Necesita
+      auto" al aceptar un pedido (o después, sin repartidor), filtrado en el servidor al ver, tomar, ofertar y asignar
+      (`P0024`), íconos en la tarjeta del local, las ofertas y el seguimiento, y chip en la tarjeta del repartidor. Todo
+      detrás de un interruptor del superadmin, apagado de fábrica. Migración `20261113000000_vehiculo_del_repartidor.sql`
+      (a prod con `npx supabase db push --db-url "<prod>"` al mergear)
 
 ## Promociones con imagen y vigencia
 

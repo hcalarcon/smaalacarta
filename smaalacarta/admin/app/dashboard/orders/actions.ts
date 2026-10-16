@@ -8,6 +8,7 @@ import {
   createManualOrder,
   getOrderPrepState,
   selfDelivery,
+  setOrderNeedsCar,
   setOrderPrep,
   setOrderStatus,
 } from "@/lib/db/orders";
@@ -61,8 +62,13 @@ function cleanReason(reason: string | null | undefined): { ok: true; reason: str
 
 // Aceptar un pedido con el tiempo que estima el local, o sin tiempo (`minutes` nulo) (ADMIN-PEDIDOS-31 y 33).
 // El negocio sale de la sesión; el pedido tiene que ser suyo. Un pedido programado o anticipado ya tiene su
-// hora: se confirma sin tiempo.
-export async function acceptOrderAction(orderId: string, minutes: number | null): Promise<OrderActionResult> {
+// hora: se confirma sin tiempo. Con `needsCar` el pedido pide auto (ENVIO-176): se carga antes de confirmar, para
+// que la búsqueda nazca ya filtrada y nadie sin auto la vea ni un instante.
+export async function acceptOrderAction(
+  orderId: string,
+  minutes: number | null,
+  needsCar = false,
+): Promise<OrderActionResult> {
   const { business } = await requireBusiness();
 
   if (minutes !== null) {
@@ -78,6 +84,11 @@ export async function acceptOrderAction(orderId: string, minutes: number | null)
   // nada ni le avisa al usuario.
   if (state.order.status !== "pending") return { ok: true };
 
+  if (needsCar === true && state.order.courier_status !== null) {
+    const car = await setOrderNeedsCar(orderId, true);
+    if ("error" in car) return { ok: false, error: orderErrorMessage(car.error) };
+  }
+
   const confirmed = await setOrderStatus(orderId, "confirmed", undefined, "pending");
   if ("error" in confirmed) {
     // Si otro pedido de aceptar llegó primero, el pedido ya quedó aceptado: no es un error del usuario.
@@ -86,6 +97,9 @@ export async function acceptOrderAction(orderId: string, minutes: number | null)
       revalidatePath("/dashboard/orders");
       return { ok: true };
     }
+
+    // No se aceptó: el pedido no se queda pidiendo auto por algo que el local no llegó a confirmar.
+    if (needsCar === true && state.order.courier_status !== null) await setOrderNeedsCar(orderId, false);
 
     return { ok: false, error: orderErrorMessage(confirmed.error) };
   }
@@ -102,6 +116,24 @@ export async function acceptOrderAction(orderId: string, minutes: number | null)
     }
   }
 
+  return { ok: true };
+}
+
+// Prender o apagar "Necesita auto" en un pedido que todavía no tiene repartidor (ENVIO-176). La base vuelve a
+// comprobar que es del negocio y que sigue buscando.
+export async function setNeedsCarAction(orderId: string, needsCar: boolean): Promise<OrderActionResult> {
+  await requireBusiness();
+
+  if (typeof orderId !== "string" || !ID.test(orderId) || typeof needsCar !== "boolean") {
+    return { ok: false, error: NO_ORDER };
+  }
+
+  const result = await setOrderNeedsCar(orderId, needsCar);
+  if ("error" in result) {
+    return { ok: false, error: orderErrorMessage(result.error) };
+  }
+
+  revalidatePath("/dashboard/orders");
   return { ok: true };
 }
 

@@ -15,6 +15,7 @@ import { formatDateTime, timeAgo } from "@/lib/orders/format";
 import { preorderLabel, scheduledLabel } from "@/lib/orders/scheduled";
 import { formatMoney } from "@/lib/promotions/pricing";
 import PendingButton from "@/components/ui/PendingButton";
+import VehicleIcons from "@/components/ui/VehicleIcon";
 import ConfirmDeleteDialog from "../../dashboard/components/ConfirmDeleteDialog";
 
 type Errors = Partial<Record<"price" | "reason", string>>;
@@ -109,6 +110,13 @@ export default function AvailableOrderCard({
         <p className="min-w-0 break-words text-base font-semibold text-brand">
           #{order.numero} · {order.negocio.nombre}
         </p>
+
+        {order.necesita_auto ? (
+          <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-900">
+            <VehicleIcons vehicles={["auto"]} />
+            Necesita auto
+          </span>
+        ) : null}
 
         {order.pago_estado === "not_required" || order.pago_estado === "paid" ? null : (
           <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs font-semibold text-stone-600">

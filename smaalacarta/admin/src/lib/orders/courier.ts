@@ -36,6 +36,8 @@ export type CourierOrder = {
   // Lo devolvió después de que el local cambió la demora (ENVIO-159).
   returned_reason_kind?: string | null;
   returned_reason?: string | null;
+  // El local pidió auto (ENVIO-176).
+  needs_car?: boolean;
 };
 
 // Una oferta de repartidor tal como la entrega `business_order_offers()` (ENVIO-111).
@@ -46,13 +48,22 @@ export type OrderOffer = {
   precio: number;
   motivo: string | null;
   favorito: boolean;
+  // Moto y/o auto del repartidor; falta con el interruptor apagado (ENVIO-178).
+  vehiculo?: string[];
 };
 
 // Las ofertas abiertas de un pedido que busca repartidor, con cuándo se elige sola (ENVIO-105).
 export type OrderOffers = { order_id: string; cierra_en: string | null; ofertas: OrderOffer[] };
 
 // Un repartidor activo que cubre alguna zona del local (`business_delivery_options()`).
-export type OrderCourier = { id: string; name: string; whatsapp: string | null; zone_ids: string[] };
+export type OrderCourier = {
+  id: string;
+  name: string;
+  whatsapp: string | null;
+  zone_ids: string[];
+  // Moto y/o auto; falta con el interruptor apagado (ENVIO-178).
+  vehiculo?: string[];
+};
 
 // Pasados estos minutos sin ninguna oferta, el panel lo destaca (ENVIO-118).
 export const SEARCH_WARNING_MINUTES = 10;
@@ -224,12 +235,15 @@ export function returnedNotice(
 // Los repartidores activos que cubren la zona del pedido (los que se pueden asignar a mano), por nombre.
 export function couriersForOrder(
   couriers: OrderCourier[],
-  order: Pick<CourierOrder, "delivery_zone_id">,
+  order: Pick<CourierOrder, "delivery_zone_id" | "needs_car">,
 ): OrderCourier[] {
   if (!order.delivery_zone_id) return [];
 
+  // Si el pedido necesita auto, solo los que lo tienen. `vehiculo` solo llega con el interruptor prendido: sin él
+  // no hay con qué filtrar, y el servidor tampoco filtra (ENVIO-177).
   return couriers
     .filter((courier) => courier.zone_ids.includes(order.delivery_zone_id as string))
+    .filter((courier) => !order.needs_car || courier.vehiculo === undefined || courier.vehiculo.includes("auto"))
     .sort((a, b) => a.name.localeCompare(b.name, "es"));
 }
 

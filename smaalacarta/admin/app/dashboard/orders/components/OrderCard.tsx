@@ -36,6 +36,7 @@ import { isFinal, primaryAction, STATUS_LABELS, type OrderStatus } from "@/lib/o
 import { formatMoney } from "@/lib/promotions/pricing";
 import ItemNote from "@/components/ui/ItemNote";
 import PendingButton from "@/components/ui/PendingButton";
+import VehicleIcons from "@/components/ui/VehicleIcon";
 
 const SHOWN_ITEMS = 2;
 
@@ -53,7 +54,10 @@ export default function OrderCard({
   offers,
   onSetPrep,
   onAdjust,
+  vehicleEnabled = false,
 }: {
+  // El interruptor del vehículo (ENVIO-175): apagado, no se ven ni "Necesita auto" ni los íconos.
+  vehicleEnabled?: boolean;
   order: Order;
   now: Date;
   busy: boolean;
@@ -100,9 +104,9 @@ export default function OrderCard({
   const urgency = orderUrgency(order, now, offers?.ofertas.length ?? 0);
   const step = stepIndex(order.status);
   const adjustable = Boolean(inKitchen && onAdjust && order.prep_ready_at);
-  const courierName = order.courier_id
-    ? couriers.find((courier) => courier.id === order.courier_id)?.name
-    : undefined;
+  const taker = order.courier_id ? couriers.find((courier) => courier.id === order.courier_id) : undefined;
+  const courierName = taker?.name;
+  const needsCar = vehicleEnabled && order.needs_car === true && withDelivery && !isFinal(order.status);
 
   return (
     // Tocar la tarjeta abre el detalle; los botones y enlaces de adentro hacen lo suyo y no lo abren.
@@ -285,7 +289,18 @@ export default function OrderCard({
           <p className="font-semibold">
             🛵 {order.delivery_zone_name ?? "Envío"} · {fee.price}
           </p>
-          <p>{courierStatusLabel(order, courierName)}</p>
+          <p>
+            {courierStatusLabel(order, courierName)}
+            {vehicleEnabled ? <VehicleIcons vehicles={taker?.vehiculo} className="ml-1" /> : null}
+          </p>
+          {needsCar ? (
+            <p className="mt-0.5">
+              <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 font-semibold text-sky-900">
+                <VehicleIcons vehicles={["auto"]} />
+                Necesita auto
+              </span>
+            </p>
+          ) : null}
           {returnedNotice(order) ? <p className="font-semibold text-amber-800">{returnedNotice(order)}</p> : null}
           {pickupEtaNotice(order) ? <p className="font-medium">⏱ {pickupEtaNotice(order)}</p> : null}
           {searching && acceptsOffers(order) ? <p className="font-medium">{offersLabel(offers, now)}</p> : null}
@@ -294,7 +309,9 @@ export default function OrderCard({
               {offers.ofertas.slice(0, 3).map((offer) => (
                 <li key={offer.id} className="truncate">
                   {offer.favorito ? "⭐ " : ""}
-                  {offer.repartidor} · {formatMoney(offer.precio)}
+                  {offer.repartidor}
+                  {vehicleEnabled ? <VehicleIcons vehicles={offer.vehiculo} className="mx-1" /> : null} ·{" "}
+                  {formatMoney(offer.precio)}
                 </li>
               ))}
               {offers.ofertas.length > 3 ? <li>y {offers.ofertas.length - 3} más…</li> : null}

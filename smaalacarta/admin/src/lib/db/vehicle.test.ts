@@ -232,6 +232,18 @@ describe("Necesita auto — ENVIO-176", () => {
     expect((await db.query("select needs_car from orders where id = $1", [id])).rows[0]).toEqual({ needs_car: false });
   });
 
+  it("pedir auto cierra las ofertas abiertas de quienes no tienen auto", async () => {
+    await setMode("offers");
+    const { id } = await envio();
+    await offer(db, MOTO_USER, id);
+    await offer(db, AUTO_USER, id);
+
+    expect((await call(ANA, `select public.set_order_needs_car('${id}', true)`)).ok).toBe(true);
+
+    const open = await db.query("select courier_id from courier_offers where order_id = $1 and closed_at is null", [id]);
+    expect(open.rows).toEqual([{ courier_id: AUTO }]);
+  });
+
   it("un pedido sin envío con repartidor no pide auto", async () => {
     const items = JSON.stringify([{ id: CAFE, kind: "product", quantity: 1 }]);
     const r = await call(

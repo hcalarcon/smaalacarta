@@ -510,22 +510,28 @@ export type Database = {
       couriers: {
         Row: {
           active: boolean
+          auto: boolean
           created_at: string
           id: string
+          moto: boolean
           name: string
           whatsapp: string | null
         }
         Insert: {
           active?: boolean
+          auto?: boolean
           created_at?: string
           id?: string
+          moto?: boolean
           name: string
           whatsapp?: string | null
         }
         Update: {
           active?: boolean
+          auto?: boolean
           created_at?: string
           id?: string
+          moto?: boolean
           name?: string
           whatsapp?: string | null
         }
@@ -888,6 +894,7 @@ export type Database = {
           delivery_zone_name: string | null
           id: string
           mp_payment_id: string | null
+          needs_car: boolean
           new_order_reminded_at: string | null
           new_order_reminders: number
           no_offers_alerted_at: string | null
@@ -940,6 +947,7 @@ export type Database = {
           delivery_zone_name?: string | null
           id?: string
           mp_payment_id?: string | null
+          needs_car?: boolean
           new_order_reminded_at?: string | null
           new_order_reminders?: number
           no_offers_alerted_at?: string | null
@@ -992,6 +1000,7 @@ export type Database = {
           delivery_zone_name?: string | null
           id?: string
           mp_payment_id?: string | null
+          needs_car?: boolean
           new_order_reminded_at?: string | null
           new_order_reminders?: number
           no_offers_alerted_at?: string | null
@@ -1132,16 +1141,19 @@ export type Database = {
           delivery_mode: string
           id: boolean
           updated_at: string
+          vehicle_enabled: boolean
         }
         Insert: {
           delivery_mode?: string
           id?: boolean
           updated_at?: string
+          vehicle_enabled?: boolean
         }
         Update: {
           delivery_mode?: string
           id?: boolean
           updated_at?: string
+          vehicle_enabled?: boolean
         }
         Relationships: []
       }
@@ -1482,6 +1494,10 @@ export type Database = {
         Returns: string
       }
       courier_available_orders: { Args: never; Returns: Json }
+      courier_blocked_by_car: {
+        Args: { p_courier_id: string; p_order_id: string }
+        Returns: boolean
+      }
       courier_covers_my_zones: {
         Args: { p_courier_id: string }
         Returns: boolean
@@ -1511,6 +1527,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      courier_save_vehicles: {
+        Args: { p_auto: boolean; p_moto: boolean }
+        Returns: undefined
+      }
       courier_sees_order: {
         Args: { p_courier_id: string; p_order_id: string }
         Returns: boolean
@@ -1524,6 +1544,7 @@ export type Database = {
         Returns: undefined
       }
       courier_take_order: { Args: { p_order_id: string }; Returns: undefined }
+      courier_vehicles: { Args: { p_courier_id: string }; Returns: Json }
       courier_withdraw_offer: {
         Args: { p_order_id: string }
         Returns: undefined
@@ -1784,6 +1805,10 @@ export type Database = {
         Args: { p_favorite: string }
         Returns: undefined
       }
+      set_order_needs_car: {
+        Args: { p_needs_car: boolean; p_order_id: string }
+        Returns: undefined
+      }
       set_order_prep: {
         Args: {
           p_order_id: string
@@ -1828,6 +1853,7 @@ export type Database = {
         Args: { p_business_id: string }
         Returns: number
       }
+      vehicle_enabled: { Args: never; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

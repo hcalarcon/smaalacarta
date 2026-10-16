@@ -851,3 +851,18 @@ body {
   line-height: 1;
   cursor: pointer;
 }
+
+/* El vehículo del repartidor (ENVIO-178): íconos chicos junto al nombre. */
+.vehicle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.15rem;
+  margin-left: 0.4rem;
+  vertical-align: middle;
+  color: var(--brand);
+}
+
+.vehicle .icon {
+  width: 1.05rem;
+  height: 1.05rem;
+}
