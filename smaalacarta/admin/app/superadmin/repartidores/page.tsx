@@ -1,12 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import VehicleIcons from "@/components/ui/VehicleIcon";
 import { listCouriers } from "@/lib/db/couriers";
+import { isVehicleEnabled } from "@/lib/db/vehicle";
 
 export const metadata: Metadata = { title: "Repartidores" };
 
 export default async function CouriersPage() {
-  const couriers = await listCouriers();
+  const [couriers, vehicleEnabled] = await Promise.all([listCouriers(), isVehicleEnabled()]);
 
   return (
     <div className="space-y-8">
@@ -62,6 +64,15 @@ export default async function CouriersPage() {
                           : `${courier.zoneCount} zonas`}
                     </dd>
                   </div>
+                  {vehicleEnabled ? (
+                    <div className="flex items-center gap-2">
+                      <dt className="text-stone-400">Vehículo:</dt>
+                      <dd className="flex items-center gap-1">
+                        <VehicleIcons vehicles={[...(courier.moto ? ["moto"] : []), ...(courier.auto ? ["auto"] : [])]} />
+                        {courier.moto && courier.auto ? "Moto y auto" : courier.auto ? "Auto" : "Moto"}
+                      </dd>
+                    </div>
+                  ) : null}
                   <div className="flex gap-2">
                     <dt className="text-stone-400">Cuenta:</dt>
                     <dd className="truncate">{courier.email ?? "sin cuenta"}</dd>
