@@ -155,6 +155,10 @@ textarea {
 }
 
 /* Piezas que solo usan Moderna y Minimalista (cara-de-app.css). En Clásica no se ven ni cambian nada. */
+.carrito-panel:focus {
+  outline: none;
+}
+
 .header-marca,
 .header-titulo,
 .checkout-pie {

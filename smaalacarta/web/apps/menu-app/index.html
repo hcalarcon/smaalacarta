@@ -77,7 +77,7 @@
       </div>
       <!-- Logo y nombre (PUBLICO-97): en Clásica no cambia nada, en Moderna y Minimalista es la tarjeta de identidad -->
       <div class="header-marca">
-        <img id="logo-negocio" class="logo-negocio" alt="" hidden />
+        <img id="logo-negocio" class="logo-negocio" alt="" width="52" height="52" hidden />
         <div class="header-titulo">
           <h1 id="nombre-negocio">...</h1>
           <p id="descripcion-negocio"></p>
@@ -150,7 +150,7 @@
     </button>
 
     <!-- CARRITO -->
-    <div id="carrito-panel" class="carrito-panel">
+    <div id="carrito-panel" class="carrito-panel" role="dialog" aria-modal="true" aria-label="Tu pedido" data-i18n-aria-label="cart.title" tabindex="-1">
       <div class="carrito-header">
         <h2 data-i18n="cart.title">Tu pedido</h2>
         <button id="cerrar-carrito">✕</button>

@@ -33,6 +33,7 @@ body {
   background: var(--pill-bg);
   color: var(--pill-text);
   font-weight: 800;
+  font-variant-numeric: tabular-nums;
   line-height: 1.4;
   white-space: nowrap;
 }
@@ -64,6 +65,13 @@ body {
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
 }
 
+.selector-idioma button,
+.barra-boton,
+.aviso-idioma button {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
 .selector-idioma button {
   min-width: 44px;
   min-height: 44px;
@@ -84,7 +92,8 @@ body {
 .barra-boton:focus-visible,
 .aviso-idioma button:focus-visible,
 .checkout-header button:focus-visible {
-  outline: 3px solid var(--pill-bg);
+  /* El color del texto, no el de la pastilla: el foco se ve aunque el local elija un color muy claro. */
+  outline: 3px solid var(--text);
   outline-offset: 2px;
   box-shadow: 0 0 0 5px var(--card);
 }
@@ -586,7 +595,8 @@ html[data-template] .checkout > #gracias-pedido {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  html body .categoria .categoria-grid {
+  html body .categoria.categoria-ofertas .categoria-grid,
+  html body .categoria.categoria-destacados .categoria-grid {
     scroll-behavior: auto;
   }
 }

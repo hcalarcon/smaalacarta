@@ -1174,23 +1174,49 @@ window.addEventListener("popstate", () => {
 
 // Escape cierra el carrito y el checkout, salvo que haya arriba un diálogo con su propio Escape (la zona).
 document.addEventListener("keydown", (e) => {
-  if (e.key !== "Escape" || document.querySelector(".zona-dialogo")) return;
+  // Un diálogo abierto arriba (zona, hoja de producto, foto ampliada) tiene su propio Escape: ese se cierra primero.
+  if (e.key !== "Escape" || document.querySelector(".zona-dialogo, .opciones-hoja, .lightbox")) return;
   if ($("#checkout")?.classList.contains("active") || $("#carrito-panel")?.classList.contains("active")) {
     closeAll();
   }
 });
 
+// Se sale de la página con la entrada del carrito reemplazada y no sumada: al volver con "atrás" desde el
+// seguimiento o desde el pago no queda una entrada de más del menú (PUBLICO-95).
+function goTo(url) {
+  if (LAYER_ENTRY) {
+    LAYER_ENTRY = false;
+    window.location.replace(url);
+  } else {
+    window.location.href = url;
+  }
+}
+
+// Mientras el carrito o el checkout están abiertos, el resto de la página no recibe foco ni lectura
+// (`inert`): el diálogo es modal de verdad y Tab no se escapa a lo de atrás.
+const LAYER_IDS = ["carrito-panel", "checkout", "overlay", "loader", "aviso-idioma"];
+
+function setBackgroundInert(on) {
+  for (const node of document.body.children) {
+    if (node.tagName === "SCRIPT" || LAYER_IDS.includes(node.id)) continue;
+    node.inert = on;
+  }
+}
+
 function openCart() {
   LAYER_OPENER = document.activeElement;
   pushLayer();
+  setBackgroundInert(true);
   $("#carrito-panel")?.classList.add("active");
   $("#overlay")?.classList.add("active");
   document.body.classList.add("no-scroll");
+  $("#carrito-panel")?.focus({ preventScroll: true });
 }
 
 function openCheckout() {
   LAYER_OPENER ??= document.activeElement;
   pushLayer();
+  setBackgroundInert(true);
   $("#overlay")?.classList.add("active");
   $("#checkout")?.classList.add("active");
   document.body.classList.add("no-scroll");
@@ -1211,6 +1237,7 @@ function closeAll() {
   $("#overlay")?.classList.remove("active");
   $("#checkout")?.classList.remove("active");
   document.body.classList.remove("no-scroll");
+  setBackgroundInert(false);
 
   if (LAYER_ENTRY) {
     LAYER_ENTRY = false;
@@ -1273,17 +1300,16 @@ function updateBarraActive() {
 }
 
 let BARRA_FRAME = 0;
-window.addEventListener(
-  "scroll",
-  () => {
-    if (BARRA_FRAME) return;
-    BARRA_FRAME = requestAnimationFrame(() => {
-      BARRA_FRAME = 0;
-      updateBarraActive();
-    });
-  },
-  { passive: true },
-);
+const onScrollOrResize = () => {
+  if (BARRA_FRAME) return;
+  BARRA_FRAME = requestAnimationFrame(() => {
+    BARRA_FRAME = 0;
+    updateBarraActive();
+  });
+};
+window.addEventListener("scroll", onScrollOrResize, { passive: true });
+// Girar el celular o cambiar el tamaño reacomoda las solapas: se vuelve a calcular.
+window.addEventListener("resize", onScrollOrResize);
 
 $("#barra-menu")?.addEventListener("click", () => {
   scrollToSection(
@@ -1592,7 +1618,7 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
     // repartidor y, si quiere, se manda también por WhatsApp (el link queda guardado, es opcional).
     ORDERS.rememberHandoff(window.localStorage, saved.code, whatsappUrl);
     WA_WINDOW?.discardPlaceholder(placeholder);
-    window.location.href = link;
+    goTo(link);
     return;
   }
 
@@ -1628,17 +1654,17 @@ async function payOnline(form, code, trackingLink) {
 
   const pay = await MERCADOPAGO.createPayment({ code });
   if (pay.ok) {
-    window.location.href = pay.url;
+    goTo(pay.url);
     return;
   }
 
   alert(tr("error.mpFailed"));
-  window.location.href = trackingLink;
+  goTo(trackingLink);
 }
 
 function openWhatsAppUrl(placeholder, url) {
   if (WA_WINDOW) return WA_WINDOW.openWhatsApp(placeholder, url, window);
-  window.location.href = url;
+  goTo(url);
   return "same-tab";
 }
 
