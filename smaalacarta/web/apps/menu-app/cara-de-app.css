@@ -74,42 +74,71 @@ body {
   letter-spacing: 0.04em;
 }
 
+/* Al tocar "ES" la pastilla se estira hacia la izquierda y muestra los otros dos idiomas en la misma línea.
+   Solo se animan opacity, transform y clip-path: el layout no salta (la lista es absoluta). */
 .selector-idioma .idioma-lista {
   position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
+  top: 0;
+  right: calc(100% + 4px);
   z-index: 5;
-  display: none;
-  flex-direction: column;
-  gap: 2px;
-  padding: 4px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  height: 100%;
+  padding: 0 2px;
   border: 1px solid var(--border);
-  border-radius: 16px;
+  border-radius: 999px;
   background: var(--card);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.22);
   text-shadow: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(12px);
+  clip-path: inset(0 0 0 100% round 999px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease,
+    clip-path 0.2s ease,
+    visibility 0s linear 0.2s;
 }
 
 .selector-idioma.abierto .idioma-lista {
-  display: flex;
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  clip-path: inset(0 0 0 0 round 999px);
+  transition-delay: 0s;
+}
+
+/* El idioma activo es el botón de la derecha: queda resaltado mientras está abierto. */
+.selector-idioma.abierto .idioma-toggle {
+  background: var(--pill-bg);
+  border-color: var(--pill-bg);
+  color: var(--pill-text);
 }
 
 .selector-idioma .idioma-opcion {
-  min-width: 56px;
+  min-width: 44px;
   min-height: 44px;
-  padding: 0 0.9rem;
-  border-radius: 12px;
+  padding: 0 0.6rem;
+  border-radius: 999px;
   background: transparent;
   color: var(--text);
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-align: center;
 }
 
 .selector-idioma .idioma-opcion[aria-pressed="true"] {
-  background: var(--pill-bg);
-  color: var(--pill-text);
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .selector-idioma .idioma-lista {
+    transform: none;
+    transition: none;
+  }
 }
 
 .selector-idioma button,

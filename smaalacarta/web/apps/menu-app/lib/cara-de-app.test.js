@@ -54,6 +54,17 @@ describe("selector de idioma compacto (PUBLICO-91)", () => {
     expect(app).toContain('lista.className = "idioma-lista"');
   });
 
+  it("se estira hacia la izquierda en la misma línea, con animación suave y sin ella si se pide", () => {
+    const lista = rule(".selector-idioma .idioma-lista {");
+    expect(lista).toMatch(/flex-direction: row/);
+    expect(lista).toMatch(/position: absolute/);
+    expect(lista).toMatch(/right: calc\(100% \+ 4px\)/);
+    expect(lista).toMatch(/clip-path/);
+    expect(lista).toMatch(/opacity 0\.2s/);
+    expect(shell).toMatch(/prefers-reduced-motion: reduce\)\s*\{\s*\.selector-idioma \.idioma-lista \{[^}]*transition: none/);
+    expect(app).toContain('toggle.setAttribute("aria-expanded", String(open))');
+  });
+
   it("la Clásica sigue con los tres botones: el botón compacto está oculto en la base", () => {
     expect(base).toMatch(/\.idioma-toggle\s*\{\s*display: none;/);
   });

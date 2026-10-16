@@ -393,7 +393,7 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
 - **PUBLICO-90** Si corresponde sugerir un idioma (PUBLICO-88) y el menú está en español, aparece un aviso chico
   ("¿Ver el menú en English?") con un botón para cambiar y otro para cerrar; cualquiera de los dos guarda la
   elección y el aviso no vuelve.
-- **PUBLICO-91** El idioma es un solo botón compacto ("ES") dentro del encabezado, que abre la lista ES / EN / PT;
+- **PUBLICO-91** El idioma es un solo botón compacto ("ES") dentro del encabezado, que al tocarlo se estira hacia la izquierda y muestra los otros idiomas en la misma línea (animación de ~200 ms, sin ella con `prefers-reduced-motion`; `aria-expanded`; se cierra al elegir, al tocar afuera o con Escape);
   se va con el desplazamiento y nunca queda encima de las categorías. Botones de al menos 44 px de alto.
 - **PUBLICO-92** Abajo hay una barra fija con Menú, Promos y Carrito (el carrito con contador de unidades); cada
   botón tiene `aria-label` y al menos 44 px de alto; Promos no aparece si el local no tiene promociones.
