@@ -47,6 +47,12 @@ body {
   font-size: 1.05rem;
 }
 
+.item-info .item-precio {
+  width: max-content;
+  max-width: none;
+  flex: none;
+}
+
 /* ---------- SELECTOR DE IDIOMA COMPACTO (PUBLICO-91) ---------- */
 /* Un solo botón "ES" dentro del encabezado: se va con el scroll y nunca queda encima de las
    categorías. Al tocarlo abre la lista ES / EN / PT. */

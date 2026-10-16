@@ -433,6 +433,10 @@ _Sin requisitos todavía._
 
 _Sin requisitos todavía._
 
+- **CARRITO-1** En las plantillas de cara de app, la pastilla del precio de cada producto en el carrito conserva el
+  ancho necesario para contener el importe y su relleno, aunque el espacio del nombre esté reducido por los
+  controles de cantidad.
+
 ## PEDIDO — Envío del pedido por WhatsApp
 
 *Aplicado por: pendiente. Cubierto por: pendiente.*

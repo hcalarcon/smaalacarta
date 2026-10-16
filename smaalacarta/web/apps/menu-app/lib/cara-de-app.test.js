@@ -115,6 +115,15 @@ describe("header compacto de Moderna (PUBLICO-98)", () => {
   });
 });
 
+describe("precio de los productos en el carrito (CARRITO-1)", () => {
+  it("la pastilla conserva el ancho intrínseco del importe aunque el nombre comparta fila con los controles", () => {
+    const precio = rule(".item-info .item-precio {");
+    expect(precio).toMatch(/width:\s*max-content/);
+    expect(precio).toMatch(/max-width:\s*none/);
+    expect(precio).toMatch(/flex:\s*none/);
+  });
+});
+
 describe("hoja del checkout (PUBLICO-94 y 95)", () => {
   it("es un diálogo con el total y confirmar fijos abajo", () => {
     expect(html).toContain('role="dialog"');
