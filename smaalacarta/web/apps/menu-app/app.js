@@ -49,6 +49,9 @@ let CART_COUNT = 0;
 let BASE_MENU = null;
 let LAST_THANKS = null;
 let syncTema = () => {};
+let HEADER_LAYOUT_READY = false;
+let CART_STORAGE = null;
+let CART_SLUG = null;
 
 // Texto de la interfaz en el idioma elegido. Solo el mensaje de WhatsApp al negocio
 // no pasa por acá: queda siempre en español (IDIOMA-5).
@@ -232,6 +235,7 @@ async function init() {
       optionsSheetLib,
       cartLinesLib,
       deliveryZonesLib,
+      cartStorageLib,
     ] = await Promise.all([
       import("/apps/menu-app/lib/hostname.js"),
       import("/apps/menu-app/lib/html.js"),
@@ -254,6 +258,7 @@ async function init() {
       import("/apps/menu-app/lib/options-sheet.js"),
       import("/apps/menu-app/lib/cart-lines.js"),
       import("/apps/menu-app/lib/delivery-zones.js"),
+      import("/apps/menu-app/lib/cart-storage.js"),
     ]);
     // Nota por producto (PUBLICO-65): la limpieza y las reglas puras viven en lib/item-notes.js.
     NOTES = await import("/apps/menu-app/lib/item-notes.js");
@@ -266,6 +271,7 @@ async function init() {
     OPTIONS = optionsLib;
     OPTIONS_SHEET = optionsSheetLib;
     CART_LINES = cartLinesLib;
+    CART_STORAGE = cartStorageLib;
     PRICE = priceLib;
     WA_WINDOW = waWindow;
     CHECKOUT = checkoutLib;
@@ -302,6 +308,7 @@ async function init() {
     }
 
     const { slug, type } = result;
+    CART_SLUG = slug;
 
     const basePath = type === "cliente" ? "/data/clientes" : "/data/demos";
 
@@ -331,6 +338,12 @@ async function init() {
         showNotFound();
         return;
       }
+    }
+
+    const loaderNegocio = document.querySelector("#loader-negocio");
+    if (loaderNegocio) {
+      loaderNegocio.textContent = config.nombre || "";
+      loaderNegocio.hidden = !config.nombre;
     }
 
     window.CONFIG = config;
@@ -398,6 +411,7 @@ async function init() {
 
     // ⏳ Esperar que cargue el CSS del template
     await loadTemplate(config.template);
+    configureModernHeader();
 
     if (!menu) {
       console.error("No se pudo cargar menú");
@@ -605,6 +619,45 @@ function loadTemplate(template) {
   });
 }
 
+function configureModernHeader() {
+  const header = document.querySelector(".header");
+  if (!header) return;
+
+  const compact = document.documentElement.dataset.template === "moderno" &&
+    window.matchMedia("(max-width: 639px)").matches;
+  const zoneChip = document.querySelector("#zona-chip");
+  const search = document.querySelector("#buscador");
+
+  if (compact) {
+    if (zoneChip && zoneChip.parentElement !== document.querySelector("#linea-estado")) {
+      document.querySelector("#linea-estado")?.append(zoneChip);
+    }
+    if (zoneChip) zoneChip.textContent = zoneChip.textContent.replace(/^📍\s*/, "");
+  } else {
+    if (zoneChip && zoneChip.parentElement !== header) header.insertBefore(zoneChip, search);
+    if (zoneChip && !zoneChip.textContent.startsWith("📍 ")) zoneChip.textContent = `📍 ${zoneChip.textContent}`;
+    document.body.classList.remove("header-scrolled", "buscador-abierto");
+    document.querySelector("#btn-buscar")?.setAttribute("aria-expanded", "false");
+  }
+
+  if (!HEADER_LAYOUT_READY) {
+    window.addEventListener("scroll", updateModernHeaderScrollState, { passive: true });
+    window.addEventListener("resize", configureModernHeader);
+    HEADER_LAYOUT_READY = true;
+  }
+  updateModernHeaderScrollState();
+}
+
+function updateModernHeaderScrollState() {
+  const header = document.querySelector(".header");
+  const stickyTitle = document.querySelector("#header-sticky-title");
+  const compact = document.documentElement.dataset.template === "moderno" &&
+    window.matchMedia("(max-width: 639px)").matches;
+  const shouldShowCompact = Boolean(header && compact && window.scrollY >= header.offsetHeight);
+  document.body.classList.toggle("header-scrolled", shouldShowCompact);
+  if (stickyTitle) stickyTitle.toggleAttribute("hidden", !shouldShowCompact);
+}
+
 // RENDER
 // Pedido anticipado (PUBLICO-33): con el negocio cerrado por horario (no por un cierre temporal)
 // y el corte sin pasar, el menú toma el pedido para la próxima apertura. Null si no corresponde.
@@ -615,6 +668,7 @@ function currentPreorder(c, cierre = INFO?.closedNotice(c)) {
 
 function renderHeader(c) {
   const nombreEl = document.querySelector("#nombre-negocio");
+  const miniNombreEl = document.querySelector("#nombre-negocio-mini");
   const descEl = document.querySelector("#descripcion-negocio");
   const estadoEl = document.querySelector("#estado-texto");
   const header = document.querySelector(".header");
@@ -622,6 +676,7 @@ function renderHeader(c) {
   const lineaTexto = document.querySelector("#linea-estado-texto");
 
   if (nombreEl) nombreEl.textContent = c.nombre || "";
+  if (miniNombreEl) miniNombreEl.textContent = c.nombre || "";
 
   // Logo del local junto al nombre (PUBLICO-97); lo muestran Moderna y Minimalista.
   const logoEl = document.querySelector("#logo-negocio");
@@ -652,7 +707,17 @@ function renderHeader(c) {
 
   const estado = tr(abierto ? "status.open" : "status.closed");
   if (estadoEl) estadoEl.textContent = estado;
-  if (lineaTexto) lineaTexto.textContent = c.descripcion ? `${estado} · ${c.descripcion}` : estado;
+  const zonaElegida = Boolean(ZONE_CHOICE);
+  if (lineaTexto) {
+    lineaTexto.textContent =
+      document.documentElement.dataset.template === "moderno" &&
+      window.matchMedia("(max-width: 639px)").matches &&
+      zonaElegida
+        ? estado
+        : c.descripcion
+          ? `${estado} · ${c.descripcion}`
+          : estado;
+  }
 
   dots.forEach((dot) => {
     dot.style.background = abierto ? "#4ade80" : "#ef4444";
@@ -892,9 +957,36 @@ function renderMenu(menu) {
 
 function initSearch() {
   const input = document.querySelector("#buscador");
+  const btnBuscar = document.querySelector("#btn-buscar");
   const menuContainer = document.querySelector("#menu");
 
   if (!input || !menuContainer) return;
+
+  if (btnBuscar && document.documentElement.dataset.template === "moderno") {
+    const setSearchOpen = (abierto, devolverFoco = true) => {
+      document.body.classList.toggle("buscador-abierto", abierto);
+      btnBuscar.setAttribute("aria-expanded", String(abierto));
+      if (abierto) input.focus();
+      else if (devolverFoco) btnBuscar.focus();
+    };
+    btnBuscar.addEventListener("click", () => {
+      setSearchOpen(btnBuscar.getAttribute("aria-expanded") !== "true");
+    });
+    input.addEventListener("keydown", (event) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setSearchOpen(false);
+    });
+    document.addEventListener("click", (event) => {
+      if (
+        document.body.classList.contains("buscador-abierto") &&
+        !input.contains(event.target) &&
+        !btnBuscar.contains(event.target)
+      ) {
+        setSearchOpen(false, false);
+      }
+    });
+  }
 
   input.addEventListener("input", (e) => {
     const term = (e.target.value || "").trim().toLowerCase();
@@ -1147,7 +1239,7 @@ function updateCart() {
 // PERSISTENCIA
 function saveCart() {
   if (PREVIEW) return; // la vista previa no toca el almacenamiento
-  localStorage.setItem("cart", JSON.stringify(cart));
+  CART_STORAGE.saveCart(window.localStorage, CART_SLUG, cart);
 }
 
 // Quita del carrito lo que quedó sin stock (por ejemplo, un carrito guardado de otra visita) y
@@ -1181,8 +1273,7 @@ async function refreshMenu() {
 
 function loadCart() {
   if (PREVIEW) return;
-  const c = localStorage.getItem("cart");
-  if (c) cart = JSON.parse(c);
+  cart = CART_STORAGE.loadCart(window.localStorage, CART_SLUG);
   updateCart();
 }
 
@@ -2032,14 +2123,26 @@ function renderZone() {
 
   if (ZONE_ON) {
     const zone = ZONE_CHOICE?.type === "zone" ? DZ.findZone(COURIER_ZONES, ZONE_CHOICE.zoneId) : null;
+    const compactHeader = document.documentElement.dataset.template === "moderno" &&
+      window.matchMedia("(max-width: 639px)").matches;
+    const prefix = compactHeader ? "" : "📍 ";
     chip.textContent = zone
-      ? `📍 ${zone.name}`
+      ? `${prefix}${zone.name}`
       : ZONE_CHOICE?.type === "pickup"
-        ? `📍 ${tr("zone.chipPickup")}`
+        ? `${prefix}${tr("zone.chipPickup")}`
         : ZONE_CHOICE?.type === "notListed"
-          ? `📍 ${tr("zone.chipNoDelivery")}`
-          : `📍 ${tr("zone.change")}`;
+          ? `${prefix}${tr("zone.chipNoDelivery")}`
+          : `${prefix}${tr("zone.change")}`;
     chip.setAttribute("aria-label", tr("zone.change"));
+    if (
+      document.documentElement.dataset.template === "moderno" &&
+      window.matchMedia("(max-width: 639px)").matches
+    ) {
+      const estado = document.querySelector("#estado-texto")?.textContent || "";
+      const descripcion = document.querySelector("#descripcion-negocio")?.textContent || "";
+      const lineaTexto = document.querySelector("#linea-estado-texto");
+      if (lineaTexto) lineaTexto.textContent = ZONE_CHOICE ? estado : descripcion ? `${estado} · ${descripcion}` : estado;
+    }
   }
 
   applyDeliveryBlock();
@@ -2346,6 +2449,7 @@ async function startPreview() {
       brandNames,
     );
     await loadTemplate(PV.previewTemplate(config));
+    configureModernHeader();
 
     BASE_MENU = menu;
     MENU_GLOBAL = MENU.buildEnhancedMenu(menu, LANG);
