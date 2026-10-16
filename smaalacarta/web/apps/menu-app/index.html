@@ -34,6 +34,16 @@
       <span class="loader-texto" data-i18n="loader.loading">Cargando…</span>
     </div>
 
+    <!-- Tema del loader (PUBLICO-85): el último que tuvo este menú, antes de que llegue la configuración -->
+    <script type="module">
+      import { loaderThemeKey, savedLoaderTheme } from "/apps/menu-app/lib/theme.js";
+      try {
+        const key = loaderThemeKey(location.hostname, location.pathname, location.search);
+        const saved = savedLoaderTheme(window.localStorage, key);
+        if (saved) document.documentElement.dataset.tema = saved;
+      } catch {}
+    </script>
+
     <!-- HEADER -->
     <header class="header sticky-header">
       <div class="header-top">

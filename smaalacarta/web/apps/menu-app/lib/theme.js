@@ -25,3 +25,31 @@ export function rememberTheme(storage, slug, tema) {
     // ver arriba
   }
 }
+
+// El loader se pinta antes de conocer el tema del negocio (llega con la configuración). Por eso
+// se recuerda el último tema que tuvo este menú y se aplica al abrir; la primera vez, claro.
+const LOADER_PREFIX = "sma-tema-loader:";
+
+export function loaderThemeKey(hostname, pathname, search) {
+  const params = new URLSearchParams(search || "");
+  const demo = params.get("demo") || params.get("cliente") || "";
+  const segment = String(pathname || "").split("/")[1] || "";
+  return `${hostname}|${segment}|${demo}`;
+}
+
+export function savedLoaderTheme(storage, key) {
+  try {
+    const saved = storage?.getItem(LOADER_PREFIX + key);
+    return isTheme(saved) ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
+export function rememberLoaderTheme(storage, key, tema) {
+  try {
+    if (isTheme(tema)) storage.setItem(LOADER_PREFIX + key, tema);
+  } catch {
+    // Sin almacenamiento: el loader arranca claro.
+  }
+}

@@ -330,6 +330,11 @@ async function init() {
     document.documentElement.dataset.template = config.template || "";
     // El tema por defecto es el del negocio; si el visitante eligió otro, vale el suyo (PUBLICO-24).
     document.documentElement.dataset.tema = THEME.resolveTheme(config, window.localStorage, slug);
+    THEME.rememberLoaderTheme(
+      window.localStorage,
+      THEME.loaderThemeKey(location.hostname, location.pathname, location.search),
+      document.documentElement.dataset.tema,
+    );
 
     // App instalable: manifest, ícono y color del negocio (PWA-1 a 3).
     PWA.applyPwa(document, { type, slug, config });

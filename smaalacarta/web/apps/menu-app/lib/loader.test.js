@@ -31,6 +31,9 @@ describe("loader en la página (PUBLICO-83)", () => {
     expect(css).toMatch(/@media \(prefers-reduced-motion: no-preference\)\s*\{[^@]*\.loader-saliendo/);
     expect(css).toMatch(/@media \(prefers-reduced-motion: no-preference\)\s*\{[^@]*menu-entra/);
     expect(css).toMatch(/\[data-tema="oscuro"\] \.loader/);
+    // Fondo propio: blanco en claro y oscuro en oscuro, sin tomar el de la plantilla a mitad de carga.
+    expect(css).not.toMatch(/\.loader \{[^}]*var\(--bg/);
+    expect(read("../index.html")).toContain("savedLoaderTheme");
   });
 
   it("la marca se escribe completa y el carrito no aparece de golpe al entrar", () => {
