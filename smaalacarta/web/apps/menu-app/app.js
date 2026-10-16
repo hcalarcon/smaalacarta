@@ -73,6 +73,27 @@ async function fetchJSON(path) {
   }
 }
 
+// Termina la carga con un fade (PUBLICO-85): el menú entra (`entrando`) mientras el loader se
+// desvanece y recién después se saca de la página. Si no hay transición (movimiento reducido)
+// se saca enseguida.
+function finishLoading() {
+  const loader = document.getElementById("loader");
+  document.body.classList.add("entrando");
+  document.body.classList.remove("loading");
+  if (!loader) return;
+
+  const remove = () => loader.remove();
+  const calm = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  if (calm) {
+    remove();
+    return;
+  }
+  loader.classList.add("loader-saliendo");
+  loader.addEventListener("transitionend", remove, { once: true });
+  setTimeout(remove, 800);
+  setTimeout(() => document.body.classList.remove("entrando"), 1000);
+}
+
 // Sin negocio (ni en Supabase ni en los JSON): antes se quedaba trabado en el
 // loader para siempre. Sin plantilla ni marca (no hay negocio del que sacarlas):
 // una pantalla simple, igual de espíritu que la del estático y el PDF.
@@ -381,10 +402,7 @@ async function init() {
     dropSoldOutFromCart(enhancedMenu);
     restoreThanks();
 
-    // 🧹 Ocultar loader correctamente
-    document.body.classList.remove("loading");
-    const loader = document.getElementById("loader");
-    if (loader) loader.style.display = "none";
+    finishLoading();
   } catch (err) {
     console.error("Error en init:", err);
     document.body.innerHTML = `<h2>${I18N ? tr("error.unexpected") : "Error inesperado"}</h2>`;
@@ -2048,9 +2066,7 @@ async function startPreview() {
     applyStaticTexts();
     renderHeader(config);
 
-    document.body.classList.remove("loading");
-    const loader = document.getElementById("loader");
-    if (loader) loader.style.display = "none";
+    finishLoading();
 
     if (firstDraw && typeof ResizeObserver !== "undefined") {
       new ResizeObserver(reportHeader).observe(document.body);

@@ -58,6 +58,17 @@ textarea {
   color: var(--muted, #6b7280);
 }
 
+/* El tema se conoce antes que la hoja de la plantilla: sin esto el loader destella claro y
+   recién después se pone oscuro. */
+:root[data-tema="oscuro"] .loader {
+  background: var(--bg, #15161a);
+  color: var(--muted, #9aa0ac);
+}
+
+:root[data-tema="oscuro"] .loader-marca {
+  color: var(--text, #f2f2f4);
+}
+
 .loader-anim {
   width: 120px;
   height: 100px;
@@ -105,6 +116,19 @@ textarea {
   .loader-capa-5 { --n: 4; }
   .loader-capa-6 { --n: 5; }
 
+  .loader {
+    transition: opacity 0.45s ease;
+  }
+
+  .loader-saliendo {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  body.entrando :is(header, nav, main, .cta-section, #btn-carrito) {
+    animation: menu-entra 0.5s ease-out backwards;
+  }
+
   .loader-marca-texto {
     width: 0;
     border-right-color: var(--loader-acento, #e0523c);
@@ -116,6 +140,11 @@ textarea {
   0% { opacity: 0; transform: translateY(-34px); }
   25%, 80% { opacity: 1; transform: translateY(0); }
   100% { opacity: 0; transform: translateY(0); }
+}
+
+@keyframes menu-entra {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }
 
 @keyframes loader-escribir {

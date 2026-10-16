@@ -24,6 +24,15 @@ describe("loader en la página (PUBLICO-83)", () => {
     expect(css).toMatch(/@media \(prefers-reduced-motion: no-preference\)\s*\{[^@]*loader-marca/);
   });
 
+  it("el loader se desvanece y el menú entra con fade, sin esconder el loader de golpe (PUBLICO-85)", () => {
+    const app = read("../app.js");
+    expect(app).not.toContain('loader.style.display = "none"');
+    expect(app).toContain("finishLoading()");
+    expect(css).toMatch(/@media \(prefers-reduced-motion: no-preference\)\s*\{[^@]*\.loader-saliendo/);
+    expect(css).toMatch(/@media \(prefers-reduced-motion: no-preference\)\s*\{[^@]*menu-entra/);
+    expect(css).toMatch(/\[data-tema="oscuro"\] \.loader/);
+  });
+
   it("el texto está en es, en y pt", () => {
     for (const lang of LANGS) expect(DICTIONARY[lang]["loader.loading"]).toBeTruthy();
   });

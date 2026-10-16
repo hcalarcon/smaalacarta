@@ -380,6 +380,8 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   "SMA a la carta" que se va escribiendo; igual en las tres plantillas, en CSS y SVG propios, con los colores del
   local si ya se conocen, sin librerías y sin bloquear la carga; con `prefers-reduced-motion` queda quieto, con la
   marca completa, y lleva un texto accesible "Cargando…" (es/en/pt).
+- **PUBLICO-85** Al terminar de cargar, el loader se desvanece mientras el menú aparece con un fade suave (sin
+  corte), y en tema oscuro el loader ya se ve oscuro; con `prefers-reduced-motion` el cambio es inmediato.
 
 ## BUSQUEDA — Buscador
 
