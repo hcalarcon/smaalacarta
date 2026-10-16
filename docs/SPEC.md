@@ -2075,6 +2075,28 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   webhook) y `handlerMs` (lo que tardó en resolver y mandar). Los avisos por cambio de estado (Listo, demora,
   cancelado) salen del webhook sobre `orders` en el momento del `UPDATE`; `pg_cron` solo marca los plazos
   (elección automática, sin ofertas, recordatorios y "10 minutos antes de retirar").
+- **ENVIO-174** El repartidor carga su vehículo en "Mi perfil": casillas **Moto** y **Auto**, una o las dos, al
+  menos una (`couriers.moto`, `couriers.auto`, con `CHECK`). Los repartidores que ya existían quedan con Moto. Solo
+  el propio repartidor lo cambia (`courier_save_vehicles()`); el superadmin lo ve. No cambia el precio: zonas y
+  ofertas siguen igual. Solo hay moto y auto.
+- **ENVIO-175** El superadmin tiene el interruptor "Vehículo del repartidor (moto/auto)" en `platform_settings`
+  (`vehicle_enabled`), junto al modo de envíos. **Arranca apagado.** Lo lee el servidor con `vehicle_enabled()`,
+  no solo la pantalla, y solo el superadmin lo cambia. Apagado: no se ven las casillas del perfil, ni "Necesita
+  auto", ni los íconos, y el servidor ignora `needs_car` (no filtra a nadie). Los datos cargados se conservan.
+- **ENVIO-176** Al aceptar un pedido con envío, el local puede prender "Necesita auto" (`orders.needs_car`, por
+  defecto apagado). Se carga antes de confirmar, para que la búsqueda nazca ya filtrada, y se puede cambiar
+  mientras no haya repartidor asignado (`set_order_needs_car()`); con repartidor, o en un pedido cerrado o sin
+  envío con repartidor, da error. Solo lo cambia un miembro del negocio del pedido: ni el cliente ni el repartidor.
+- **ENVIO-177** Con el interruptor prendido, un pedido que necesita auto **solo lo ve el repartidor que marcó
+  Auto**: en la lista de pedidos disponibles, al tomarlo (precio fijo), al ofertar y en la asignación a mano del
+  local. Lo decide el servidor (`courier_sees_order()`, `courier_take_order()`, `courier_make_offer()`,
+  `business_assign_courier()`): un repartidor sin auto recibe el error `P0024` ("Este pedido necesita auto"). Los
+  avisos push de "pedido nuevo" tampoco le llegan. Si nadie con auto cubre la zona, el aviso de "sin ofertas" a los
+  10 minutos sale igual.
+- **ENVIO-178** Con el interruptor prendido se ve el vehículo del repartidor con un ícono propio (SVG, no emoji):
+  junto a su nombre en la tarjeta y el detalle del pedido del local, en cada oferta, y en el seguimiento del cliente
+  (`public_order_delivery()` suma `vehiculo` del repartidor asignado y de cada oferta). En la tarjeta del
+  repartidor, el chip "Necesita auto" cuando el pedido lo pide. El texto accesible del seguimiento va en es/en/pt.
 
 
 
