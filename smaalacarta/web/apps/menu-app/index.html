@@ -16,36 +16,23 @@
   </head>
   <body class="loading">
     <!-- LOADER -->
-    <div id="loader" class="loader" data-variant="hamburguesa" role="status">
+    <div id="loader" class="loader" role="status">
       <!-- Hamburguesa que se arma (PUBLICO-83) -->
       <svg class="loader-anim loader-hamburguesa" viewBox="0 0 120 100" aria-hidden="true">
-        <g class="loader-capa loader-capa-1"><path d="M28 78h64v6a8 8 0 0 1-8 8H36a8 8 0 0 1-8-8z" fill="var(--loader-pan, #d9902f)" /></g>
-        <g class="loader-capa loader-capa-2"><rect x="24" y="62" width="72" height="14" rx="7" fill="#5b3a29" /></g>
-        <g class="loader-capa loader-capa-3"><path d="M22 58q10 10 19 0t19 0 19 0 19 0v-4H22z" fill="#5fae4e" /></g>
-        <g class="loader-capa loader-capa-4"><rect x="28" y="46" width="64" height="9" rx="4.5" fill="var(--loader-acento, #e0523c)" /></g>
-        <g class="loader-capa loader-capa-5">
-          <path d="M26 44a34 28 0 0 1 68 0z" fill="var(--loader-pan, #d9902f)" />
-          <circle cx="46" cy="30" r="2" fill="#fff" opacity=".7" /><circle cx="62" cy="24" r="2" fill="#fff" opacity=".7" /><circle cx="76" cy="32" r="2" fill="#fff" opacity=".7" />
+        <g class="loader-capa loader-capa-1"><path d="M26 76h68v6a10 10 0 0 1-10 10H36a10 10 0 0 1-10-10z" fill="var(--loader-pan, #d9902f)" /></g>
+        <g class="loader-capa loader-capa-2"><rect x="22" y="62" width="76" height="15" rx="7.5" fill="#5b3a29" /><path d="M30 66q4 3 8 0M52 68q4 3 8 0M76 66q4 3 8 0" stroke="#7a5239" stroke-width="2" fill="none" stroke-linecap="round" /></g>
+        <g class="loader-capa loader-capa-3"><path d="M20 58q10 9 20 0t20 0 20 0 20 0v-5H20z" fill="#5fae4e" /></g>
+        <g class="loader-capa loader-capa-4"><path d="M26 49h68l-8 12-10-6-12 8-12-8-10 6z" fill="#f6c343" /></g>
+        <g class="loader-capa loader-capa-5"><rect x="26" y="42" width="68" height="9" rx="4.5" fill="var(--loader-acento, #e0523c)" /></g>
+        <g class="loader-capa loader-capa-6">
+          <path d="M24 42a36 30 0 0 1 72 0z" fill="var(--loader-pan, #d9902f)" />
+          <path d="M34 30a28 22 0 0 1 14-9" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".45" />
+          <ellipse cx="50" cy="26" rx="3" ry="1.6" fill="#fff3d6" transform="rotate(-20 50 26)" /><ellipse cx="64" cy="19" rx="3" ry="1.6" fill="#fff3d6" /><ellipse cx="78" cy="27" rx="3" ry="1.6" fill="#fff3d6" transform="rotate(20 78 27)" /><ellipse cx="60" cy="32" rx="3" ry="1.6" fill="#fff3d6" transform="rotate(8 60 32)" />
         </g>
       </svg>
-      <!-- Plato con tapa que se levanta (PUBLICO-83) -->
-      <svg class="loader-anim loader-cloche" viewBox="0 0 120 100" aria-hidden="true">
-        <path class="loader-vapor loader-vapor-1" d="M44 34q-6-8 0-14t0-12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
-        <path class="loader-vapor loader-vapor-2" d="M60 34q-6-8 0-14t0-12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
-        <path class="loader-vapor loader-vapor-3" d="M76 34q-6-8 0-14t0-12" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" />
-        <g class="loader-tapa">
-          <circle cx="60" cy="40" r="5" fill="var(--loader-acento, #e0523c)" />
-          <path d="M20 78a40 36 0 0 1 80 0z" fill="var(--loader-pan, #d9902f)" />
-          <path d="M32 70a30 26 0 0 1 22-18" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".55" />
-        </g>
-        <rect x="10" y="80" width="100" height="8" rx="4" fill="#5b3a29" />
-      </svg>
+      <span class="loader-marca" aria-hidden="true"><span class="loader-marca-texto">SMA a la carta</span></span>
       <span class="loader-texto" data-i18n="loader.loading">Cargando…</span>
     </div>
-    <script type="module">
-      import { loaderVariant } from "/apps/menu-app/lib/loader.js";
-      document.getElementById("loader")?.setAttribute("data-variant", loaderVariant(location.search));
-    </script>
 
     <!-- HEADER -->
     <header class="header sticky-header">
