@@ -150,6 +150,7 @@
     <!-- Tema del loader (PUBLICO-85): el último que tuvo este menú, antes de que llegue la configuración -->
     <script type="module">
       import { loaderThemeKey, savedLoaderTheme } from "/apps/menu-app/lib/theme.js";
+      import { resolveTarget } from "/apps/menu-app/lib/hostname.js";
       import { applyLoaderAnimation, savedLoaderLook } from "/apps/menu-app/lib/loader.js";
       try {
         const key = loaderThemeKey(location.hostname, location.pathname, location.search);
@@ -158,6 +159,22 @@
         // La última animación de carga de este menú, para verla de entrada y no una pantalla vacía.
         const look = savedLoaderLook(window.localStorage, key);
         if (look) applyLoaderAnimation(look);
+
+        // Se pide el menú ya, en paralelo con la carga del resto del código, así la animación elegida llega antes
+        // (la primera vez no hay una recordada). app.js reutiliza esta misma respuesta.
+        const target = resolveTarget({ hostname: location.hostname, search: location.search });
+        if (target?.type === "cliente" && !new URLSearchParams(location.search).get("preview")) {
+          const promise = Promise.all([
+            import("/apps/menu-app/lib/public-menu.js"),
+            import("/apps/menu-app/supabase-config.js"),
+          ])
+            .then(([{ fetchPublicMenu }, { SUPABASE }]) => fetchPublicMenu({ ...SUPABASE, slug: target.slug }))
+            .catch(() => null);
+          window.__menuEarly = { slug: target.slug, promise };
+          promise.then((remote) => {
+            if (remote) applyLoaderAnimation(remote.config);
+          });
+        }
       } catch {}
       // Si la configuración no llega, a los 10 segundos el cargador sale de "pendiente" con la animación de siempre.
       setTimeout(() => {

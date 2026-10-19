@@ -206,6 +206,13 @@ function resolveAppConfig(resolveHost, resolveDemo) {
 // Menú publicado desde el admin (PUBLICO-6). Devuelve null si Supabase no está
 // configurado, el negocio no está publicado o algo falla: entonces se usan los JSON.
 async function loadFromSupabase(slug) {
+  // El pedido que index.html ya hizo al abrir (una sola vez): llega antes que si se empezara recién ahora.
+  const early = window.__menuEarly;
+  if (early?.slug === slug) {
+    window.__menuEarly = null;
+    return early.promise;
+  }
+
   try {
     const [{ fetchPublicMenu, isSupabaseConfigured }, { SUPABASE }] =
       await Promise.all([

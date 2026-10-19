@@ -94,26 +94,6 @@ textarea {
   display: none;
 }
 
-/* Sin animación recordada (primera visita) se ve un indicador neutro mientras llega la configuración. */
-.loader[data-animacion="pendiente"]::before {
-  content: "";
-  width: 36px;
-  height: 36px;
-  border: 3px solid rgba(128, 128, 128, 0.3);
-  border-top-color: currentColor;
-  border-radius: 50%;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .loader[data-animacion="pendiente"]::before {
-    animation: loader-pendiente-gira 0.9s linear infinite;
-  }
-}
-
-@keyframes loader-pendiente-gira {
-  to { transform: rotate(360deg); }
-}
-
 .loader-marca {
   display: inline-block;
   max-width: 90vw;
