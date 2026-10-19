@@ -1554,6 +1554,10 @@ export type Database = {
       courier_offers_notice_window: { Args: never; Returns: string }
       courier_offers_window: { Args: never; Returns: string }
       courier_orders: { Args: { p_since?: string }; Returns: Json }
+      courier_push_eligible: {
+        Args: { p_courier_ids: string[] }
+        Returns: string[]
+      }
       courier_return_order: {
         Args: { p_kind: string; p_order_id: string; p_reason?: string }
         Returns: undefined

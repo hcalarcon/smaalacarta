@@ -71,6 +71,12 @@ describe("termsLabel — ENVIO-185", () => {
     expect(formatAcceptedAt(at)).toContain("12:30");
   });
 
+  it("con el interruptor apagado, No se exige (salvo que ya haya aceptado la vigente)", () => {
+    expect(termsLabel(null, 1, false)).toBe("No se exige");
+    expect(termsLabel({ version: 1, acceptedAt: at }, 2, false)).toBe("No se exige");
+    expect(termsLabel({ version: 1, acceptedAt: at }, 1, false)).toMatch(/^Versión 1/);
+  });
+
   it("con una versión vieja, Pendiente", () => {
     expect(termsLabel({ version: 1, acceptedAt: at }, 2)).toMatch(/^Pendiente/);
   });

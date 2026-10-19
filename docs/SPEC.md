@@ -2140,6 +2140,17 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
 
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
+- **ENVIO-186** Con "Exigir términos a repartidores" prendido, el aviso push de pedido nuevo no le llega al repartidor que
+  no aceptó la versión vigente (`courier_push_eligible()`, que usa el endpoint del webhook). Apagado, les llega a todos.
+- **ENVIO-187** Con el interruptor prendido, la elección automática de ofertas (`settle_courier_offers`) ignora las
+  ofertas de quien no aceptó la versión vigente (pasa si se sube la versión con ofertas abiertas). Apagado, elige entre todas.
+- **ENVIO-188** Con el interruptor prendido, el local no puede asignar a mano un pedido a un repartidor que no aceptó la
+  versión vigente (error `P0026`, "todavía no aceptó los términos") y ese repartidor no aparece en la lista para elegir
+  (`business_delivery_options`). Apagado, se asigna a cualquiera.
+- **ENVIO-189** Si falla la consulta del estado de los términos, el panel del repartidor no se cae: se muestra igual y la
+  base sigue exigiéndolos al ver, tomar y ofertar.
+- **ENVIO-190** En la lista de repartidores del superadmin, con el interruptor apagado la columna "Términos" dice "No se
+  exige" (en lugar de "Pendiente") a quien no aceptó la versión vigente.
 
 *Aplicado por `app/dashboard/page.tsx`, `src/lib/db/summary.ts`, `src/lib/dates.ts`,
 `src/lib/menu-url.ts` y el menú lateral. Cubierto por: `src/lib/dates.test.ts`,

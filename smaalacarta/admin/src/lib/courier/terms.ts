@@ -136,11 +136,19 @@ export function formatAcceptedAt(iso: string): string {
 }
 
 // Lo que ve el superadmin en la columna "Términos" de cada repartidor (ENVIO-185): la versión aceptada y la
-// fecha, o "Pendiente" si no aceptó la vigente.
-export function termsLabel(latest: { version: number; acceptedAt: string } | null, currentVersion: number): string {
+// fecha, o "Pendiente" si no aceptó la vigente. Con el interruptor apagado no se le pide nada: "No se exige".
+export function termsLabel(
+  latest: { version: number; acceptedAt: string } | null,
+  currentVersion: number,
+  required = true,
+): string {
+  const current = latest?.version === currentVersion;
+
+  if (!required && !current) return "No se exige";
+
   if (!latest) return "Pendiente";
 
-  if (latest.version !== currentVersion) return `Pendiente (aceptó la versión ${latest.version})`;
+  if (!current) return `Pendiente (aceptó la versión ${latest.version})`;
 
   return `Versión ${latest.version}, aceptada el ${formatAcceptedAt(latest.acceptedAt)}`;
 }

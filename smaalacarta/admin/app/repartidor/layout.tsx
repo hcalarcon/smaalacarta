@@ -21,10 +21,11 @@ export default async function CourierLayout({ children }: { children: React.Reac
   const [name, orders, terms] = await Promise.all([
     getCourierName(courierId),
     listCourierOrders(),
-    getCourierTermsStatus(),
+    // Si esta consulta falla no se cae todo el panel: la base exige los términos igual al ver, tomar y ofertar.
+    getCourierTermsStatus().catch(() => null),
   ]);
   // Sin aceptar los términos vigentes no hay panel (ENVIO-183): la base tampoco le da pedidos (ENVIO-182).
-  const gated = mustAccept(terms);
+  const gated = terms !== null && mustAccept(terms);
   const toSettleCount = orders.filter((item) => courierOrderState(item) === "to_settle").length;
 
   return (
@@ -47,7 +48,7 @@ export default async function CourierLayout({ children }: { children: React.Reac
       {gated ? (
         <TermsGate
           body={loadTerms().body}
-          version={terms.version}
+          version={terms!.version}
           lang={pickLang((await headers()).get("accept-language"))}
         />
       ) : (

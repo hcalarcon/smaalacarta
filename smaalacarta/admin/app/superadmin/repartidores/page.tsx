@@ -81,7 +81,7 @@ export default async function CouriersPage() {
                   ) : null}
                   <div className="flex gap-2">
                     <dt className="text-stone-400">Términos:</dt>
-                    <dd>{termsLabel(courier.terms, terms.version)}</dd>
+                    <dd>{termsLabel(courier.terms, terms.version, terms.required)}</dd>
                   </div>
                   <div className="flex gap-2">
                     <dt className="text-stone-400">Cuenta:</dt>

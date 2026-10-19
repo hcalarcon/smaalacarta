@@ -67,7 +67,14 @@ export function buildPushDeps(): PushDeps {
         { needsCar: order[0]?.needs_car === true, enabled: platform[0]?.vehicle_enabled === true },
       );
 
-      return eligible.map((courier) => courier.id).filter((id) => !out.has(id));
+      const candidates = eligible.map((courier) => courier.id).filter((id) => !out.has(id));
+      if (candidates.length === 0) return [];
+
+      // Con "Exigir términos" prendido, solo quienes aceptaron la versión vigente (ENVIO-186).
+      const { data, error } = await supabase.rpc("courier_push_eligible", { p_courier_ids: candidates });
+      if (error) throw new Error(error.message);
+
+      return Array.isArray(data) ? (data as string[]) : [];
     },
 
     async courierUserIds(courierIds) {
