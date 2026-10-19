@@ -13,7 +13,9 @@ describe("loader en la página (PUBLICO-83)", () => {
   const css = read("../base.css");
 
   it("incluye las animaciones de comida y escribe la marca, con un texto accesible aparte", () => {
-    expect(html).toMatch(/id="loader"[^>]*data-animacion="hamburguesa"/);
+    // Arranca sin ninguna animación a la vista: se elige cuando llega la configuración del negocio, así no pasa primero
+    // por la hamburguesa y recién después por la elegida (PUBLICO-104).
+    expect(html).toMatch(/id="loader"[^>]*data-animacion="pendiente"/);
     expect(html).toContain("loader-hamburguesa");
     expect(html).toContain("loader-pizza");
     expect(html).toContain("loader-cafe");
