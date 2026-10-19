@@ -44,7 +44,7 @@ export const DEFAULT_MENU_LOOK: MenuLook = {
 };
 
 // Solo https y sin caracteres que rompan un atributo o un estilo (mismo criterio que la base).
-const IMAGE_URL = /^https:\/\/[^\s"'()<>]+$/;
+const IMAGE_URL = /^https:\/\/[^\s"'()<>\\]+$/;
 
 export type MenuLookErrors = Partial<Record<"menuAnimation" | "loaderAnimation" | "loaderCustomUrl" | "backgroundImageUrl", string>>;
 

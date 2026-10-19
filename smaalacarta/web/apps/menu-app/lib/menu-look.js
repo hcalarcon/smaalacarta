@@ -5,7 +5,7 @@
 // `estandar` es lo que había antes de poder elegir (el fade de la página); `ninguna`, "Sin animaciones".
 export const MENU_ANIMATIONS = ["estandar", "suave", "dinamica", "ninguna"];
 
-const HTTPS_URL = /^https:\/\/[^\s"'()<>]+$/;
+const HTTPS_URL = /^https:\/\/[^\s"'()<>\\]+$/;
 
 export function menuAnimation(config) {
   return MENU_ANIMATIONS.includes(config?.animacionMenu) ? config.animacionMenu : "estandar";

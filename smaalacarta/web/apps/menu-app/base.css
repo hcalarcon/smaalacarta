@@ -1605,6 +1605,11 @@ body.zona-abierta {
    `estandar` es el fade de la página de siempre. Las que mueven algo solo corren si el visitante no pidió menos
    movimiento; `ninguna` apaga todo el movimiento del menú (el cargador tiene su propia opción). */
 @media (prefers-reduced-motion: no-preference) {
+  /* Las que mueven productos reemplazan el fundido de toda la página: si no, los dos opacities se componen. */
+  html:is([data-animacion-menu="suave"], [data-animacion-menu="dinamica"]) body.entrando :is(header, nav, main, .cta-section) {
+    animation: none;
+  }
+
   html[data-animacion-menu="suave"] body.entrando :is(.categoria-titulo, .producto) {
     animation: menu-suave 0.55s ease-out backwards;
   }

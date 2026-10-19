@@ -11,7 +11,7 @@ const LOADER_ANIMATIONS = new Set([
 
 // La animación propia del negocio (PUBLICO-104) es una imagen alojada en su carpeta de Storage: solo https y sin
 // caracteres que rompan un atributo.
-const HTTPS_URL = /^https:\/\/[^\s"'()<>]+$/;
+const HTTPS_URL = /^https:\/\/[^\s"'()<>\\]+$/;
 
 export function customLoaderUrl(config) {
   const url = typeof config?.animacionCargaUrl === "string" ? config.animacionCargaUrl.trim() : "";
@@ -29,6 +29,10 @@ export function applyLoaderAnimation(config, doc = document) {
     const image = doc.querySelector("#loader-custom");
 
     if (image && loader) {
+      // Si el archivo ya no está o no carga, vuelve a la de comida en vez de dejar el cargador vacío.
+      image.onerror = () => {
+        loader.dataset.animacion = "hamburguesa";
+      };
       image.src = custom;
       loader.dataset.animacion = "custom";
       return "custom";
