@@ -36,22 +36,22 @@ export const AVAILABILITY_TEXTS: Record<
   }
 > = {
   es: {
-    on: "Estoy disponible",
-    off: "No disponible",
+    on: "Conectado",
+    off: "No conectado",
     since: (time) => `Disponible desde las ${time}`,
     hint: "Si no hacés nada durante 4 horas, te ponemos como No disponible. Igual ves y tomás pedidos.",
     error: "No pudimos guardar el cambio. Probá de nuevo.",
   },
   en: {
-    on: "I'm available",
-    off: "Not available",
+    on: "Connected",
+    off: "Not connected",
     since: (time) => `Available since ${time}`,
     hint: "If you do nothing for 4 hours, we set you as Not available. You still see and take orders.",
     error: "We couldn't save the change. Please try again.",
   },
   pt: {
-    on: "Estou disponível",
-    off: "Indisponível",
+    on: "Conectado",
+    off: "Desconectado",
     since: (time) => `Disponível desde as ${time}`,
     hint: "Se você não fizer nada por 4 horas, deixamos você como Indisponível. Você continua vendo e pegando pedidos.",
     error: "Não conseguimos salvar a mudança. Tente de novo.",

@@ -35,8 +35,8 @@ describe("textos — ENVIO-191", () => {
       expect(Object.keys(t).sort()).toEqual(Object.keys(AVAILABILITY_TEXTS.es).sort());
       expect(t.since("14:05")).toContain("14:05");
     }
-    expect(AVAILABILITY_TEXTS.es.on).toBe("Estoy disponible");
-    expect(AVAILABILITY_TEXTS.es.off).toBe("No disponible");
+    expect(AVAILABILITY_TEXTS.es.on).toBe("Conectado");
+    expect(AVAILABILITY_TEXTS.es.off).toBe("No conectado");
     expect(AVAILABILITY_TEXTS.es.since("14:05")).toBe("Disponible desde las 14:05");
   });
 

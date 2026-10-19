@@ -33,6 +33,8 @@ type DashboardShellProps = {
   // Aviso de negocio suspendido (ADMIN-SUSPENSION-1): se ve en todo el panel,
   // no aplica a /superadmin.
   banner?: React.ReactNode;
+  // Un estado chico junto al título (por ejemplo, "Conectado" del repartidor).
+  statusSlot?: React.ReactNode;
   // Barra fija arriba de todo el panel (ADMIN-PEDIDOS-30): va dentro del header pegajoso para que no se
   // vaya al hacer scroll. Solo la pasa el panel del negocio con pedidos por menú.
   alertBar?: React.ReactNode;
@@ -55,6 +57,7 @@ export default function DashboardShell({
   quickLinks,
   showChangePassword = true,
   banner,
+  statusSlot,
   alertBar,
   showAppControls = false,
   bottomNav,
@@ -189,6 +192,8 @@ export default function DashboardShell({
                   {subtitle}
                 </p>
               </div>
+
+              {statusSlot ? <div className="shrink-0">{statusSlot}</div> : null}
             </div>
 
             {/* Celular y tableta: un solo botón ⋯ con todo lo demás (ADMIN-MOVIL-1). */}

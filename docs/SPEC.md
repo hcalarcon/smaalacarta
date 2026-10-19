@@ -2197,8 +2197,9 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   base sigue exigiéndolos al ver, tomar y ofertar.
 - **ENVIO-190** En la lista de repartidores del superadmin, con el interruptor apagado la columna "Términos" dice "No se
   exige" (en lugar de "Pendiente") a quien no aceptó la versión vigente.
-- **ENVIO-191** El repartidor tiene arriba de su panel un interruptor grande, "Estoy disponible" / "No disponible", y con
-  el interruptor prendido dice "Disponible desde las HH:MM". Todos arrancan No disponible (sin fila en
+- **ENVIO-191** El repartidor tiene junto al título de su panel un estado chico que también es el interruptor: un
+  círculo verde con "Conectado" o rojo con "No conectado" (la hora "Disponible desde las HH:MM" y la regla de las 4 horas
+  van en el tooltip, para no ocupar lugar). Todos arrancan No conectado (sin fila en
   `courier_availability`). Solo el propio repartidor lo cambia (`courier_set_available()`); nadie escribe la tabla
   directo. Cada repartidor lee solo su fila y el superadmin las ve todas.
 - **ENVIO-192** Cada vez que el estado cambia de verdad se guarda un registro en `courier_availability_events`

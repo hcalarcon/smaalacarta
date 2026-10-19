@@ -8,8 +8,10 @@ import { AVAILABILITY_TEXTS, type AvailabilityLang, type AvailabilityStatus } fr
 import { formatClock } from "@/lib/orders/prep";
 import { useAvailabilityChanges } from "@/lib/realtime/useOrderChanges";
 
-// "Estoy disponible" / "No disponible" arriba del panel del repartidor (ENVIO-191). Solo él lo cambia. Se apaga solo
-// a las 4 horas sin actividad (ENVIO-194): el aviso llega por Realtime y el panel se actualiza sin recargar.
+// "Conectado" / "No conectado" junto al título del panel del repartidor (ENVIO-191): un círculo verde o rojo y una
+// palabra, que también es el interruptor. Solo él lo cambia. Se apaga solo a las 4 horas sin actividad (ENVIO-194):
+// el aviso llega por Realtime y el estado se actualiza sin recargar. La hora de conexión y la regla de las 4 horas
+// van en el tooltip, no ocupan lugar en la pantalla.
 export default function AvailabilityToggle({
   status,
   lang,
@@ -63,53 +65,34 @@ export default function AvailabilityToggle({
     }
   }
 
-  return (
-    <section
-      aria-label={text.on}
-      className={`rounded-3xl border p-4 shadow-sm transition-colors sm:p-5 ${
-        on ? "border-action bg-white" : "border-line bg-white"
-      }`}
-    >
-      <div className="flex items-center justify-between gap-4">
-        <div className="min-w-0">
-          <p id="availability-label" className="flex items-center gap-2 text-xl font-bold text-brand">
-            <span
-              aria-hidden="true"
-              className={`h-3 w-3 shrink-0 rounded-full ${on ? "bg-action" : "bg-stone-300"}`}
-            />
-            {on ? text.on : text.off}
-          </p>
-          {on && status.since ? (
-            <p className="mt-0.5 text-sm font-medium text-stone-700">{text.since(formatClock(status.since))}</p>
-          ) : null}
-          <p className="mt-1 text-xs text-stone-500">{text.hint}</p>
-        </div>
+  const detail = on && status.since ? `${text.since(formatClock(status.since))}. ${text.hint}` : text.hint;
 
-        <button
-          type="button"
-          role="switch"
-          aria-checked={on}
-          aria-labelledby="availability-label"
-          disabled={optimistic !== null}
-          onClick={change}
-          className={`relative h-10 w-[72px] shrink-0 rounded-full transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-70 ${
-            on ? "bg-action" : "bg-stone-300"
-          }`}
-        >
-          <span
-            aria-hidden="true"
-            className={`absolute top-1 h-8 w-8 rounded-full bg-white shadow transition-all ${
-              on ? "left-[36px]" : "left-1"
-            }`}
-          />
-        </button>
-      </div>
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={on}
+        aria-label={text.on}
+        title={detail}
+        disabled={optimistic !== null}
+        onClick={change}
+        className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:opacity-70 ${
+          on ? "border-action/40 bg-white text-brand" : "border-line-strong bg-white text-stone-600"
+        }`}
+      >
+        <span
+          aria-hidden="true"
+          className={`h-2.5 w-2.5 shrink-0 rounded-full ${on ? "bg-green-500" : "bg-red-500"}`}
+        />
+        {on ? text.on : text.off}
+      </button>
 
       {error ? (
-        <p role="alert" className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-800">
+        <p role="alert" className="max-w-40 text-xs leading-tight text-red-700">
           {error}
         </p>
       ) : null}
-    </section>
+    </div>
   );
 }

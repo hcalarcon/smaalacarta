@@ -39,19 +39,24 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
-describe("el interruptor del repartidor — ENVIO-191", () => {
-  it("apagado dice No disponible y no muestra la hora", () => {
+describe("el estado Conectado del repartidor — ENVIO-191", () => {
+  it("apagado dice No conectado, con círculo rojo, y no muestra la hora", () => {
     render(<AvailabilityToggle status={OFF} lang="es" />);
 
-    expect(screen.getByRole("switch", { name: "No disponible" }).getAttribute("aria-checked")).toBe("false");
-    expect(screen.queryByText(/Disponible desde/)).toBeNull();
+    const toggle = screen.getByRole("switch", { name: "Conectado" });
+    expect(toggle.getAttribute("aria-checked")).toBe("false");
+    expect(toggle.textContent).toBe("No conectado");
+    expect(toggle.querySelector(".bg-red-500")).not.toBeNull();
+    expect(toggle.getAttribute("title")).not.toMatch(/desde las/);
   });
 
-  it("prendido dice Estoy disponible y desde qué hora (hora argentina)", () => {
+  it("prendido dice Conectado, con círculo verde, y la hora queda en el tooltip (hora argentina)", () => {
     render(<AvailabilityToggle status={ON} lang="es" />);
 
-    expect(screen.getByRole("switch", { name: "Estoy disponible" }).getAttribute("aria-checked")).toBe("true");
-    expect(screen.getByText("Disponible desde las 12:30")).toBeTruthy();
+    const toggle = screen.getByRole("switch", { name: "Conectado" });
+    expect(toggle.getAttribute("aria-checked")).toBe("true");
+    expect(toggle.querySelector(".bg-green-500")).not.toBeNull();
+    expect(toggle.getAttribute("title")).toContain("Disponible desde las 12:30");
   });
 
   it("tocarlo manda el valor contrario y pide los datos nuevos", async () => {
@@ -77,12 +82,11 @@ describe("el interruptor del repartidor — ENVIO-191", () => {
 
   it("los textos van en inglés y en portugués", () => {
     const { unmount } = render(<AvailabilityToggle status={ON} lang="en" />);
-    expect(screen.getByText("I'm available")).toBeTruthy();
-    expect(screen.getByText("Available since 12:30")).toBeTruthy();
+    expect(screen.getByText("Connected")).toBeTruthy();
     unmount();
 
     render(<AvailabilityToggle status={OFF} lang="pt" />);
-    expect(screen.getByText("Indisponível")).toBeTruthy();
+    expect(screen.getByText("Desconectado")).toBeTruthy();
   });
 
   it("se actualiza sola cuando cambia la disponibilidad de alguien (Realtime)", () => {

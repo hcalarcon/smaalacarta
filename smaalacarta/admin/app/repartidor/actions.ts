@@ -62,7 +62,11 @@ export async function setAvailableAction(available: boolean): Promise<CourierAct
   if (typeof available !== "boolean") return { ok: false, error: GENERIC };
 
   const result = await setCourierAvailable(available);
-  if ("error" in result) return { ok: false, error: GENERIC };
+  if ("error" in result) {
+    // Queda en el log del servidor: el repartidor solo ve el mensaje general.
+    console.error("courier_set_available falló:", result.error.code, result.error.message);
+    return { ok: false, error: GENERIC };
+  }
 
   revalidatePath("/repartidor", "layout");
   return { ok: true };
