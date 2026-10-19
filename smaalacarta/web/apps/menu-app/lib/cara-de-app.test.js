@@ -113,6 +113,16 @@ describe("header compacto de Moderna (PUBLICO-98)", () => {
     expect(shell).toMatch(/\.btn-buscar:focus-visible/);
     expect(shell).toMatch(/prefers-reduced-motion:\s*reduce/);
   });
+
+  it("en escritorio compacta el encabezado y extiende el sombreado por toda la portada (PUBLICO-100)", () => {
+    const desktop = shell.slice(shell.indexOf("@media (min-width: 1024px)"));
+
+    expect(desktop).toMatch(/html\[data-template="moderno"\]\s+\.header\s*\{[^}]*padding:\s*8px 16px 10px/);
+    expect(desktop).toMatch(/html\[data-template="moderno"\]\s+\.header \.header-marca\s*\{[^}]*padding:\s*8px 12px 0/);
+    expect(desktop).toMatch(/html\[data-template="moderno"\]\s+\.logo-negocio:not\(\[hidden\]\)\s*\{[^}]*width:\s*44px;[^}]*height:\s*44px/);
+    expect(desktop).toMatch(/html\[data-template="moderno"\]\s+\.header\s*\{[^}]*isolation:\s*isolate/);
+    expect(desktop).toMatch(/html\[data-template="moderno"\]\s+\.header::before\s*\{[^}]*position:\s*absolute;[^}]*inset:\s*0;[^}]*background:\s*color-mix/);
+  });
 });
 
 describe("precio de los productos en el carrito (CARRITO-1)", () => {

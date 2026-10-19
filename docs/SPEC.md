@@ -416,6 +416,9 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   `prefers-reduced-motion` y Clásica y Minimalista no cambian.
 - **PUBLICO-99** El loader del menú muestra, además de la marca SMA a la carta, el nombre del negocio que está
   cargando, en texto escapado mediante `textContent` y sin cortarlo en celulares.
+- **PUBLICO-100** En la plantilla Moderna, en pantallas de escritorio (desde 1024 px) el encabezado ocupa menos
+  alto que en su diseño previo y el sombreado cubre toda la portada, no solo el área detrás del nombre. El celular
+  y las plantillas Clásica y Minimalista no cambian.
 - **PUBLICO-83** Mientras carga el menú interactivo se ve un loader animado: una hamburguesa que se arma y debajo
   "SMA a la carta" que se va escribiendo; igual en las tres plantillas, en CSS y SVG propios, con los colores del
   local si ya se conocen, sin librerías y sin bloquear la carga; con `prefers-reduced-motion` queda quieto, con la
