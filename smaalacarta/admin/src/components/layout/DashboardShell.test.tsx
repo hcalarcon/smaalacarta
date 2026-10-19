@@ -62,8 +62,8 @@ describe("DashboardShell — menú lateral achicable, ADMIN-PEDIDOS-56", () => {
     fireEvent.click(screen.getByRole("button", { name: "Achicar menú lateral" }));
 
     const link = screen.getByRole("link", { name: "Pedidos, 3 pendientes" });
-    expect(link.getAttribute("title")).toBeNull();
-    expect(link.textContent).toBe("3");
+    // El nombre se ve escrito debajo del ícono, junto al contador.
+    expect(link.textContent).toBe("Pedidos3");
     expect(localStorage.getItem("sma.sidebar.collapsed")).toBe("1");
 
     unmount();
@@ -73,29 +73,11 @@ describe("DashboardShell — menú lateral achicable, ADMIN-PEDIDOS-56", () => {
   });
 
   // ADMIN-PEDIDOS-56
-  it("achicado, el nombre aparece al pasar el mouse o al enfocar con el teclado, y Escape lo cierra", () => {
+  it("achicado, cada ícono lleva su nombre escrito, sin depender de pasar el mouse", () => {
     localStorage.setItem("sma.sidebar.collapsed", "1");
     render(<DashboardShell {...withLinks}>contenido</DashboardShell>);
 
-    expect(screen.queryByTestId("nav-tooltip")).toBeNull();
-
-    const link = screen.getByRole("link", { name: "Pedidos, 3 pendientes" });
-    fireEvent.mouseEnter(link);
-    expect(screen.getByTestId("nav-tooltip").textContent).toBe("Pedidos");
-    fireEvent.mouseLeave(link);
-    expect(screen.queryByTestId("nav-tooltip")).toBeNull();
-
-    fireEvent.focus(screen.getByRole("link", { name: "Resumen" }));
-    expect(screen.getByTestId("nav-tooltip").textContent).toBe("Resumen");
-    fireEvent.keyDown(window, { key: "Escape" });
-    expect(screen.queryByTestId("nav-tooltip")).toBeNull();
-  });
-
-  it("con el menú expandido no hay tooltips: los nombres ya se ven", () => {
-    render(<DashboardShell {...withLinks}>contenido</DashboardShell>);
-
-    fireEvent.mouseEnter(screen.getByRole("link", { name: /Pedidos/ }));
-
+    expect(screen.getByRole("link", { name: "Resumen" }).textContent).toBe("Resumen");
     expect(screen.queryByTestId("nav-tooltip")).toBeNull();
   });
 

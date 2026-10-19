@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
 
 import { activeHref } from "@/lib/layout/nav-active";
 import { navBadgeLabel } from "@/lib/layout/nav-badge";
@@ -16,33 +15,11 @@ export default function DashboardNav({
 }: {
   links: NavLink[];
   onNavigate?: () => void;
-  // Solo íconos, con el nombre en un tooltip al pasar el mouse o al enfocar con el teclado (ADMIN-PEDIDOS-55 y 56).
+  // Solo íconos, con el nombre escrito debajo de cada uno: un ícono solo no dice qué es (ADMIN-PEDIDOS-55 y 56).
   collapsed?: boolean;
 }) {
   const pathname = usePathname();
   const current = activeHref(pathname, links);
-  // El tooltip va con `position: fixed` y no dentro del enlace: la lista del menú hace scroll y recortaría lo que
-  // sobresale. Es solo una ayuda visual (`aria-hidden`): el nombre accesible ya está en el `aria-label` del enlace.
-  const [tip, setTip] = useState<{ label: string; top: number } | null>(null);
-
-  function showTip(label: string, element: HTMLElement) {
-    const box = element.getBoundingClientRect();
-    setTip({ label, top: box.top + box.height / 2 });
-  }
-
-  // Escape lo cierra (WCAG 1.4.13) y al expandir el menú no queda uno colgado.
-  useEffect(() => {
-    if (!tip) return;
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setTip(null);
-    };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [tip]);
-
-  const visibleTip = collapsed ? tip : null;
 
   return (
     <nav aria-label="Principal" className="flex flex-col gap-1">
@@ -55,17 +32,13 @@ export default function DashboardNav({
             href={link.href}
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
-            onMouseEnter={collapsed ? (event) => showTip(link.label, event.currentTarget) : undefined}
-            onMouseLeave={collapsed ? () => setTip(null) : undefined}
-            onFocus={collapsed ? (event) => showTip(link.label, event.currentTarget) : undefined}
-            onBlur={collapsed ? () => setTip(null) : undefined}
             aria-label={
               collapsed
                 ? `${link.label}${navBadgeLabel(link.badge) ? `, ${link.badge} pendientes` : ""}`
                 : undefined
             }
             className={`relative flex items-center rounded-xl text-sm font-medium transition ${
-              collapsed ? "justify-center py-3" : "gap-3 px-4 py-3"
+              collapsed ? "flex-col justify-center gap-1 px-1 py-2" : "gap-3 px-4 py-3"
             } ${
               active
                 ? "bg-brand text-white shadow-sm"
@@ -84,7 +57,11 @@ export default function DashboardNav({
             >
               <path d={link.icon} />
             </svg>
-            {collapsed ? null : link.label}
+            {collapsed ? (
+              <span className="w-full truncate text-center text-[11px] font-medium leading-tight">{link.label}</span>
+            ) : (
+              link.label
+            )}
             {navBadgeLabel(link.badge) ? (
               <span
                 className={`rounded-full text-xs font-bold ${
@@ -98,17 +75,6 @@ export default function DashboardNav({
           </Link>
         );
       })}
-
-      {visibleTip ? (
-        <span
-          aria-hidden="true"
-          data-testid="nav-tooltip"
-          style={{ top: visibleTip.top }}
-          className="pointer-events-none fixed left-[4.25rem] z-50 -translate-y-1/2 whitespace-nowrap rounded-lg bg-stone-900 px-2.5 py-1.5 text-xs font-medium text-white shadow-lg"
-        >
-          {visibleTip.label}
-        </span>
-      ) : null}
     </nav>
   );
 }

@@ -1499,8 +1499,8 @@ contradiga: ahora entra a los envíos, lleva opciones y nace confirmado)
 - **ADMIN-PEDIDOS-56** El menú lateral de escritorio se achica a solo íconos con el nombre en el tooltip, y el contenido
   usa todo el ancho. La elección se recuerda en el navegador (`localStorage`, con `try/catch`, `src/lib/layout/sidebar-pref.ts`).
   En el celular sigue la hamburguesa.
-  Achicado, el nombre de cada ícono aparece como tooltip al pasar el mouse **y al enfocar con el teclado**, se cierra
-  con Escape, y cada enlace lleva su `aria-label` (con los pendientes). Expandido, no hay tooltips.
+  Achicado, el nombre de cada ícono se ve escrito debajo de él (no como tooltip: un ícono solo no dice qué es), el
+  enlace lleva `aria-label` con los pendientes, y el menú pasa de 4 a 5 rem de ancho.
 - **ADMIN-PEDIDOS-57** Todo cambio de estado lleva el estado que la persona veía (`from`; `p_from` en
   `set_order_status` y `courier_set_status`, migración `20261112000000`) y solo se aplica si el pedido sigue ahí: si no,
   la base no hace nada, no registra evento y no da error. Un doble click, dos pestañas o Realtime nunca avanzan dos pasos.
