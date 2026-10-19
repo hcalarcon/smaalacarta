@@ -723,6 +723,38 @@ html[data-template] .checkout > #gracias-pedido {
   }
 }
 
+@media (min-width: 1024px) {
+  html[data-template="moderno"] .header {
+    isolation: isolate;
+    gap: 4px;
+    padding: 8px 16px 10px;
+  }
+
+  html[data-template="moderno"] .header::before {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: color-mix(in srgb, var(--header-scrim, #000) 24%, transparent);
+    content: "";
+    pointer-events: none;
+  }
+
+  html[data-template="moderno"] .header .header-marca {
+    margin: 0 -12px;
+    padding: 8px 12px 0;
+    background: none;
+  }
+
+  html[data-template="moderno"] .logo-negocio:not([hidden]) {
+    width: 44px;
+    height: 44px;
+  }
+
+  html[data-template="moderno"] .header .header-titulo h1 {
+    font-size: clamp(1.35rem, 2vw, 1.8rem);
+  }
+}
+
 @media (min-width: 640px) {
   /* En escritorio sigue siendo un modal, con el ancho de la pantalla como tope. */
   html[data-template] .checkout {
