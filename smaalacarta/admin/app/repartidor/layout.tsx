@@ -4,30 +4,24 @@ import { Suspense } from "react";
 import CourierBottomNav from "@/components/layout/CourierBottomNav";
 import DashboardShell from "@/components/layout/DashboardShell";
 import { courierLinks } from "@/components/layout/nav-links";
-import PushToggle from "@/components/pwa/PushToggle";
 import { requireCourier } from "@/lib/auth/courier";
 import { courierPanelTitle } from "@/lib/courier/panel";
-import { getCourierAvailability } from "@/lib/db/availability";
-import { pickAvailabilityLang } from "@/lib/courier/availability";
 import { getCourierName } from "@/lib/db/couriers";
 import { getCourierTermsStatus } from "@/lib/db/courier-terms";
 import { mustAccept, pickLang } from "@/lib/courier/terms";
 import { loadTerms } from "@/lib/courier/terms-file";
 import { listCourierOrders } from "@/lib/db/courier";
 import { courierOrderState } from "@/lib/courier/settlements";
-import AvailabilityToggle from "./components/AvailabilityToggle";
 import TermsGate from "./components/TermsGate";
 
 export default async function CourierLayout({ children }: { children: React.ReactNode }) {
   // Sin sesión va a /login; quien no es repartidor, a su panel (ENVIO-30).
   const { user, courierId } = await requireCourier();
-  const [name, orders, terms, availability] = await Promise.all([
+  const [name, orders, terms] = await Promise.all([
     getCourierName(courierId),
     listCourierOrders(),
     // Si esta consulta falla no se cae todo el panel: la base exige los términos igual al ver, tomar y ofertar.
     getCourierTermsStatus().catch(() => null),
-    // Sin este dato no se muestra el interruptor, pero el panel anda igual (ENVIO-189).
-    getCourierAvailability().catch(() => null),
   ]);
   // Sin aceptar los términos vigentes no hay panel (ENVIO-183): la base tampoco le da pedidos (ENVIO-182).
   const gated = terms !== null && mustAccept(terms);
@@ -49,7 +43,6 @@ export default async function CourierLayout({ children }: { children: React.Reac
         )
       }
     >
-      {/* Para el repartidor, enterarse de los pedidos es todo el negocio (ADMIN-PWA-15). */}
       {gated ? (
         <TermsGate
           body={loadTerms().body}
@@ -57,16 +50,7 @@ export default async function CourierLayout({ children }: { children: React.Reac
           lang={pickLang((await headers()).get("accept-language"))}
         />
       ) : (
-        <>
-          {availability?.enabled ? (
-            <AvailabilityToggle
-              status={availability}
-              lang={pickAvailabilityLang((await headers()).get("accept-language"))}
-            />
-          ) : null}
-          <PushToggle variant="banner" />
-          {children}
-        </>
+        children
       )}
     </DashboardShell>
   );
