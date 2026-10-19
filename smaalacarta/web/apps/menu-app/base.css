@@ -95,35 +95,6 @@ textarea {
 }
 
 .loader-marca {
-  color: #f2f2f4;
-}
-
-.loader-anim {
-  display: none;
-  width: 120px;
-  height: 100px;
-  overflow: visible;
-}
-
-.loader[data-animacion="hamburguesa"] .loader-hamburguesa,
-.loader[data-animacion="pizza"] .loader-pizza,
-.loader[data-animacion="cafe"] .loader-cafe,
-.loader[data-animacion="helado"] .loader-helado,
-.loader[data-animacion="parrilla"] .loader-parrilla,
-.loader[data-animacion="sushi"] .loader-sushi,
-.loader[data-animacion="pastas"] .loader-pastas,
-.loader[data-animacion="panificados"] .loader-panificados {
-  display: block;
-}
-
-/* Hasta que llega la configuración del negocio no se sabe qué animación va: la marca, el nombre y el texto esperan
-   y arrancan junto con la animación elegida. Van con display:none (no visibility) para que su animación de entrada
-   no corra a escondidas. Si la configuración tarda, el script de index.html los suelta igual a los 3 segundos. */
-.loader[data-animacion="pendiente"] > * {
-  display: none;
-}
-
-.loader-marca {
   display: inline-block;
   max-width: 90vw;
   font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
