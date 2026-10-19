@@ -321,6 +321,34 @@ describe("el apagado automático — ENVIO-194", () => {
     expect(row.fresh).toBe(true);
   });
 
+  it("volver a ofertar con otro precio cuenta como actividad, pero cerrar la oferta sin que él haga nada no", async () => {
+    await db.exec("update platform_settings set delivery_mode = 'offers'");
+    await turn(UNO_USER, true);
+    const o = await envio();
+    expect((await offer(db, UNO_USER, o.id)).ok).toBe(true);
+    await forgetActivity(UNO, 3);
+
+    // La lectura perezosa cierra la oferta con la sesión del repartidor: no es actividad suya.
+    await call(UNO_USER, `update courier_offers set closed_at = now() where order_id = '${o.id}'`);
+    const closed = (
+      await db.query<{ stale: boolean }>(
+        "select last_activity_at < now() - interval '2 hours' as stale from courier_availability where courier_id = $1",
+        [UNO],
+      )
+    ).rows[0];
+    expect(closed.stale).toBe(true);
+
+    const list = (await db.query<{ p: string }>("select delivery_fee_list as p from orders where id = $1", [o.id])).rows[0].p;
+    expect((await offer(db, UNO_USER, o.id, Number(list) - 100, "Voy cerca")).ok).toBe(true);
+    const again = (
+      await db.query<{ fresh: boolean }>(
+        "select last_activity_at > now() - interval '1 minute' as fresh from courier_availability where courier_id = $1",
+        [UNO],
+      )
+    ).rows[0];
+    expect(again.fresh).toBe(true);
+  });
+
   it("cambiar el estado de un pedido propio cuenta como actividad", async () => {
     await turn(UNO_USER, true);
     const o = await envio();
@@ -465,6 +493,17 @@ describe("el conteo del local — ENVIO-200", () => {
 
     await db.exec(`delete from courier_zone_coverage where courier_id = '${UNO}' and zone_id = '${alta}'`);
     await db.exec(`delete from business_delivery_zones where business_id = '${NEG_ANA}' and zone_id = '${alta}'`);
+  });
+
+  it("marca también la zona de un pedido abierto que el local ya no tiene entre las suyas", async () => {
+    const o = await envio();
+    await db.exec(`delete from business_delivery_zones where business_id = '${NEG_ANA}' and zone_id = '${cantera}'`);
+
+    const ana = await count(ANA, NEG_ANA);
+    expect(ana.empty_zone_ids).toEqual([cantera]);
+
+    await db.exec(`insert into business_delivery_zones (business_id, zone_id) values ('${NEG_ANA}', '${cantera}')`);
+    await take(UNO_USER, o.id);
   });
 
   it("solo un miembro del negocio lo puede pedir", async () => {

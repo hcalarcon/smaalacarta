@@ -804,9 +804,15 @@ async function start() {
   }
 
   async function refresh() {
-    const [result, delivery] = await Promise.all([
+    // La disponibilidad va en paralelo y solo mientras el envío todavía no tiene repartidor: es un aviso, no debe
+    // demorar el estado del pedido.
+    const mayBeSearching = !lastDelivery || lastDelivery.state === "waiting" || lastDelivery.state === "searching";
+    const [result, delivery, availability] = await Promise.all([
       fetchTracking({ url: SUPABASE.url, key: SUPABASE.key, code }),
       fetchDelivery({ url: SUPABASE.url, key: SUPABASE.key, code }),
+      mayBeSearching
+        ? fetchCourierAvailability({ url: SUPABASE.url, key: SUPABASE.key, code })
+        : Promise.resolve({ ok: false, none: false }),
     ]);
 
     if (delivery.ok) {
@@ -815,7 +821,6 @@ async function start() {
       // Mientras busca repartidor, si su zona sigue sin disponibles se avisa (ENVIO-199). Es un dato aparte: si la
       // consulta falla, no se muestra nada.
       if (lastDelivery?.state === "searching") {
-        const availability = await fetchCourierAvailability({ url: SUPABASE.url, key: SUPABASE.key, code });
         lastDelivery = { ...lastDelivery, noCouriers: availability.none };
       }
     }

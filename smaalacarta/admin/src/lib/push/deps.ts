@@ -72,7 +72,9 @@ export function buildPushDeps(): PushDeps {
 
       // Con "Exigir términos" prendido, solo quienes aceptaron la versión vigente (ENVIO-186).
       const { data, error } = await supabase.rpc("courier_push_eligible", { p_courier_ids: candidates });
-      if (error) throw new Error(error.message);
+      // Si el filtro falla, el aviso sale a todos los que cubren la zona (como antes): perder un pedido es peor
+      // que un aviso de más.
+      if (error) return candidates;
 
       return Array.isArray(data) ? (data as string[]) : [];
     },

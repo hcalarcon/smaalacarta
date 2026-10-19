@@ -81,8 +81,18 @@ export async function listAvailableCouriers(now: Date = new Date()): Promise<Ava
     throw new Error(error.message);
   }
 
-  return ((data ?? []) as unknown as AvailabilityRow[])
-    .filter((row) => row.couriers?.active && row.since && isFreshActivity(row.last_activity_at, now))
+  const rows = ((data ?? []) as unknown as AvailabilityRow[]).filter(
+    (row) => row.couriers?.active && row.since && isFreshActivity(row.last_activity_at, now),
+  );
+
+  // Con "Exigir términos" prendido, la base no cuenta a quien no aceptó la versión vigente (ENVIO-196): acá tampoco.
+  const accepted = await acceptedCurrentTerms(
+    supabase,
+    rows.map((row) => row.courier_id),
+  );
+
+  return rows
+    .filter((row) => accepted === null || accepted.has(row.courier_id))
     .map((row) => ({
       id: row.courier_id,
       name: row.couriers!.name,
@@ -93,4 +103,25 @@ export async function listAvailableCouriers(now: Date = new Date()): Promise<Ava
         .map((zone) => zone.name)
         .sort((a, b) => a.localeCompare(b, "es")),
     }));
+}
+
+// Los que aceptaron la versión vigente, o nulo si no se exigen los términos. El superadmin lee las dos tablas.
+async function acceptedCurrentTerms(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  courierIds: string[],
+): Promise<Set<string> | null> {
+  const { data: settings } = await supabase
+    .from("platform_settings")
+    .select("courier_terms_required, courier_terms_version")
+    .maybeSingle();
+
+  if (settings?.courier_terms_required === false || courierIds.length === 0) return null;
+
+  const { data } = await supabase
+    .from("courier_terms_acceptances")
+    .select("courier_id")
+    .eq("version", settings?.courier_terms_version ?? 1)
+    .in("courier_id", courierIds);
+
+  return new Set((data ?? []).map((row) => row.courier_id));
 }
