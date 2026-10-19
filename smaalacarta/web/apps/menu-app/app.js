@@ -366,6 +366,11 @@ async function init() {
       loaderNegocio.hidden = !config.nombre;
     }
     loaderLib.applyLoaderAnimation(config);
+    loaderLib.rememberLoaderLook(
+      window.localStorage,
+      THEME.loaderThemeKey(location.hostname, location.pathname, location.search),
+      config,
+    );
     // Cómo se anima el menú y su imagen de fondo, según lo que eligió el negocio (PUBLICO-102 a 107).
     LOOK.applyMenuLook(document, config);
 

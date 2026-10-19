@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { DICTIONARY, LANGS } from "./i18n.js";
-import { applyLoaderAnimation, customLoaderUrl } from "./loader.js";
+import { applyLoaderAnimation, customLoaderUrl, rememberLoaderLook, savedLoaderLook } from "./loader.js";
 
 const read = (relative) => readFileSync(fileURLToPath(new URL(relative, import.meta.url)), "utf8");
 
@@ -178,5 +178,35 @@ describe("loader en la página (PUBLICO-83)", () => {
 
   it("el texto está en es, en y pt", () => {
     for (const lang of LANGS) expect(DICTIONARY[lang]["loader.loading"]).toBeTruthy();
+  });
+});
+
+describe("la última animación se recuerda para la próxima visita — PUBLICO-104", () => {
+  const store = () => {
+    const data = new Map();
+    return { getItem: (k) => data.get(k) ?? null, setItem: (k, v) => data.set(k, v) };
+  };
+
+  it("guarda y devuelve la de comida", () => {
+    const s = store();
+    rememberLoaderLook(s, "k", { animacionCarga: "pastas" });
+    expect(savedLoaderLook(s, "k")).toEqual({ animacionCarga: "pastas" });
+  });
+
+  it("guarda y devuelve la propia solo con una dirección https", () => {
+    const s = store();
+    const url = "https://x.supabase.co/storage/v1/object/public/business-animations/n/a.gif";
+    rememberLoaderLook(s, "k", { animacionCarga: "custom", animacionCargaUrl: url });
+    expect(savedLoaderLook(s, "k")).toEqual({ animacionCarga: "custom", animacionCargaUrl: url });
+    s.setItem("sma-loader-animacion:k", JSON.stringify({ a: "custom", url: "javascript:alert(1)" }));
+    expect(savedLoaderLook(s, "k")).toBeNull();
+  });
+
+  it("sin nada guardado, o roto, o sin almacenamiento: null", () => {
+    const s = store();
+    expect(savedLoaderLook(s, "k")).toBeNull();
+    s.setItem("sma-loader-animacion:k", "{roto");
+    expect(savedLoaderLook(s, "k")).toBeNull();
+    expect(savedLoaderLook(undefined, "k")).toBeNull();
   });
 });

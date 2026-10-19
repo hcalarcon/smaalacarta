@@ -48,3 +48,27 @@ export function applyLoaderAnimation(config, doc = document) {
 
   return animation;
 }
+
+// La configuración del negocio tarda en llegar (primero se cargan los módulos del menú). Para no dejar la pantalla
+// vacía, se recuerda la última animación de este menú y se pone al abrir; la primera vez, un indicador neutro.
+const LOOK_PREFIX = "sma-loader-animacion:";
+
+export function rememberLoaderLook(storage, key, config) {
+  try {
+    const custom = customLoaderUrl(config);
+    const animation = LOADER_ANIMATIONS.has(config?.animacionCarga) ? config.animacionCarga : "hamburguesa";
+    storage.setItem(LOOK_PREFIX + key, JSON.stringify(custom ? { a: "custom", url: custom } : { a: animation }));
+  } catch {
+    // Sin almacenamiento: la próxima vez arranca con el indicador neutro.
+  }
+}
+
+export function savedLoaderLook(storage, key) {
+  try {
+    const saved = JSON.parse(storage?.getItem(LOOK_PREFIX + key) || "null");
+    if (saved?.a === "custom") return HTTPS_URL.test(saved.url || "") ? { animacionCarga: "custom", animacionCargaUrl: saved.url } : null;
+    return LOADER_ANIMATIONS.has(saved?.a) ? { animacionCarga: saved.a } : null;
+  } catch {
+    return null;
+  }
+}
