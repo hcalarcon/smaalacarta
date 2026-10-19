@@ -12,6 +12,7 @@ import {
 } from "@/lib/db/delivery-zones";
 import {
   DELIVERY_MODES,
+  setCourierTermsSwitch,
   setDeliveryMode,
   setVehicleSwitch,
   type DeliveryMode,
@@ -67,6 +68,22 @@ export async function setVehicleSwitchAction(enabled: boolean): Promise<ZoneActi
   revalidatePath("/superadmin/zonas");
   revalidatePath("/dashboard/orders");
   revalidatePath("/repartidor");
+  return { ok: true };
+}
+
+// El interruptor "Exigir términos a repartidores" (ENVIO-181): apagado, no se muestra la pantalla ni se bloquea
+// a nadie; las aceptaciones guardadas se conservan.
+export async function setCourierTermsSwitchAction(required: boolean): Promise<ZoneActionResult> {
+  await requireSuperAdmin();
+
+  if (typeof required !== "boolean") return { ok: false, error: GENERIC };
+
+  const result = await setCourierTermsSwitch(required);
+  if ("error" in result) return { ok: false, error: GENERIC };
+
+  revalidatePath("/superadmin/zonas");
+  revalidatePath("/superadmin/repartidores");
+  revalidatePath("/repartidor", "layout");
   return { ok: true };
 }
 

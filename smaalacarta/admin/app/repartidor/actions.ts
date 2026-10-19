@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireCourier } from "@/lib/auth/courier";
 import { validateReturn } from "@/lib/courier/panel";
+import { acceptCourierTerms } from "@/lib/db/courier-terms";
 import { validatePreferences, type CourierPreferences } from "@/lib/courier/profile";
 import { validateEta, type EtaKind } from "@/lib/courier/times";
 import { validateVehicles, type CourierVehicles } from "@/lib/courier/vehicle";
@@ -37,6 +38,20 @@ const GENERIC = "No pudimos guardar el cambio. Probá de nuevo.";
 // este repartidor no lo tiene (el pedido no es para él: sale de su lista).
 const isClosed = (code?: string) =>
   code === "P0020" || code === "P0019" || code === "P0023" || code === "P0024";
+
+// Aceptar los términos para repartidores (ENVIO-180): la persona sale de la sesión y la hora la pone la base. Si la
+// versión que leyó ya no es la vigente, la base da 22023 y la pantalla vuelve a mostrar el texto nuevo.
+export async function acceptTermsAction(version: number): Promise<CourierActionResult> {
+  await requireCourier();
+
+  if (!Number.isInteger(version) || version < 1) return { ok: false, error: GENERIC };
+
+  const result = await acceptCourierTerms(version);
+  if ("error" in result) return { ok: false, error: GENERIC };
+
+  revalidatePath("/repartidor", "layout");
+  return { ok: true };
+}
 
 // Tomar un pedido de precio fijo (ENVIO-147): al precio de lista, sin precio ni motivo. Si lo tomó otro
 // antes, la base da P0019 y la respuesta lleva `closed` para que el panel lo saque de la lista.

@@ -2,13 +2,19 @@ import type { Metadata } from "next";
 import Link from "next/link";
 
 import VehicleIcons from "@/components/ui/VehicleIcon";
+import { termsLabel } from "@/lib/courier/terms";
 import { listCouriers } from "@/lib/db/couriers";
+import { getCourierTermsSwitch } from "@/lib/db/platform-settings";
 import { isVehicleEnabled } from "@/lib/db/vehicle";
 
 export const metadata: Metadata = { title: "Repartidores" };
 
 export default async function CouriersPage() {
-  const [couriers, vehicleEnabled] = await Promise.all([listCouriers(), isVehicleEnabled()]);
+  const [couriers, vehicleEnabled, terms] = await Promise.all([
+    listCouriers(),
+    isVehicleEnabled(),
+    getCourierTermsSwitch(),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -73,6 +79,10 @@ export default async function CouriersPage() {
                       </dd>
                     </div>
                   ) : null}
+                  <div className="flex gap-2">
+                    <dt className="text-stone-400">Términos:</dt>
+                    <dd>{termsLabel(courier.terms, terms.version)}</dd>
+                  </div>
                   <div className="flex gap-2">
                     <dt className="text-stone-400">Cuenta:</dt>
                     <dd className="truncate">{courier.email ?? "sin cuenta"}</dd>
