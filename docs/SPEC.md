@@ -2153,6 +2153,49 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   exige" (en lugar de "Pendiente") a quien no aceptó la versión vigente.
 
 *Aplicado por `app/dashboard/page.tsx`, `src/lib/db/summary.ts`, `src/lib/dates.ts`,
+- **ENVIO-191** El repartidor tiene arriba de su panel un interruptor grande, "Estoy disponible" / "No disponible", y con
+  el interruptor prendido dice "Disponible desde las HH:MM". Todos arrancan No disponible (sin fila en
+  `courier_availability`). Solo el propio repartidor lo cambia (`courier_set_available()`); nadie escribe la tabla
+  directo. Cada repartidor lee solo su fila y el superadmin las ve todas.
+- **ENVIO-192** Cada vez que el estado cambia de verdad se guarda un registro en `courier_availability_events`
+  (repartidor, disponible sí/no, `at` del servidor y `reason`: `manual` o `auto_off`). Nadie lo edita ni lo borra: es
+  para medir la prueba. El repartidor lee los suyos y el superadmin todos.
+- **ENVIO-193** El superadmin tiene el interruptor "Disponibilidad de repartidores" en `platform_settings`
+  (`courier_availability_enabled`), junto a los otros. **Arranca prendido.** Lo lee el servidor con
+  `courier_availability_enabled()` y solo el superadmin lo cambia. Apagado: no se ve el interruptor del repartidor ni
+  ningún aviso (menú, seguimiento, local), prender da `P0027`, y el aviso push de pedido nuevo les llega a todos
+  como antes.
+- **ENVIO-194** Un repartidor disponible se apaga solo a las 4 horas sin actividad. Actividad es prender el interruptor,
+  tomar u ofertar un pedido, o cambiar el estado de un pedido propio (no cuenta lo que haga el local ni el cliente).
+  `courier_availability_expire()`, con pg_cron cada minuto, lo apaga y deja un registro `auto_off`; y como cuenta
+  disponible solo con actividad en las últimas 4 horas, el conteo es correcto aunque el cron se atrase. Si tiene
+  avisos push activados, se le avisa: "Te pusimos como No disponible porque pasaron 4 horas sin actividad".
+- **ENVIO-195** Un repartidor No disponible igual ve los pedidos de su panel y puede tomarlos u ofertar, pero no recibe
+  el aviso push de pedido nuevo (`courier_push_eligible()`). Los avisos de pedidos que ya son suyos (listo, cambio
+  de demora, cancelado, faltan 10 minutos) le llegan siempre.
+- **ENVIO-196** Un repartidor cuenta como disponible para una zona si está disponible (con actividad en las últimas 4
+  horas), está activo, cubre esa zona y, con "Exigir términos a repartidores" prendido, aceptó la versión vigente.
+- **ENVIO-197** Para el público hay dos funciones que solo responden sí o no, sin nombres ni cantidades:
+  `public_zone_has_couriers(zona)` y `public_order_has_couriers(código)` (nulo si el pedido ya no busca repartidor).
+  Con el interruptor apagado, o con una zona que no existe, no hay nada que avisar. Las tablas no se leen sin sesión.
+- **ENVIO-198** En el menú, si el cliente eligió envío y su zona no tiene repartidores disponibles, antes de confirmar
+  ve el aviso "Ahora puede que no haya repartidores disponibles para tu zona. Podés pedir igual o elegir retiro en
+  el local." Puede pedir igual. Si hay alguno, o si falla la consulta, no se muestra nada. Va en es/en/pt.
+- **ENVIO-199** En el seguimiento, mientras el pedido busca repartidor y su zona sigue sin disponibles, se ve "Puede
+  que tarde en aparecer un repartidor"; se va solo cuando aparece uno o el pedido tiene repartidor. Va en es/en/pt.
+- **ENVIO-200** En la pantalla de pedidos del local hay un indicador "Repartidores disponibles ahora: N" (solo la
+  cantidad, de los que cubren al menos una de sus zonas de envío); con 0 se ve en ámbar: "Ningún repartidor
+  disponible". Cada pedido con envío sin repartidor cuya zona está en 0 lleva la misma marca. No hay push al local
+  por esto. Lo calcula `business_courier_availability(negocio)` con el negocio que pone el servidor, y solo lo
+  contesta a un miembro de ese negocio.
+- **ENVIO-201** El superadmin ve la lista de repartidores disponibles ahora, con desde qué hora y qué zonas cubren.
+- **ENVIO-202** El interruptor del repartidor, el indicador del local y el aviso del seguimiento se actualizan sin
+  recargar: `courier_availability_pulse` (un contador sin datos de nadie, en la publicación de Realtime) sube con cada
+  cambio de disponibilidad y los paneles vuelven a pedir los datos; el seguimiento lo consulta en cada vuelta.
+
+
+
+## ADMIN-RESUMEN — Pantalla de inicio del panel
 `src/lib/menu-url.ts` y el menú lateral. Cubierto por: `src/lib/dates.test.ts`,
 `src/lib/menu-url.test.ts` y `src/lib/layout/nav-badge.test.ts`.*
 
