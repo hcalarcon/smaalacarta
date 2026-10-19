@@ -2111,6 +2111,28 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   junto a su nombre en la tarjeta y el detalle del pedido del local, en cada oferta, y en el seguimiento del cliente
   (`public_order_delivery()` suma `vehiculo` del repartidor asignado y de cada oferta). En la tarjeta del
   repartidor, el chip "Necesita auto" cuando el pedido lo pide. El texto accesible del seguimiento va en es/en/pt.
+- **ENVIO-179** Los términos para repartidores tienen una versión (arranca en 1, vive en `platform_settings.courier_terms_version`
+  y la lee el servidor con `courier_terms_version()`). El texto vive en `admin/src/content/terminos-repartidores.md`
+  con su número al lado; un test comprueba que el archivo y la base dicen la misma versión, así que cambiar los
+  términos es editar el archivo, subir el número y una migración que actualice la versión.
+- **ENVIO-180** Cada aceptación es una fila de `courier_terms_acceptances` (repartidor, versión y `accepted_at` del
+  servidor), que no se pisa ni se borra: es la prueba. Se crea solo con `courier_accept_terms(versión)`, que exige la
+  versión vigente. El repartidor lee solo las suyas, no ve ni crea las de otro, y el superadmin las lee todas.
+- **ENVIO-181** El superadmin tiene el interruptor "Exigir términos a repartidores" en `platform_settings`
+  (`courier_terms_required`), junto al modo de envíos y al vehículo. **Arranca prendido.** Lo lee el servidor con
+  `courier_terms_required()` y solo el superadmin lo cambia. Apagado no se muestra la pantalla ni se bloquea nada.
+- **ENVIO-182** Con el interruptor prendido, el repartidor que no aceptó la versión vigente no ve pedidos disponibles
+  (`courier_available_orders()` devuelve vacío y `courier_sees_order()` es falso), y tomar u ofertar da el error
+  `P0025` ("Tenés que aceptar los términos para repartidores"). Aceptar lo habilita; subir la versión vuelve a
+  bloquear a todos hasta que acepten otra vez.
+- **ENVIO-183** Al entrar al panel del repartidor sin haber aceptado la versión vigente, en lugar del panel se ve la
+  pantalla de términos: el texto, la casilla "Leí y acepto los términos" y el botón "Aceptar" (deshabilitado hasta
+  marcar la casilla). Los textos de la pantalla van en es/en/pt (según el idioma del navegador); los términos, solo
+  en español.
+- **ENVIO-184** En "Mi perfil" el repartidor tiene el link "Términos para repartidores" para releerlos
+  (`/repartidor/terminos`), con "Versión N, aceptada el …".
+- **ENVIO-185** En la lista de repartidores del superadmin, cada uno muestra "Términos": la versión aceptada y la fecha,
+  o "Pendiente" (con el interruptor prendido y la versión vigente sin aceptar).
 
 
 

@@ -15,6 +15,8 @@ export function orderErrorMessage(error: DbError) {
       return "Ya lo tomó otro repartidor.";
     case "P0020":
       return "El pedido ya no recibe ofertas.";
+    case "P0025":
+      return "Tenés que aceptar los términos para repartidores.";
     case "P0023":
       return "Este pedido funciona de otra manera. Actualizá la pantalla.";
     case "P0021":

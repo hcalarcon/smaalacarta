@@ -454,6 +454,38 @@ export type Database = {
           },
         ]
       }
+      courier_terms_acceptances: {
+        Row: {
+          accepted_at: string
+          courier_id: string
+          id: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          accepted_at?: string
+          courier_id: string
+          id?: string
+          user_id: string
+          version: number
+        }
+        Update: {
+          accepted_at?: string
+          courier_id?: string
+          id?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_terms_acceptances_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courier_users: {
         Row: {
           courier_id: string
@@ -1138,18 +1170,24 @@ export type Database = {
       }
       platform_settings: {
         Row: {
+          courier_terms_required: boolean
+          courier_terms_version: number
           delivery_mode: string
           id: boolean
           updated_at: string
           vehicle_enabled: boolean
         }
         Insert: {
+          courier_terms_required?: boolean
+          courier_terms_version?: number
           delivery_mode?: string
           id?: boolean
           updated_at?: string
           vehicle_enabled?: boolean
         }
         Update: {
+          courier_terms_required?: boolean
+          courier_terms_version?: number
           delivery_mode?: string
           id?: boolean
           updated_at?: string
@@ -1493,6 +1531,7 @@ export type Database = {
         }
         Returns: string
       }
+      courier_accept_terms: { Args: { p_version: number }; Returns: undefined }
       courier_available_orders: { Args: never; Returns: Json }
       courier_blocked_by_car: {
         Args: { p_courier_id: string; p_order_id: string }
@@ -1544,6 +1583,13 @@ export type Database = {
         Returns: undefined
       }
       courier_take_order: { Args: { p_order_id: string }; Returns: undefined }
+      courier_terms_accepted: {
+        Args: { p_courier_id: string }
+        Returns: boolean
+      }
+      courier_terms_required: { Args: never; Returns: boolean }
+      courier_terms_status: { Args: never; Returns: Json }
+      courier_terms_version: { Args: never; Returns: number }
       courier_vehicles: { Args: { p_courier_id: string }; Returns: Json }
       courier_withdraw_offer: {
         Args: { p_order_id: string }
