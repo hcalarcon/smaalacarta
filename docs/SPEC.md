@@ -2170,6 +2170,8 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   (`courier_availability_enabled`), junto a los otros. **Arranca prendido.** Lo lee el servidor con
   `courier_availability_enabled()` y solo el superadmin lo cambia. Apagado: no se ve el interruptor del repartidor ni
   ningún aviso (menú, seguimiento, local), prender da `P0027`, y el aviso push de pedido nuevo les llega a todos
+  El aviso sale de un Database Webhook de Supabase sobre `courier_availability_events` (solo Insert) que llama al mismo
+  endpoint y con el mismo secreto que el de `orders`; sin él, el repartidor se apaga igual pero no se entera.
   como antes.
 - **ENVIO-194** Un repartidor disponible se apaga solo a las 4 horas sin actividad. Actividad es prender el interruptor,
   tomar u ofertar un pedido, o cambiar el estado de un pedido propio (no cuenta lo que haga el local ni el cliente).
