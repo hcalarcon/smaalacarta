@@ -89,7 +89,7 @@ textarea {
 
 /* Hasta que llega la configuración del negocio no se sabe qué animación va: la marca, el nombre y el texto no se
    muestran (display:none, para que su animación de entrada no corra a escondidas) y arrancan junto con la animación
-   elegida. Si la configuración tarda demasiado, el script de index.html los suelta igual a los 3 segundos. */
+   elegida. Si la configuración tarda demasiado, el script de index.html los suelta igual a los 10 segundos. */
 .loader[data-animacion="pendiente"] > * {
   display: none;
 }

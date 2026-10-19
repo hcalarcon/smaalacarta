@@ -155,11 +155,11 @@
         const saved = savedLoaderTheme(window.localStorage, key);
         if (saved) document.documentElement.dataset.tema = saved;
       } catch {}
-      // Si la configuración no llega, el cargador sale de "pendiente" con la animación de siempre.
+      // Si la configuración no llega, a los 10 segundos el cargador sale de "pendiente" con la animación de siempre.
       setTimeout(() => {
         const loader = document.querySelector("#loader");
         if (loader?.dataset.animacion === "pendiente") loader.dataset.animacion = "hamburguesa";
-      }, 3000);
+      }, 10000);
     </script>
 
     <!-- HEADER -->

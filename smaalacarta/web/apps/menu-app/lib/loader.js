@@ -25,6 +25,9 @@ export function applyLoaderAnimation(config, doc = document) {
   const calm = Boolean(doc.defaultView?.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
   const custom = calm ? null : customLoaderUrl(config);
 
+  // Desde cuándo se ve la animación elegida: `finishLoading` la deja correr al menos un segundo.
+  if (loader) loader.dataset.desde = String(Date.now());
+
   if (custom) {
     const image = doc.querySelector("#loader-custom");
 

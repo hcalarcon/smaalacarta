@@ -96,8 +96,16 @@ function rememberLoaderTheme() {
 // Termina la carga con un fade (PUBLICO-85): el menú entra (`entrando`) mientras el loader se
 // desvanece y recién después se saca de la página. Si no hay transición (movimiento reducido)
 // se saca enseguida.
+const LOADER_MIN_MS = 1000;
+
 function finishLoading() {
   const loader = document.getElementById("loader");
+  // La animación elegida se deja ver al menos un segundo, aunque el menú ya esté listo.
+  const seen = Date.now() - Number(loader?.dataset.desde || 0);
+  if (loader && loader.dataset.desde && seen < LOADER_MIN_MS) {
+    setTimeout(finishLoading, LOADER_MIN_MS - seen);
+    return;
+  }
   document.body.classList.add("entrando");
   document.body.classList.remove("loading");
   if (!loader) return;
