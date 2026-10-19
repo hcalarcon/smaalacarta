@@ -429,8 +429,42 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   `hamburguesa`, `pizza`, `cafe`, `helado`, `parrilla`, `sushi`, `pastas` o `panificados`. Si falta o el valor no es
   válido, usa `hamburguesa`. Cada opción tiene su propia ilustración SVG y animación CSS, decorativas y sin
   dependencias; respetan `prefers-reduced-motion`, el tema y el fade actuales. En `helado`, la bocha cae y se asienta
-  sobre un cucurucho con trama antes de que caiga la cereza. Este soporte vive en `web/`; la configuración desde el
-  panel queda pendiente.
+  sobre un cucurucho con trama antes de que caiga la cereza. La elección se hace desde Configuración → Animaciones
+  (PUBLICO-103).
+- **PUBLICO-102** Cada negocio elige cómo se anima su menú al entrar (`business_settings.menu_animation`, que llega al
+  menú como `config.animacionMenu` y se aplica en `html[data-animacion-menu]`): `estandar` (el fundido de siempre, es lo
+  que tienen hoy todos los negocios), `suave` (títulos y productos suben despacio, escalonados), `dinamica` (los
+  productos rebotan y los títulos se deslizan) o `ninguna` ("Sin animaciones": no se mueve nada del menú, ni
+  transiciones). Un valor que falta o no vale se lee como `estandar`. Disponible en todos los planes.
+- **PUBLICO-103** En Configuración hay una sección **Animaciones** (después de Apariencia) con: la animación del menú
+  (las cuatro de arriba), la animación de carga (las ocho de comida de PUBLICO-101 o **La mía**) y la imagen de fondo.
+  Se guarda con "Guardar cambios", junto con el resto, con `save_menu_look()`, que vuelve a
+  validar todo (`22023`) y deja el negocio de la sesión como único dueño de lo que cambia. Los negocios que ya
+  existían quedan en `estandar`, `hamburguesa` y sin fondo.
+- **PUBLICO-104** La animación de carga propia es una imagen animada (GIF, WebP o PNG animado) del propio negocio:
+  `loader_animation = 'custom'` exige `loader_custom_url`, y el menú la muestra en el loader con `config.animacionCargaUrl`.
+  Con `prefers-reduced-motion` no se usa (un GIF no se puede pausar) y queda la de comida, que se ve quieta. Lottie
+  (`.json`) queda para después: hoy no hay librería de Lottie en el loader.
+- **PUBLICO-105** Los archivos van a Storage con la sesión del negocio. Las animaciones, al bucket `business-animations`
+  (público para leer, **1 MB** y solo GIF, WebP o PNG); el fondo, a `business-images` (**2 MB**, JPG, PNG o WebP). En los
+  dos, cada negocio escribe solo en su carpeta `<business_id>/…` (mismas políticas que el logo). El tipo y el tamaño los
+  hace cumplir el bucket, no el navegador (que avisa antes); la dirección guardada tiene que ser de la carpeta del
+  propio negocio y del bucket correcto, tanto en `save_menu_look()` como en un CHECK de la tabla.
+- **PUBLICO-106** Un negocio no puede cambiar la elección de otro ni subir a su carpeta; sin sesión no se guarda nada.
+- **PUBLICO-107** La imagen de fondo del menú es opcional (por defecto no hay, y el menú no cambia). Se ve en las tres
+  plantillas y en celular: una capa fija detrás de todo (`html.con-fondo::before`), `cover` sin deformar, sin
+  `background-attachment: fixed`, con encima una capa del color de la página (`--bg`: cambia con la plantilla y con el
+  tema claro u oscuro) para que el texto se lea siempre; los productos y tarjetas tienen su fondo y no se tapan. Solo se
+  usa una dirección https sin comillas ni paréntesis.
+- **PUBLICO-108** Junto a las opciones hay una vista previa tipo celular con el menú real (la misma de Apariencia,
+  `?preview=1`), que reproduce lo que está elegido sin guardar: primero la animación de carga (`look=1` la deja ver
+  unos segundos) y después la entrada del menú, con el fondo. Cada cambio de animación y el botón **Ver de nuevo** la
+  repiten. La vista de Apariencia también muestra el fondo.
+- **PUBLICO-109** Con `prefers-reduced-motion: reduce` el menú no se anima aunque el negocio haya elegido una
+  animación: las que mueven algo viven dentro de `@media (prefers-reduced-motion: no-preference)`. No se cargan
+  librerías: todo es CSS y una imagen.
+- **PUBLICO-110** `public_menu` (por `build_public_menu`) entrega `animacionMenu`, `animacionCarga`,
+  `animacionCargaUrl` (solo con la propia) y `fondo` (solo si hay); `menu_preview` también.
 
 ## BUSQUEDA — Buscador
 

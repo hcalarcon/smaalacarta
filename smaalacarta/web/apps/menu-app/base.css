@@ -1600,3 +1600,99 @@ body.zona-abierta {
   outline: 2px solid var(--brand, #111);
   outline-offset: 2px;
 }
+
+/* ANIMACIONES DEL MENÚ (PUBLICO-102): las elige cada negocio (`config.animacionMenu`, en `html[data-animacion-menu]`).
+   `estandar` es el fade de la página de siempre. Las que mueven algo solo corren si el visitante no pidió menos
+   movimiento; `ninguna` apaga todo el movimiento del menú (el cargador tiene su propia opción). */
+@media (prefers-reduced-motion: no-preference) {
+  html[data-animacion-menu="suave"] body.entrando :is(.categoria-titulo, .producto) {
+    animation: menu-suave 0.55s ease-out backwards;
+  }
+
+  html[data-animacion-menu="suave"] body.entrando .producto:nth-child(2) { animation-delay: 0.05s; }
+  html[data-animacion-menu="suave"] body.entrando .producto:nth-child(3) { animation-delay: 0.1s; }
+  html[data-animacion-menu="suave"] body.entrando .producto:nth-child(4) { animation-delay: 0.15s; }
+  html[data-animacion-menu="suave"] body.entrando .producto:nth-child(n + 5) { animation-delay: 0.2s; }
+
+  html[data-animacion-menu="dinamica"] body.entrando .categoria-titulo {
+    animation: menu-desliza 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards;
+  }
+
+  html[data-animacion-menu="dinamica"] body.entrando .producto {
+    animation: menu-rebota 0.6s cubic-bezier(0.34, 1.4, 0.64, 1) backwards;
+  }
+
+  html[data-animacion-menu="dinamica"] body.entrando .producto:nth-child(2) { animation-delay: 0.07s; }
+  html[data-animacion-menu="dinamica"] body.entrando .producto:nth-child(3) { animation-delay: 0.14s; }
+  html[data-animacion-menu="dinamica"] body.entrando .producto:nth-child(4) { animation-delay: 0.21s; }
+  html[data-animacion-menu="dinamica"] body.entrando .producto:nth-child(n + 5) { animation-delay: 0.28s; }
+}
+
+html[data-animacion-menu="ninguna"] {
+  scroll-behavior: auto !important;
+}
+
+html[data-animacion-menu="ninguna"] body *:not(#loader):not(#loader *) {
+  animation: none !important;
+  transition: none !important;
+}
+
+@keyframes menu-suave {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes menu-desliza {
+  from { opacity: 0; transform: translateX(-24px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes menu-rebota {
+  from { opacity: 0; transform: translateY(18px) scale(0.94); }
+  to { opacity: 1; transform: none; }
+}
+
+/* FONDO DEL MENÚ (PUBLICO-107): una imagen fija detrás de todo, con una capa del color de la página encima
+   (`--bg` cambia con la plantilla y con el tema claro u oscuro), para que el texto se lea siempre. Los productos
+   y tarjetas tienen su propio fondo, así que la imagen no los tapa ni los afecta. Cubre sin deformar y no usa
+   `background-attachment: fixed`, que en el celular se traba. */
+html.con-fondo body {
+  background: transparent;
+}
+
+html.con-fondo::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    linear-gradient(
+      color-mix(in srgb, var(--bg, #fff) 84%, transparent),
+      color-mix(in srgb, var(--bg, #fff) 84%, transparent)
+    ),
+    var(--fondo-url) center / cover no-repeat,
+    var(--bg, #fff);
+}
+
+html.con-fondo[data-tema="oscuro"]::before {
+  background:
+    linear-gradient(
+      color-mix(in srgb, var(--bg, #15161a) 88%, transparent),
+      color-mix(in srgb, var(--bg, #15161a) 88%, transparent)
+    ),
+    var(--fondo-url) center / cover no-repeat,
+    var(--bg, #15161a);
+}
+
+/* ANIMACIÓN DE CARGA PROPIA (PUBLICO-104): un GIF, WebP o PNG animado del negocio, en lugar de la de comida. */
+.loader-custom {
+  display: none;
+  max-width: min(60vw, 240px);
+  max-height: 200px;
+  object-fit: contain;
+}
+
+.loader[data-animacion="custom"] .loader-custom {
+  display: block;
+}

@@ -22,6 +22,7 @@ export function settingsSections({
       ? [
           { id: "publicacion", label: "Publicación" },
           { id: "apariencia", label: "Apariencia" },
+          { id: "animaciones", label: "Animaciones" },
         ]
       : []),
     ...(pdfService ? [{ id: "pdf", label: "Menú en PDF" }] : []),

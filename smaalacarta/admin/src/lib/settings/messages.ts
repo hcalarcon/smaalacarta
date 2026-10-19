@@ -7,6 +7,8 @@ export function settingsErrorMessage(error: DbError) {
   switch (error.code) {
     case "23514":
       return "Alguno de los datos no tiene un formato válido. Revisá colores, imagen, horarios y los datos de entrega y pago.";
+    case "22023":
+      return "Revisá las animaciones y la imagen de fondo: alguno de los datos no es válido.";
     case "P0010":
       return "Tu cuenta está suspendida: no se pueden guardar cambios.";
     case "42501":

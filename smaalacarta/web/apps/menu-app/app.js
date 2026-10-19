@@ -28,6 +28,7 @@ let CART_LINES = null;
 let NOTES = null;
 let PROMO_INFO;
 let LANGUAGE = null;
+let LOOK = null;
 // Envío con repartidor (ENVIO-20): los barrios del negocio, o null si no tiene o falló.
 let DZ = null;
 // Aviso de "puede que no haya repartidores" (ENVIO-198).
@@ -265,6 +266,7 @@ async function init() {
       import("/apps/menu-app/lib/cart-storage.js"),
       import("/apps/menu-app/lib/loader.js"),
     ]);
+    LOOK = await import("/apps/menu-app/lib/menu-look.js");
     // Nota por producto (PUBLICO-65): la limpieza y las reglas puras viven en lib/item-notes.js.
     NOTES = await import("/apps/menu-app/lib/item-notes.js");
     // Vigencia y últimas unidades de las promociones (PUBLICO-68 y 69).
@@ -356,6 +358,8 @@ async function init() {
       loaderNegocio.hidden = !config.nombre;
     }
     loaderLib.applyLoaderAnimation(config);
+    // Cómo se anima el menú y su imagen de fondo, según lo que eligió el negocio (PUBLICO-102 a 107).
+    LOOK.applyMenuLook(document, config);
 
     window.CONFIG = config;
     // Barrios del envío con repartidor: solo los negocios de Supabase pueden tenerlo. Si falla,
@@ -2436,6 +2440,10 @@ function resetCheckout() {
 // llegan varias seguidas, se dibuja la última. Nada de esto se ejecuta fuera de `?preview=1`.
 async function startPreview() {
   const PV = await import("/apps/menu-app/lib/preview.js");
+  const LOADER = await import("/apps/menu-app/lib/loader.js");
+  // La sección "Animaciones" del panel abre la vista previa con `look=1`: se deja ver el cargador un momento antes
+  // de que entre el menú, para que se vea la animación de carga elegida y después la de entrada (PUBLICO-108).
+  const HOLD_LOADER = new URLSearchParams(window.location.search).get("look") === "1";
 
   document.body.classList.add("preview");
   document.querySelector(".cta-section")?.setAttribute("hidden", "");
@@ -2481,6 +2489,8 @@ async function startPreview() {
       COLORS.brandVariables(config.colores),
       brandNames,
     );
+    LOOK.applyMenuLook(document, config);
+    if (firstDraw) LOADER.applyLoaderAnimation(config);
     await loadTemplate(PV.previewTemplate(config));
     configureModernHeader();
 
@@ -2492,6 +2502,7 @@ async function startPreview() {
     applyStaticTexts();
     renderHeader(config);
 
+    if (firstDraw && HOLD_LOADER) await new Promise((resolve) => setTimeout(resolve, 2800));
     finishLoading();
 
     if (firstDraw && typeof ResizeObserver !== "undefined") {

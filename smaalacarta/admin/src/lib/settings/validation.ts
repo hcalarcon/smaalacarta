@@ -8,6 +8,7 @@ import {
   validateDeliveryPayment,
 } from "./payment";
 import { CENTER, isFocus } from "./header-focus";
+import { DEFAULT_MENU_LOOK, validateMenuLook, type MenuLook } from "./menu-look";
 import { normalizePreorders, validatePreorders, type PreorderCutoffs } from "./preorders";
 import { validateSchedule, type Schedule } from "./schedule";
 import {
@@ -35,7 +36,7 @@ export const THEMES = [
 
 export type ThemeKey = (typeof THEMES)[number]["key"];
 
-export type SettingsInput = {
+export type SettingsInput = MenuLook & {
   published: boolean;
   template: string;
   theme: string;
@@ -118,6 +119,7 @@ export const DEFAULT_SETTINGS: SettingsInput = {
   scheduledLeadMinutes: DEFAULT_LEAD,
   preordersEnabled: false,
   preorderCutoffs: {},
+  ...DEFAULT_MENU_LOOK,
 };
 
 type Field =
@@ -144,7 +146,11 @@ type Field =
   | "transferCbu"
   | "scheduledLeadMinutes"
   | "defaultPrepMinutes"
-  | "preorderCutoffs";
+  | "preorderCutoffs"
+  | "menuAnimation"
+  | "loaderAnimation"
+  | "loaderCustomUrl"
+  | "backgroundImageUrl";
 
 const COLOR = /^#[0-9a-fA-F]{6}$/;
 // Solo https y sin caracteres que rompan un atributo o un estilo (mismo criterio
@@ -220,6 +226,8 @@ export function validateSettings(input: SettingsInput): ValidationResult<Field> 
   if (input.menuPdfUrl.trim() && !IMAGE_URL.test(input.menuPdfUrl.trim())) {
     errors.menuPdfUrl = "Ingresá una dirección que empiece con https://";
   }
+
+  Object.assign(errors, validateMenuLook(input));
 
   if (input.tagline.length > TAGLINE_MAX) {
     errors.tagline = `Usá hasta ${TAGLINE_MAX} caracteres.`;

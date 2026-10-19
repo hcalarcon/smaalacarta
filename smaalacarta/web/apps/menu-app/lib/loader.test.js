@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { DICTIONARY, LANGS } from "./i18n.js";
-import { applyLoaderAnimation } from "./loader.js";
+import { applyLoaderAnimation, customLoaderUrl } from "./loader.js";
 
 const read = (relative) => readFileSync(fileURLToPath(new URL(relative, import.meta.url)), "utf8");
 
@@ -54,6 +54,56 @@ describe("loader en la página (PUBLICO-83)", () => {
       expect(loader.dataset.animacion).toBe(animacion);
     },
   );
+
+  describe("animación de carga propia — PUBLICO-104", () => {
+    const url = "https://x.supabase.co/storage/v1/object/public/business-animations/n/abc.gif";
+    const page = (calm = false) => {
+      const loader = { dataset: {} };
+      const image = { src: "" };
+      const doc = {
+        querySelector: (selector) => (selector === "#loader" ? loader : selector === "#loader-custom" ? image : null),
+        defaultView: { matchMedia: () => ({ matches: calm }) },
+      };
+      return { loader, image, doc };
+    };
+
+    it("usa el archivo del negocio cuando elige 'propia'", () => {
+      const { loader, image, doc } = page();
+
+      expect(applyLoaderAnimation({ animacionCarga: "custom", animacionCargaUrl: url }, doc)).toBe("custom");
+      expect(loader.dataset.animacion).toBe("custom");
+      expect(image.src).toBe(url);
+    });
+
+    it("con menos movimiento pedido no usa la propia (un GIF no se pausa): queda la de comida", () => {
+      const { loader, image, doc } = page(true);
+
+      expect(applyLoaderAnimation({ animacionCarga: "custom", animacionCargaUrl: url }, doc)).toBe("hamburguesa");
+      expect(loader.dataset.animacion).toBe("hamburguesa");
+      expect(image.src).toBe("");
+    });
+
+    it.each([undefined, "", "http://x.com/a.gif", "javascript:alert(1)", 'https://x.com/a.gif"onerror="x'])(
+      "una dirección que no vale (%s) vuelve a la hamburguesa",
+      (animacionCargaUrl) => {
+        const { loader, doc } = page();
+
+        expect(applyLoaderAnimation({ animacionCarga: "custom", animacionCargaUrl }, doc)).toBe("hamburguesa");
+        expect(loader.dataset.animacion).toBe("hamburguesa");
+        expect(customLoaderUrl({ animacionCarga: "custom", animacionCargaUrl })).toBeNull();
+      },
+    );
+
+    it("solo se usa si la elección es 'custom'", () => {
+      expect(customLoaderUrl({ animacionCarga: "pizza", animacionCargaUrl: url })).toBeNull();
+    });
+
+    it("la página tiene la imagen y el CSS la muestra solo con 'custom'", () => {
+      expect(html).toMatch(/<img id="loader-custom" class="loader-custom" alt=""/);
+      expect(css).toMatch(/\.loader\[data-animacion="custom"\]\s+\.loader-custom\s*\{[^}]*display:\s*block/);
+      expect(css).toMatch(/\.loader-custom\s*\{[^}]*display:\s*none/);
+    });
+  });
 
   it("el helado cae sobre el cucurucho y después cae la cereza, sin aparecer con un pop", () => {
     expect(css).toMatch(/loader-helado-bocha\s*\{[^}]*animation:\s*loader-helado-bocha 2\.8s/);

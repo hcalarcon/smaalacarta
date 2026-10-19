@@ -7,7 +7,9 @@ import Field from "@/components/ui/Field";
 import ImageUploader from "@/components/ui/ImageUploader";
 import PdfUploader from "@/components/ui/PdfUploader";
 import Section from "@/components/ui/Section";
+import AnimationsSection from "./AnimationsSection";
 import AppearancePreview from "./AppearancePreview";
+import type { MenuLook } from "@/lib/settings/menu-look";
 import { DELIVERY_OPTIONS, PAYMENT_OPTIONS, hasTransfer, mercadoPagoHint } from "@/lib/settings/payment";
 import type { PreorderCutoffs } from "@/lib/settings/preorders";
 import {
@@ -159,6 +161,13 @@ export default function SettingsForm({
   const [defaultPrepMinutes, setDefaultPrepMinutes] = useState(String(initial.defaultPrepMinutes));
   const [logoUrl, setLogoUrl] = useState(initial.logoUrl);
   const [menuPdfUrl, setMenuPdfUrl] = useState(initial.menuPdfUrl);
+  // Animaciones y fondo del menú (PUBLICO-102 a 110).
+  const [look, setLook] = useState<MenuLook>({
+    menuAnimation: initial.menuAnimation,
+    loaderAnimation: initial.loaderAnimation,
+    loaderCustomUrl: initial.loaderCustomUrl,
+    backgroundImageUrl: initial.backgroundImageUrl,
+  });
   const [whatsapp, setWhatsapp] = useState(initial.whatsapp);
   const [address, setAddress] = useState(initial.address);
   const [instagram, setInstagram] = useState(initial.instagram);
@@ -236,6 +245,7 @@ export default function SettingsForm({
         defaultPrepMinutes: defaultPrepMinutes.trim() === "" ? Number.NaN : Number(defaultPrepMinutes),
         logoUrl,
         menuPdfUrl,
+        ...look,
         schedule: toSchedule(days, scheduleEnabled),
         whatsapp,
         address,
@@ -312,6 +322,7 @@ export default function SettingsForm({
             logoUrl,
             focus: headerFocus,
             schedule: toSchedule(days, scheduleEnabled),
+            look,
           }}
           onFocusChange={setHeaderFocus}
           className="sticky top-[7.5rem] z-10 self-start lg:col-start-2 lg:row-start-1 lg:top-24"
@@ -469,6 +480,25 @@ export default function SettingsForm({
         </div>
       </div>
       </Section>
+
+      <AnimationsSection
+        businessId={businessId}
+        look={look}
+        onChange={setLook}
+        errors={fieldErrors}
+        draft={{
+          name: businessName,
+          tagline,
+          template,
+          theme,
+          primaryColor,
+          secondaryColor,
+          imageUrl: headerImageUrl,
+          logoUrl,
+          focus: headerFocus,
+          schedule: toSchedule(days, scheduleEnabled),
+        }}
+      />
       </> : null}
 
       {pdfService ? (

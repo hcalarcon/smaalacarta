@@ -60,6 +60,10 @@ export async function getSettings(
     scheduledLeadMinutes: data.scheduled_lead_minutes,
     preordersEnabled: data.preorders_enabled,
     preorderCutoffs: (data.preorder_cutoffs ?? {}) as PreorderCutoffs,
+    menuAnimation: data.menu_animation,
+    loaderAnimation: data.loader_animation,
+    loaderCustomUrl: data.loader_custom_url ?? "",
+    backgroundImageUrl: data.background_image_url ?? "",
   };
 }
 
@@ -152,5 +156,17 @@ export async function saveSettings(
     p_default_prep_minutes: input.defaultPrepMinutes,
   });
 
-  return error ? { error: { code: error.code, message: error.message } } : {};
+  if (error) return { error: { code: error.code, message: error.message } };
+
+  // Animaciones y fondo del menú (PUBLICO-102 a 110): van en otra función de la base, que vuelve a validar todo y
+  // exige que los archivos sean de la carpeta de este negocio.
+  const look = await supabase.rpc("save_menu_look", {
+    p_business_id: businessId,
+    p_menu_animation: input.menuAnimation,
+    p_loader_animation: input.loaderAnimation,
+    p_loader_custom_url: input.loaderCustomUrl,
+    p_background_image_url: input.backgroundImageUrl,
+  });
+
+  return look.error ? { error: { code: look.error.code, message: look.error.message } } : {};
 }

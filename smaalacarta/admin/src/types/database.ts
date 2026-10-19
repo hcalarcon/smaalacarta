@@ -74,6 +74,7 @@ export type Database = {
           address: string | null
           allow_item_notes: boolean
           allow_scheduled_orders: boolean
+          background_image_url: string | null
           business_id: string
           closed_message: string | null
           created_at: string
@@ -85,7 +86,10 @@ export type Database = {
           header_image_x: number
           header_image_y: number
           instagram_url: string | null
+          loader_animation: string
+          loader_custom_url: string | null
           logo_url: string | null
+          menu_animation: string
           menu_pdf_url: string | null
           payment_options: string[]
           preorder_cutoffs: Json
@@ -112,6 +116,7 @@ export type Database = {
           address?: string | null
           allow_item_notes?: boolean
           allow_scheduled_orders?: boolean
+          background_image_url?: string | null
           business_id: string
           closed_message?: string | null
           created_at?: string
@@ -123,7 +128,10 @@ export type Database = {
           header_image_x?: number
           header_image_y?: number
           instagram_url?: string | null
+          loader_animation?: string
+          loader_custom_url?: string | null
           logo_url?: string | null
+          menu_animation?: string
           menu_pdf_url?: string | null
           payment_options?: string[]
           preorder_cutoffs?: Json
@@ -150,6 +158,7 @@ export type Database = {
           address?: string | null
           allow_item_notes?: boolean
           allow_scheduled_orders?: boolean
+          background_image_url?: string | null
           business_id?: string
           closed_message?: string | null
           created_at?: string
@@ -161,7 +170,10 @@ export type Database = {
           header_image_x?: number
           header_image_y?: number
           instagram_url?: string | null
+          loader_animation?: string
+          loader_custom_url?: string | null
           logo_url?: string | null
+          menu_animation?: string
           menu_pdf_url?: string | null
           payment_options?: string[]
           preorder_cutoffs?: Json
@@ -1931,6 +1943,16 @@ export type Database = {
       }
       save_delivery_preferences: {
         Args: { p_favorite: string; p_zone_ids: string[] }
+        Returns: undefined
+      }
+      save_menu_look: {
+        Args: {
+          p_background_image_url: string
+          p_business_id: string
+          p_loader_animation: string
+          p_loader_custom_url: string
+          p_menu_animation: string
+        }
         Returns: undefined
       }
       save_option_group: {
