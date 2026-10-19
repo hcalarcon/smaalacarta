@@ -2142,10 +2142,6 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   (`/repartidor/terminos`), con "Versión N, aceptada el …".
 - **ENVIO-185** En la lista de repartidores del superadmin, cada uno muestra "Términos": la versión aceptada y la fecha,
   o "Pendiente" (con el interruptor prendido y la versión vigente sin aceptar).
-
-
-
-## ADMIN-RESUMEN — Pantalla de inicio del panel
 - **ENVIO-186** Con "Exigir términos a repartidores" prendido, el aviso push de pedido nuevo no le llega al repartidor que
   no aceptó la versión vigente (`courier_push_eligible()`, que usa el endpoint del webhook). Apagado, les llega a todos.
 - **ENVIO-187** Con el interruptor prendido, la elección automática de ofertas (`settle_courier_offers`) ignora las
@@ -2157,8 +2153,6 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   base sigue exigiéndolos al ver, tomar y ofertar.
 - **ENVIO-190** En la lista de repartidores del superadmin, con el interruptor apagado la columna "Términos" dice "No se
   exige" (en lugar de "Pendiente") a quien no aceptó la versión vigente.
-
-*Aplicado por `app/dashboard/page.tsx`, `src/lib/db/summary.ts`, `src/lib/dates.ts`,
 - **ENVIO-191** El repartidor tiene arriba de su panel un interruptor grande, "Estoy disponible" / "No disponible", y con
   el interruptor prendido dice "Disponible desde las HH:MM". Todos arrancan No disponible (sin fila en
   `courier_availability`). Solo el propio repartidor lo cambia (`courier_set_available()`); nadie escribe la tabla
@@ -2170,14 +2164,14 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   (`courier_availability_enabled`), junto a los otros. **Arranca prendido.** Lo lee el servidor con
   `courier_availability_enabled()` y solo el superadmin lo cambia. Apagado: no se ve el interruptor del repartidor ni
   ningún aviso (menú, seguimiento, local), prender da `P0027`, y el aviso push de pedido nuevo les llega a todos
-  El aviso sale de un Database Webhook de Supabase sobre `courier_availability_events` (solo Insert) que llama al mismo
-  endpoint y con el mismo secreto que el de `orders`; sin él, el repartidor se apaga igual pero no se entera.
   como antes.
 - **ENVIO-194** Un repartidor disponible se apaga solo a las 4 horas sin actividad. Actividad es prender el interruptor,
   tomar u ofertar un pedido, o cambiar el estado de un pedido propio (no cuenta lo que haga el local ni el cliente).
   `courier_availability_expire()`, con pg_cron cada minuto, lo apaga y deja un registro `auto_off`; y como cuenta
   disponible solo con actividad en las últimas 4 horas, el conteo es correcto aunque el cron se atrase. Si tiene
   avisos push activados, se le avisa: "Te pusimos como No disponible porque pasaron 4 horas sin actividad".
+  El aviso sale de un Database Webhook de Supabase sobre `courier_availability_events` (solo Insert) que llama al mismo
+  endpoint y con el mismo secreto que el de `orders`; sin él, el repartidor se apaga igual pero no se entera.
 - **ENVIO-195** Un repartidor No disponible igual ve los pedidos de su panel y puede tomarlos u ofertar, pero no recibe
   el aviso push de pedido nuevo (`courier_push_eligible()`). Los avisos de pedidos que ya son suyos (listo, cambio
   de demora, cancelado, faltan 10 minutos) le llegan siempre.
@@ -2204,6 +2198,8 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
 
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
+
+*Aplicado por `app/dashboard/page.tsx`, `src/lib/db/summary.ts`, `src/lib/dates.ts`,
 `src/lib/menu-url.ts` y el menú lateral. Cubierto por: `src/lib/dates.test.ts`,
 `src/lib/menu-url.test.ts` y `src/lib/layout/nav-badge.test.ts`.*
 
