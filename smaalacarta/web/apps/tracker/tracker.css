@@ -467,6 +467,14 @@ body {
   animation: steam 1.6s ease-in-out infinite;
 }
 
+.step-current .icon-preparing path:nth-child(n + 3) {
+  animation: steam 1.4s ease-in-out infinite;
+}
+
+.step-current .icon-preparing path:nth-child(4) {
+  animation-delay: 0.35s;
+}
+
 .step-current .icon-received {
   animation: step-nudge 1.8s ease-in-out infinite;
 }
@@ -811,6 +819,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .step-current .step-icon,
   .step-current .icon,
+  .step-current .icon-preparing path,
   .delivery-head.moving .delivery-icon .icon {
     animation: none;
   }

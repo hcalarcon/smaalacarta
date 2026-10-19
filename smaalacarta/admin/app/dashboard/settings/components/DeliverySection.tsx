@@ -12,6 +12,7 @@ import {
   type DeliveryInput,
   type DeliveryOptions,
 } from "@/lib/courier/preferences";
+import { VEHICLE_LABELS } from "@/lib/courier/vehicle";
 import { formatMoney } from "@/lib/promotions/pricing";
 
 // Envíos (ENVIO-58 y 119): a qué zonas envía el local y repartidor favorito (su oferta le aparece primero
@@ -97,6 +98,34 @@ export default function DeliverySection({ options }: { options: DeliveryOptions 
           </ul>
         )}
       </fieldset>
+
+      {options.vehicle_enabled && input.vehicles ? (
+        <fieldset>
+          <legend className="mb-1.5 block text-sm font-medium text-brand">Vehículos con los que trabajo</legend>
+          <p className="mb-2 text-sm text-stone-500">
+            Solo ven y pueden tomar tus pedidos los repartidores que tengan al menos uno de estos vehículos.
+          </p>
+          <div className="flex flex-wrap gap-x-6">
+            {(["moto", "auto"] as const).map((vehicle) => (
+              <label key={vehicle} className="flex min-h-11 cursor-pointer items-center gap-3 py-1.5">
+                <input
+                  type="checkbox"
+                  checked={input.vehicles?.[vehicle] ?? false}
+                  onChange={(event) =>
+                    setInput({
+                      ...input,
+                      vehicles: { moto: false, auto: false, ...input.vehicles, [vehicle]: event.target.checked },
+                    })
+                  }
+                  className="h-5 w-5"
+                />
+                <span className="text-stone-900">{VEHICLE_LABELS[vehicle]}</span>
+              </label>
+            ))}
+          </div>
+          {deliveryErrors.vehicles ? <p className="mt-1.5 text-sm text-red-600">{deliveryErrors.vehicles}</p> : null}
+        </fieldset>
+      ) : null}
 
       <div>
         <label htmlFor="envios-favorito" className="mb-1.5 block text-sm font-medium text-brand">

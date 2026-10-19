@@ -109,13 +109,30 @@ export async function getDeliveryOptions(): Promise<DeliveryOptions | null> {
     return null;
   }
 
-  return data as unknown as DeliveryOptions;
+  const options = data as unknown as DeliveryOptions;
+
+  // Los vehículos con los que trabaja el local (ENVIO-203): solo se muestran con el interruptor prendido.
+  const [{ data: enabled }, { data: settings }] = await Promise.all([
+    supabase.rpc("vehicle_enabled"),
+    supabase.from("business_settings").select("vehicle_moto, vehicle_auto").maybeSingle(),
+  ]);
+
+  if (enabled === true && settings) {
+    return {
+      ...options,
+      vehicle_enabled: true,
+      vehicles: { moto: settings.vehicle_moto, auto: settings.vehicle_auto },
+    };
+  }
+
+  return options;
 }
 
 // Zonas y favorito en una sola transacción (ENVIO-53).
 export async function saveDeliveryPreferences(input: {
   zoneIds: string[];
   favoriteId: string | null;
+  vehicles?: { moto: boolean; auto: boolean };
 }): Promise<{ ok: true } | DbFailure> {
   const supabase = await createClient();
 
@@ -125,5 +142,16 @@ export async function saveDeliveryPreferences(input: {
     p_favorite: input.favoriteId as string,
   });
 
-  return error ? { error: { code: error.code, message: error.message } } : { ok: true };
+  if (error) return { error: { code: error.code, message: error.message } };
+
+  // Los vehículos van aparte (otra función de la base); solo si la pantalla los mostró.
+  if (input.vehicles) {
+    const saved = await supabase.rpc("save_business_vehicles", {
+      p_moto: input.vehicles.moto,
+      p_auto: input.vehicles.auto,
+    });
+    if (saved.error) return { error: { code: saved.error.code, message: saved.error.message } };
+  }
+
+  return { ok: true };
 }

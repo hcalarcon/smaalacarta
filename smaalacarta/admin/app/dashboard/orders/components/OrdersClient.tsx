@@ -92,6 +92,7 @@ export default function OrdersClient({
   suggestedPrepMinutes = null,
   defaultPrepMinutes = 20,
   vehicleEnabled = false,
+  canAskForCar = true,
   availability = { enabled: false, total: 0, emptyZoneIds: [] },
 }: {
   slug: string;
@@ -110,6 +111,8 @@ export default function OrdersClient({
   defaultPrepMinutes?: number;
   // El interruptor del vehículo del repartidor (ENVIO-175): apagado, no se ve nada de moto/auto.
   vehicleEnabled?: boolean;
+  // "Necesita auto" solo tiene sentido si el negocio trabaja con moto y con auto (ENVIO-205).
+  canAskForCar?: boolean;
   // Cuántos repartidores disponibles cubren las zonas del local y cuáles zonas están en 0 (ENVIO-200).
   availability?: BusinessAvailability;
 }) {
@@ -412,7 +415,7 @@ export default function OrdersClient({
 
     try {
       const result =
-        mode === "accept" ? await acceptOrderAction(orderId, minutes, vehicleEnabled && acceptNeedsCar) : await setPrepAction(orderId, minutes ?? 0, null);
+        mode === "accept" ? await acceptOrderAction(orderId, minutes, vehicleEnabled && canAskForCar && acceptNeedsCar) : await setPrepAction(orderId, minutes ?? 0, null);
 
       if (result.ok) {
         setPrepPicker(null);
@@ -710,8 +713,10 @@ export default function OrdersClient({
         }
         onSelfDelivery={() => selected && resolveDelivery(selected.id, () => selfDeliveryAction(selected.id))}
         vehicleEnabled={vehicleEnabled}
-        onNeedsCar={(needsCar) =>
-          selected && resolveDelivery(selected.id, () => setNeedsCarAction(selected.id, needsCar))
+        onNeedsCar={
+          canAskForCar
+            ? (needsCar) => selected && resolveDelivery(selected.id, () => setNeedsCarAction(selected.id, needsCar))
+            : undefined
         }
         onConfirmSettlement={() => selected && setReceivingId(selected.id)}
       />
@@ -760,7 +765,7 @@ export default function OrdersClient({
           onClose={() => setPrepPicker(null)}
           needsCar={acceptNeedsCar}
           onNeedsCarChange={
-            vehicleEnabled && prepOrder.courier_status ? (value) => setAcceptNeedsCar(value) : undefined
+            vehicleEnabled && canAskForCar && prepOrder.courier_status ? (value) => setAcceptNeedsCar(value) : undefined
           }
         />
       ) : null}

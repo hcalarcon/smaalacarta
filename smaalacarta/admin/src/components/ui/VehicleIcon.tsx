@@ -1,7 +1,8 @@
 import { parseVehicles, vehiclesLabel, type Vehicle } from "@/lib/courier/vehicle";
 
-// Íconos propios del vehículo del repartidor (ENVIO-178): SVG de línea, no emoji, que toman el color del texto.
-// Es la misma moto que el seguimiento del cliente; el auto es de la misma familia.
+// Íconos del vehículo del repartidor (ENVIO-178): SVG de línea, no emoji, que toman el color del texto.
+// `motorbike` y `car` de Tabler Icons (https://tabler.io/icons, licencia MIT, © Paweł Kuna), pegados acá y no la
+// librería entera. Son los mismos que el seguimiento del cliente (`web/apps/tracker/lib/icons.js`).
 function Glyph({ vehicle }: { vehicle: Vehicle }) {
   return (
     <svg
@@ -17,16 +18,16 @@ function Glyph({ vehicle }: { vehicle: Vehicle }) {
     >
       {vehicle === "moto" ? (
         <>
-          <circle cx="6" cy="17" r="3" />
-          <circle cx="18" cy="17" r="3" />
-          <path d="M9 17h5l3-7h-4M13 10l-1.5-3H8" />
+          <circle cx="5" cy="16" r="3" />
+          <circle cx="19" cy="16" r="3" />
+          <path d="M7.5 14h5l4 -4h-10.5m1.5 4l4 -4" />
+          <path d="M13 6h2l1.5 3l2 4" />
         </>
       ) : (
         <>
-          <path d="M5 11l1.6-4.2A2 2 0 0 1 8.5 5.5h7a2 2 0 0 1 1.9 1.3L19 11" />
-          <path d="M4 11h16a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z" />
-          <circle cx="7.5" cy="17.5" r="1.6" />
-          <circle cx="16.5" cy="17.5" r="1.6" />
+          <circle cx="7" cy="17" r="2" />
+          <circle cx="17" cy="17" r="2" />
+          <path d="M5 17h-2v-6l2 -5h9l4 5h1a2 2 0 0 1 2 2v4h-2m-4 0h-6m-6 -6h15m-6 0v-5" />
         </>
       )}
     </svg>

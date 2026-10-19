@@ -105,6 +105,8 @@ export type Database = {
           transfer_alias: string | null
           transfer_cbu: string | null
           updated_at: string
+          vehicle_auto: boolean
+          vehicle_moto: boolean
         }
         Insert: {
           address?: string | null
@@ -141,6 +143,8 @@ export type Database = {
           transfer_alias?: string | null
           transfer_cbu?: string | null
           updated_at?: string
+          vehicle_auto?: boolean
+          vehicle_moto?: boolean
         }
         Update: {
           address?: string | null
@@ -177,6 +181,8 @@ export type Database = {
           transfer_alias?: string | null
           transfer_cbu?: string | null
           updated_at?: string
+          vehicle_auto?: boolean
+          vehicle_moto?: boolean
         }
         Relationships: [
           {
@@ -1692,6 +1698,15 @@ export type Database = {
       courier_terms_required: { Args: never; Returns: boolean }
       courier_terms_status: { Args: never; Returns: Json }
       courier_terms_version: { Args: never; Returns: number }
+      courier_vehicle_ok: {
+        Args: {
+          p_auto: boolean
+          p_business_id: string
+          p_moto: boolean
+          p_needs_car: boolean
+        }
+        Returns: boolean
+      }
       courier_vehicles: { Args: { p_courier_id: string }; Returns: Json }
       courier_withdraw_offer: {
         Args: { p_order_id: string }
@@ -1855,7 +1870,7 @@ export type Database = {
       public_order_has_couriers: { Args: { p_code: string }; Returns: boolean }
       public_order_tracking: { Args: { p_code: string }; Returns: Json }
       public_zone_has_couriers: {
-        Args: { p_zone_id: string }
+        Args: { p_business_id?: string; p_zone_id: string }
         Returns: boolean
       }
       resolve_order_lines: {
@@ -1908,6 +1923,10 @@ export type Database = {
           p_transfer_cbu: string
           p_whatsapp: string
         }
+        Returns: undefined
+      }
+      save_business_vehicles: {
+        Args: { p_auto: boolean; p_moto: boolean }
         Returns: undefined
       }
       save_delivery_preferences: {
@@ -2007,7 +2026,10 @@ export type Database = {
         Returns: number
       }
       vehicle_enabled: { Args: never; Returns: boolean }
-      zone_available_couriers: { Args: { p_zone_id: string }; Returns: number }
+      zone_available_couriers: {
+        Args: { p_business_id?: string; p_zone_id: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never

@@ -65,6 +65,7 @@ export default async function OrdersPage() {
       suggestedPrepMinutes={suggestedPrep}
       defaultPrepMinutes={prepSettings.defaultPrepMinutes}
       vehicleEnabled={vehicleEnabled}
+      canAskForCar={!delivery?.vehicles || (delivery.vehicles.moto && delivery.vehicles.auto)}
       availability={availability}
     />
   );

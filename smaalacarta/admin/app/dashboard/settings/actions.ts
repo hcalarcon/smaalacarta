@@ -108,7 +108,7 @@ export type SaveDeliveryResult =
   | {
       ok: false;
       error: string;
-      fieldErrors?: Partial<Record<"favorite", string>>;
+      fieldErrors?: Partial<Record<"favorite" | "vehicles", string>>;
     };
 
 // Zonas a las que envía el local y repartidor favorito (ENVIO-58 y 112). El negocio sale de la
@@ -140,6 +140,7 @@ export async function saveDeliveryAction(input: DeliveryInput): Promise<SaveDeli
   const saved = await saveDeliveryPreferences({
     zoneIds: validation.zoneIds,
     favoriteId: validation.favoriteId,
+    vehicles: validation.vehicles,
   });
 
   if ("error" in saved) {

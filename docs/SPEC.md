@@ -635,6 +635,14 @@ llegando al negocio por WhatsApp.
   no entrega `pedido.prep` aunque la hora esté cargada y el cliente no ve el tiempo; al volver a encenderlo, sí.
 - **SEGUIMIENTO-51** La línea de la hora ("Listo aprox. 13:40 · faltan 25 min") se muestra en un tamaño de texto normal
   destacado (1 rem, negrita), sin competir con el estado del pedido.
+- **SEGUIMIENTO-52** La línea de pasos suma "En preparación" entre "Aceptado" y "Listo": Recibido → Aceptado → En
+  preparación → Listo → En camino → Entregado (para retirar: … → Listo para retirar → Retirado; si lo lleva el local:
+  … → Listo → Entregado). El local no tiene un botón más: apenas acepta el pedido (`confirmed`), "Aceptado" queda hecho
+  y "En preparación" es el paso activo, con la cuenta regresiva de la hora de listo si `show_prep_time` está prendido;
+  si el local marca `preparing` a mano, cae en el mismo paso. Ícono de olla con vapor animado, que se apaga con
+  `prefers-reduced-motion`. Textos en es/en/pt.
+- **SEGUIMIENTO-53** Los íconos de moto y auto son `motorbike` y `car` de Tabler Icons (licencia MIT), pegados como SVG
+  (no la librería), los mismos en el seguimiento, las ofertas, la tarjeta del local y el panel del repartidor.
 - **ADMIN-REPARTIDOR-8** La tarjeta del pedido del repartidor, en orden: #número · local · estado, **destino** (ícono
   de ubicación, barrio y dirección de entrega en grande), retiro en {local} más chico, hora de listo, la plata en una sola
   línea chica (lo que cobra por el envío y un chip "Cobrar $X" si tiene que cobrar al cliente) y la acción principal.
@@ -2194,6 +2202,21 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
 - **ENVIO-202** El interruptor del repartidor, el indicador del local y el aviso del seguimiento se actualizan sin
   recargar: `courier_availability_pulse` (un contador sin datos de nadie, en la publicación de Realtime) sube con cada
   cambio de disponibilidad y los paneles vuelven a pedir los datos; el seguimiento lo consulta en cada vuelta.
+- **ENVIO-203** En Configuración, en Envíos, el negocio elige "Vehículos con los que trabajo": Moto y Auto, al menos uno
+  (`business_settings.vehicle_moto` / `vehicle_auto`; la base lo exige con un CHECK y `save_business_vehicles()` da
+  `22023`). Los negocios que ya existían quedan con los dos. Solo se ve con el interruptor "Vehículo del repartidor"
+  del superadmin prendido, y se guarda con "Guardar cambios" junto con las zonas. Cada negocio cambia solo los suyos
+  (el negocio sale de la sesión).
+- **ENVIO-204** Con el interruptor prendido, un repartidor ve, toma, oferta y recibe por asignación a mano un pedido
+  solo si tiene al menos uno de los vehículos del negocio (`courier_vehicle_ok()`, usada por `courier_sees_order()`);
+  si lo intenta igual, la base da `P0024`. Un negocio solo Moto no le muestra sus pedidos a un repartidor solo Auto.
+  El aviso push de pedido nuevo respeta lo mismo (`withBusinessVehicles`). Apagado el interruptor, no se filtra nada.
+- **ENVIO-205** "Necesita auto" por pedido (ENVIO-176) sigue igual, pero el botón solo aparece si el negocio trabaja con
+  Moto y con Auto: si trabaja solo con Auto, todos sus pedidos ya van solo a repartidores con auto.
+- **ENVIO-206** Al cambiar los vehículos del negocio, las ofertas abiertas de repartidores que ya no le sirven se cierran.
+- **ENVIO-207** El conteo de repartidores disponibles (ENVIO-196 a 202) respeta el vehículo: el panel del local, el
+  aviso del seguimiento y, si recibe el negocio, el del menú (`public_zone_has_couriers(zona, negocio)`) cuentan solo a
+  quienes sirven a ese negocio.
 
 
 

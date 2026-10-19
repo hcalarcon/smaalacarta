@@ -4,10 +4,20 @@
 
 const SVG_NS = "http://www.w3.org/2000/svg";
 
+// La moto y el auto son de Tabler Icons (https://tabler.io/icons, licencia MIT, © Paweł Kuna): `motorbike` y `car`,
+// con las ruedas como `circle` (la misma geometría que su `path` de círculo). Los dos de la misma librería, y los
+// mismos que el panel (`admin/src/components/ui/VehicleIcon.tsx`).
 const MOTO = [
-  ["circle", { cx: 6, cy: 17, r: 3 }],
-  ["circle", { cx: 18, cy: 17, r: 3 }],
-  ["path", { d: "M9 17h5l3-7h-4M13 10l-1.5-3H8" }],
+  ["circle", { cx: 5, cy: 16, r: 3 }],
+  ["circle", { cx: 19, cy: 16, r: 3 }],
+  ["path", { d: "M7.5 14h5l4 -4h-10.5m1.5 4l4 -4" }],
+  ["path", { d: "M13 6h2l1.5 3l2 4" }],
+];
+
+const CAR = [
+  ["circle", { cx: 7, cy: 17, r: 2 }],
+  ["circle", { cx: 17, cy: 17, r: 2 }],
+  ["path", { d: "M5 17h-2v-6l2 -5h9l4 5h1a2 2 0 0 1 2 2v4h-2m-4 0h-6m-6 -6h15m-6 0v-5" }],
 ];
 
 const BAG = [
@@ -24,6 +34,13 @@ const ICONS = {
     ["path", { d: "M3 15h18" }],
     ["path", { d: "M5 15a7 7 0 0 1 14 0" }],
     ["path", { d: "M12 8V6M10 6h4" }],
+  ],
+  // Una olla con dos hilos de vapor; el vapor sube cuando el paso está activo (`tracker.css`).
+  preparing: [
+    ["path", { d: "M5 12h14v5a3 3 0 0 1-3 3H8a3 3 0 0 1-3-3z" }],
+    ["path", { d: "M3 12h18" }],
+    ["path", { d: "M9 4c0 1.4 1 1.6 1 3" }],
+    ["path", { d: "M14 4c0 1.4 1 1.6 1 3" }],
   ],
   ready: BAG,
   readyPickup: [...BAG, ["path", { d: "M9.5 14.5l2 2 3.5-3.5" }]],
@@ -49,14 +66,9 @@ const ICONS = {
     ["path", { d: "M5 9v11h14V9M9 20v-6h6v6" }],
   ],
   check: [["path", { d: "M5 12.5l4.5 4.5L19 7.5" }]],
-  // El vehículo del repartidor (ENVIO-178): la misma moto de la línea de pasos y un auto de la misma familia.
+  // El vehículo del repartidor (ENVIO-178): la misma moto de la línea de pasos y el auto de Tabler.
   vehicleMoto: MOTO,
-  vehicleAuto: [
-    ["path", { d: "M5 11l1.6-4.2A2 2 0 0 1 8.5 5.5h7a2 2 0 0 1 1.9 1.3L19 11" }],
-    ["path", { d: "M4 11h16a1 1 0 0 1 1 1v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1z" }],
-    ["circle", { cx: 7.5, cy: 17.5, r: 1.6 }],
-    ["circle", { cx: 16.5, cy: 17.5, r: 1.6 }],
-  ],
+  vehicleAuto: CAR,
 };
 
 export const ICON_KEYS = Object.keys(ICONS);
