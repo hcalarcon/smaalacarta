@@ -715,6 +715,18 @@ html[data-template] .checkout .checkout-header {
   display: none;
 }
 
+/* "Puede que no haya repartidores" (ENVIO-198): avisa, no bloquea. Ámbar translúcido, para que se lea igual en
+   tema claro y oscuro, con el texto del tema. */
+.aviso-sin-repartidores {
+  padding: 0.6rem 0.8rem;
+  border: 1px solid color-mix(in srgb, #f59e0b 60%, transparent);
+  border-left-width: 4px;
+  border-radius: 0.6rem;
+  background: color-mix(in srgb, #f59e0b 14%, transparent);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
 /* Barrio, dirección y teléfono del envío con repartidor (ENVIO-20): no cambian el espaciado del formulario. */
 .envio-repartidor {
   display: contents;

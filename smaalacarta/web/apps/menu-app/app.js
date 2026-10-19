@@ -30,6 +30,9 @@ let PROMO_INFO;
 let LANGUAGE = null;
 // Envío con repartidor (ENVIO-20): los barrios del negocio, o null si no tiene o falló.
 let DZ = null;
+// Aviso de "puede que no haya repartidores" (ENVIO-198).
+let AVAILABILITY = null;
+let checkZoneCouriers = null;
 let COURIER_ZONES = null;
 // Zona del cliente al entrar (PUBLICO-73 a 78): `ZONE_ON` es si el local la pregunta; `ZONE_STEP` es
 // qué muestra la tarjeta (ask, zones, notListed, confirmed o null si está cerrada).
@@ -269,6 +272,11 @@ async function init() {
     // Idioma elegido y sugerencia según el celular (PUBLICO-88 a 90).
     LANGUAGE = await import("/apps/menu-app/lib/language.js");
     ZONE = await import("/apps/menu-app/lib/zone-choice.js");
+    // Aviso de "puede que no haya repartidores" en el checkout (ENVIO-198).
+    AVAILABILITY = await import("/apps/menu-app/lib/courier-availability.js");
+    checkZoneCouriers = AVAILABILITY.createZoneChecker((zoneId) =>
+      AVAILABILITY.fetchZoneHasCouriers({ ...SUPABASE_CFG, zoneId }),
+    );
     DZ = deliveryZonesLib;
     OPTIONS = optionsLib;
     OPTIONS_SHEET = optionsSheetLib;
@@ -1944,6 +1952,28 @@ function renderZoneNotice() {
   const chosen = zone.disabled ? null : DZ.findZone(COURIER_ZONES, zone.value);
   notice.hidden = !chosen;
   notice.textContent = chosen ? tr("checkout.zoneNotice", DZ.zoneNoticeVars(chosen, PRICE.formatPrice)) : "";
+
+  renderNoCouriersNotice(chosen);
+}
+
+// Aviso de "puede que no haya repartidores" (ENVIO-198): con envío y una zona elegida, si la base dice que no
+// hay nadie disponible. No bloquea nada: se puede pedir igual. Si la consulta falla, no se muestra.
+let noCouriersToken = 0;
+async function renderNoCouriersNotice(chosen) {
+  const notice = document.querySelector("#aviso-sin-repartidores");
+  if (!notice) return;
+
+  // Solo vale la respuesta de la última zona elegida: una más lenta de la anterior no pisa a la nueva.
+  const token = ++noCouriersToken;
+  notice.hidden = true;
+  if (!chosen || !AVAILABILITY || !MENU_SOURCE) return;
+
+  const result = await checkZoneCouriers(chosen.id);
+  if (token !== noCouriersToken) return;
+
+  const show = AVAILABILITY.showNoCouriersNotice(result);
+  notice.hidden = !show;
+  notice.textContent = show ? tr("checkout.noCouriers") : "";
 }
 
 function initCourierFields() {

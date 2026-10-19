@@ -4,6 +4,7 @@ import {
   brandTheme,
   chooseCourier,
   deliveryCard,
+  fetchCourierAvailability,
   fetchDelivery,
   fetchTracking,
   isFinalStatus,
@@ -828,5 +829,71 @@ describe("nota por ítem — SEGUIMIENTO-36", () => {
 
     expect(li.querySelector("img")).toBeNull();
     expect(li.querySelector(".item-nota").textContent).toBe("📝 <img src=x onerror=alert(1)>");
+  });
+});
+
+describe("aviso de que puede que no haya repartidores — ENVIO-199", () => {
+  const reply = (body, ok = true) => vi.fn().mockResolvedValue({ ok, json: async () => body });
+
+  it("llama a public_order_has_couriers con el código y dice si no hay nadie", async () => {
+    const fetchImpl = reply(false);
+    const r = await fetchCourierAvailability({ ...cfg, code: CODE, fetchImpl });
+
+    expect(r).toEqual({ ok: true, none: true });
+    const [url, init] = fetchImpl.mock.calls[0];
+    expect(url).toBe("https://x.supabase.co/rest/v1/rpc/public_order_has_couriers");
+    expect(JSON.parse(init.body)).toEqual({ p_code: CODE });
+  });
+
+  it("si hay alguno, o ya no aplica (nulo), no avisa", async () => {
+    expect(await fetchCourierAvailability({ ...cfg, code: CODE, fetchImpl: reply(true) })).toEqual({ ok: true, none: false });
+    expect(await fetchCourierAvailability({ ...cfg, code: CODE, fetchImpl: reply(null) })).toEqual({ ok: true, none: false });
+  });
+
+  it("ante cualquier problema no avisa nada", async () => {
+    expect(await fetchCourierAvailability({ ...cfg, code: CODE, fetchImpl: reply(false, false) })).toEqual({ ok: false, none: false });
+    expect(await fetchCourierAvailability({ ...cfg, code: CODE, fetchImpl: vi.fn().mockRejectedValue(new Error("red")) })).toEqual({
+      ok: false,
+      none: false,
+    });
+    expect(await fetchCourierAvailability({ ...cfg, code: CODE, fetchImpl: reply({ cantidad: 0 }) })).toEqual({ ok: false, none: false });
+    expect(await fetchCourierAvailability({ ...cfg, code: "malo", fetchImpl: reply(false) })).toEqual({ ok: false, none: false });
+  });
+
+  describe("la tarjeta del envío", () => {
+    const searching = (extra = {}) => ({
+      courier: "",
+      vehicles: [],
+      whatsapp: null,
+      zone: "Cantera",
+      listPrice: 5000,
+      price: null,
+      reason: null,
+      state: "searching",
+      extras: null,
+      arrivesAt: null,
+      mode: "offers",
+      note: null,
+      offers: [],
+      closesAt: null,
+      ...extra,
+    });
+    const money = new Intl.NumberFormat("es-AR");
+
+    it.each([
+      ["es", "Puede que tarde en aparecer un repartidor."],
+      ["en", "It may take a while for a courier to appear."],
+      ["pt", "Pode demorar para aparecer um entregador."],
+    ])("mientras busca y la zona está en 0, suma la línea en %s", (lang, line) => {
+      expect(deliveryCard(searching({ noCouriers: true }), lang, money).lines).toContain(line);
+    });
+
+    it("sin el aviso, o cuando ya tiene repartidor, no aparece", () => {
+      expect(deliveryCard(searching(), "es", money).lines).toHaveLength(1);
+      expect(deliveryCard(searching({ noCouriers: false }), "es", money).lines).toHaveLength(1);
+
+      const accepted = deliveryCard(searching({ state: "accepted", courier: "Juan", noCouriers: true }), "es", money);
+      expect(accepted.lines.join(" ")).not.toContain("tarde en aparecer");
+    });
   });
 });

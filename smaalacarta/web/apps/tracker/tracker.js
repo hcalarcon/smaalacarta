@@ -12,6 +12,7 @@ import { vehicleLabel } from "/apps/tracker/lib/vehicles.js";
 import { etaView as buildEta } from "/apps/tracker/lib/prep.js";
 import { cancelReason, deliveryMode, progressSteps } from "/apps/tracker/lib/steps.js";
 import {
+  fetchCourierAvailability,
   fetchDelivery,
   fetchTracking,
   brandTheme,
@@ -808,7 +809,16 @@ async function start() {
       fetchDelivery({ url: SUPABASE.url, key: SUPABASE.key, code }),
     ]);
 
-    if (delivery.ok) lastDelivery = delivery.data;
+    if (delivery.ok) {
+      lastDelivery = delivery.data;
+
+      // Mientras busca repartidor, si su zona sigue sin disponibles se avisa (ENVIO-199). Es un dato aparte: si la
+      // consulta falla, no se muestra nada.
+      if (lastDelivery?.state === "searching") {
+        const availability = await fetchCourierAvailability({ url: SUPABASE.url, key: SUPABASE.key, code });
+        lastDelivery = { ...lastDelivery, noCouriers: availability.none };
+      }
+    }
 
     if (result.ok) {
       last = { ...result.data, envio: lastDelivery };
