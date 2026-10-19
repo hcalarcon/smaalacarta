@@ -347,6 +347,37 @@ export async function fetchDelivery({ url, key, code, fetchImpl = globalThis.fet
   }
 }
 
+// ¿Hay repartidores disponibles para la zona de este pedido? (ENVIO-199). La base solo contesta sí o no, y nulo
+// cuando ya no aplica (el pedido tiene repartidor, terminó, o la disponibilidad está apagada). `none` es verdadero
+// solo cuando dijo que no hay nadie; ante cualquier problema es falso y no se muestra nada.
+export async function fetchCourierAvailability({ url, key, code, fetchImpl = globalThis.fetch }) {
+  if (!url || !url.trim() || !key || !key.trim() || !CODE.test(String(code ?? ""))) {
+    return { ok: false, none: false };
+  }
+
+  const headers = { apikey: key, "Content-Type": "application/json" };
+  if (key.startsWith("eyJ")) headers.Authorization = `Bearer ${key}`;
+
+  try {
+    const res = await fetchImpl(`${url.trim().replace(/\/+$/, "")}/rest/v1/rpc/public_order_has_couriers`, {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ p_code: code }),
+      signal:
+        typeof AbortSignal !== "undefined" && AbortSignal.timeout ? AbortSignal.timeout(8000) : undefined,
+    });
+
+    if (!res.ok) return { ok: false, none: false };
+
+    const body = await res.json();
+    if (body !== null && typeof body !== "boolean") return { ok: false, none: false };
+
+    return { ok: true, none: body === false };
+  } catch {
+    return { ok: false, none: false };
+  }
+}
+
 // El teléfono del repartidor y el link para escribirle (ENVIO-44 y 91): solo con el envío tomado y si
 // hay un WhatsApp válido.
 function courierContact(delivery, lang) {
@@ -399,6 +430,8 @@ export function deliveryCard(delivery, lang, money, now = new Date()) {
             title: t("tracker.delivery.searching", lang),
             lines: [
               t(delivery.mode === "fixed" ? "tracker.delivery.searchingFixedText" : "tracker.delivery.searchingText", lang),
+              // La zona sigue sin repartidores disponibles (ENVIO-199): se va sola cuando aparece uno.
+              ...(delivery.noCouriers === true ? [t("tracker.delivery.noCouriers", lang)] : []),
             ],
           };
     case "self":

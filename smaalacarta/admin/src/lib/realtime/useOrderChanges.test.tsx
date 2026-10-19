@@ -50,10 +50,14 @@ afterEach(() => {
 });
 
 describe("cambios de pedidos en tiempo real — ENVIO-172", () => {
-  it("escucha los pedidos y las ofertas", () => {
+  it("escucha los pedidos, las ofertas y la disponibilidad de los repartidores", () => {
     render(<Probe onChange={vi.fn()} />);
 
-    expect(state.handlers.map((entry) => entry.table).sort()).toEqual(["courier_offers", "orders"]);
+    expect(state.handlers.map((entry) => entry.table).sort()).toEqual([
+      "courier_availability_pulse",
+      "courier_offers",
+      "orders",
+    ]);
   });
 
   it("un cambio dispara una sola actualización aunque lleguen varios seguidos", () => {

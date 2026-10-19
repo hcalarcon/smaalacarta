@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { detectEvents } from "./events";
+import { detectAutoOff, detectEvents } from "./events";
 import { insert, update } from "./fixtures";
 
 const kinds = (payload: Parameters<typeof detectEvents>[0]) => detectEvents(payload).map((e) => e.kind);
@@ -185,5 +185,33 @@ describe("circuito de tiempos — ENVIO-158 a 160", () => {
     expect(
       kinds(update({ ...taken, prep_ready_at: "2026-10-12T15:30:00Z" }, { ...taken, status: "cancelled", prep_ready_at: "2026-10-12T16:00:00Z" })),
     ).toEqual(["order_cancelled"]);
+  });
+});
+
+describe("apagado automático de la disponibilidad — ENVIO-194", () => {
+  const record = (extra: Record<string, unknown> = {}) => ({
+    id: "e1",
+    courier_id: "c-moto",
+    available: false,
+    reason: "auto_off",
+    ...extra,
+  });
+  const payload = (extra: Record<string, unknown> = {}, type = "INSERT") => ({
+    type,
+    table: "courier_availability_events",
+    record: record(extra),
+  });
+
+  it("avisa al repartidor cuando se apagó solo", () => {
+    expect(detectAutoOff(payload())).toBe("c-moto");
+  });
+
+  it("no avisa si apagó a mano, si se prendió, si no es un alta o si es otra tabla", () => {
+    expect(detectAutoOff(payload({ reason: "manual" }))).toBeNull();
+    expect(detectAutoOff(payload({ available: true }))).toBeNull();
+    expect(detectAutoOff(payload({}, "UPDATE"))).toBeNull();
+    expect(detectAutoOff({ ...payload(), table: "orders" })).toBeNull();
+    expect(detectAutoOff({ ...payload(), record: null })).toBeNull();
+    expect(detectAutoOff(payload({ courier_id: "" }))).toBeNull();
   });
 });

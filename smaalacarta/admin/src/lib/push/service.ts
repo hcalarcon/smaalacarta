@@ -1,5 +1,5 @@
-import { detectEvents, type OrderRecord, type PushEvent, type WebhookPayload } from "./events";
-import { buildMessage, type PushMessage } from "./messages";
+import { detectAutoOff, detectEvents, type OrderRecord, type PushEvent, type WebhookPayload } from "./events";
+import { autoOffMessage, buildMessage, type PushMessage } from "./messages";
 
 // Quién recibe cada aviso y qué se hace con las suscripciones (ADMIN-PWA-18 a 26). Las dependencias llegan
 // inyectadas, como en `src/lib/mp/`: `deps.ts` las conecta a Supabase y a `web-push`, y los tests usan
@@ -33,6 +33,10 @@ export type PushResult = { events: number; sent: number; removed: number; failed
 const unique = <T>(values: T[]) => [...new Set(values)];
 
 export async function handlePushWebhook(deps: PushDeps, payload: WebhookPayload): Promise<PushResult> {
+  // El apagado automático de la disponibilidad llega por otra tabla (ENVIO-194).
+  const autoOff = detectAutoOff(payload);
+  if (autoOff) return notifyAutoOff(deps, autoOff);
+
   const events = detectEvents(payload);
   const result: PushResult = { events: events.length, sent: 0, removed: 0, failed: 0 };
 
@@ -53,6 +57,22 @@ export async function handlePushWebhook(deps: PushDeps, payload: WebhookPayload)
       }
     }),
   );
+
+  return result;
+}
+
+// Le avisa al repartidor que se lo puso como No disponible. Si no tiene avisos activados, no pasa nada.
+async function notifyAutoOff(deps: PushDeps, courierId: string): Promise<PushResult> {
+  const result: PushResult = { events: 1, sent: 0, removed: 0, failed: 0 };
+
+  try {
+    const userIds = unique(await deps.courierUserIds([courierId]));
+    if (userIds.length === 0) return result;
+
+    await sendToAll(deps, await deps.subscriptions(userIds), autoOffMessage(), result);
+  } catch {
+    result.failed += 1;
+  }
 
   return result;
 }
@@ -121,7 +141,11 @@ async function deliver(deps: PushDeps, event: PushEvent, once: Once, result: Pus
 
   const subscriptions = await deps.subscriptions(userIds);
 
-  // Cada aparato por separado: uno que falla no frena a los demás.
+  await sendToAll(deps, subscriptions, message, result);
+}
+
+// Cada aparato por separado: uno que falla no frena a los demás.
+async function sendToAll(deps: PushDeps, subscriptions: PushSubscriptionRow[], message: PushMessage, result: PushResult) {
   await Promise.all(
     subscriptions.map(async (subscription) => {
       try {

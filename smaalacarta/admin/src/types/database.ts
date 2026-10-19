@@ -105,6 +105,8 @@ export type Database = {
           transfer_alias: string | null
           transfer_cbu: string | null
           updated_at: string
+          vehicle_auto: boolean
+          vehicle_moto: boolean
         }
         Insert: {
           address?: string | null
@@ -141,6 +143,8 @@ export type Database = {
           transfer_alias?: string | null
           transfer_cbu?: string | null
           updated_at?: string
+          vehicle_auto?: boolean
+          vehicle_moto?: boolean
         }
         Update: {
           address?: string | null
@@ -177,6 +181,8 @@ export type Database = {
           transfer_alias?: string | null
           transfer_cbu?: string | null
           updated_at?: string
+          vehicle_auto?: boolean
+          vehicle_moto?: boolean
         }
         Relationships: [
           {
@@ -335,6 +341,85 @@ export type Database = {
           },
         ]
       }
+      courier_availability: {
+        Row: {
+          available: boolean
+          courier_id: string
+          last_activity_at: string | null
+          since: string | null
+          updated_at: string
+        }
+        Insert: {
+          available?: boolean
+          courier_id: string
+          last_activity_at?: string | null
+          since?: string | null
+          updated_at?: string
+        }
+        Update: {
+          available?: boolean
+          courier_id?: string
+          last_activity_at?: string | null
+          since?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_availability_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: true
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      courier_availability_events: {
+        Row: {
+          at: string
+          available: boolean
+          courier_id: string
+          id: string
+          reason: string
+        }
+        Insert: {
+          at?: string
+          available: boolean
+          courier_id: string
+          id?: string
+          reason: string
+        }
+        Update: {
+          at?: string
+          available?: boolean
+          courier_id?: string
+          id?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_availability_events_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      courier_availability_pulse: {
+        Row: {
+          id: boolean
+          n: number
+        }
+        Insert: {
+          id?: boolean
+          n?: number
+        }
+        Update: {
+          id?: boolean
+          n?: number
+        }
+        Relationships: []
+      }
       courier_offers: {
         Row: {
           closed_at: string | null
@@ -449,6 +534,38 @@ export type Database = {
             foreignKeyName: "courier_preferences_courier_id_fkey"
             columns: ["courier_id"]
             isOneToOne: true
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      courier_terms_acceptances: {
+        Row: {
+          accepted_at: string
+          courier_id: string
+          id: string
+          user_id: string
+          version: number
+        }
+        Insert: {
+          accepted_at?: string
+          courier_id: string
+          id?: string
+          user_id: string
+          version: number
+        }
+        Update: {
+          accepted_at?: string
+          courier_id?: string
+          id?: string
+          user_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_terms_acceptances_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: false
             referencedRelation: "couriers"
             referencedColumns: ["id"]
           },
@@ -1138,18 +1255,27 @@ export type Database = {
       }
       platform_settings: {
         Row: {
+          courier_availability_enabled: boolean
+          courier_terms_required: boolean
+          courier_terms_version: number
           delivery_mode: string
           id: boolean
           updated_at: string
           vehicle_enabled: boolean
         }
         Insert: {
+          courier_availability_enabled?: boolean
+          courier_terms_required?: boolean
+          courier_terms_version?: number
           delivery_mode?: string
           id?: boolean
           updated_at?: string
           vehicle_enabled?: boolean
         }
         Update: {
+          courier_availability_enabled?: boolean
+          courier_terms_required?: boolean
+          courier_terms_version?: number
           delivery_mode?: string
           id?: boolean
           updated_at?: string
@@ -1476,6 +1602,10 @@ export type Database = {
         Args: { p_order_id: string }
         Returns: undefined
       }
+      business_courier_availability: {
+        Args: { p_business_id: string }
+        Returns: Json
+      }
       business_delivery_options: { Args: never; Returns: Json }
       business_has_mp: { Args: { p_business_id: string }; Returns: boolean }
       business_order_offers: { Args: never; Returns: Json }
@@ -1492,6 +1622,15 @@ export type Database = {
           p_status: string
         }
         Returns: string
+      }
+      courier_accept_terms: { Args: { p_version: number }; Returns: undefined }
+      courier_availability_enabled: { Args: never; Returns: boolean }
+      courier_availability_expire: { Args: never; Returns: number }
+      courier_availability_idle_limit: { Args: never; Returns: string }
+      courier_availability_status: { Args: never; Returns: Json }
+      courier_available_now: {
+        Args: { p_courier_id: string }
+        Returns: boolean
       }
       courier_available_orders: { Args: never; Returns: Json }
       courier_blocked_by_car: {
@@ -1515,6 +1654,10 @@ export type Database = {
       courier_offers_notice_window: { Args: never; Returns: string }
       courier_offers_window: { Args: never; Returns: string }
       courier_orders: { Args: { p_since?: string }; Returns: Json }
+      courier_push_eligible: {
+        Args: { p_courier_ids: string[] }
+        Returns: string[]
+      }
       courier_return_order: {
         Args: { p_kind: string; p_order_id: string; p_reason?: string }
         Returns: undefined
@@ -1535,6 +1678,10 @@ export type Database = {
         Args: { p_courier_id: string; p_order_id: string }
         Returns: boolean
       }
+      courier_set_available: {
+        Args: { p_available: boolean }
+        Returns: undefined
+      }
       courier_set_eta: {
         Args: { p_kind: string; p_minutes: number; p_order_id: string }
         Returns: string
@@ -1544,6 +1691,22 @@ export type Database = {
         Returns: undefined
       }
       courier_take_order: { Args: { p_order_id: string }; Returns: undefined }
+      courier_terms_accepted: {
+        Args: { p_courier_id: string }
+        Returns: boolean
+      }
+      courier_terms_required: { Args: never; Returns: boolean }
+      courier_terms_status: { Args: never; Returns: Json }
+      courier_terms_version: { Args: never; Returns: number }
+      courier_vehicle_ok: {
+        Args: {
+          p_auto: boolean
+          p_business_id: string
+          p_moto: boolean
+          p_needs_car: boolean
+        }
+        Returns: boolean
+      }
       courier_vehicles: { Args: { p_courier_id: string }; Returns: Json }
       courier_withdraw_offer: {
         Args: { p_order_id: string }
@@ -1704,7 +1867,12 @@ export type Database = {
         Returns: Json
       }
       public_order_delivery: { Args: { p_code: string }; Returns: Json }
+      public_order_has_couriers: { Args: { p_code: string }; Returns: boolean }
       public_order_tracking: { Args: { p_code: string }; Returns: Json }
+      public_zone_has_couriers: {
+        Args: { p_business_id?: string; p_zone_id: string }
+        Returns: boolean
+      }
       resolve_order_lines: {
         Args: {
           p_allow_free: boolean
@@ -1755,6 +1923,10 @@ export type Database = {
           p_transfer_cbu: string
           p_whatsapp: string
         }
+        Returns: undefined
+      }
+      save_business_vehicles: {
+        Args: { p_auto: boolean; p_moto: boolean }
         Returns: undefined
       }
       save_delivery_preferences: {
@@ -1854,6 +2026,10 @@ export type Database = {
         Returns: number
       }
       vehicle_enabled: { Args: never; Returns: boolean }
+      zone_available_couriers: {
+        Args: { p_business_id?: string; p_zone_id: string }
+        Returns: number
+      }
     }
     Enums: {
       [_ in never]: never

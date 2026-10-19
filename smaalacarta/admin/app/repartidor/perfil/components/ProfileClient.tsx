@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 
 import { savePreferencesAction, saveVehiclesAction } from "../../actions";
 import PendingButton from "@/components/ui/PendingButton";
 import VehicleIcons from "@/components/ui/VehicleIcon";
+import { formatAcceptedAt } from "@/lib/courier/terms";
 import { NOTE_MAX, type CourierPreferences } from "@/lib/courier/profile";
 import { validateVehicles, type CourierVehicles } from "@/lib/courier/vehicle";
 
@@ -14,10 +16,13 @@ export default function ProfileClient({
   initial,
   vehicles,
   vehicleEnabled = false,
+  terms = null,
 }: {
   initial: CourierPreferences;
   vehicles: CourierVehicles;
   vehicleEnabled?: boolean;
+  // La última versión de los términos que aceptó y cuándo (ENVIO-184).
+  terms?: { version: number | null; at: string | null } | null;
 }) {
   const [value, setValue] = useState(initial);
   const [saved, setSaved] = useState(initial);
@@ -104,6 +109,20 @@ export default function ProfileClient({
           {error}
         </div>
       ) : null}
+
+      <section className="rounded-3xl border border-line bg-white p-5 shadow-sm" aria-labelledby="terms-title">
+        <h2 id="terms-title" className="font-semibold text-stone-800">
+          Términos
+        </h2>
+        {terms?.version && terms.at ? (
+          <p className="text-sm text-stone-500">
+            Versión {terms.version}, aceptada el {formatAcceptedAt(terms.at)}
+          </p>
+        ) : null}
+        <Link href="/repartidor/terminos" className="mt-1 inline-block py-2 text-sm font-medium text-brand underline">
+          Términos para repartidores
+        </Link>
+      </section>
 
       {vehicleEnabled ? (
         <section className="rounded-3xl border border-line bg-white p-5 shadow-sm" aria-labelledby="vehicle-title">

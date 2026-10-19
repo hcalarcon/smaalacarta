@@ -9,21 +9,27 @@ export type DeliveryOptions = {
   favorite_id: string | null;
   // El repartidor que se recomienda si el local no elige uno (Repartos al Toque, si está activo): ENVIO-134.
   default_courier?: { id: string; name: string } | null;
+  // Con qué vehículos trabaja el local (ENVIO-203) y si el interruptor del superadmin está prendido: solo
+  // entonces se muestran. Los arma `getDeliveryOptions()` (no vienen de `business_delivery_options()`).
+  vehicles?: { moto: boolean; auto: boolean };
+  vehicle_enabled?: boolean;
 };
 
 // Lo que edita la pantalla.
 export type DeliveryInput = {
   zoneIds: string[];
   favoriteId: string | null;
+  vehicles?: { moto: boolean; auto: boolean };
 };
 
-export type DeliveryErrors = Partial<Record<"favorite", string>>;
+export type DeliveryErrors = Partial<Record<"favorite" | "vehicles", string>>;
 
 // El estado inicial de la pantalla, a partir de lo que guardó el local.
 export function initialDeliveryInput(options: DeliveryOptions): DeliveryInput {
   const input: DeliveryInput = {
     zoneIds: options.zones.filter((zone) => zone.selected).map((zone) => zone.id),
     favoriteId: options.favorite_id,
+    ...(options.vehicles ? { vehicles: options.vehicles } : {}),
   };
 
   return normalizeDeliveryInput(input, options);
@@ -45,13 +51,17 @@ export function normalizeDeliveryInput(input: DeliveryInput, options: DeliveryOp
   const stillCovers =
     input.favoriteId !== null && favoriteCandidates(options, zoneIds).some((courier) => courier.id === input.favoriteId);
 
-  return { zoneIds, favoriteId: stillCovers ? input.favoriteId : null };
+  return {
+    zoneIds,
+    favoriteId: stillCovers ? input.favoriteId : null,
+    ...(input.vehicles ? { vehicles: input.vehicles } : {}),
+  };
 }
 
 export function validateDeliveryInput(
   input: DeliveryInput,
   options: DeliveryOptions,
-): { ok: true; zoneIds: string[]; favoriteId: string | null } | { ok: false; errors: DeliveryErrors } {
+): { ok: true; zoneIds: string[]; favoriteId: string | null; vehicles?: { moto: boolean; auto: boolean } } | { ok: false; errors: DeliveryErrors } {
   const errors: DeliveryErrors = {};
 
   if (input.favoriteId !== null) {
@@ -61,18 +71,26 @@ export function validateDeliveryInput(
     }
   }
 
+  // Al menos un vehículo (la base exige lo mismo, ENVIO-203).
+  if (input.vehicles && !input.vehicles.moto && !input.vehicles.auto) {
+    errors.vehicles = "Elegí al menos un vehículo: moto o auto.";
+  }
+
   if (Object.keys(errors).length > 0) return { ok: false, errors };
 
   return {
     ok: true,
     zoneIds: input.zoneIds,
     favoriteId: input.favoriteId,
+    vehicles: input.vehicles,
   };
 }
 
 export function deliveryInputChanged(saved: DeliveryInput, current: DeliveryInput): boolean {
   return (
     saved.favoriteId !== current.favoriteId ||
+    saved.vehicles?.moto !== current.vehicles?.moto ||
+    saved.vehicles?.auto !== current.vehicles?.auto ||
     saved.zoneIds.length !== current.zoneIds.length ||
     saved.zoneIds.some((id, index) => id !== current.zoneIds[index])
   );

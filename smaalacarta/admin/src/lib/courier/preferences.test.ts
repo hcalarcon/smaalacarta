@@ -97,3 +97,27 @@ describe("deliveryInputChanged — ENVIO-58", () => {
     expect(deliveryInputChanged(saved, { ...saved, favoriteId: "toque" })).toBe(true);
   });
 });
+
+describe("vehículos del negocio — ENVIO-203", () => {
+  const withVehicles: DeliveryOptions = { ...options, vehicles: { moto: true, auto: true }, vehicle_enabled: true };
+
+  it("el estado inicial trae los vehículos guardados", () => {
+    expect(initialDeliveryInput(withVehicles).vehicles).toEqual({ moto: true, auto: true });
+    expect(initialDeliveryInput(options).vehicles).toBeUndefined();
+  });
+
+  it("exige al menos un vehículo", () => {
+    const input = { ...initialDeliveryInput(withVehicles), vehicles: { moto: false, auto: false } };
+    expect(validateDeliveryInput(input, withVehicles)).toMatchObject({
+      ok: false,
+      errors: { vehicles: expect.stringContaining("al menos un vehículo") },
+    });
+    expect(validateDeliveryInput({ ...input, vehicles: { moto: false, auto: true } }, withVehicles).ok).toBe(true);
+  });
+
+  it("cambiar un vehículo cuenta como cambio", () => {
+    const saved = initialDeliveryInput(withVehicles);
+    expect(deliveryInputChanged(saved, { ...saved, vehicles: { moto: true, auto: false } })).toBe(true);
+    expect(deliveryInputChanged(saved, { ...saved })).toBe(false);
+  });
+});

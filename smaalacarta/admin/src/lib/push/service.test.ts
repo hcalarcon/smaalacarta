@@ -229,3 +229,75 @@ describe("rapidez del aviso — ENVIO-172", () => {
     expect(result.sent).toBe(0);
   });
 });
+
+describe("disponibilidad del repartidor — ENVIO-194 y 195", () => {
+  const autoOff = (extra: Record<string, unknown> = {}) =>
+    ({
+      type: "INSERT",
+      table: "courier_availability_events",
+      record: { id: "e1", courier_id: "c-moto", available: false, reason: "auto_off", ...extra },
+      old_record: null,
+    }) as unknown as Parameters<typeof handlePushWebhook>[1];
+
+  it("al apagarse solo, le avisa al repartidor con el texto acordado", async () => {
+    const bodies: string[] = [];
+    const d = deps({
+      send: vi.fn(async (_s, message) => {
+        bodies.push(message.body);
+        return "ok" as const;
+      }),
+    });
+
+    const result = await handlePushWebhook(d, autoOff());
+
+    expect(d.courierUserIds).toHaveBeenCalledWith(["c-moto"]);
+    expect(result).toMatchObject({ events: 1, sent: 1, failed: 0 });
+    expect(bodies).toEqual(["Te pusimos como No disponible porque pasaron 4 horas sin actividad"]);
+    // No es un aviso de pedido: no consulta ni al local ni a los repartidores de la zona.
+    expect(d.businessUserIds).not.toHaveBeenCalled();
+    expect(d.coveringCourierIds).not.toHaveBeenCalled();
+  });
+
+  it("si no tiene avisos activados no pasa nada", async () => {
+    const d = deps({ subscriptions: vi.fn(async () => []) });
+
+    const result = await handlePushWebhook(d, autoOff());
+
+    expect(result).toMatchObject({ sent: 0, failed: 0 });
+  });
+
+  it("si apagó a mano, no le avisa", async () => {
+    const d = deps();
+
+    const result = await handlePushWebhook(d, autoOff({ reason: "manual" }));
+
+    expect(result.events).toBe(0);
+    expect(d.send).not.toHaveBeenCalled();
+  });
+
+  it("una falla al avisar se cuenta pero no rompe", async () => {
+    const d = deps({
+      send: vi.fn(async () => {
+        throw new Error("sin servicio push");
+      }),
+    });
+
+    expect(await handlePushWebhook(d, autoOff())).toMatchObject({ sent: 0, failed: 1 });
+  });
+
+  it("los avisos de pedidos que ya son suyos le llegan siempre, sin mirar si está disponible", async () => {
+    const d = deps();
+
+    // Quedó listo el pedido de c-moto: va directo a él, sin pasar por la lista de los que cubren la zona.
+    await handlePushWebhook(
+      d,
+      update(
+        { status: "preparing", courier_status: "accepted", courier_id: "c-moto" },
+        { status: "ready", courier_status: "accepted", courier_id: "c-moto" },
+      ),
+    );
+
+    expect(d.coveringCourierIds).not.toHaveBeenCalled();
+    expect(usersOf(d)).toContain("u-c-moto");
+  });
+});

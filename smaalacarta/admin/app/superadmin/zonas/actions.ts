@@ -12,6 +12,8 @@ import {
 } from "@/lib/db/delivery-zones";
 import {
   DELIVERY_MODES,
+  setCourierAvailabilitySwitch,
+  setCourierTermsSwitch,
   setDeliveryMode,
   setVehicleSwitch,
   type DeliveryMode,
@@ -67,6 +69,39 @@ export async function setVehicleSwitchAction(enabled: boolean): Promise<ZoneActi
   revalidatePath("/superadmin/zonas");
   revalidatePath("/dashboard/orders");
   revalidatePath("/repartidor");
+  return { ok: true };
+}
+
+// El interruptor "Exigir términos a repartidores" (ENVIO-181): apagado, no se muestra la pantalla ni se bloquea
+// a nadie; las aceptaciones guardadas se conservan.
+export async function setCourierTermsSwitchAction(required: boolean): Promise<ZoneActionResult> {
+  await requireSuperAdmin();
+
+  if (typeof required !== "boolean") return { ok: false, error: GENERIC };
+
+  const result = await setCourierTermsSwitch(required);
+  if ("error" in result) return { ok: false, error: GENERIC };
+
+  revalidatePath("/superadmin/zonas");
+  revalidatePath("/superadmin/repartidores");
+  revalidatePath("/repartidor", "layout");
+  return { ok: true };
+}
+
+// El interruptor "Disponibilidad de repartidores" (ENVIO-193): apagado, no se ve el interruptor del repartidor ni
+// ningún aviso, y el aviso push de pedido nuevo llega a todos. Lo registrado se conserva.
+export async function setCourierAvailabilitySwitchAction(enabled: boolean): Promise<ZoneActionResult> {
+  await requireSuperAdmin();
+
+  if (typeof enabled !== "boolean") return { ok: false, error: GENERIC };
+
+  const result = await setCourierAvailabilitySwitch(enabled);
+  if ("error" in result) return { ok: false, error: GENERIC };
+
+  revalidatePath("/superadmin/zonas");
+  revalidatePath("/superadmin/repartidores");
+  revalidatePath("/dashboard/orders");
+  revalidatePath("/repartidor", "layout");
   return { ok: true };
 }
 

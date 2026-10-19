@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { DICTIONARY, LANGS } from "./i18n.js";
+import { applyLoaderAnimation } from "./loader.js";
 
 const read = (relative) => readFileSync(fileURLToPath(new URL(relative, import.meta.url)), "utf8");
 
@@ -11,12 +12,63 @@ describe("loader en la página (PUBLICO-83)", () => {
   const html = read("../index.html");
   const css = read("../base.css");
 
-  it("arma la hamburguesa y escribe la marca, con un texto accesible aparte", () => {
+  it("incluye las animaciones de comida y escribe la marca, con un texto accesible aparte", () => {
+    expect(html).toMatch(/id="loader"[^>]*data-animacion="hamburguesa"/);
     expect(html).toContain("loader-hamburguesa");
+    expect(html).toContain("loader-pizza");
+    expect(html).toContain("loader-cafe");
+    expect(html).toContain("loader-helado");
+    expect(html).toContain("loader-parrilla");
+    expect(html).toContain("loader-sushi");
+    expect(html).toContain("loader-pastas");
+    expect(html).toContain("loader-panificados");
     expect(html).toContain('class="loader-marca"');
     expect(html).toContain("SMA a la carta");
     expect(html).toContain('data-i18n="loader.loading"');
     expect(html).not.toContain("loader-cloche");
+    expect([...html.matchAll(/class="loader-anim [^"]+"[^>]*aria-hidden="true"/g)]).toHaveLength(8);
+  });
+
+  it("aplica la opción configurada después de cargar los datos del negocio", () => {
+    expect(read("../app.js")).toContain("loaderLib.applyLoaderAnimation(config)");
+  });
+
+  it("muestra una sola animación elegida por data-animacion", () => {
+    expect(css).toMatch(/\.loader\[data-animacion="hamburguesa"\]\s+\.loader-hamburguesa/);
+    expect(css).toMatch(/\.loader\[data-animacion="pizza"\]\s+\.loader-pizza/);
+    expect(css).toMatch(/\.loader\[data-animacion="cafe"\]\s+\.loader-cafe/);
+    expect(css).toMatch(/\.loader\[data-animacion="helado"\]\s+\.loader-helado/);
+    expect(css).toMatch(/\.loader\[data-animacion="parrilla"\]\s+\.loader-parrilla/);
+    expect(css).toMatch(/\.loader\[data-animacion="sushi"\]\s+\.loader-sushi/);
+    expect(css).toMatch(/\.loader\[data-animacion="pastas"\]\s+\.loader-pastas/);
+    expect(css).toMatch(/\.loader\[data-animacion="panificados"\]\s+\.loader-panificados/);
+  });
+
+  it.each(["hamburguesa", "pizza", "cafe", "helado", "parrilla", "sushi", "pastas", "panificados"])(
+    "selecciona la animación %s que configura el negocio",
+    (animacion) => {
+      const loader = { dataset: {}, setAttribute(name, value) { this.dataset[name] = value; } };
+      const doc = { querySelector: () => loader };
+
+      expect(applyLoaderAnimation({ animacionCarga: animacion }, doc)).toBe(animacion);
+      expect(loader.dataset.animacion).toBe(animacion);
+    },
+  );
+
+  it("el helado cae sobre el cucurucho y después cae la cereza, sin aparecer con un pop", () => {
+    expect(css).toMatch(/loader-helado-bocha\s*\{[^}]*animation:\s*loader-helado-bocha 2\.8s/);
+    expect(css).toMatch(/loader-helado-cereza\s*\{[^}]*animation:\s*loader-helado-cereza 2\.8s/);
+    expect(css).toMatch(/@keyframes loader-helado-bocha\s*\{[^}]*0%, 10% \{ transform: translateY\(-48px\); \}[^}]*32% \{ transform: translateY\(0\); \}/);
+    expect(css).toMatch(/@keyframes loader-helado-cereza\s*\{[^}]*0%, 46% \{ transform: translateY\(-28px\); \}[^}]*62% \{ transform: translateY\(0\); \}/);
+    expect(html).toContain("m39 60 39-14");
+  });
+
+  it.each([undefined, "", "cohete"])("usa la hamburguesa si la animación falta o no está permitida (%s)", (animacion) => {
+    const loader = { dataset: {}, setAttribute(name, value) { this.dataset[name] = value; } };
+    const doc = { querySelector: () => loader };
+
+    expect(applyLoaderAnimation({ animacionCarga: animacion }, doc)).toBe("hamburguesa");
+    expect(loader.dataset.animacion).toBe("hamburguesa");
   });
 
   it("muestra el nombre del negocio que está cargando sin interpretar su contenido", () => {
@@ -29,6 +81,21 @@ describe("loader en la página (PUBLICO-83)", () => {
   it("anima solo si el visitante no pidió menos movimiento", () => {
     expect(css).toMatch(/@media \(prefers-reduced-motion: no-preference\)\s*\{[^@]*loader-capa/);
     expect(css).toMatch(/@media \(prefers-reduced-motion: no-preference\)\s*\{[^@]*loader-marca/);
+    const animations = css.slice(
+      css.indexOf("@media (prefers-reduced-motion: no-preference)"),
+      css.indexOf("@keyframes loader-caer"),
+    );
+    for (const selector of [
+      ".loader-pizza-cuerpo",
+      ".loader-cafe-vapor",
+      ".loader-helado-bocha",
+      ".loader-parrilla-llamas",
+      ".loader-sushi-salmon",
+      ".loader-pastas-fideos",
+      ".loader-panificados-pan",
+    ]) {
+      expect(animations).toContain(selector);
+    }
   });
 
   it("el loader se desvanece y el menú entra con fade, sin esconder el loader de golpe (PUBLICO-85)", () => {

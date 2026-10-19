@@ -16,8 +16,8 @@
   </head>
   <body class="loading">
     <!-- LOADER -->
-    <div id="loader" class="loader" role="status">
-      <!-- Hamburguesa que se arma (PUBLICO-83) -->
+    <div id="loader" class="loader" data-animacion="hamburguesa" role="status">
+      <!-- Animaciones de comida (PUBLICO-83 y 101); se elige una con config.animacionCarga. -->
       <svg class="loader-anim loader-hamburguesa" viewBox="0 0 120 100" aria-hidden="true">
         <g class="loader-capa loader-capa-1"><path d="M26 76h68v6a10 10 0 0 1-10 10H36a10 10 0 0 1-10-10z" fill="var(--loader-pan, #d9902f)" /></g>
         <g class="loader-capa loader-capa-2"><rect x="22" y="62" width="76" height="15" rx="7.5" fill="#5b3a29" /><path d="M30 66q4 3 8 0M52 68q4 3 8 0M76 66q4 3 8 0" stroke="#7a5239" stroke-width="2" fill="none" stroke-linecap="round" /></g>
@@ -29,6 +29,116 @@
           <path d="M34 30a28 22 0 0 1 14-9" stroke="#fff" stroke-width="3" fill="none" stroke-linecap="round" opacity=".45" />
           <ellipse cx="50" cy="26" rx="3" ry="1.6" fill="#fff3d6" transform="rotate(-20 50 26)" /><ellipse cx="64" cy="19" rx="3" ry="1.6" fill="#fff3d6" /><ellipse cx="78" cy="27" rx="3" ry="1.6" fill="#fff3d6" transform="rotate(20 78 27)" /><ellipse cx="60" cy="32" rx="3" ry="1.6" fill="#fff3d6" transform="rotate(8 60 32)" />
         </g>
+      </svg>
+      <svg class="loader-anim loader-pizza" viewBox="0 0 120 100" aria-hidden="true">
+        <g class="loader-pizza-cuerpo">
+          <circle cx="60" cy="50" r="39" fill="#c77b2c" />
+          <circle cx="60" cy="50" r="34" fill="#f2c45c" />
+          <path d="M60 17a33 33 0 0 1 31 22L60 50z" fill="#f8dd89" opacity=".8" />
+          <path d="M60 50 91 39" stroke="#fff0bd" stroke-width="2" opacity=".8" />
+        </g>
+        <g class="loader-pizza-ingrediente loader-pizza-ingrediente-1">
+          <circle cx="44" cy="38" r="6" fill="#bd3f32" /><circle cx="44" cy="38" r="2" fill="#e98763" />
+        </g>
+        <g class="loader-pizza-ingrediente loader-pizza-ingrediente-2">
+          <circle cx="68" cy="31" r="6" fill="#bd3f32" /><circle cx="68" cy="31" r="2" fill="#e98763" />
+        </g>
+        <g class="loader-pizza-ingrediente loader-pizza-ingrediente-3">
+          <circle cx="77" cy="53" r="6" fill="#bd3f32" /><circle cx="77" cy="53" r="2" fill="#e98763" />
+        </g>
+        <g class="loader-pizza-ingrediente loader-pizza-ingrediente-4">
+          <circle cx="52" cy="66" r="6" fill="#bd3f32" /><circle cx="52" cy="66" r="2" fill="#e98763" />
+        </g>
+        <path d="M34 49q5-5 10 0t10 0M61 73q5-5 10 0" fill="none" stroke="#5c9c50" stroke-width="3" stroke-linecap="round" />
+      </svg>
+      <svg class="loader-anim loader-cafe" viewBox="0 0 120 100" aria-hidden="true">
+        <path d="M36 45h47v24a18 18 0 0 1-18 18h-11a18 18 0 0 1-18-18z" fill="#f5f0e8" stroke="#8b5a3c" stroke-width="4" />
+        <path d="M83 51h7a11 11 0 0 1 0 22h-9" fill="none" stroke="#8b5a3c" stroke-width="5" />
+        <path d="M41 51h37v12H41z" fill="#71452f" />
+        <path d="M30 88h61" stroke="#8b5a3c" stroke-width="5" stroke-linecap="round" />
+        <path class="loader-cafe-vapor loader-cafe-vapor-1" d="M48 38c-8-8 8-10 0-19" fill="none" stroke="#9ca3af" stroke-width="3" stroke-linecap="round" />
+        <path class="loader-cafe-vapor loader-cafe-vapor-2" d="M63 36c-8-8 8-10 0-19" fill="none" stroke="#9ca3af" stroke-width="3" stroke-linecap="round" />
+        <path class="loader-cafe-vapor loader-cafe-vapor-3" d="M77 38c-8-8 8-10 0-19" fill="none" stroke="#9ca3af" stroke-width="3" stroke-linecap="round" />
+      </svg>
+      <svg class="loader-anim loader-helado" viewBox="0 0 120 100" aria-hidden="true">
+        <path d="m31 46 29 50 29-50z" fill="#d69a56" stroke="#a96838" stroke-width="3" stroke-linejoin="round" />
+        <path d="m39 60 39-14M44 70l29-11M49 81l19-9M55 91l9-5M40 62l10 18M51 56l14 27M66 51l13 18M51 77l12 16" stroke="#f3ce91" stroke-width="2" />
+        <path d="M34 48q26 7 52 0" fill="none" stroke="#f8d9a6" stroke-width="3" />
+        <g class="loader-helado-bocha">
+          <circle cx="60" cy="40" r="27" fill="#f4a8b9" />
+          <path d="M36 43q24 12 48 0M43 52q17 8 34 0" fill="none" stroke="#df7897" stroke-width="2.5" />
+          <path d="M48 25l3 5m13-8 2 5m9 10 3 4m-31 5 2 4" stroke="#fff2cc" stroke-width="2.5" stroke-linecap="round" />
+          <circle cx="54" cy="38" r="2" fill="#fff2cc" /><circle cx="70" cy="32" r="2" fill="#fff2cc" />
+        </g>
+        <g class="loader-helado-cereza">
+          <circle cx="60" cy="12" r="8" fill="#c43c4e" />
+          <path d="M60 8q-2-7 5-10" fill="none" stroke="#5b8b45" stroke-width="2.5" stroke-linecap="round" />
+          <path d="M63 2q5-5 8-1-4 4-8 1" fill="#6e9c4d" />
+        </g>
+      </svg>
+      <svg class="loader-anim loader-parrilla" viewBox="0 0 120 100" aria-hidden="true">
+        <path d="M31 54h58l-7 23H38z" fill="#41464b" stroke="#25292d" stroke-width="3" stroke-linejoin="round" />
+        <g class="loader-parrilla-llamas">
+          <path d="M42 61q-8-12 2-21 0 8 6 10-2-9 7-17 0 12 8 17 6-5 5-12 11 12 2 23z" fill="#ef6538" />
+          <path d="M52 61q-5-8 2-14 1 6 5 8 5-5 3-10 9 10 2 16z" fill="#ffc34d" />
+        </g>
+        <g class="loader-parrilla-carne">
+          <path d="M40 43q2-7 10-5l7 4-2 11H41z" fill="#a83e2e" stroke="#692d25" stroke-width="2" />
+          <path d="M64 45q1-6 7-6h8q6 0 6 6v5q0 6-6 6h-9q-6 0-6-6z" fill="#c75b39" stroke="#873b2d" stroke-width="2" />
+          <path d="m45 43 8 8m14-4 12 5m-10-8 10 8" stroke="#f4b06d" stroke-width="2" stroke-linecap="round" />
+        </g>
+        <path d="M35 54h50M39 59h44M44 54v8m12-8v8m12-8v8m12-8v8" stroke="#c8cdd1" stroke-width="2" stroke-linecap="round" />
+        <path d="M40 77 35 91m45-14 5 14" stroke="#41464b" stroke-width="4" stroke-linecap="round" />
+        <path class="loader-parrilla-vapor loader-parrilla-vapor-1" d="M47 37q-6-7 0-13" fill="none" stroke="#aab1b7" stroke-width="2.5" stroke-linecap="round" />
+        <path class="loader-parrilla-vapor loader-parrilla-vapor-2" d="M72 34q-6-7 0-13" fill="none" stroke="#aab1b7" stroke-width="2.5" stroke-linecap="round" />
+      </svg>
+      <svg class="loader-anim loader-sushi" viewBox="0 0 120 100" aria-hidden="true">
+        <ellipse cx="60" cy="78" rx="48" ry="12" fill="#e7edf0" stroke="#aab8bf" stroke-width="3" />
+        <ellipse cx="60" cy="76" rx="38" ry="7" fill="#fff" />
+        <g class="loader-sushi-roll">
+          <circle cx="39" cy="64" r="13" fill="#243d32" />
+          <circle cx="39" cy="64" r="9" fill="#fff" />
+          <circle cx="39" cy="64" r="4" fill="#f18a53" />
+          <circle cx="39" cy="64" r="1.5" fill="#8b4e98" />
+        </g>
+        <g class="loader-sushi-roll loader-sushi-roll-2">
+          <circle cx="70" cy="64" r="13" fill="#243d32" />
+          <circle cx="70" cy="64" r="9" fill="#fff" />
+          <circle cx="70" cy="64" r="4" fill="#f3c552" />
+          <circle cx="70" cy="64" r="1.5" fill="#5ca56a" />
+        </g>
+        <path d="M38 46q4-13 20-13 14 0 18 13l-7 9H44z" fill="#fff" />
+        <g class="loader-sushi-salmon">
+          <path d="M39 44q3-13 19-13 12 0 16 13-17 8-35 0z" fill="#ee8a68" stroke="#c95e4a" stroke-width="2" />
+          <path d="M47 35q2 7 8 10m5-12q1 6 7 9" stroke="#ffd2ae" stroke-width="2" fill="none" stroke-linecap="round" />
+        </g>
+        <path d="M96 25 78 53m25-25L85 56" stroke="#b58045" stroke-width="3" stroke-linecap="round" />
+      </svg>
+      <svg class="loader-anim loader-pastas" viewBox="0 0 120 100" aria-hidden="true">
+        <path d="M25 56q2 31 35 31t35-31z" fill="#e7a63e" stroke="#b86f2c" stroke-width="3" />
+        <ellipse cx="60" cy="56" rx="35" ry="12" fill="#f6d17b" stroke="#b86f2c" stroke-width="3" />
+        <g class="loader-pastas-fideos" fill="none" stroke="#e4a936" stroke-width="3" stroke-linecap="round">
+          <path d="M34 55q7-21 15 0t15 0 15 0 10 0" />
+          <path d="M37 59q8-16 16 0t16 0 14 0" stroke="#f4c45d" />
+          <path d="M43 52q5-14 11 0t12 0 13 0" stroke="#fff0ae" />
+        </g>
+        <g class="loader-pastas-tenedor">
+          <path d="M78 14v27q0 11-11 16" fill="none" stroke="#8b9298" stroke-width="4" stroke-linecap="round" />
+          <path d="M70 14v10m5-10v10m5-10v10m5-10v10" stroke="#8b9298" stroke-width="2.5" stroke-linecap="round" />
+        </g>
+        <path d="M44 43q4-10 12-8 7-8 13 1" fill="none" stroke="#db4c35" stroke-width="3" stroke-linecap="round" />
+        <path d="m48 42 3-5m19 4 4-4" stroke="#5c9c50" stroke-width="2" stroke-linecap="round" />
+      </svg>
+      <svg class="loader-anim loader-panificados" viewBox="0 0 120 100" aria-hidden="true">
+        <path d="M25 78h70" stroke="#777f85" stroke-width="4" stroke-linecap="round" />
+        <g class="loader-panificados-pan">
+          <path d="M26 71q0-24 18-30 17-7 32 3 17-1 19 27z" fill="#bd702e" stroke="#8c4f26" stroke-width="3" />
+          <path d="M42 48q8 8 6 16m12-22q8 10 6 19m12-15q8 9 6 18" fill="none" stroke="#f5d59b" stroke-width="4" stroke-linecap="round" />
+          <path d="M31 70h58" stroke="#e7a95d" stroke-width="3" stroke-linecap="round" />
+        </g>
+        <path class="loader-panificados-vapor loader-panificados-vapor-1" d="M44 35q-7-9 0-16" fill="none" stroke="#aab1b7" stroke-width="2.5" stroke-linecap="round" />
+        <path class="loader-panificados-vapor loader-panificados-vapor-2" d="M65 32q-7-9 0-16" fill="none" stroke="#aab1b7" stroke-width="2.5" stroke-linecap="round" />
+        <path class="loader-panificados-vapor loader-panificados-vapor-3" d="M84 36q-7-9 0-16" fill="none" stroke="#aab1b7" stroke-width="2.5" stroke-linecap="round" />
       </svg>
       <span class="loader-marca" aria-hidden="true"><span class="loader-marca-texto">SMA a la carta</span></span>
       <span id="loader-negocio" class="loader-negocio" hidden></span>
@@ -223,6 +333,7 @@
           </select>
           <input name="direccion" placeholder="Dirección (calle y número)" data-i18n-placeholder="checkout.address" minlength="5" maxlength="200" autocomplete="street-address" disabled />
           <p id="aviso-barrio" class="aviso-entrega" hidden></p>
+          <p id="aviso-sin-repartidores" class="aviso-entrega aviso-sin-repartidores" role="status" hidden></p>
         </div>
         <!-- Menú de un JSON: campo de hora libre, como siempre. Con Supabase lo reemplaza #horario-programado (PUBLICO-30). -->
         <div id="horario-libre" class="horario-pedido">

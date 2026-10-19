@@ -4,9 +4,9 @@
 import { t } from "../../menu-app/lib/i18n.js";
 
 // Cómo se entrega el pedido, para elegir el camino y las palabras:
-// - `courier`: con envío por un repartidor (recibido, aceptado, listo, en camino, entregado).
-// - `pickup`: para retirar (recibido, aceptado, listo para retirar, retirado).
-// - `local`: el local lo lleva él (sin repartidor): recibido, aceptado, listo, entregado.
+// - `courier`: con envío por un repartidor (recibido, aceptado, en preparación, listo, en camino, entregado).
+// - `pickup`: para retirar (recibido, aceptado, en preparación, listo para retirar, retirado).
+// - `local`: el local lo lleva él (sin repartidor): recibido, aceptado, en preparación, listo, entregado.
 export function deliveryMode(pedido, envio) {
   if (pedido?.entrega === "retiro") return "pickup";
   if (envio && envio.state !== "self") return "courier";
@@ -16,16 +16,18 @@ export function deliveryMode(pedido, envio) {
 }
 
 const PATHS = {
-  courier: ["received", "accepted", "ready", "onTheWay", "delivered"],
-  pickup: ["received", "accepted", "readyPickup", "pickedUp"],
-  local: ["received", "accepted", "ready", "delivered"],
+  courier: ["received", "accepted", "preparing", "ready", "onTheWay", "delivered"],
+  pickup: ["received", "accepted", "preparing", "readyPickup", "pickedUp"],
+  local: ["received", "accepted", "preparing", "ready", "delivered"],
 };
 
 // En qué paso del camino está cada estado del pedido.
 const STEP_OF_STATUS = {
   pending: "received",
-  confirmed: "accepted",
-  preparing: "accepted",
+  // El local no tiene un botón más: apenas acepta, el pedido ya está "en preparación" (SEGUIMIENTO-52). "Aceptado"
+  // queda hecho y la cuenta regresiva de la hora de listo corre en este paso.
+  confirmed: "preparing",
+  preparing: "preparing",
   ready: { courier: "ready", pickup: "readyPickup", local: "ready" },
   handed_to_courier: "onTheWay",
   on_the_way: "onTheWay",

@@ -72,8 +72,19 @@ export type QueryResult =
 //
 // `deliveryMode`: el modo de envíos de la plataforma (ENVIO-145). Los tests de ofertas existentes
 // asumen `offers`; la migración arranca la plataforma en `fixed`, así que se fija acá.
+//
+// `courierTerms`: el interruptor "Exigir términos a repartidores" (ENVIO-181) arranca prendido en la migración;
+// los tests del circuito de envío lo apagan salvo que pidan `true`.
+//
+// `courierAvailability`: lo mismo para "Disponibilidad de repartidores" (ENVIO-193): arranca prendido y los tests del
+// circuito lo apagan salvo que pidan `true`.
 export async function createTestDb(
-  options: { before?: string; deliveryMode?: "fixed" | "offers" } = {},
+  options: {
+    before?: string;
+    deliveryMode?: "fixed" | "offers";
+    courierTerms?: boolean;
+    courierAvailability?: boolean;
+  } = {},
 ): Promise<TestDb> {
   const db = new PGlite();
   await db.exec(SUPABASE_STUBS);
@@ -92,6 +103,10 @@ export async function createTestDb(
 
   if (!options.before) {
     await db.exec(`update platform_settings set delivery_mode = '${options.deliveryMode ?? "offers"}'`);
+    await db.exec(`update platform_settings set courier_terms_required = ${options.courierTerms ?? false}`);
+    await db.exec(
+      `update platform_settings set courier_availability_enabled = ${options.courierAvailability ?? false}`,
+    );
   }
 
   return db;
