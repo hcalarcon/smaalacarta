@@ -1,5 +1,6 @@
 import { deliveryLabel } from "@/lib/orders/labels";
 import { BASE_PATH } from "@/lib/base-path";
+import { AUTO_OFF_PUSH } from "@/lib/courier/availability";
 import { formatClock } from "@/lib/orders/prep";
 
 import type { OrderRecord, PushEventKind } from "./events";
@@ -14,7 +15,7 @@ export type PushMessage = {
   tag: string;
   // Qué evento lo generó, y si es de los que tienen que sonar fuerte (ADMIN-PWA-36): el service worker
   // elige cómo mostrarlo con esto.
-  kind: PushEventKind;
+  kind: PushEventKind | "courier_auto_off";
   urgent: boolean;
   // Solo en los urgentes: el número y el total ya formateado, para el cuerpo de la notificación.
   number?: string;
@@ -73,6 +74,19 @@ export function formatPesos(amount: number | null | undefined): string {
   const cents = decimals === "00" ? "" : `,${decimals}`;
 
   return `${amount < 0 ? "-" : ""}$${grouped}${cents}`;
+}
+
+// "Te pusimos como No disponible porque pasaron 4 horas sin actividad" (ENVIO-194). Un solo aviso a la vez: el
+// siguiente reemplaza al anterior.
+export function autoOffMessage(): PushMessage {
+  return {
+    title: AUTO_OFF_PUSH.title,
+    body: AUTO_OFF_PUSH.body,
+    url: `${BASE_PATH}/repartidor`,
+    tag: "courier-auto-off",
+    kind: "courier_auto_off",
+    urgent: false,
+  };
 }
 
 function deliveryText(delivery: string | null): string {

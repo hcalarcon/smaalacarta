@@ -12,6 +12,7 @@ import {
 } from "@/lib/db/delivery-zones";
 import {
   DELIVERY_MODES,
+  setCourierAvailabilitySwitch,
   setCourierTermsSwitch,
   setDeliveryMode,
   setVehicleSwitch,
@@ -83,6 +84,23 @@ export async function setCourierTermsSwitchAction(required: boolean): Promise<Zo
 
   revalidatePath("/superadmin/zonas");
   revalidatePath("/superadmin/repartidores");
+  revalidatePath("/repartidor", "layout");
+  return { ok: true };
+}
+
+// El interruptor "Disponibilidad de repartidores" (ENVIO-193): apagado, no se ve el interruptor del repartidor ni
+// ningún aviso, y el aviso push de pedido nuevo llega a todos. Lo registrado se conserva.
+export async function setCourierAvailabilitySwitchAction(enabled: boolean): Promise<ZoneActionResult> {
+  await requireSuperAdmin();
+
+  if (typeof enabled !== "boolean") return { ok: false, error: GENERIC };
+
+  const result = await setCourierAvailabilitySwitch(enabled);
+  if ("error" in result) return { ok: false, error: GENERIC };
+
+  revalidatePath("/superadmin/zonas");
+  revalidatePath("/superadmin/repartidores");
+  revalidatePath("/dashboard/orders");
   revalidatePath("/repartidor", "layout");
   return { ok: true };
 }

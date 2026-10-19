@@ -10,7 +10,7 @@ const { requireSuperAdmin, db, platform } = vi.hoisted(() => ({
     saveDeliveryZoneOrder: vi.fn(),
     updateDeliveryZone: vi.fn(),
   },
-  platform: { setDeliveryMode: vi.fn(), DELIVERY_MODES: ["fixed", "offers"] },
+  platform: { setDeliveryMode: vi.fn(), setCourierAvailabilitySwitch: vi.fn(), DELIVERY_MODES: ["fixed", "offers"] },
 }));
 
 vi.mock("@/lib/auth/superadmin", () => ({ requireSuperAdmin: () => requireSuperAdmin() }));
@@ -22,6 +22,7 @@ import {
   createZoneAction,
   deleteZoneAction,
   reorderZonesAction,
+  setCourierAvailabilitySwitchAction,
   setDeliveryModeAction,
   setZoneActiveAction,
   updateZoneAction,
@@ -139,5 +140,34 @@ describe("zonas de la plataforma — ENVIO-56", () => {
     expect(db.deleteDeliveryZone).not.toHaveBeenCalled();
     expect(db.updateDeliveryZone).not.toHaveBeenCalled();
     expect(db.saveDeliveryZoneOrder).not.toHaveBeenCalled();
+  });
+});
+
+describe("setCourierAvailabilitySwitchAction — ENVIO-193", () => {
+  it("exige superadmin antes de tocar la base", async () => {
+    requireSuperAdmin.mockRejectedValue(new Error("redirect"));
+
+    await expect(setCourierAvailabilitySwitchAction(false)).rejects.toThrow();
+    expect(platform.setCourierAvailabilitySwitch).not.toHaveBeenCalled();
+  });
+
+  it("solo acepta verdadero o falso", async () => {
+    const r = await setCourierAvailabilitySwitchAction("no" as unknown as boolean);
+
+    expect(r.ok).toBe(false);
+    expect(platform.setCourierAvailabilitySwitch).not.toHaveBeenCalled();
+  });
+
+  it("guarda el valor", async () => {
+    platform.setCourierAvailabilitySwitch.mockResolvedValue({ ok: true });
+
+    expect(await setCourierAvailabilitySwitchAction(false)).toEqual({ ok: true });
+    expect(platform.setCourierAvailabilitySwitch).toHaveBeenCalledWith(false);
+  });
+
+  it("si la base niega el cambio (no es superadmin), da error", async () => {
+    platform.setCourierAvailabilitySwitch.mockResolvedValue({ error: { code: "42501" } });
+
+    expect((await setCourierAvailabilitySwitchAction(false)).ok).toBe(false);
   });
 });

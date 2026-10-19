@@ -110,3 +110,36 @@ export async function setCourierTermsSwitch(required: boolean): Promise<{ ok: tr
 
   return { ok: true };
 }
+
+// El interruptor "Disponibilidad de repartidores" (ENVIO-193). Arranca prendido. Lo lee y lo cambia solo el
+// superadmin con la tabla; el resto del servidor lo pregunta con `courier_availability_enabled()`.
+export async function getCourierAvailabilitySwitch(): Promise<boolean> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("platform_settings")
+    .select("courier_availability_enabled")
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data?.courier_availability_enabled !== false;
+}
+
+export async function setCourierAvailabilitySwitch(enabled: boolean): Promise<{ ok: true } | DbFailure> {
+  const supabase = await createClient();
+
+  // El RLS deja actualizar solo al superadmin; sin filas devueltas, no se cambió nada.
+  const { data, error } = await supabase
+    .from("platform_settings")
+    .update({ courier_availability_enabled: enabled, updated_at: new Date().toISOString() })
+    .eq("id", true)
+    .select("courier_availability_enabled");
+
+  if (error) return { error: { code: error.code, message: error.message } };
+  if (!data || data.length === 0) return { error: { code: "42501", message: "Sin permiso" } };
+
+  return { ok: true };
+}

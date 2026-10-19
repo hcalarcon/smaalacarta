@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 
 import { requireCourier } from "@/lib/auth/courier";
 import { validateReturn } from "@/lib/courier/panel";
+import { setCourierAvailable } from "@/lib/db/availability";
 import { acceptCourierTerms } from "@/lib/db/courier-terms";
 import { validatePreferences, type CourierPreferences } from "@/lib/courier/profile";
 import { validateEta, type EtaKind } from "@/lib/courier/times";
@@ -47,6 +48,20 @@ export async function acceptTermsAction(version: number): Promise<CourierActionR
   if (!Number.isInteger(version) || version < 1) return { ok: false, error: GENERIC };
 
   const result = await acceptCourierTerms(version);
+  if ("error" in result) return { ok: false, error: GENERIC };
+
+  revalidatePath("/repartidor", "layout");
+  return { ok: true };
+}
+
+// Prender o apagar "Estoy disponible" (ENVIO-191): el repartidor sale de la sesión, nunca del navegador. Con la
+// disponibilidad apagada en la plataforma, la base responde P0027.
+export async function setAvailableAction(available: boolean): Promise<CourierActionResult> {
+  await requireCourier();
+
+  if (typeof available !== "boolean") return { ok: false, error: GENERIC };
+
+  const result = await setCourierAvailable(available);
   if ("error" in result) return { ok: false, error: GENERIC };
 
   revalidatePath("/repartidor", "layout");

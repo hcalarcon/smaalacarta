@@ -1,20 +1,25 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 
+import AvailableNow from "./components/AvailableNow";
 import VehicleIcons from "@/components/ui/VehicleIcon";
 import { termsLabel } from "@/lib/courier/terms";
+import { listAvailableCouriers } from "@/lib/db/availability";
 import { listCouriers } from "@/lib/db/couriers";
-import { getCourierTermsSwitch } from "@/lib/db/platform-settings";
+import { getCourierAvailabilitySwitch, getCourierTermsSwitch } from "@/lib/db/platform-settings";
 import { isVehicleEnabled } from "@/lib/db/vehicle";
 
 export const metadata: Metadata = { title: "Repartidores" };
 
 export default async function CouriersPage() {
-  const [couriers, vehicleEnabled, terms] = await Promise.all([
+  const [couriers, vehicleEnabled, terms, availabilityOn] = await Promise.all([
     listCouriers(),
     isVehicleEnabled(),
     getCourierTermsSwitch(),
+    getCourierAvailabilitySwitch(),
   ]);
+  // Los que están disponibles ahora (ENVIO-201): solo con el interruptor de la plataforma prendido.
+  const availableNow = availabilityOn ? await listAvailableCouriers() : [];
 
   return (
     <div className="space-y-8">
@@ -33,6 +38,8 @@ export default async function CouriersPage() {
           + Nuevo repartidor
         </Link>
       </section>
+
+      {availabilityOn ? <AvailableNow couriers={availableNow} /> : null}
 
       {couriers.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-line-strong bg-white p-10 text-center text-stone-500">

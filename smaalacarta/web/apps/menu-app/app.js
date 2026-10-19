@@ -236,6 +236,7 @@ async function init() {
       cartLinesLib,
       deliveryZonesLib,
       cartStorageLib,
+      loaderLib,
     ] = await Promise.all([
       import("/apps/menu-app/lib/hostname.js"),
       import("/apps/menu-app/lib/html.js"),
@@ -259,6 +260,7 @@ async function init() {
       import("/apps/menu-app/lib/cart-lines.js"),
       import("/apps/menu-app/lib/delivery-zones.js"),
       import("/apps/menu-app/lib/cart-storage.js"),
+      import("/apps/menu-app/lib/loader.js"),
     ]);
     // Nota por producto (PUBLICO-65): la limpieza y las reglas puras viven en lib/item-notes.js.
     NOTES = await import("/apps/menu-app/lib/item-notes.js");
@@ -345,6 +347,7 @@ async function init() {
       loaderNegocio.textContent = config.nombre || "";
       loaderNegocio.hidden = !config.nombre;
     }
+    loaderLib.applyLoaderAnimation(config);
 
     window.CONFIG = config;
     // Barrios del envío con repartidor: solo los negocios de Supabase pueden tenerlo. Si falla,

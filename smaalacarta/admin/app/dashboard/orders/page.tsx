@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
 import OrdersClient from "./components/OrdersClient";
+import { getBusinessAvailability } from "@/lib/db/availability";
 import { getDeliveryOptions } from "@/lib/db/delivery-zones";
 import { getManualOrderMenu, getSuggestedPrepMinutes, listOrderOffers, listOrders } from "@/lib/db/orders";
 import { getPrepSettings } from "@/lib/db/settings";
@@ -30,7 +31,7 @@ export default async function OrdersPage() {
   // que se leen después ya la ven.
   const offers = business.courier_delivery ? await listOrderOffers() : [];
 
-  const [orders, menu, delivery, suggestedPrep, prepSettings, vehicleEnabled] = await Promise.all([
+  const [orders, menu, delivery, suggestedPrep, prepSettings, vehicleEnabled, availability] = await Promise.all([
     listOrders(business.id),
     // El menú con sus opciones, para cargar un pedido a mano con el precio de la base (ADMIN-PEDIDOS-47).
     getManualOrderMenu(business.id),
@@ -41,6 +42,10 @@ export default async function OrdersPage() {
     getPrepSettings(business.id),
     // Si la plataforma tiene prendido el vehículo del repartidor (ENVIO-175): "Necesita auto" y los íconos.
     business.courier_delivery ? isVehicleEnabled() : Promise.resolve(false),
+    // Cuántos repartidores disponibles cubren sus zonas (ENVIO-200). El negocio sale de la sesión, no del navegador.
+    business.courier_delivery
+      ? getBusinessAvailability(business.id)
+      : Promise.resolve({ enabled: false, total: 0, emptyZoneIds: [] }),
   ]);
 
   return (
@@ -60,6 +65,7 @@ export default async function OrdersPage() {
       suggestedPrepMinutes={suggestedPrep}
       defaultPrepMinutes={prepSettings.defaultPrepMinutes}
       vehicleEnabled={vehicleEnabled}
+      availability={availability}
     />
   );
 }

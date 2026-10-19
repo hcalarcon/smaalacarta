@@ -896,6 +896,18 @@ describe("vehículo del repartidor en la tarjeta — ENVIO-178", () => {
     expect(screen.getByText("Necesita auto")).toBeTruthy();
   });
 
+  it("ENVIO-200: un pedido con envío sin repartidor en una zona sin disponibles lleva la marca ámbar", () => {
+    cardWith(searching(), { noCouriers: true });
+
+    expect(screen.getByText("Ningún repartidor disponible")).toBeTruthy();
+  });
+
+  it("ENVIO-200: sin la marca, no se ve", () => {
+    cardWith(searching());
+
+    expect(screen.queryByText("Ningún repartidor disponible")).toBeNull();
+  });
+
   it("apagado, el chip no se ve aunque el pedido lo tenga marcado", () => {
     cardWith(searching({ needs_car: true }), { vehicleEnabled: false });
 

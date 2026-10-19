@@ -425,6 +425,12 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   marca completa, y lleva un texto accesible "Cargando…" (es/en/pt).
 - **PUBLICO-85** Al terminar de cargar, el loader se desvanece mientras el menú aparece con un fade suave (sin
   corte), y en tema oscuro el loader ya se ve oscuro; con `prefers-reduced-motion` el cambio es inmediato.
+- **PUBLICO-101** El loader interactivo permite elegir en `config.animacionCarga` una animación propia de comida:
+  `hamburguesa`, `pizza`, `cafe`, `helado`, `parrilla`, `sushi`, `pastas` o `panificados`. Si falta o el valor no es
+  válido, usa `hamburguesa`. Cada opción tiene su propia ilustración SVG y animación CSS, decorativas y sin
+  dependencias; respetan `prefers-reduced-motion`, el tema y el fade actuales. En `helado`, la bocha cae y se asienta
+  sobre un cucurucho con trama antes de que caiga la cereza. Este soporte vive en `web/`; la configuración desde el
+  panel queda pendiente.
 
 ## BUSQUEDA — Buscador
 
