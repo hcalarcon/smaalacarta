@@ -87,6 +87,17 @@ textarea {
   display: block;
 }
 
+/* Hasta que llega la configuración del negocio no se sabe qué animación va: la marca, el nombre y el texto esperan
+   y aparecen junto con la animación elegida. Si la configuración tarda demasiado, salen igual a los 3 segundos. */
+.loader[data-animacion="pendiente"] > * {
+  visibility: hidden;
+  animation: loader-pendiente-sale 0s 3s forwards;
+}
+
+@keyframes loader-pendiente-sale {
+  to { visibility: visible; }
+}
+
 .loader-marca {
   display: inline-block;
   max-width: 90vw;
