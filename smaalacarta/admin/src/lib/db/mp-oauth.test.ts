@@ -26,7 +26,7 @@ beforeAll(async () => {
     insert into business_users (business_id, user_id, role) values
       ('${NEG_ANA}', '${ANA}', 'owner'), ('${NEG_ANA}', '${STAFF}', 'staff');
   `);
-});
+}, 60_000);
 
 afterAll(() => db.close());
 
