@@ -56,36 +56,69 @@ body {
   border-radius: 12px;
 }
 
-.sub {
+.pane {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: hidden;
+  background: #0d0a07;
+}
+.cam {
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.sub,
+.nota {
+  position: absolute;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
+}
+.sub {
   font-weight: 600;
   line-height: 1.15;
   text-shadow: 0 2px 14px rgba(0, 0, 0, 0.45);
 }
-
-.vel,
-.nota {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.marca-txt {
+.nota span {
   display: inline-block;
   font-weight: 700;
   border-radius: 999px;
   white-space: nowrap;
-}
-.vel .marca-txt {
-  background: var(--acento);
-  color: var(--fondo-1);
-}
-.nota .marca-txt {
-  background: rgba(36, 29, 22, 0.88);
+  background: rgba(36, 29, 22, 0.92);
   color: var(--texto);
   border: 2px solid var(--acento);
+}
+
+.est {
+  display: inline-block;
+  font-weight: 700;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: rgba(240, 242, 238, 0.12);
+  color: rgba(240, 242, 238, 0.55);
+}
+#estados {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#ff {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 14px;
+  background: rgba(36, 29, 22, 0.85);
+  border: 2px solid var(--acento);
+}
+#ff svg {
+  display: block;
+  fill: var(--acento);
 }
 
 /* Intro y cierre cubren toda la escena. */
