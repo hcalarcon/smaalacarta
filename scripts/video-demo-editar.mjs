@@ -157,7 +157,11 @@ async function armarExplicativo({ clave, carpeta, dir, plan, pasos, duraciones }
   const formato = clave === "explicativo-h" ? "h" : "v";
   const fuentes = tamanosFuente(pasos);
   const timeline = armarTomas(plan, pasos, formato);
-  validarFuentes(timeline.tomas, duraciones);
+  // El vertical solo lee la grabación de quien actúa en cada tramo.
+  validarFuentes(
+    timeline.tomas.map((t) => ({ ...t, fuentes: formato === "v" ? { [t.actor]: t.fuentes[t.actor] } : t.fuentes })),
+    duraciones,
+  );
   const tareas = [];
   timeline.tomas.forEach((t, i) => {
     for (const p of PANTALLAS) {

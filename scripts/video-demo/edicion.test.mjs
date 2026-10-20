@@ -17,7 +17,7 @@ import {
   tamanosFuente,
   validarFuentes,
 } from "./edicion.mjs";
-import { armarRedes, gruposDeTexto, guionRedes, marcoRedes } from "./redes.mjs";
+import { armarRedes, escenasHtml, gruposDeTexto, guionRedes, marcoRedes } from "./redes.mjs";
 
 const plan = JSON.parse(readFileSync(new URL("../../video-demo/edicion/plan.json", import.meta.url), "utf8"));
 
@@ -182,6 +182,16 @@ describe("guion del explicativo", () => {
     for (const g of cam) expect(g.de).toBeDefined();
   });
 
+  it("la etiqueta de una pantalla solo cambia de color cuando cambia su estado (sin parpadeo en cada corte)", () => {
+    const t = armarTomas(plan, pasosDeEjemplo(), "h");
+    const guion = guionExplicativo(plan, t, FUENTES, "h");
+    for (const p of ["cliente", "local", "repartidor"]) {
+      const cambios = guion.filter((g) => g.s === `#etq-${p} span`);
+      for (let i = 1; i < cambios.length; i++) expect(cambios[i].de.color).toBe(cambios[i - 1].a.color);
+      expect(cambios.length).toBeLessThan(t.tomas.length);
+    }
+  });
+
   it("la pantalla de quien actúa queda grande y al centro, y las otras dos chicas a los costados", () => {
     for (const actor of ["cliente", "local", "repartidor"]) {
       const { panes } = disposicionHorizontal({ actor }, FUENTES);
@@ -264,6 +274,20 @@ describe("redes", () => {
     expect(guion.some((g) => g.s === "#esc-0" && g.a.opacity === 1 && g.t > 0)).toBe(true);
     expect(plan.redes.cierre.texto).toBe("Primer mes gratis");
     expect(t.cierre.dur).toBe(2);
+  });
+
+  it("los videos de una escena con dos paneles no comparten pista", () => {
+    const html = escenasHtml(redes());
+    const pistas = [...html.matchAll(/id="v-(\d+)-(\d+)"[^>]*data-track-index="(\d+)"/g)];
+    expect(pistas.length).toBeGreaterThan(10);
+    const porEscena = new Map();
+    for (const [, escena, , pista] of pistas) porEscena.set(escena, [...(porEscena.get(escena) ?? []), pista]);
+    for (const lista of porEscena.values()) expect(new Set(lista).size).toBe(lista.length);
+  });
+
+  it("cada palabra del cartel arranca oculta (sin destello antes de animarse)", () => {
+    const guion = guionRedes(plan, redes());
+    expect(guion.some((g) => g.s === "#txt-0 .w" && g.t === 0 && g.a.opacity === 0 && !g.d)).toBe(true);
   });
 
   it("las grabaciones alcanzan para todos los cortes", () => {

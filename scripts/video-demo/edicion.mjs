@@ -172,15 +172,13 @@ export function disposicionHorizontal(toma, fuentes) {
     const g = out[actor];
     return lado === "izq" ? { ini: 0, fin: g.x } : { ini: g.x + g.w, fin: 1920 };
   };
-  // Los celulares van a la izquierda, el local a la derecha; si el actor es el local, uno de cada lado.
-  const lados = actor === "local" ? { cliente: "izq", repartidor: "der" } : { cliente: "izq", repartidor: "der", local: actor === "cliente" ? "izq" : "der" };
-  if (actor === "cliente") {
-    lados.local = "izq";
-    lados.repartidor = "der";
-  } else if (actor === "repartidor") {
-    lados.cliente = "izq";
-    lados.local = "der";
-  }
+  // Los celulares van a la izquierda y el local a la derecha; si el actor es el local, uno de cada lado.
+  const LADOS = {
+    cliente: { local: "izq", repartidor: "der" },
+    local: { cliente: "izq", repartidor: "der" },
+    repartidor: { cliente: "izq", local: "der" },
+  };
+  const lados = LADOS[actor];
   for (const p of otros) {
     const r = libre(lados[p]);
     const t = tam(p, chica[p]);
@@ -206,6 +204,8 @@ const ESTADO_PENDIENTE = { backgroundColor: "rgba(240,242,238,0.12)", color: "rg
 const ESTADO_ACTUAL = { backgroundColor: "#d97706", color: "#241d16", scale: 1.06 };
 const ESTADO_HECHO = { backgroundColor: "#047857", color: "#f0f2ee", scale: 1 };
 
+const COLOR_ACENTO = "#d97706";
+const COLOR_ETIQUETA = "rgba(240,242,238,0.6)";
 const posEtiqueta = (d, fuente) => {
   const w = d.w ?? fuente.sw * d.k;
   return { x: Math.round(d.x + w / 2 - 150), y: d.y - 46 };
@@ -260,6 +260,7 @@ export function guionExplicativo(plan, timeline, fuentes, formato) {
 
   const previo = {}; // última disposición de cada pantalla
   const camPrevia = {};
+  const etiquetaActiva = {};
   let estadoActual = -1;
   let ffVisible = false;
 
@@ -274,7 +275,6 @@ export function guionExplicativo(plan, timeline, fuentes, formato) {
       const visible = d.o > 0;
       const de = antes ?? { x: d.x, y: d.y, k: d.k * 0.94, o: 0 };
       const cambia = !antes || ["x", "y", "k", "o"].some((c) => Math.abs((antes[c] ?? 0) - d[c]) > 0.01);
-      const entraAhora = !antes || (antes.o === 0 && d.o > 0);
       if (cambia) {
         if (esH) {
           const dd = i === 0 ? 0.7 : TRANSICION;
@@ -292,7 +292,6 @@ export function guionExplicativo(plan, timeline, fuentes, formato) {
           }
         }
       }
-      void entraAhora;
       set(`#pane-${p}`, T, { zIndex: d.z ?? 1 });
       previo[p] = d;
     }
@@ -301,7 +300,10 @@ export function guionExplicativo(plan, timeline, fuentes, formato) {
     if (esH) {
       for (const p of PANTALLAS) {
         const activo = activas.has(p);
-        tw(`#etq-${p} span`, T, 0.3, { color: activo ? "rgba(240,242,238,0.6)" : "#d97706" }, { color: activo ? "#d97706" : "rgba(240,242,238,0.6)" }, "power2.out");
+        if (activo !== (etiquetaActiva[p] ?? false)) {
+          tw(`#etq-${p} span`, T, 0.3, { color: activo ? COLOR_ETIQUETA : COLOR_ACENTO }, { color: activo ? COLOR_ACENTO : COLOR_ETIQUETA }, "power2.out");
+        }
+        etiquetaActiva[p] = activo;
       }
     }
 

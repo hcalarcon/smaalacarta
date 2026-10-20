@@ -1,8 +1,8 @@
 // Edición para redes (9:16, 20 a 25 s): cortes de 0,5 a 1,5 s sobre una grilla de 0,5 s, punch-in
 // a los focos, celulares que entran inclinados y barridos con desenfoque. Misma idea que los
 // explicativos: nada se redibuja, solo se recorta, se enmarca y se mueve la grabación real.
-import { planearCamara, posicionCamara, redondear } from "./camara.mjs";
-import { escapar, focosDelTramo, focosPorPantalla, inicioDeFuente, PANTALLAS, saltoDeFuente } from "./edicion.mjs";
+import { planearCamara, redondear } from "./camara.mjs";
+import { escapar, focosDelTramo, focosPorPantalla, inicioDeFuente, saltoDeFuente } from "./edicion.mjs";
 
 export const LIENZO_REDES = { w: 1080, h: 1920 };
 export const GRILLA = 0.5;
@@ -93,7 +93,7 @@ export function escenasHtml(timeline) {
           const mini = e.momento ? `<div class="mini" style="left:${box.x + 28}px;top:${box.y + box.h - 84}px"><span>${ETIQUETAS[pn.pantalla]}</span></div>` : "";
           return `<div class="caja" id="caja-${i}-${j}" style="left:${box.x}px;top:${box.y}px;width:${box.w}px;height:${box.h}px">
           <div class="pane" id="pane-${i}-${j}" style="width:${fw}px;height:${fh}px;border-radius:${radio}px;${sombra}">
-            <div class="cam" id="cam-${i}-${j}" style="width:${sw}px;height:${sh}px"><video id="v-${i}-${j}" class="clip" src="media/r-${i}-${j}.mp4" muted playsinline data-start="${e.inicio}" data-duration="${dur}" data-track-index="${i % 2}" style="left:0;top:0;width:${sw}px;height:${sh}px"></video></div>
+            <div class="cam" id="cam-${i}-${j}" style="width:${sw}px;height:${sh}px"><video id="v-${i}-${j}" class="clip" src="media/r-${i}-${j}.mp4" muted playsinline data-start="${e.inicio}" data-duration="${dur}" data-track-index="${(i % 2) * 2 + j}" style="left:0;top:0;width:${sw}px;height:${sh}px"></video></div>
           </div>
         </div>${mini}`;
         })
@@ -135,7 +135,10 @@ export function guionRedes(plan, timeline) {
     });
     if (e.llegada != null) set(`#flash-${i}`, 0, { opacity: 0 });
   });
-  grupos.forEach((_, n) => set(`#txt-${n}`, 0, { opacity: 0 }));
+  grupos.forEach((_, n) => {
+    set(`#txt-${n}`, 0, { opacity: 0 });
+    set(`#txt-${n} .w`, 0, { opacity: 0 });
+  });
   set("#cierre-redes .portada-int", 0, { opacity: 0 });
 
   escenas.forEach((e, i) => {
@@ -212,4 +215,3 @@ export function guionRedes(plan, timeline) {
   return g;
 }
 
-export { posicionCamara, PANTALLAS };
