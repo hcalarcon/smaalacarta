@@ -116,13 +116,15 @@ export function armarLista(cuadros, fin) {
 }
 
 // Codifica los cuadros guardados en un mp4 a 30 fps y borra los JPEG. Uno por vez: se llama en serie.
+// `format=yuv420p` va ANTES de `fps`: el filtro duplica cuadros para rellenar las pausas y, si lo hace con el
+// JPEG sin convertir, a 2560x1600 se queda sin memoria («Cannot allocate memory») en una pausa larga.
 export async function codificarVideo({ carpeta, cuadros, fin }, archivo) {
   const lista = path.join(carpeta, "lista.txt");
   await writeFile(lista, armarLista(cuadros, fin));
   const fallo = await new Promise((resolve) => {
     const ffmpeg = spawn(
       "ffmpeg",
-      ["-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", lista, "-vf", `fps=${FPS}`, "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", archivo],
+      ["-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", lista, "-vf", `format=yuv420p,fps=${FPS}`, "-an", "-c:v", "libx264", "-preset", "veryfast", "-crf", "20", "-pix_fmt", "yuv420p", archivo],
       { stdio: ["ignore", "ignore", "pipe"] },
     );
     let texto = "";
