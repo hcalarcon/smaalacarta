@@ -1,4 +1,4 @@
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 type Handler = () => void;
@@ -7,6 +7,7 @@ const state = vi.hoisted(() => ({
   handlers: [] as { table: string; handler: Handler }[],
   removed: 0,
   throwOnCreate: false,
+  onStatus: null as null | ((status: string) => void),
 }));
 
 vi.mock("@/lib/supabase-browser", () => ({
@@ -18,7 +19,10 @@ vi.mock("@/lib/supabase-browser", () => ({
         state.handlers.push({ table: filter.table, handler });
         return channel;
       },
-      subscribe: () => channel,
+      subscribe: (callback?: (status: string) => void) => {
+        state.onStatus = callback ?? null;
+        return channel;
+      },
     };
 
     return {
@@ -38,8 +42,8 @@ function Probe({ onChange }: { onChange: () => void }) {
 }
 
 function CourierProbe({ onChange }: { onChange: () => void }) {
-  useCourierOrderChanges(onChange);
-  return null;
+  const connected = useCourierOrderChanges(onChange);
+  return <p>{connected ? "conectado" : "sin conexión"}</p>;
 }
 
 beforeEach(() => {
@@ -47,6 +51,7 @@ beforeEach(() => {
   state.handlers = [];
   state.removed = 0;
   state.throwOnCreate = false;
+  state.onStatus = null;
 });
 
 afterEach(() => {
@@ -77,6 +82,19 @@ describe("cambios del repartidor en tiempo real — ENVIO-209", () => {
     });
 
     expect(onChange).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("el panel sabe si Realtime está conectado — ENVIO-210", () => {
+  it("avisa que está conectado cuando el canal se suscribe y que no lo está si se cae", () => {
+    render(<CourierProbe onChange={vi.fn()} />);
+    expect(screen.getByText("sin conexión")).toBeTruthy();
+
+    act(() => state.onStatus?.("SUBSCRIBED"));
+    expect(screen.getByText("conectado")).toBeTruthy();
+
+    act(() => state.onStatus?.("CHANNEL_ERROR"));
+    expect(screen.getByText("sin conexión")).toBeTruthy();
   });
 });
 

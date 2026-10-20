@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { createClient } from "@/lib/supabase-browser";
 
@@ -15,27 +15,30 @@ const DEBOUNCE_MS = 250;
 // llega: el local ve lo suyo y el repartidor, lo que puede ver. Si el canal no se puede abrir, queda la
 // consulta periódica de cada pantalla.
 export function useOrderChanges(onChange: () => void) {
-  useTableChanges(ORDER_TABLES, onChange);
+  return useTableChanges(ORDER_TABLES, onChange);
 }
 
 // El panel del repartidor (ENVIO-208): a su cuenta no le llega nada de `orders` (solo lo lee el negocio), así que
 // escucha `courier_order_pulse`, que la base sube para él cada vez que cambia un pedido que le importa.
+//
+// Devuelve si el canal está conectado (ENVIO-210): mientras lo está, la consulta periódica no hace falta a cada rato.
 export function useCourierOrderChanges(onChange: () => void) {
-  useTableChanges(COURIER_TABLES, onChange);
+  return useTableChanges(COURIER_TABLES, onChange);
 }
 
 // Solo la disponibilidad de los repartidores (ENVIO-202): el interruptor del repartidor no necesita enterarse
 // de cada pedido.
 export function useAvailabilityChanges(onChange: () => void) {
-  useTableChanges(AVAILABILITY_TABLES, onChange);
+  return useTableChanges(AVAILABILITY_TABLES, onChange);
 }
 
 const ORDER_TABLES = ["orders", "courier_offers", "courier_availability_pulse"] as const;
 const COURIER_TABLES = ["courier_order_pulse", "courier_offers", "courier_availability_pulse"] as const;
 const AVAILABILITY_TABLES = ["courier_availability_pulse"] as const;
 
-function useTableChanges(tables: readonly string[], onChange: () => void) {
+function useTableChanges(tables: readonly string[], onChange: () => void): boolean {
   const latest = useRef(onChange);
+  const [connected, setConnected] = useState(false);
 
   useEffect(() => {
     latest.current = onChange;
@@ -63,7 +66,7 @@ function useTableChanges(tables: readonly string[], onChange: () => void) {
       for (const table of tables) {
         builder = builder.on("postgres_changes", { event: "*", schema: "public", table }, changed);
       }
-      channel = builder.subscribe();
+      channel = builder.subscribe((status) => setConnected(status === "SUBSCRIBED"));
     } catch {
       return;
     }
@@ -75,4 +78,6 @@ function useTableChanges(tables: readonly string[], onChange: () => void) {
     // `tables` es una constante de módulo: no cambia entre renders.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  return connected;
 }

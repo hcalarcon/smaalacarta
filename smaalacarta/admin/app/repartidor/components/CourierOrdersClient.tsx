@@ -34,8 +34,11 @@ import { courierOrderState, grandTotals, totalsByBusiness } from "@/lib/courier/
 import { STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
 
-// Respaldo por si Realtime se corta (ENVIO-209); lo normal es que el pulso lo adelante.
+// Respaldo por si Realtime se corta (ENVIO-209). Sin el canal conectado consulta cada 5 s; con él, el pulso lleva los
+// cambios y el respaldo queda como red de seguridad lenta, para que no haya un refresco del respaldo en camino
+// cuando llega el pulso y lo haga esperar (ENVIO-210).
 const REFRESH_MS = 5_000;
+const REFRESH_CONNECTED_MS = 30_000;
 const HISTORY_SHOWN = 20;
 
 const EMPTY: Record<PanelGroup, string> = {
@@ -58,7 +61,7 @@ export default function CourierOrdersClient({
   // Un refresco a la vez (ENVIO-210): el pulso, la consulta de abajo y las acciones comparten el mismo.
   const refresh = useSerialRefresh(serverNow);
   // Un cambio en la base trae los datos nuevos al instante (ENVIO-172); la consulta de abajo queda de respaldo.
-  useCourierOrderChanges(refresh);
+  const realtimeConnected = useCourierOrderChanges(refresh);
 
   // La hora arranca con la del servidor para que el primer render coincida en los dos lados.
   const [now, setNow] = useState(() => new Date(serverNow));
@@ -126,10 +129,10 @@ export default function CourierOrdersClient({
         setNow(new Date());
         refresh();
       }
-    }, REFRESH_MS);
+    }, realtimeConnected ? REFRESH_CONNECTED_MS : REFRESH_MS);
 
     return () => clearInterval(id);
-  }, [refresh, soundOnRef]);
+  }, [refresh, soundOnRef, realtimeConnected]);
 
   async function run(orderId: string, call: () => ReturnType<typeof makeOfferAction>) {
     // Un segundo toque sobre el mismo pedido, aunque llegue en el mismo instante, no lanza otra acción.

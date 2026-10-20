@@ -2272,6 +2272,10 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   intervalo, Next los encadena en una sola transición que no se muestra hasta que termina el último, y el pedido
   aceptado no aparecía nunca aunque el servidor ya lo devolvía. Si la respuesta no llega en 10 segundos se libera
   igual. Lo usan el panel del repartidor y el tablero del local.
+- **ENVIO-211** Con el canal de Realtime conectado, el panel del repartidor no consulta cada 5 segundos: el respaldo pasa
+  a una red de seguridad de 30 segundos, así el pulso no se encuentra con un refresco del respaldo en camino y no espera
+  su respuesta. Si el canal no está conectado (no abrió, se cayó), vuelve a los 5 segundos. Los hooks de Realtime
+  devuelven si el canal está suscrito.
 
 
 
