@@ -57,7 +57,7 @@ export function saltoDeFuente(porId, paso, pantalla, salto) {
 export function pasosSinPlan(plan, pasosJson) {
   const usados = new Set(plan.omitidos ?? []);
   for (const formato of ["h", "v"]) for (const t of plan.explicativo[formato]) for (const id of [t.paso, ...(t.pasos ?? [])]) usados.add(id);
-  for (const e of plan.redes.escenas) for (const pn of e.paneles) usados.add(pn.paso);
+  for (const e of plan.redes.ideas) for (const pn of e.paneles) for (const c of pn.cortes) usados.add(c.paso);
   return pasosJson.pasos.filter((p) => !usados.has(p.id)).map((p) => p.id);
 }
 
@@ -94,6 +94,8 @@ export function armarTomas(plan, pasosJson, formato) {
       subtitulo: def.subtitulo,
       nota: def.nota ?? null,
       estado: def.estado ?? null,
+      celebra: def.celebra ?? null,
+      fijo: Boolean(def.focos),
       reflejo: def.reflejo ?? null,
       velocidad,
       dur,
@@ -126,15 +128,7 @@ export function validarFuentes(tomas, duraciones) {
 // ---------------------------------------------------------------------------------------------
 // Geometría de los dos explicativos (px del lienzo)
 
-export const LIENZO = { h: { w: 1920, h: 1080 }, v: { w: 1080, h: 1920 } };
 const TRANSICION = 0.7;
-
-/** Ventana de cada pantalla en el vertical: ocupa 940 de 1080 px de ancho (87 %). */
-export function marcoVertical(pantalla, { sw, sh }) {
-  const caja = { w: 940, h: 1240 };
-  const k = pantalla === "local" ? caja.h / sh : caja.w / sw;
-  return { fw: Math.round(caja.w / k), fh: Math.round(caja.h / k), sw, sh, k, caja, x: 70, y: 310 };
-}
 
 const escalaPantalla = (alto, sh) => alto / sh;
 
@@ -187,15 +181,6 @@ export function disposicionHorizontal(toma, fuentes) {
   return { panes: out, flecha: null };
 }
 
-export function disposicionVertical(toma, fuentes) {
-  const out = {};
-  for (const p of PANTALLAS) {
-    const m = marcoVertical(p, fuentes[p]);
-    out[p] = { x: m.x, y: m.y, k: m.k, w: m.caja.w, h: m.caja.h, o: p === toma.actor ? 1 : 0, z: 1 };
-  }
-  return { panes: out, flecha: null };
-}
-
 // ---------------------------------------------------------------------------------------------
 // Guion de animación: lista de {s, t, d, de, a, e} que motor.js vuelca en una timeline de GSAP.
 // `de` explícito en cada movimiento: así el render no depende del orden en que se busca cada cuadro.
@@ -212,8 +197,8 @@ const posEtiqueta = (d, fuente) => {
 };
 const posCam = (p) => ({ x: p.x, y: p.y, scale: p.s });
 
-export function guionExplicativo(plan, timeline, fuentes, formato) {
-  const esH = formato === "h";
+/** Guion del explicativo horizontal (el vertical vive en explicativo-v.mjs). */
+export function guionExplicativo(plan, timeline, fuentes) {
   const g = [];
   const tw = (s, t, d, de, a, e = "power2.inOut", extra = {}) => g.push({ s, t: redondear(t), d: redondear(d), de, a, e, ...extra });
   const set = (s, t, a) => g.push({ s, t: redondear(t), a });
@@ -223,7 +208,7 @@ export function guionExplicativo(plan, timeline, fuentes, formato) {
 
   const marcos = {};
   for (const p of PANTALLAS) {
-    marcos[p] = esH ? { fw: fuentes[p].sw, fh: fuentes[p].sh, sw: fuentes[p].sw, sh: fuentes[p].sh } : marcoVertical(p, fuentes[p]);
+    marcos[p] = { fw: fuentes[p].sw, fh: fuentes[p].sh, sw: fuentes[p].sw, sh: fuentes[p].sh };
   }
 
   // Estado inicial de todo lo que se anima.
@@ -265,46 +250,31 @@ export function guionExplicativo(plan, timeline, fuentes, formato) {
   let ffVisible = false;
 
   tomas.forEach((t, i) => {
-    const disp = esH ? disposicionHorizontal(t, fuentes) : disposicionVertical(t, fuentes);
+    const disp = disposicionHorizontal(t, fuentes);
     const T = t.inicio;
     const activas = new Set(t.reflejo ? [t.reflejo.de, t.reflejo.a] : [t.actor]);
 
     for (const p of PANTALLAS) {
       const d = disp.panes[p];
       const antes = previo[p];
-      const visible = d.o > 0;
       const de = antes ?? { x: d.x, y: d.y, k: d.k * 0.94, o: 0 };
       const cambia = !antes || ["x", "y", "k", "o"].some((c) => Math.abs((antes[c] ?? 0) - d[c]) > 0.01);
       if (cambia) {
-        if (esH) {
-          const dd = i === 0 ? 0.7 : TRANSICION;
-          tw(`#pane-${p}`, i === 0 ? entra : T, dd, { x: de.x, y: de.y, scale: de.k, opacity: de.o }, { x: d.x, y: d.y, scale: d.k, opacity: d.o }, "power3.inOut");
-          tw(`#etq-${p}`, i === 0 ? entra : T, dd, { ...posEtiqueta(de, fuentes[p]), opacity: de.o }, { ...posEtiqueta(d, fuentes[p]), opacity: d.o }, "power3.inOut");
-        } else {
-          // En el vertical hay una pantalla por vez: la que sale se apaga y la que entra aparece con un pequeño empuje.
-          set(`#pane-${p}`, T, { x: d.x, y: d.y, scale: d.k });
-          if (visible) {
-            tw(`#pane-${p}`, T, 0.35, { opacity: 0, x: d.x, y: d.y + 36, scale: d.k * 0.97 }, { opacity: 1, x: d.x, y: d.y, scale: d.k }, "power3.out");
-            tw(`#etq-${p}`, T + 0.05, 0.3, { opacity: 0 }, { opacity: 1 }, "power2.out");
-          } else {
-            set(`#pane-${p}`, T, { opacity: 0 });
-            set(`#etq-${p}`, T, { opacity: 0 });
-          }
-        }
+        const dd = i === 0 ? 0.7 : TRANSICION;
+        tw(`#pane-${p}`, i === 0 ? entra : T, dd, { x: de.x, y: de.y, scale: de.k, opacity: de.o }, { x: d.x, y: d.y, scale: d.k, opacity: d.o }, "power3.inOut");
+        tw(`#etq-${p}`, i === 0 ? entra : T, dd, { ...posEtiqueta(de, fuentes[p]), opacity: de.o }, { ...posEtiqueta(d, fuentes[p]), opacity: d.o }, "power3.inOut");
       }
       set(`#pane-${p}`, T, { zIndex: d.z ?? 1 });
       previo[p] = d;
     }
 
     // Etiquetas: la de quien actúa en naranja.
-    if (esH) {
-      for (const p of PANTALLAS) {
-        const activo = activas.has(p);
-        if (activo !== (etiquetaActiva[p] ?? false)) {
-          tw(`#etq-${p} span`, T, 0.3, { color: activo ? COLOR_ETIQUETA : COLOR_ACENTO }, { color: activo ? COLOR_ACENTO : COLOR_ETIQUETA }, "power2.out");
-        }
-        etiquetaActiva[p] = activo;
+    for (const p of PANTALLAS) {
+      const activo = activas.has(p);
+      if (activo !== (etiquetaActiva[p] ?? false)) {
+        tw(`#etq-${p} span`, T, 0.3, { color: activo ? COLOR_ETIQUETA : COLOR_ACENTO }, { color: activo ? COLOR_ACENTO : COLOR_ETIQUETA }, "power2.out");
       }
+      etiquetaActiva[p] = activo;
     }
 
     // Cámara: va al foco antes del toque y después al de resultado; al terminar, muestra el contexto.
@@ -319,15 +289,15 @@ export function guionExplicativo(plan, timeline, fuentes, formato) {
             focos: t.focos[p].map((f) => ({ t: f.t, rect: f.rect })),
             dur: t.dur,
             escalaMax: p === "local" ? 1.9 : 2.4,
-            zoomMax: esH ? (p === "local" ? 1.7 : 2.0) : Infinity,
-            llenar: esH ? 0.82 : 0.8,
+            zoomMax: p === "local" ? 1.7 : 2.0,
+            llenar: 0.82,
           })
-        : { inicio: posicionCamara(marco, { s: 1, cx: marco.sw / 2, cy: marco.sh * (esH ? 0.5 : 0.4) }), movimientos: [] };
+        : { inicio: posicionCamara(marco, { s: 1, cx: marco.sw / 2, cy: marco.sh * 0.5 }), movimientos: [] };
       const ini = plan1.inicio;
       const ant = camPrevia[p];
       const igual = ant && ant.s === ini.s && ant.x === ini.x && ant.y === ini.y;
       if (!igual) {
-        const continua = Boolean(ant) && (esH || (i > 0 && tomas[i - 1].actor === p));
+        const continua = Boolean(ant);
         if (continua) tw(`#cam-${p}`, T, 0.6, posCam(ant), posCam(ini), "power2.inOut");
         else set(`#cam-${p}`, T, posCam(ini));
       }
@@ -403,20 +373,17 @@ const videoHtml = (id, src, inicio, dur, pista, estilo) =>
 const ETIQUETAS = { cliente: "Cliente", local: "Local", repartidor: "Repartidor" };
 
 /** Una ventana (pane) por pantalla, con sus videos tramo a tramo adentro. */
-export function panesHtml(timeline, fuentes, formato) {
-  const esH = formato === "h";
+export function panesHtml(timeline, fuentes) {
   return PANTALLAS.map((p, pista) => {
-    const marco = esH ? { fw: fuentes[p].sw, fh: fuentes[p].sh, k: 0.47 } : marcoVertical(p, fuentes[p]);
-    const radio = Math.round(30 / (esH ? 0.4739 : marco.k));
-    const borde = Math.round(8 / (esH ? 0.4739 : marco.k));
+    const marco = { fw: fuentes[p].sw, fh: fuentes[p].sh };
+    const radio = Math.round(30 / 0.4739);
+    const borde = Math.round(8 / 0.4739);
     const videos = timeline.tomas
-      .filter((t) => !(formato === "v" && t.actor !== p))
-      .map((t) => {
-        const i = timeline.tomas.indexOf(t);
+      .map((t, i) => {
         return videoHtml(`v-${p}-${i}`, `media/${p}-${i}.mp4`, t.inicio, t.dur, pista, `left:0;top:0;width:${fuentes[p].sw}px;height:${fuentes[p].sh}px`);
       })
       .join("\n          ");
-    return `<div class="pane" id="pane-${p}" style="width:${marco.fw}px;height:${marco.fh}px;border-radius:${radio}px;box-shadow:0 0 0 ${borde}px #0d0a07,0 0 0 ${borde + Math.round(2 / (esH ? 0.4739 : marco.k))}px rgba(240,242,238,0.2),0 ${borde * 3}px ${borde * 8}px rgba(0,0,0,0.5)">
+    return `<div class="pane" id="pane-${p}" style="width:${marco.fw}px;height:${marco.fh}px;border-radius:${radio}px;box-shadow:0 0 0 ${borde}px #0d0a07,0 0 0 ${borde + Math.round(2 / 0.4739)}px rgba(240,242,238,0.2),0 ${borde * 3}px ${borde * 8}px rgba(0,0,0,0.5)">
         <div class="cam" id="cam-${p}" style="width:${fuentes[p].sw}px;height:${fuentes[p].sh}px">
           ${videos}
         </div>

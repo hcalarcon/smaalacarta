@@ -26,6 +26,7 @@ import {
   textosHtml,
   validarFuentes,
 } from "./video-demo/edicion.mjs";
+import { guionVertical, panelesHtml, textosVerticalHtml } from "./video-demo/explicativo-v.mjs";
 import { armarRedes, escenasHtml, guionRedes, textosRedesHtml } from "./video-demo/redes.mjs";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -170,11 +171,26 @@ async function armarExplicativo({ clave, carpeta, dir, plan, pasos, duraciones }
     }
   });
   await correrEnParalelo(tareas);
+  if (formato === "v") {
+    const textosV = textosVerticalHtml(plan, timeline, fuentes);
+    const valoresV = {
+      ...valoresComunes(plan, timeline, plan.cierre),
+      PANES: panelesHtml(timeline, fuentes),
+      VIAJES: textosV.viajes,
+      FESTEJOS: textosV.festejos,
+      PASTILLAS: textosV.pastillas,
+      SUBTITULOS: textosV.subtitulos,
+      NOTAS: textosV.notas,
+      ESTADOS: textosV.estados,
+      DATOS: jsonSeguro({ guion: guionVertical(plan, timeline, fuentes) }),
+    };
+    return { timeline, valores: valoresV, plantilla: "plantilla-explicativo-v.html" };
+  }
   const textos = textosHtml(plan, timeline);
-  const guion = guionExplicativo(plan, timeline, fuentes, formato);
+  const guion = guionExplicativo(plan, timeline, fuentes);
   const valores = {
     ...valoresComunes(plan, timeline, plan.cierre),
-    PANES: panesHtml(timeline, fuentes, formato),
+    PANES: panesHtml(timeline, fuentes),
     FLECHAS: formato === "h" ? flechasHtml(timeline, fuentes) : "",
     SUBTITULOS: textos.subtitulos,
     NOTAS: textos.notas,
@@ -188,13 +204,15 @@ async function armarRedesVideo({ carpeta, dir, plan, pasos, duraciones }) {
   const fuentes = tamanosFuente(pasos);
   const timeline = armarRedes(plan, pasos, fuentes);
   validarFuentes(
-    timeline.escenas.flatMap((e) => e.paneles.map((pn) => ({ id: e.id, fuentes: { [pn.pantalla]: pn.fuente } }))),
+    timeline.ideas.flatMap((e) => e.paneles.flatMap((pn) => pn.cortes.map((c) => ({ id: e.id, fuentes: { [pn.pantalla]: c.fuente } })))),
     duraciones,
   );
   const tareas = [];
-  timeline.escenas.forEach((e, i) => {
+  timeline.ideas.forEach((e, i) => {
     e.paneles.forEach((pn, j) => {
-      tareas.push(argsTramo(path.join(carpeta, `${pn.pantalla}.mp4`), pn.fuente, pn.velocidad, path.join(dir, "media", `r-${i}-${j}.mp4`)));
+      pn.cortes.forEach((c, n) => {
+        tareas.push(argsTramo(path.join(carpeta, `${pn.pantalla}.mp4`), c.fuente, c.velocidad, path.join(dir, "media", `r-${i}-${j}-${n}.mp4`)));
+      });
     });
   });
   await correrEnParalelo(tareas);
@@ -202,7 +220,7 @@ async function armarRedesVideo({ carpeta, dir, plan, pasos, duraciones }) {
   const valores = {
     ...valoresComunes(plan, timeline, plan.redes.cierre),
     ESCENAS: escenasHtml(timeline),
-    TEXTOS: textosRedesHtml(timeline),
+    ...textosRedesHtml(timeline),
     DATOS: jsonSeguro({ guion }),
   };
   return { timeline, valores, plantilla: "plantilla-redes.html", cortes: timeline.cortes };
@@ -214,9 +232,13 @@ const FORMATOS = [
   { clave: "redes", salida: "redes-9x16.mp4", rango: "redes", armar: armarRedesVideo, tira: { cada: 2, ancho: 216, alto: 384, columnas: 8 } },
 ];
 
-/** Renderiza con un solo worker: así HyperFrames manda los cuadros directo al encoder y no llena el disco con miles de imágenes. Reintenta una vez. */
+/**
+ * Renderiza con un solo worker: así HyperFrames manda los cuadros directo al encoder y no llena el disco con miles de imágenes.
+ * `--frames-cache-dir off` apaga la caché de cuadros extraídos (hyperframes-extract-cache-* en la carpeta temporal, que llegó a pesar 8,4 GB):
+ * los cuadros se extraen en la carpeta de trabajo del render y se borran al terminar. Reintenta una vez.
+ */
 function renderizar(dir, destino, bitrate) {
-  const args = [hyperframes, "render", dir, "-o", destino, "--fps", String(FPS), "--video-bitrate", String(bitrate), "--video-frame-format", "png", "--workers", "1", "--quiet"];
+  const args = [hyperframes, "render", dir, "-o", destino, "--fps", String(FPS), "--video-bitrate", String(bitrate), "--video-frame-format", "png", "--workers", "1", "--frames-cache-dir", "off", "--quiet"];
   for (let intento = 1; intento <= 2; intento++) {
     const res = spawnSync(process.execPath, args, { stdio: "inherit", env: ENTORNO });
     if (res.status === 0) return;

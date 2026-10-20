@@ -66,16 +66,17 @@ export function agruparFocos(focos, huecoMax) {
  * Movimientos de cámara de un tramo: [{ t, d, a }] con `a` = posición a la que llega.
  * Va al foco un poco antes del toque, lo sostiene y, si queda tiempo, se aleja a mostrar el contexto.
  * `focos`: [{ t (segundos desde el inicio del tramo), rect }].
+ * `desde` (opcional): posición en la que ya está la cámara; sin él, arranca mostrando el contexto.
  * Devuelve también la posición inicial.
  */
-export function planearCamara({ frame, k, focos, dur, mov = 0.5, adelanto = 0.35, sostener = 0.7, hueco = 1.3, vuelve = true, llenar, escalaMax, zoomMax }) {
+export function planearCamara({ frame, k, focos, dur, mov = 0.5, adelanto = 0.35, sostener = 0.7, hueco = 1.3, vuelve = true, desde = null, llenar, escalaMax, zoomMax }) {
   const grupos = agruparFocos(focos, hueco);
   const encuadre = (rect) => posicionCamara(frame, encuadrar({ ...frame, k }, rect, { llenar, escalaMax, zoomMax }));
   const centroInicial = grupos.length
     ? { cx: grupos[0].rect.x + grupos[0].rect.w / 2, cy: grupos[0].rect.y + grupos[0].rect.h / 2 }
     : { cx: frame.sw / 2, cy: frame.sh * 0.4 };
   const contexto = (centro) => posicionCamara(frame, { s: 1, ...centro });
-  const inicio = contexto(centroInicial);
+  const inicio = desde ?? contexto(centroInicial);
   const movimientos = [];
   let estado = inicio;
   let libre = 0;

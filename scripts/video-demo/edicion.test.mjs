@@ -1,5 +1,4 @@
 // @vitest-environment node
-import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 import { agruparFocos, encuadrar, planearCamara, posicionCamara } from "./camara.mjs";
@@ -11,38 +10,12 @@ import {
   focosDelTramo,
   guionExplicativo,
   inicioDeFuente,
-  marcoVertical,
   pasosSinPlan,
   rellenarPlantilla,
-  tamanosFuente,
   validarFuentes,
 } from "./edicion.mjs";
-import { armarRedes, escenasHtml, gruposDeTexto, guionRedes, marcoRedes } from "./redes.mjs";
 
-const plan = JSON.parse(readFileSync(new URL("../../video-demo/edicion/plan.json", import.meta.url), "utf8"));
-
-// Pasos de una grabación completa (cada pantalla arranca un poco distinta, como en la real).
-const DURACIONES = [
-  ["paneles", 1.8], ["menu-abre", 11.3], ["menu-categorias", 7.3], ["producto-opciones", 8.4], ["producto-2", 4.7],
-  ["producto-3", 4.8], ["carrito", 4], ["checkout", 22], ["confirma", 2.2], ["recibido", 4.5], ["local-recibe", 11.2],
-  ["local-acepta", 35.1], ["repartidor-ve", 2.5], ["repartidor-toma", 11.2], ["local-prepara", 15.8], ["local-listo", 15.3],
-  ["local-entrega", 15.4], ["repartidor-en-camino", 16.2], ["repartidor-entrega", 12.8], ["fin", 3.5],
-];
-const DESFASE = { cliente: 10.975, repartidor: 10.862, local: 10.763 };
-
-function pasosDeEjemplo(focos = {}) {
-  let reloj = 0;
-  const pasos = DURACIONES.map(([id, dur], i) => {
-    const inicio = reloj;
-    reloj += dur;
-    const videos = {};
-    for (const [pantalla, base] of Object.entries(DESFASE)) videos[pantalla] = { inicio: base + inicio, fin: base + reloj };
-    return { n: i + 1, id, texto: id, focos: focos[id] ?? [], videos };
-  });
-  return { completo: true, resolucion: { videos: { cliente: "780x1688", repartidor: "780x1688", local: "2560x1600" } }, pasos };
-}
-const FUENTES = tamanosFuente(pasosDeEjemplo());
-const TOTAL = Object.fromEntries(Object.entries(DESFASE).map(([p, base]) => [p, base + DURACIONES.reduce((s, [, d]) => s + d, 0) + 3]));
+import { FUENTES, TOTAL, pasosDeEjemplo, plan } from "./pasos-ejemplo.mjs";
 
 describe("cámara", () => {
   const frame = { fw: 780, fh: 1688, sw: 780, sh: 1688 };
@@ -211,92 +184,6 @@ describe("guion del explicativo", () => {
     expect(panes.repartidor.o).toBe(0);
   });
 
-  it("en el vertical las pantallas ocupan del 85 al 90 % del ancho y el local trae zoom", () => {
-    for (const p of ["cliente", "repartidor", "local"]) {
-      const m = marcoVertical(p, FUENTES[p]);
-      expect(m.caja.w / 1080).toBeGreaterThanOrEqual(0.85);
-      expect(m.caja.w / 1080).toBeLessThanOrEqual(0.9);
-      expect(m.fh).toBeLessThanOrEqual(FUENTES[p].sh);
-      expect(m.fw).toBeLessThanOrEqual(FUENTES[p].sw);
-    }
-  });
-});
-
-describe("redes", () => {
-  const redes = () => armarRedes(plan, pasosDeEjemplo(), FUENTES);
-
-  it("dura de 20 a 25 s y todos los cortes caen en la grilla de 0,5 s", () => {
-    const t = redes();
-    expect(t.duracion).toBeGreaterThanOrEqual(plan.limites.redes[0]);
-    expect(t.duracion).toBeLessThanOrEqual(plan.limites.redes[1]);
-    for (const corte of t.cortes) expect(corte / 0.5).toBeCloseTo(Math.round(corte / 0.5), 6);
-  });
-
-  it("el gancho abre con el aviso del local y el texto pedido", () => {
-    const t = redes();
-    expect(t.escenas[0].dur).toBe(1.5);
-    expect(t.escenas[0].paneles[0].pantalla).toBe("local");
-    expect(t.escenas[0].texto).toBe("Así le llega un pedido a tu local 👇");
-  });
-
-  it("los cortes duran de 0,5 a 1,5 s (salvo el gancho, el momento clave y el final)", () => {
-    for (const e of redes().escenas.filter((s) => !["gancho", "suena", "entregado"].includes(s.id))) {
-      expect(e.dur).toBeGreaterThanOrEqual(0.5);
-      expect(e.dur).toBeLessThanOrEqual(1.5);
-    }
-  });
-
-  it("el momento clave es una pantalla partida: el cliente arriba y el local abajo", () => {
-    const e = redes().escenas.find((s) => s.momento);
-    expect(e.paneles.map((p) => [p.pantalla, p.caja])).toEqual([["cliente", "arriba"], ["local", "abajo"]]);
-    expect(e.llegada).toBeGreaterThan(0);
-  });
-
-  it("las escenas seguidas con el mismo texto comparten cartel", () => {
-    const grupos = gruposDeTexto(redes());
-    expect(grupos.map((g) => g.texto)).toContain("El cliente pide");
-    expect(grupos.filter((g) => g.texto === "El cliente pide")).toHaveLength(1);
-  });
-
-  it("cada ventana entra en la grabación y el aviso del local entra entero", () => {
-    const m = marcoRedes("local", "completa", FUENTES.local);
-    expect(m.fw).toBeGreaterThanOrEqual(1024); // ancho del aviso
-    for (const [pantalla, caja] of [["cliente", "completa"], ["cliente", "tarjeta"], ["cliente", "arriba"], ["repartidor", "abajo"], ["local", "arriba"], ["local", "tarjeta"]]) {
-      const v = marcoRedes(pantalla, caja, FUENTES[pantalla]);
-      expect(v.fw).toBeLessThanOrEqual(FUENTES[pantalla].sw);
-      expect(v.fh).toBeLessThanOrEqual(FUENTES[pantalla].sh);
-    }
-  });
-
-  it("el guion no deja nada en blanco al arrancar y cierra con el aviso de Primer mes gratis", () => {
-    const t = redes();
-    const guion = guionRedes(plan, t);
-    expect(guion.some((g) => g.s === "#esc-0" && g.a.opacity === 1 && g.t > 0)).toBe(true);
-    expect(plan.redes.cierre.texto).toBe("Primer mes gratis");
-    expect(t.cierre.dur).toBe(2);
-  });
-
-  it("los videos de una escena con dos paneles no comparten pista", () => {
-    const html = escenasHtml(redes());
-    const pistas = [...html.matchAll(/id="v-(\d+)-(\d+)"[^>]*data-track-index="(\d+)"/g)];
-    expect(pistas.length).toBeGreaterThan(10);
-    const porEscena = new Map();
-    for (const [, escena, , pista] of pistas) porEscena.set(escena, [...(porEscena.get(escena) ?? []), pista]);
-    for (const lista of porEscena.values()) expect(new Set(lista).size).toBe(lista.length);
-  });
-
-  it("cada palabra del cartel arranca oculta (sin destello antes de animarse)", () => {
-    const guion = guionRedes(plan, redes());
-    expect(guion.some((g) => g.s === "#txt-0 .w" && g.t === 0 && g.a.opacity === 0 && !g.d)).toBe(true);
-  });
-
-  it("las grabaciones alcanzan para todos los cortes", () => {
-    const t = redes();
-    validarFuentes(
-      t.escenas.flatMap((e) => e.paneles.map((pn) => ({ id: e.id, fuentes: { [pn.pantalla]: pn.fuente } }))),
-      TOTAL,
-    );
-  });
 });
 
 describe("ffmpeg y plantilla", () => {
