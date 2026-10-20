@@ -9,6 +9,16 @@ describe("parseEnv", () => {
   });
 });
 
+describe("parseEnv con # y comillas", () => {
+  it("respeta el # dentro de comillas y descarta lo que sigue a la comilla de cierre", () => {
+    expect(parseEnv("A=\"abc#123\" # nota\nB='x # y'")).toEqual({ A: "abc#123", B: "x # y" });
+  });
+
+  it("sin comillas, el # pegado al valor es parte de él y el comentario lleva un espacio antes", () => {
+    expect(parseEnv("A=abc#123\nB=valor  # comentario")).toEqual({ A: "abc#123", B: "valor" });
+  });
+});
+
 describe("assertDevDatabase", () => {
   const prod = ["https://prod.supabase.co", undefined];
 

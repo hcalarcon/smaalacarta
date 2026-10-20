@@ -11,11 +11,20 @@ export function parseEnv(text) {
     const eq = line.indexOf("=");
     if (eq < 1) continue;
     const key = line.slice(0, eq).trim().replace(/^export\s+/, "");
-    let value = line.slice(eq + 1).trim();
-    if (/^(['"]).*\1$/.test(value)) value = value.slice(1, -1);
-    env[key] = value;
+    env[key] = parseValue(line.slice(eq + 1).trim());
   }
   return env;
+}
+
+// Entre comillas, el valor llega hasta la comilla que cierra (un # adentro es parte del valor y lo de
+// después se ignora). Sin comillas, el comentario empieza en un # precedido por un espacio.
+function parseValue(raw) {
+  const quote = raw[0];
+  if (quote === '"' || quote === "'") {
+    const end = raw.indexOf(quote, 1);
+    if (end > 0) return raw.slice(1, end);
+  }
+  return raw.replace(/\s+#.*$/, "").trim();
 }
 
 export function readEnvFile(file) {
