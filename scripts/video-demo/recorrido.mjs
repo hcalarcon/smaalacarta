@@ -8,6 +8,7 @@ import { clienteServicio } from "./db.mjs";
 import { CLIENTE, SLUG, ZONA, planGroup } from "./demo.mjs";
 import { guardarFallo } from "./fallo.mjs";
 import { crearRegistro } from "./pasos.mjs";
+import { REALTIME_SCRIPT, crearBitacora, vigilarRLS } from "./realtime.mjs";
 import {
   ESPERA,
   ESPERA_PANEL,
@@ -155,7 +156,8 @@ export async function grabar({ salida, supabase, serviceKey, cuentas, datos, hea
   const contextos = {};
   const paginas = {};
   const origenes = {};
-  const estado = { numero: null };
+  const estado = { numero: null, detenerRLS: null };
+  let bitacora = null;
   let registro;
   let error = null;
 
@@ -191,6 +193,7 @@ export async function grabar({ salida, supabase, serviceKey, cuentas, datos, hea
       });
       await context.tracing.start({ screenshots: true, snapshots: true });
       await context.addInitScript(CURSOR_SCRIPT);
+      if (nombre !== "cliente") await context.addInitScript(REALTIME_SCRIPT);
       // Ningún WhatsApp real: ni el del checkout ni el del seguimiento.
       await context.route(WHATSAPP, (route) => route.abort());
       contextos[nombre] = context;
@@ -210,13 +213,15 @@ export async function grabar({ salida, supabase, serviceKey, cuentas, datos, hea
       paginas[nombre] = await contextos[nombre].newPage();
     }
     registro = crearRegistro(origenes);
+    bitacora = crearBitacora(origenes);
+    for (const nombre of ["local", "repartidor"]) bitacora.mirar(nombre, paginas[nombre]);
 
     // Una ventana nueva (el placeholder de WhatsApp en PC) no es parte del recorrido.
     contextos.cliente.on("page", (popup) => {
       popup.close().catch(() => {});
     });
 
-    await recorrer({ registro, paginas, datos, supabase, serviceKey, estado });
+    await recorrer({ registro, paginas, datos, supabase, serviceKey, estado, bitacora, cuentas });
   } catch (err) {
     // Dónde estaba cada pantalla ayuda a ver qué faltó (sin sesión, términos pendientes, otra ruta…).
     const donde = [];
@@ -248,6 +253,9 @@ export async function grabar({ salida, supabase, serviceKey, cuentas, datos, hea
     error = err;
   }
 
+  await estado.detenerRLS?.().catch(() => {});
+  await bitacora?.guardar(salida).catch(() => {});
+
   // Cerrar los contextos es lo que termina de escribir los videos.
   const videos = {};
   for (const nombre of Object.keys(contextos)) await contextos[nombre].close().catch(() => {});
@@ -266,7 +274,7 @@ export async function grabar({ salida, supabase, serviceKey, cuentas, datos, hea
   return { registro, videos, error };
 }
 
-async function recorrer({ registro, paginas, datos, supabase, serviceKey, estado }) {
+async function recorrer({ registro, paginas, datos, supabase, serviceKey, estado, bitacora, cuentas }) {
   const { cliente, local, repartidor } = paginas;
   const { paso } = registro;
   const negocio = datos.negocio.name;
@@ -344,9 +352,10 @@ async function recorrer({ registro, paginas, datos, supabase, serviceKey, estado
     // El pedido se identifica por el código de la URL de seguimiento, no por el marcado demo.
     const codigo = new URL(cliente.url()).pathname.split("/").pop();
     const service = clienteServicio(supabase.url, serviceKey);
-    const { data: pedido } = await service.from("orders").select("order_number").eq("code", codigo).maybeSingle();
+    const { data: pedido } = await service.from("orders").select("id, order_number").eq("code", codigo).maybeSingle();
     if (!pedido) throw new Error("No encontré en la base el pedido que acaba de crear el cliente.");
     numero = pedido.order_number;
+    estado.detenerRLS = await vigilarRLS({ supabase, cuentas, pedidoId: pedido.id, bitacora });
     estado.numero = numero;
     await pausa(1500, 2200);
   });
