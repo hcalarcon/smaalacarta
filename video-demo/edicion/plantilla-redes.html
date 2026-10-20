@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=1080, height=1920" />
+    <title>Redes SMA a la Carta 9x16</title>
+    <link rel="stylesheet" href="marca.css" />
+    <script src="vendor/gsap.min.js"></script>
+    <script src="motor.js"></script>
+    <style>
+      .esc { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; overflow: hidden; }
+      .caja { position: absolute; }
+      .flash { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; background: #fff; z-index: 50; pointer-events: none; }
+      .mini { position: absolute; z-index: 30; }
+      .mini span { display: inline-block; padding: 6px 26px; border-radius: 999px; background: var(--acento); color: var(--fondo-1); font-family: var(--titulos); font-weight: 800; font-size: 34px; letter-spacing: 0.06em; text-transform: uppercase; }
+
+      .txt { position: absolute; left: 0; top: 0; width: 1080px; height: 1920px; z-index: 100; pointer-events: none; }
+      .txt-fondo { position: absolute; left: 0; top: 0; width: 1080px; height: 560px; background: linear-gradient(rgba(36, 29, 22, 0.94), rgba(36, 29, 22, 0.55) 60%, rgba(36, 29, 22, 0)); }
+      .txt-int { position: absolute; left: 50px; top: 90px; width: 980px; text-align: center; font-family: var(--titulos); font-weight: 800; line-height: 1.02; color: var(--texto); text-shadow: 0 4px 24px rgba(0, 0, 0, 0.55); letter-spacing: -0.01em; }
+      .w { display: inline-block; }
+      .txt.centro .txt-fondo { display: none; }
+      .txt.centro .txt-int { top: 70px; left: 110px; width: 860px; padding: 12px 20px; border-radius: 44px; background: var(--acento); color: var(--fondo-1); text-shadow: none; }
+
+      .portada img { width: 190px; height: 190px; margin-bottom: 56px; }
+      .portada h1 { font-size: 150px; max-width: 940px; color: var(--acento); }
+      .portada .url { font-size: 60px; padding: 18px 52px; margin-top: 56px; }
+    </style>
+  </head>
+  <body>
+    <div id="root" data-composition-id="redes" data-start="0" data-width="1080" data-height="1920" data-duration="{{DURACION}}">
+      {{ESCENAS}}
+      {{TEXTOS}}
+
+      <section id="cierre-redes" class="clip portada" data-start="{{CIERRE_INICIO}}" data-duration="{{CIERRE_DUR}}" data-track-index="20" style="z-index:200">
+        <div class="portada-int">
+          <img src="logo.png" alt="" />
+          <h1>{{CIERRE_TEXTO}}</h1>
+          <div class="url">{{CIERRE_URL}}</div>
+        </div>
+      </section>
+    </div>
+    <script>
+      const D = {{DATOS}};
+      const tl = gsap.timeline({ paused: true });
+      montarGuion(tl, D.guion);
+      window.__timelines["redes"] = tl;
+    </script>
+  </body>
+</html>
