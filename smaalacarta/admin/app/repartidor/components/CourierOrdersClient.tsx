@@ -3,7 +3,7 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
-import { useOrderChanges } from "@/lib/realtime/useOrderChanges";
+import { useCourierOrderChanges } from "@/lib/realtime/useOrderChanges";
 import AvailableOrderCard from "./AvailableOrderCard";
 import CourierOrderCard from "./CourierOrderCard";
 import { useNewOrderAlert } from "./useNewOrderAlert";
@@ -33,7 +33,8 @@ import { courierOrderState, grandTotals, totalsByBusiness } from "@/lib/courier/
 import { STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
 import { formatMoney } from "@/lib/promotions/pricing";
 
-const REFRESH_MS = 15_000;
+// Respaldo por si Realtime se corta (ENVIO-209); lo normal es que el pulso lo adelante.
+const REFRESH_MS = 5_000;
 const HISTORY_SHOWN = 20;
 
 const EMPTY: Record<PanelGroup, string> = {
@@ -55,7 +56,7 @@ export default function CourierOrdersClient({
 }) {
   const router = useRouter();
   // Un cambio en la base trae los datos nuevos al instante (ENVIO-172); la consulta de abajo queda de respaldo.
-  useOrderChanges(() => router.refresh());
+  useCourierOrderChanges(() => router.refresh());
 
   // La hora arranca con la del servidor para que el primer render coincida en los dos lados.
   const [now, setNow] = useState(() => new Date(serverNow));

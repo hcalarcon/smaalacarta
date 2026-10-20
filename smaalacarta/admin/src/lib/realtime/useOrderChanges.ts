@@ -18,6 +18,12 @@ export function useOrderChanges(onChange: () => void) {
   useTableChanges(ORDER_TABLES, onChange);
 }
 
+// El panel del repartidor (ENVIO-208): a su cuenta no le llega nada de `orders` (solo lo lee el negocio), así que
+// escucha `courier_order_pulse`, que la base sube para él cada vez que cambia un pedido que le importa.
+export function useCourierOrderChanges(onChange: () => void) {
+  useTableChanges(COURIER_TABLES, onChange);
+}
+
 // Solo la disponibilidad de los repartidores (ENVIO-202): el interruptor del repartidor no necesita enterarse
 // de cada pedido.
 export function useAvailabilityChanges(onChange: () => void) {
@@ -25,6 +31,7 @@ export function useAvailabilityChanges(onChange: () => void) {
 }
 
 const ORDER_TABLES = ["orders", "courier_offers", "courier_availability_pulse"] as const;
+const COURIER_TABLES = ["courier_order_pulse", "courier_offers", "courier_availability_pulse"] as const;
 const AVAILABILITY_TABLES = ["courier_availability_pulse"] as const;
 
 function useTableChanges(tables: readonly string[], onChange: () => void) {

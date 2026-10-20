@@ -5,9 +5,11 @@ const segundos = (ms) => Math.round(ms) / 1000;
 
 export function crearRegistro(origenes, ahora = () => Date.now()) {
   const pasos = [];
+  const latencias = [];
 
   return {
     pasos,
+    latencias,
     async paso(id, texto, fn) {
       const inicio = ahora();
       let fallo = false;

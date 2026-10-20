@@ -2254,6 +2254,18 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
 - **ENVIO-207** El conteo de repartidores disponibles (ENVIO-196 a 202) respeta el vehículo: el panel del local, el
   aviso del seguimiento y, si recibe el negocio, el del menú (`public_zone_has_couriers(zona, negocio)`) cuentan solo a
   quienes sirven a ese negocio.
+- **ENVIO-208** El panel del repartidor se entera al instante de un cambio que le importa. Como `orders` solo la lee el
+  negocio (el RLS no le manda a la cuenta repartidor ningún evento de esa tabla), la base sube un pulso en
+  `courier_order_pulse` (migración `*_pulso_de_pedidos_del_repartidor.sql`): una fila por repartidor con el último
+  pedido que lo tocó y la hora, sin datos del cliente ni de nadie más. Cada repartidor lee solo su fila; nadie escribe
+  desde la app (solo los triggers de `orders`); un upsert por repartidor, así que no crece. La tabla está en la
+  publicación `supabase_realtime` y el panel la escucha (`useCourierOrderChanges`) junto con sus ofertas y la
+  disponibilidad. ENVIO-172 vale para el local; el repartidor usa esto.
+- **ENVIO-209** Quién recibe el pulso: el repartidor asignado (y el anterior, si el pedido se devolvió), los que ven el
+  pedido en Disponibles según `courier_sees_order()` —la misma regla de `courier_available_orders()`— y los que
+  ofertaron. Cuando un pedido deja de estar en búsqueda (lo toma otro, se cancela, se elige otro), el pulso va a quienes
+  lo veían antes del cambio, para que se les retire de Disponibles. Un pedido sin envío con repartidor no pulsa a nadie.
+  La consulta periódica del panel del repartidor, que queda de respaldo si Realtime se corta, pasa de 15 a 5 segundos.
 
 
 

@@ -102,6 +102,7 @@ await writeFile(
       completo: !error,
       error: error ? error.message : null,
       nota: "Segundos desde el inicio de cada video. El video arranca al crearse su página: puede haber ~0,2 s de diferencia.",
+      latencias: registro?.latencias ?? [],
       pasos: registro?.pasos ?? [],
     },
     null,

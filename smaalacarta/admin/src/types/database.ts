@@ -519,6 +519,32 @@ export type Database = {
           },
         ]
       }
+      courier_order_pulse: {
+        Row: {
+          courier_id: string
+          order_id: string
+          pulsed_at: string
+        }
+        Insert: {
+          courier_id: string
+          order_id: string
+          pulsed_at?: string
+        }
+        Update: {
+          courier_id?: string
+          order_id?: string
+          pulsed_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courier_order_pulse_courier_id_fkey"
+            columns: ["courier_id"]
+            isOneToOne: true
+            referencedRelation: "couriers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       courier_preferences: {
         Row: {
           courier_id: string
@@ -1837,6 +1863,7 @@ export type Database = {
         Args: { o: Database["public"]["Tables"]["orders"]["Row"] }
         Returns: number
       }
+      order_pulse_audience: { Args: { p_order_id: string }; Returns: string[] }
       order_ready_at: {
         Args: { o: Database["public"]["Tables"]["orders"]["Row"] }
         Returns: string
@@ -1884,6 +1911,10 @@ export type Database = {
       public_zone_has_couriers: {
         Args: { p_business_id?: string; p_zone_id: string }
         Returns: boolean
+      }
+      pulse_couriers: {
+        Args: { p_couriers: string[]; p_order_id: string }
+        Returns: undefined
       }
       resolve_order_lines: {
         Args: {

@@ -156,7 +156,7 @@ export async function grabar({ salida, supabase, serviceKey, cuentas, datos, hea
   const contextos = {};
   const paginas = {};
   const origenes = {};
-  const estado = { numero: null, detenerRLS: null };
+  const estado = { numero: null, pedidoId: null, detenerRLS: null };
   let bitacora = null;
   let registro;
   let error = null;
@@ -274,6 +274,24 @@ export async function grabar({ salida, supabase, serviceKey, cuentas, datos, hea
   return { registro, videos, error };
 }
 
+// Cuánto tarda el panel del repartidor en mostrar un cambio del local. `desde_click` incluye lo que tarda la
+// acción del local en llegar a la base (cota superior); `desde_base` usa la hora del evento en la base.
+async function medirLatencia({ registro, service, pedidoId, evento, estadoPedido, clickMs, vistoMs }) {
+  const { data } = await service
+    .from("order_events")
+    .select("created_at")
+    .eq("order_id", pedidoId)
+    .eq("status", estadoPedido)
+    .order("created_at", { ascending: false })
+    .limit(1);
+  const base = data?.[0] ? new Date(data[0].created_at).getTime() : null;
+  registro.latencias.push({
+    evento,
+    desde_click_ms: vistoMs - clickMs,
+    desde_base_ms: base === null ? null : vistoMs - base,
+  });
+}
+
 async function recorrer({ registro, paginas, datos, supabase, serviceKey, estado, bitacora, cuentas }) {
   const { cliente, local, repartidor } = paginas;
   const { paso } = registro;
@@ -357,6 +375,7 @@ async function recorrer({ registro, paginas, datos, supabase, serviceKey, estado
     numero = pedido.order_number;
     estado.detenerRLS = await vigilarRLS({ supabase, cuentas, pedidoId: pedido.id, bitacora });
     estado.numero = numero;
+    estado.pedidoId = pedido.id;
     await pausa(1500, 2200);
   });
 
@@ -379,7 +398,18 @@ async function recorrer({ registro, paginas, datos, supabase, serviceKey, estado
     await tocar(local, selector.getByRole("button", { name: "20 min", exact: true }));
     await pausa(800, 1200);
     await tocar(local, selector.getByRole("button", { name: /^Aceptar con/ }));
+    const clickMs = Date.now();
+    const visto = esperar(tarjetaRepartidor(), ESPERA_PANEL).then(() => Date.now());
     await esperarOculto(selector);
+    await medirLatencia({
+      registro,
+      service: clienteServicio(supabase.url, serviceKey),
+      pedidoId: estado.pedidoId,
+      evento: "El local acepta → el pedido aparece en Disponibles del repartidor",
+      estadoPedido: "confirmed",
+      clickMs,
+      vistoMs: await visto,
+    });
     await verTexto(cliente, "Pedido confirmado");
     await verTexto(cliente, "Buscando repartidor");
     await pausa(1500, 2200);
@@ -412,6 +442,20 @@ async function recorrer({ registro, paginas, datos, supabase, serviceKey, estado
 
   await paso("local-entrega", "El local se lo entrega al repartidor", async () => {
     await tocar(local, tarjetaLocal().first().getByRole("button", { name: "Entregar al repartidor", exact: true }), ESPERA_PANEL);
+    const clickMs = Date.now();
+    const visto = esperar(
+      tarjetaRepartidor().first().getByRole("button", { name: "En camino", exact: true }),
+      ESPERA_PANEL,
+    ).then(() => Date.now());
+    await medirLatencia({
+      registro,
+      service: clienteServicio(supabase.url, serviceKey),
+      pedidoId: estado.pedidoId,
+      evento: "El local entrega → el repartidor ve el botón En camino",
+      estadoPedido: "handed_to_courier",
+      clickMs,
+      vistoMs: await visto,
+    });
     await verTexto(cliente, "Tu pedido salió del local");
     await pausa();
   });

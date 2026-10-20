@@ -30,10 +30,15 @@ vi.mock("@/lib/supabase-browser", () => ({
   },
 }));
 
-import { useOrderChanges } from "./useOrderChanges";
+import { useCourierOrderChanges, useOrderChanges } from "./useOrderChanges";
 
 function Probe({ onChange }: { onChange: () => void }) {
   useOrderChanges(onChange);
+  return null;
+}
+
+function CourierProbe({ onChange }: { onChange: () => void }) {
+  useCourierOrderChanges(onChange);
   return null;
 }
 
@@ -47,6 +52,32 @@ beforeEach(() => {
 afterEach(() => {
   cleanup();
   vi.useRealTimers();
+});
+
+describe("cambios del repartidor en tiempo real — ENVIO-209", () => {
+  it("escucha su pulso de pedidos, sus ofertas y la disponibilidad, y no `orders` (no le llega por el RLS)", () => {
+    render(<CourierProbe onChange={vi.fn()} />);
+
+    expect(state.handlers.map((entry) => entry.table).sort()).toEqual([
+      "courier_availability_pulse",
+      "courier_offers",
+      "courier_order_pulse",
+    ]);
+  });
+
+  it("un pulso vuelve a pedir los datos, juntando los que llegan casi a la vez", () => {
+    const onChange = vi.fn();
+    render(<CourierProbe onChange={onChange} />);
+
+    const pulse = state.handlers.find((entry) => entry.table === "courier_order_pulse")!;
+    act(() => {
+      pulse.handler();
+      pulse.handler();
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
 });
 
 describe("cambios de pedidos en tiempo real — ENVIO-172", () => {
