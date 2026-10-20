@@ -1,0 +1,146 @@
+{
+  "nota": "Plan de edición. Cada entrada cubre uno o más pasos de pasos.json (por id). 'h' es el horizontal y 'v' el vertical (null = no entra). 'velocidad' acelera el tramo; 'desde'/'hasta' recortan en segundos desde el inicio del primer paso (hasta = fin del último paso si falta). 'actor' es quien actúa: cliente, local, repartidor o todos. 'nota' es una marca de tiempo que pasa de verdad (la preparación y el viaje duran minutos). En 'v.crop', x puede ser un número o {desde, hasta, en, dur}: la ventana se desliza de 'desde' a 'hasta' a los 'en' segundos del paso.",
+  "intro": { "dur": 3, "titulo": "Así funciona un pedido en SMA a la Carta" },
+  "cierre": { "dur": 3, "texto": "Primer mes gratis", "url": "smaalacarta.com.ar/hola" },
+  "limites": { "h": 90, "vMin": 45, "vMax": 60 },
+  "entradas": [
+    {
+      "ids": ["paneles"],
+      "subtitulo": "El local y el repartidor ya tienen su panel abierto",
+      "actor": "todos",
+      "h": { "desde": 0.5, "hasta": 3.5, "velocidad": 1 },
+      "v": null
+    },
+    {
+      "ids": ["menu-abre"],
+      "subtitulo": "El cliente abre tu menú desde el celular",
+      "actor": "cliente",
+      "h": { "velocidad": 3 },
+      "v": { "velocidad": 5 }
+    },
+    {
+      "ids": ["menu-categorias"],
+      "subtitulo": "Mira las categorías",
+      "actor": "cliente",
+      "h": { "velocidad": 2 },
+      "v": { "velocidad": 4 }
+    },
+    {
+      "ids": ["producto-opciones"],
+      "subtitulo": "Elige las opciones de cada plato",
+      "actor": "cliente",
+      "h": { "velocidad": 2 },
+      "v": { "velocidad": 3 }
+    },
+    {
+      "ids": ["producto-2", "producto-3"],
+      "subtitulo": "Y va sumando productos",
+      "actor": "cliente",
+      "h": { "velocidad": 3 },
+      "v": { "velocidad": 4 }
+    },
+    {
+      "ids": ["carrito"],
+      "subtitulo": "Revisa su pedido",
+      "actor": "cliente",
+      "h": { "velocidad": 1.5 },
+      "v": { "velocidad": 2 }
+    },
+    {
+      "ids": ["checkout"],
+      "subtitulo": "Completa sus datos de envío",
+      "actor": "cliente",
+      "h": { "velocidad": 4 },
+      "v": { "velocidad": 5 }
+    },
+    {
+      "ids": ["confirma"],
+      "subtitulo": "Confirma el pedido",
+      "actor": "cliente",
+      "h": { "velocidad": 1 },
+      "v": { "velocidad": 1 }
+    },
+    {
+      "ids": ["recibido"],
+      "subtitulo": "Ya queda registrado y puede seguirlo",
+      "actor": "cliente",
+      "h": { "velocidad": 1.5 },
+      "v": { "velocidad": 2 }
+    },
+    {
+      "ids": ["local-recibe"],
+      "subtitulo": "Te llega el pedido con sonido",
+      "actor": "local",
+      "h": { "velocidad": 3 },
+      "v": { "velocidad": 3.5, "crop": { "x": 360, "y": 18, "w": 560, "h": 765 } }
+    },
+    {
+      "ids": ["local-acepta"],
+      "subtitulo": "Lo aceptás y le avisás cuánto demora",
+      "actor": "local",
+      "h": { "velocidad": 3 },
+      "v": { "velocidad": 4, "crop": { "x": 360, "y": 18, "w": 560, "h": 765 } }
+    },
+    {
+      "ids": ["repartidor-ve"],
+      "subtitulo": "En segundos, el repartidor lo ve",
+      "actor": "repartidor",
+      "h": { "velocidad": 1 },
+      "v": { "velocidad": 1 }
+    },
+    {
+      "ids": ["repartidor-toma"],
+      "subtitulo": "Y lo toma",
+      "actor": "repartidor",
+      "h": { "velocidad": 4 },
+      "v": { "velocidad": 5 }
+    },
+    {
+      "ids": ["local-prepara"],
+      "subtitulo": "Lo pasás a cocina",
+      "actor": "local",
+      "nota": "unos minutos después",
+      "h": { "velocidad": 5 },
+      "v": { "velocidad": 6, "crop": { "x": 570, "y": 300, "w": 360, "h": 492 } }
+    },
+    {
+      "ids": ["local-listo"],
+      "subtitulo": "Cuando está, lo marcás como listo",
+      "actor": "local",
+      "h": { "velocidad": 4 },
+      "v": {
+        "velocidad": 6,
+        "crop": { "x": { "desde": 570, "hasta": 897, "en": 4.6, "dur": 0.8 }, "y": 300, "w": 360, "h": 492 }
+      }
+    },
+    {
+      "ids": ["local-entrega"],
+      "subtitulo": "Se lo entregás al repartidor",
+      "actor": "local",
+      "h": { "velocidad": 4 },
+      "v": { "velocidad": 6, "crop": { "x": 897, "y": 300, "w": 360, "h": 492 } }
+    },
+    {
+      "ids": ["repartidor-en-camino"],
+      "subtitulo": "El repartidor sale hacia el cliente",
+      "actor": "repartidor",
+      "nota": "unos minutos después",
+      "h": { "velocidad": 4 },
+      "v": { "velocidad": 5 }
+    },
+    {
+      "ids": ["repartidor-entrega"],
+      "subtitulo": "Y le entrega el pedido",
+      "actor": "repartidor",
+      "h": { "velocidad": 4 },
+      "v": { "velocidad": 5 }
+    },
+    {
+      "ids": ["fin"],
+      "subtitulo": "Pedido entregado",
+      "actor": "cliente",
+      "h": { "velocidad": 1 },
+      "v": { "velocidad": 1.2 }
+    }
+  ]
+}
