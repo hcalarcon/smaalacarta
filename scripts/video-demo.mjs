@@ -2,7 +2,7 @@
 // Uso:  npm run video-demo
 //       npm run video-demo -- --borrar                       borra solo los pedidos demo
 //       npm run video-demo -- --permitir-otros-repartidores  no frena si hay otros disponibles en Centro
-// Requiere el admin en localhost:3000 y `npx serve . -l 8000` en smaalacarta/web. Solo contra la base dev.
+// Requiere el admin compilado (`npm run build` y `npm run start`, no `next dev`) en localhost:3000 y `npx serve . -l 8000` en smaalacarta/web. Solo contra la base dev.
 import { spawnSync } from "node:child_process";
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
@@ -11,7 +11,7 @@ import { fileURLToPath } from "node:url";
 import { borrarDemo } from "./video-demo/borrar.mjs";
 import { assertDevDatabase, readEnvFile } from "./video-demo/entorno.mjs";
 import { chequear } from "./video-demo/preflight.mjs";
-import { grabar } from "./video-demo/recorrido.mjs";
+import { ESCALAS, TAMANOS, grabar } from "./video-demo/recorrido.mjs";
 import { PRODUCTION_SUPABASE } from "../smaalacarta/web/apps/menu-app/lib/supabase-env.js";
 
 const RAIZ = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -25,12 +25,6 @@ function salirConError(mensajes) {
 function fechaHora(fecha = new Date()) {
   const dos = (n) => String(n).padStart(2, "0");
   return `${fecha.getFullYear()}-${dos(fecha.getMonth() + 1)}-${dos(fecha.getDate())}_${dos(fecha.getHours())}-${dos(fecha.getMinutes())}-${dos(fecha.getSeconds())}`;
-}
-
-function convertirAMp4(webm) {
-  const mp4 = webm.replace(/\.webm$/, ".mp4");
-  const res = spawnSync("ffmpeg", ["-y", "-loglevel", "error", "-i", webm, "-an", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-crf", "20", mp4]);
-  return res.status === 0;
 }
 
 const args = new Set(process.argv.slice(2));
@@ -88,11 +82,13 @@ if (problemas.length) {
   process.exit(1);
 }
 
+if (spawnSync("ffmpeg", ["-version"]).status !== 0) salirConError("Falta ffmpeg: la grabación se codifica con él.");
+
 const salida = path.join(RAIZ, "video-demo", "salida", fechaHora());
 await mkdir(salida, { recursive: true });
 console.log(`Grabando en ${path.relative(RAIZ, salida)} (no toques las ventanas)…`);
 
-const { registro, videos, error } = await grabar({ salida, supabase: { url, key }, serviceKey, cuentas, datos });
+const { registro, videos, error, barraOculta } = await grabar({ salida, supabase: { url, key }, serviceKey, cuentas, datos });
 
 await writeFile(
   path.join(salida, "pasos.json"),
@@ -101,7 +97,10 @@ await writeFile(
       generado: new Date().toISOString(),
       completo: !error,
       error: error ? error.message : null,
-      nota: "Segundos desde el inicio de cada video. El video arranca al crearse su página: puede haber ~0,2 s de diferencia.",
+      nota: "Segundos desde el inicio de cada video. El video arranca al crearse su página: puede haber ~0,2 s de diferencia. Los pasos empiezan cuando las tres pantallas ya cargaron; inicio_util es el segundo de cada video desde el que ya hay imagen (lo anterior se recorta). Los focos son rectángulos en píxeles del video (x, y, ancho, alto); t es el segundo en que importan.",
+      resolucion: { escala: ESCALAS, videos: Object.fromEntries(Object.entries(TAMANOS).map(([n, { width, height }]) => [n, `${width}x${height}`])) },
+      inicio_util: registro?.inicioUtil ?? {},
+      barra_de_avisos_oculta: Boolean(barraOculta),
       latencias: registro?.latencias ?? [],
       pasos: registro?.pasos ?? [],
     },
@@ -109,15 +108,6 @@ await writeFile(
     2,
   ),
 );
-
-const tieneFfmpeg = spawnSync("ffmpeg", ["-version"]).status === 0;
-if (tieneFfmpeg) {
-  for (const webm of Object.values(videos)) {
-    if (!convertirAMp4(webm)) console.warn(`No pude convertir ${path.basename(webm)} a mp4; queda el .webm.`);
-  }
-} else {
-  console.warn("ffmpeg no está instalado: dejé solo los .webm.");
-}
 
 if (error) {
   console.error(`\n✗ ${error.message}\nLos videos hasta ahí, pasos.json y la carpeta fallo/ (capturas, HTML, pedido en la base y trace) quedaron en ${path.relative(RAIZ, salida)}.`);

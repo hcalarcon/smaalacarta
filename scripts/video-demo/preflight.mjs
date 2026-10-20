@@ -22,9 +22,19 @@ async function responde(url) {
   }
 }
 
+// `next dev` compila al vuelo, deja un cliente de recarga en cada página y con tres navegadores grabando no
+// llega a refrescar los paneles a tiempo: se graba contra el admin compilado (`next build` + `next start`).
+export const esServidorDeDesarrollo = (html) => /hmr-client|webpack-hmr|react-refresh/.test(html);
+
 async function chequearServidores(problemas) {
-  if (!(await responde(`${URL_ADMIN}/admin/login`))) {
-    problemas.push("El admin no está levantado en localhost:3000. Corré `npm run dev` en smaalacarta/admin.");
+  const login = await fetch(`${URL_ADMIN}/admin/login`, { signal: AbortSignal.timeout(5000) }).then(
+    async (res) => (res.status < 500 ? await res.text() : null),
+    () => null,
+  );
+  if (login === null) {
+    problemas.push("El admin no está levantado en localhost:3000. Corré `npm run build` y `npm run start` en smaalacarta/admin.");
+  } else if (esServidorDeDesarrollo(login)) {
+    problemas.push("En localhost:3000 corre `next dev`. Apagalo y grabá contra el compilado: `npm run build` y `npm run start` en smaalacarta/admin.");
   }
   if (!(await responde(`${URL_WEB}/apps/menu-app/index.html`))) {
     problemas.push("El servidor de web/ no está levantado en localhost:8000. Corré `npx serve . -l 8000` en smaalacarta/web.");

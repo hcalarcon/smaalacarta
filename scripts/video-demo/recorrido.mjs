@@ -1,5 +1,4 @@
 // El recorrido: tres navegadores a la vez (cliente, local y repartidor), cada uno grabando su video.
-import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { chromium } from "playwright";
 
@@ -7,6 +6,7 @@ import { CURSOR_SCRIPT } from "./cursor.mjs";
 import { clienteServicio } from "./db.mjs";
 import { CLIENTE, SLUG, ZONA, planGroup } from "./demo.mjs";
 import { guardarFallo } from "./fallo.mjs";
+import { codificarVideo, iniciarGrabacion } from "./grabador.mjs";
 import { crearRegistro } from "./pasos.mjs";
 import { REALTIME_SCRIPT, crearBitacora, vigilarRLS } from "./realtime.mjs";
 import {
@@ -20,6 +20,8 @@ import {
   esperar,
   esperarDialogo,
   esperarOculto,
+  conectarFocos,
+  mostrar,
   pausa,
   tocar,
   verTexto,
@@ -29,12 +31,22 @@ import { URL_ADMIN, URL_WEB } from "./preflight.mjs";
 const CELULAR = { width: 390, height: 844 };
 const ESCRITORIO = { width: 1280, height: 800 };
 
-// Dónde abre cada ventana, para que se vean las tres juntas mientras graba.
+// Se graba al doble de resolución para que la edición pueda acercar sin que se vea borroso. Los viewports no
+// cambian: la app se ve igual, con más píxeles. Si la máquina no aguanta, bajar primero los celulares a 1.5
+// (el local es el que más zoom necesita).
 const VENTANAS = {
-  cliente: { viewport: CELULAR, x: 0 },
-  repartidor: { viewport: CELULAR, x: 420 },
-  local: { viewport: ESCRITORIO, x: 840 },
+  cliente: { viewport: CELULAR, escala: 2 },
+  repartidor: { viewport: CELULAR, escala: 2 },
+  local: { viewport: ESCRITORIO, escala: 2 },
 };
+
+export const ESCALAS = Object.fromEntries(Object.entries(VENTANAS).map(([nombre, { escala }]) => [nombre, escala]));
+export const TAMANOS = Object.fromEntries(
+  Object.entries(VENTANAS).map(([nombre, { viewport, escala }]) => [
+    nombre,
+    { width: Math.round(viewport.width * escala), height: Math.round(viewport.height * escala) },
+  ]),
+);
 
 // El seguimiento no tiene rutas de Vercel en `serve`: /pedido/<código> se resuelve con la misma página.
 const RUTA_PEDIDO = /^http:\/\/localhost:8000\/pedido\/[^/?#]+/;
@@ -147,25 +159,82 @@ async function completarCheckout(page) {
   return checkout;
 }
 
-// Corre el recorrido completo. Devuelve { registro, videos, error }; los videos quedan guardados aunque falle.
-export async function grabar({ salida, supabase, serviceKey, cuentas, datos, headless = false }) {
-  const tmp = path.join(salida, "_tmp");
-  await mkdir(tmp, { recursive: true });
+// Activa el sonido del local con un clic real, como lo haría el dueño, antes de que corra la línea de tiempo.
+// Los avisos del navegador no se activan (piden la app instalada): si por eso la barra roja «No vas a oír los
+// pedidos nuevos» sigue, se oculta solo en la grabación con CSS inyectado. Devuelve true si hubo que ocultarla.
+async function prepararSonidoDelLocal(local) {
+  const barra = local.getByRole("alert").filter({ hasText: "No vas a oír los pedidos nuevos" });
+  const aparece = await barra.waitFor({ state: "visible", timeout: 4000 }).then(
+    () => true,
+    () => false,
+  );
+  if (!aparece) return false;
 
+  const sonido = barra.getByRole("button", { name: "Activar el sonido" });
+  if (await sonido.isVisible().catch(() => false)) {
+    await tocar(local, sonido);
+    await dormir(800);
+  }
+  if (!(await barra.isVisible().catch(() => false))) return false;
+
+  await local.addStyleTag({ content: 'div[role="alert"].bg-red-700 { display: none !important; }' });
+  if (await barra.isVisible().catch(() => false)) throw new Error("No pude ocultar la barra roja de avisos del local (¿cambió su diseño?).");
+  return true;
+}
+
+// Carga las tres pantallas antes de que corra la línea de tiempo: sin esto los videos arrancan en blanco.
+// El video empieza al crearse la página y no se puede atrasar, así que se guarda en `inicioUtil` desde qué
+// segundo de cada uno ya está todo listo; los pasos empiezan recién ahí.
+async function prepararPantallas({ registro, paginas, estado }) {
+  const { cliente, local, repartidor } = paginas;
+  await Promise.all([
+    local.goto(`${URL_ADMIN}/admin/dashboard/orders`),
+    repartidor.goto(`${URL_ADMIN}/admin/repartidor`),
+    (async () => {
+      // La base dev a veces corta `public_menu` por tiempo y el menú dice «No encontramos este menú»: se recarga.
+      const categorias = cliente.locator("#categorias").getByRole("button");
+      const noEncontrado = cliente.getByText("No encontramos este menú");
+      for (let intento = 1; ; intento += 1) {
+        await cliente.goto(`${URL_WEB}/apps/menu-app/?cliente=${SLUG}`);
+        await esperar(categorias.or(noEncontrado));
+        if (!(await noEncontrado.isVisible()) || intento >= 3) break;
+        await dormir(2000);
+      }
+      await esperarOculto(cliente.locator("#loader"));
+      await esperar(categorias);
+    })(),
+  ]);
+  await Promise.all([
+    // Sin pedidos el tablero no muestra columnas: se espera el botón de la pantalla.
+    esperar(local.getByRole("button", { name: "+ Pedido manual" })),
+    esperar(repartidor.getByRole("heading", { name: "Disponibles" })),
+  ]);
+
+  estado.barraOculta = await prepararSonidoDelLocal(local);
+  if (estado.barraOculta) console.warn("La barra roja de avisos sigue (faltan los avisos del navegador): la oculté solo en la grabación.");
+  await dormir(1200);
+  registro.marcarInicio();
+}
+
+// Corre el recorrido completo. Devuelve { registro, videos, error }; los videos quedan guardados aunque falle.
+export async function grabar({ salida, supabase, serviceKey, cuentas, datos, headless = true }) {
   const browsers = {};
   const contextos = {};
   const paginas = {};
   const origenes = {};
+  const grabadores = {};
   const estado = { numero: null, pedidoId: null, detenerRLS: null };
   let bitacora = null;
   let registro;
   let error = null;
 
   try {
-    for (const [nombre, { viewport, x }] of Object.entries(VENTANAS)) {
+    // Sin ventana visible el tamaño es exacto (un Chrome con ventana no baja de ~500 px de ancho) y la
+    // escala del navegador es real, que es lo que hace falta para grabar al doble (ver grabador.mjs).
+    for (const [nombre, { viewport, escala }] of Object.entries(VENTANAS)) {
       browsers[nombre] = await chromium.launch({
         headless,
-        args: [`--window-position=${x},0`, `--window-size=${viewport.width},${viewport.height + 130}`],
+        args: [`--force-device-scale-factor=${escala}`, `--window-size=${viewport.width},${viewport.height}`],
       });
     }
 
@@ -178,18 +247,14 @@ export async function grabar({ salida, supabase, serviceKey, cuentas, datos, hea
       ),
     };
 
-    for (const [nombre, { viewport }] of Object.entries(VENTANAS)) {
+    for (const nombre of Object.keys(VENTANAS)) {
       const context = await browsers[nombre].newContext({
-        viewport,
-        screen: viewport,
-        deviceScaleFactor: 1,
-        isMobile: nombre !== "local",
-        hasTouch: false,
+        // Sin emulación de pantalla: el tamaño y la escala son los reales de la ventana.
+        viewport: null,
         locale: "es-AR",
         timezoneId: "America/Argentina/Buenos_Aires",
         serviceWorkers: "block",
         storageState: sesiones[nombre],
-        recordVideo: { dir: path.join(tmp, nombre), size: viewport },
       });
       await context.tracing.start({ screenshots: true, snapshots: true });
       await context.addInitScript(CURSOR_SCRIPT);
@@ -209,10 +274,15 @@ export async function grabar({ salida, supabase, serviceKey, cuentas, datos, hea
       await route.fulfill({ status: 200, contentType: "text/html; charset=utf-8", body: await res.text() });
     });
     for (const nombre of Object.keys(VENTANAS)) {
-      origenes[nombre] = Date.now();
       paginas[nombre] = await contextos[nombre].newPage();
+      // El segundo 0 de cada video es su primer cuadro.
+      grabadores[nombre] = await iniciarGrabacion(paginas[nombre], { carpeta: path.join(salida, `_cuadros-${nombre}`) });
+      origenes[nombre] = grabadores[nombre].origen;
     }
-    registro = crearRegistro(origenes);
+    const limites = Object.fromEntries(Object.entries(TAMANOS).map(([nombre, { width, height }]) => [nombre, { w: width, h: height }]));
+    registro = crearRegistro(origenes, undefined, { escala: ESCALAS, limites });
+    const nombreDe = new Map(Object.entries(paginas).map(([nombre, page]) => [page, nombre]));
+    conectarFocos((page, tipo, box, cuando) => registro.foco(nombreDe.get(page), tipo, box, cuando));
     bitacora = crearBitacora(origenes);
     for (const nombre of ["local", "repartidor"]) bitacora.mirar(nombre, paginas[nombre]);
 
@@ -256,22 +326,31 @@ export async function grabar({ salida, supabase, serviceKey, cuentas, datos, hea
   await estado.detenerRLS?.().catch(() => {});
   await bitacora?.guardar(salida).catch(() => {});
 
-  // Cerrar los contextos es lo que termina de escribir los videos.
-  const videos = {};
-  for (const nombre of Object.keys(contextos)) await contextos[nombre].close().catch(() => {});
-  for (const nombre of Object.keys(paginas)) {
-    const destino = path.join(salida, `${nombre}.webm`);
+  // Primero se corta la captura y se cierran los navegadores (libera memoria); recién después se codifica, de a un
+  // video por vez.
+  const grabados = {};
+  for (const [nombre, grabador] of Object.entries(grabadores)) {
     try {
-      await paginas[nombre].video().saveAs(destino);
-      videos[nombre] = destino;
-    } catch {
-      /* sin video de esta pantalla */
+      grabados[nombre] = await grabador.detener();
+    } catch (e) {
+      console.error(`No pude cortar la grabación de ${nombre}: ${e.message}`);
     }
   }
+  for (const nombre of Object.keys(contextos)) await contextos[nombre].close().catch(() => {});
   for (const nombre of Object.keys(browsers)) await browsers[nombre].close().catch(() => {});
-  await rm(tmp, { recursive: true, force: true });
 
-  return { registro, videos, error };
+  const videos = {};
+  for (const [nombre, cuadros] of Object.entries(grabados)) {
+    try {
+      const destino = path.join(salida, `${nombre}.mp4`);
+      await codificarVideo(cuadros, destino);
+      videos[nombre] = destino;
+    } catch (e) {
+      console.error(`No pude guardar el video de ${nombre}: ${e.message}`);
+    }
+  }
+
+  return { registro, videos, error, barraOculta: estado.barraOculta ?? false };
 }
 
 // Cuánto tarda el panel del repartidor en mostrar un cambio del local. `desde_click` incluye lo que tarda la
@@ -299,32 +378,14 @@ async function recorrer({ registro, paginas, datos, supabase, serviceKey, estado
   const { conOpciones, simples } = datos.productos;
   let numero;
 
-  // Las pantallas del equipo ya están abiertas cuando el cliente empieza.
+  // Las tres pantallas ya están cargadas (y el sonido del local activado) cuando empieza la línea de tiempo.
+  await prepararPantallas({ registro, paginas, estado });
+
   await paso("paneles", "El local y el repartidor tienen su panel abierto", async () => {
-    await Promise.all([
-      local.goto(`${URL_ADMIN}/admin/dashboard/orders`),
-      repartidor.goto(`${URL_ADMIN}/admin/repartidor`),
-    ]);
-    await Promise.all([
-      // Sin pedidos el tablero no muestra columnas: se espera el botón de la pantalla.
-      esperar(local.getByRole("button", { name: "+ Pedido manual" })),
-      esperar(repartidor.getByRole("heading", { name: "Disponibles" })),
-    ]);
     await pausa(1500, 2200);
   });
 
   await paso("menu-abre", `El cliente abre el menú de ${negocio}`, async () => {
-    // La base dev a veces corta `public_menu` por tiempo y el menú dice «No encontramos este menú»: se recarga.
-    const categorias = cliente.locator("#categorias").getByRole("button");
-    const noEncontrado = cliente.getByText("No encontramos este menú");
-    for (let intento = 1; ; intento += 1) {
-      await cliente.goto(`${URL_WEB}/apps/menu-app/?cliente=${SLUG}`);
-      await esperar(categorias.or(noEncontrado));
-      if (!(await noEncontrado.isVisible()) || intento >= 3) break;
-      await dormir(2000);
-    }
-    await esperarOculto(cliente.locator("#loader"));
-    await esperar(categorias);
     await elegirZona(cliente);
     await pausa(1500, 2200);
   });
@@ -384,7 +445,8 @@ async function recorrer({ registro, paginas, datos, supabase, serviceKey, estado
   const tarjetaRepartidor = () => repartidor.locator("article").filter({ hasText: new RegExp(`#${numero} · ${escapar(negocio)}`) });
 
   await paso("local-recibe", "Al local le entra el pedido", async () => {
-    await esperar(local.getByRole("alertdialog").or(tarjetaLocal()), ESPERA_PANEL);
+    // El pedido nuevo abre una alerta sobre el tablero; la tarjeta queda detrás.
+    await mostrar(local, local.getByRole("alertdialog").or(tarjetaLocal()), ESPERA_PANEL);
     await pausa(1800, 2400);
   });
 
@@ -399,7 +461,8 @@ async function recorrer({ registro, paginas, datos, supabase, serviceKey, estado
     await pausa(800, 1200);
     await tocar(local, selector.getByRole("button", { name: /^Aceptar con/ }));
     const clickMs = Date.now();
-    const visto = esperar(tarjetaRepartidor(), ESPERA_PANEL).then(() => Date.now());
+    const visto = mostrar(repartidor, tarjetaRepartidor(), ESPERA_PANEL).then(() => Date.now());
+    visto.catch(() => {}); // si el paso falla antes de esperarlo, que no quede un rechazo suelto
     await esperarOculto(selector);
     await medirLatencia({
       registro,
@@ -416,13 +479,15 @@ async function recorrer({ registro, paginas, datos, supabase, serviceKey, estado
   });
 
   await paso("repartidor-ve", "El repartidor lo ve en Disponibles", async () => {
-    await esperar(tarjetaRepartidor(), ESPERA_PANEL);
+    await tarjetaRepartidor().first().waitFor({ state: "visible", timeout: ESPERA_PANEL });
     await tarjetaRepartidor().first().scrollIntoViewIfNeeded();
+    await mostrar(repartidor, tarjetaRepartidor(), ESPERA_PANEL);
     await pausa(1800, 2400);
   });
 
   await paso("repartidor-toma", "El repartidor toma el pedido", async () => {
     await tocar(repartidor, tarjetaRepartidor().first().getByRole("button", { name: /^Tomar/ }), ESPERA_PANEL);
+    await mostrar(repartidor, tarjetaRepartidor().first(), ESPERA_PANEL);
     await esperar(tarjetaRepartidor().getByText(/Cuando el local te lo entregue/), ESPERA_PANEL);
     await esperar(cliente.getByText(/Lo lleva |Ya tiene repartidor/), ESPERA_SEGUIMIENTO);
     await pausa();
