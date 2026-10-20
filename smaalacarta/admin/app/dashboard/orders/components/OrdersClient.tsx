@@ -1,8 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { availableCountText, orderZoneIsEmpty, type BusinessAvailability } from "@/lib/courier/availability";
 import { useOrderChanges } from "@/lib/realtime/useOrderChanges";
+import { useSerialRefresh } from "@/lib/realtime/useSerialRefresh";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import ManualOrderDialog from "./ManualOrderDialog";
@@ -116,9 +116,10 @@ export default function OrdersClient({
   // Cuántos repartidores disponibles cubren las zonas del local y cuáles zonas están en 0 (ENVIO-200).
   availability?: BusinessAvailability;
 }) {
-  const router = useRouter();
   // Un cambio en la base trae los datos nuevos al instante (ENVIO-172); la consulta de abajo queda de respaldo.
-  useOrderChanges(() => router.refresh());
+  // Un refresco a la vez (ENVIO-210).
+  const refresh = useSerialRefresh(serverNow);
+  useOrderChanges(refresh);
 
   // La hora arranca con la del servidor para que el primer render coincida en los dos
   // lados; después se actualiza sola.
@@ -265,12 +266,12 @@ export default function OrdersClient({
     const id = setInterval(() => {
       if (document.visibilityState === "visible" || soundOnRef.current) {
         setNow(new Date());
-        router.refresh();
+        refresh();
       }
     }, REFRESH_MS);
 
     return () => clearInterval(id);
-  }, [router]);
+  }, [refresh]);
 
   // Con ofertas abiertas la cuenta regresiva ("se elige sola en m:ss") avanza cada segundo, y al vencer
   // se vuelve a pedir el tablero para ver el repartidor elegido (ENVIO-117).
@@ -287,12 +288,12 @@ export default function OrdersClient({
 
       if (current.getTime() >= nextDeadline) {
         clearInterval(id);
-        router.refresh();
+        refresh();
       }
     }, 1000);
 
     return () => clearInterval(id);
-  }, [nextDeadline, router]);
+  }, [nextDeadline, refresh]);
 
   // Pantalla encendida mientras el sonido esté activado. El navegador suelta el bloqueo
   // al ocultarse la pestaña, así que se vuelve a pedir al volver a verla.
@@ -430,7 +431,7 @@ export default function OrdersClient({
     } finally {
       inFlight.current = false;
       setBusyId(null);
-      router.refresh();
+      refresh();
     }
   }
 
@@ -456,7 +457,7 @@ export default function OrdersClient({
     } finally {
       inFlight.current = false;
       setBusyId(null);
-      router.refresh();
+      refresh();
     }
   }
 
@@ -479,7 +480,7 @@ export default function OrdersClient({
     } finally {
       inFlight.current = false;
       setBusyId(null);
-      router.refresh();
+      refresh();
     }
   }
 
@@ -497,7 +498,7 @@ export default function OrdersClient({
     } finally {
       setBusyId(null);
       setReceivingId(null);
-      router.refresh();
+      refresh();
     }
   }
 
@@ -774,7 +775,7 @@ export default function OrdersClient({
         open={manualOpen}
         setup={manualSetup}
         onClose={() => setManualOpen(false)}
-        onCreated={() => router.refresh()}
+        onCreated={() => refresh()}
       />
     </div>
   );

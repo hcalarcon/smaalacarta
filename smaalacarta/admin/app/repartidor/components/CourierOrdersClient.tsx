@@ -1,9 +1,10 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { useCourierOrderChanges } from "@/lib/realtime/useOrderChanges";
+import { useSerialRefresh } from "@/lib/realtime/useSerialRefresh";
 import AvailableOrderCard from "./AvailableOrderCard";
 import CourierOrderCard from "./CourierOrderCard";
 import { useNewOrderAlert } from "./useNewOrderAlert";
@@ -54,9 +55,10 @@ export default function CourierOrdersClient({
   available?: AvailableOrder[];
   serverNow: string;
 }) {
-  const router = useRouter();
+  // Un refresco a la vez (ENVIO-210): el pulso, la consulta de abajo y las acciones comparten el mismo.
+  const refresh = useSerialRefresh(serverNow);
   // Un cambio en la base trae los datos nuevos al instante (ENVIO-172); la consulta de abajo queda de respaldo.
-  useCourierOrderChanges(() => router.refresh());
+  useCourierOrderChanges(refresh);
 
   // La hora arranca con la del servidor para que el primer render coincida en los dos lados.
   const [now, setNow] = useState(() => new Date(serverNow));
@@ -122,12 +124,12 @@ export default function CourierOrdersClient({
     const id = setInterval(() => {
       if (document.visibilityState === "visible" || soundOnRef.current) {
         setNow(new Date());
-        router.refresh();
+        refresh();
       }
     }, REFRESH_MS);
 
     return () => clearInterval(id);
-  }, [router, soundOnRef]);
+  }, [refresh, soundOnRef]);
 
   async function run(orderId: string, call: () => ReturnType<typeof makeOfferAction>) {
     // Un segundo toque sobre el mismo pedido, aunque llegue en el mismo instante, no lanza otra acción.
@@ -147,7 +149,7 @@ export default function CourierOrdersClient({
     } finally {
       inFlight.delete(orderId);
       setBusyId(null);
-      router.refresh();
+      refresh();
     }
   }
 

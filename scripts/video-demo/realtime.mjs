@@ -21,7 +21,7 @@ export const REALTIME_SCRIPT = `(() => {
   const Native = window.WebSocket;
   // El protocolo v2 manda arreglos [join_ref, ref, topic, event, payload]; el v1, objetos.
   const parse = (data) => {
-    const m = parse(data);
+    const m = JSON.parse(data);
     return Array.isArray(m) ? { join_ref: m[0], ref: m[1], topic: m[2], event: m[3], payload: m[4] } : m;
   };
   const role = (token) => {
@@ -115,6 +115,13 @@ export function crearBitacora(origenes) {
       });
       page.on("request", (req) => {
         if (/[?&]_rsc=/.test(req.url())) this.escribir(pantalla, Date.now(), `refresco (router.refresh) → ${new URL(req.url()).pathname}`);
+      });
+      // Cuánto tardó la respuesta de cada refresco: apilados, tardan más que el intervalo y no se pintan.
+      page.on("requestfinished", (req) => {
+        if (!/[?&]_rsc=/.test(req.url())) return;
+        const t = req.timing();
+        const ms = t.responseEnd > 0 ? Math.round(t.responseEnd) : "?";
+        this.escribir(pantalla, Date.now(), `respuesta del refresco en ${ms} ms`);
       });
     },
     async guardar(carpeta) {

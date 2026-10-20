@@ -2266,6 +2266,12 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   ofertaron. Cuando un pedido deja de estar en búsqueda (lo toma otro, se cancela, se elige otro), el pulso va a quienes
   lo veían antes del cambio, para que se les retire de Disponibles. Un pedido sin envío con repartidor no pulsa a nadie.
   La consulta periódica del panel del repartidor, que queda de respaldo si Realtime se corta, pasa de 15 a 5 segundos.
+- **ENVIO-210** Los pedidos de datos nuevos de un panel (`router.refresh()`) no se amontonan: mientras uno sigue en
+  camino, el pulso de Realtime, la consulta periódica y el resto de las fuentes no lanzan otro sino que dejan uno
+  pendiente, que sale apenas llega la respuesta (`useSerialRefresh`). Apilados, cada respuesta tarda más que el
+  intervalo, Next los encadena en una sola transición que no se muestra hasta que termina el último, y el pedido
+  aceptado no aparecía nunca aunque el servidor ya lo devolvía. Si la respuesta no llega en 10 segundos se libera
+  igual. Lo usan el panel del repartidor y el tablero del local.
 
 
 
