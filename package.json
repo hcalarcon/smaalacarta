@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "test": "vitest run --passWithNoTests",
-    "capture-demos": "node scripts/capture-demos.mjs"
+    "capture-demos": "node scripts/capture-demos.mjs",
+    "video-demo": "node scripts/video-demo.mjs"
   },
   "devDependencies": {
     "jsdom": "^30.0.1",

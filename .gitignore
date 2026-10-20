@@ -8,3 +8,6 @@ coverage/
 .claude/settings.local.json
 .claude/scheduled_tasks.lock
 .claude/worktrees/
+
+# Salida del video demo (npm run video-demo)
+video-demo/salida/

@@ -10,6 +10,6 @@ import { defineConfig } from "vitest/config";
 export default defineConfig({
   test: {
     environment: "jsdom",
-    include: ["smaalacarta/{web,landing}/**/*.test.js"],
+    include: ["smaalacarta/{web,landing}/**/*.test.js", "scripts/**/*.test.mjs"],
   },
 });
