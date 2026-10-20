@@ -210,6 +210,17 @@ const FORMATOS = [
   { clave: "redes", salida: "redes-9x16.mp4", rango: "redes", armar: armarRedesVideo, tira: { cada: 2, ancho: 216, alto: 384, columnas: 8 } },
 ];
 
+/** Renderiza con un solo worker: así HyperFrames manda los cuadros directo al encoder y no llena el disco con miles de imágenes. Reintenta una vez. */
+function renderizar(dir, destino, bitrate) {
+  const args = [hyperframes, "render", dir, "-o", destino, "--fps", String(FPS), "--video-bitrate", String(bitrate), "--video-frame-format", "png", "--workers", "1", "--quiet"];
+  for (let intento = 1; intento <= 2; intento++) {
+    const res = spawnSync(process.execPath, args, { stdio: "inherit", env: ENTORNO });
+    if (res.status === 0) return;
+    console.warn(`⚠ El render falló (intento ${intento} de 2).`);
+  }
+  salirConError(`Falló el render de ${path.basename(destino)}.`);
+}
+
 /** Una imagen con un cuadro cada `cada` segundos, para revisar el video sin abrirlo. */
 function sacarTira(video, destino, { cada, ancho, alto, columnas }, duracion) {
   const cuadros = Math.ceil(duracion / cada);
@@ -266,7 +277,7 @@ for (const formato of FORMATOS) {
   for (let intento = 1; ; intento++) {
     rmSync(destino, { force: true });
     console.log(`Renderizando ${formato.salida} (${timeline.duracion} s, ${(bitrate / 1e6).toFixed(2)} Mbps)…`);
-    correr(process.execPath, [hyperframes, "render", dir, "-o", destino, "--fps", String(FPS), "--video-bitrate", String(bitrate), "--video-frame-format", "png", "--quiet"]);
+    renderizar(dir, destino, bitrate);
     const peso = statSync(destino).size;
     if (peso < MAX_BYTES) {
       console.log(`✓ ${path.relative(RAIZ, destino)} — ${(peso / 1e6).toFixed(1)} MB`);
