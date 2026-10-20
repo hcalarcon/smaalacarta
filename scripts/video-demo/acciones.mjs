@@ -7,6 +7,12 @@ export const ESPERA_SEGUIMIENTO = 30_000;
 // la otra pantalla no aparece en 20 s, el paso falla y deja evidencia en fallo/.
 export const ESPERA_PANEL = 20_000;
 
+// Quién anota los focos del video (lo conecta el recorrido): `(page, tipo, box, cuando)`.
+let anotarFoco = null;
+export const conectarFocos = (fn) => {
+  anotarFoco = fn;
+};
+
 export const dormir = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 export const pausa = (min = 1000, max = 1800) => dormir(min + Math.random() * (max - min));
 
@@ -47,6 +53,7 @@ export async function tocar(page, locator, espera = ESPERA) {
   const box = await locator.boundingBox();
   if (box) await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 25 });
   await dormir(250);
+  anotarFoco?.(page, "toque", box);
   await locator.click({ delay: 90, timeout: ESPERA });
 }
 
@@ -68,6 +75,15 @@ export async function esperar(locator, timeout = ESPERA) {
   await locator.first().waitFor({ state: "visible", timeout });
 }
 
+// Espera a que aparezca y anota dónde quedó: es lo que la edición va a acercar. Si no termina de
+// acomodarse, se anota donde esté.
+export async function mostrar(page, locator, timeout = ESPERA) {
+  await esperar(locator, timeout);
+  const cuando = Date.now();
+  await esperarQuieto(locator, ESPERA).catch(() => {});
+  anotarFoco?.(page, "resultado", await locator.first().boundingBox(), cuando);
+}
+
 // Un diálogo o una hoja: visible y con la animación de apertura terminada.
 export async function esperarDialogo(locator, espera = ESPERA) {
   await esperar(locator, espera);
@@ -80,4 +96,4 @@ export async function esperarOculto(locator, timeout = ESPERA) {
 
 // El texto del seguimiento (título del estado, "Buscando repartidor"…) que aparece solo.
 export const verTexto = (page, texto) =>
-  esperar(page.getByText(texto, typeof texto === "string" ? { exact: true } : undefined), ESPERA_SEGUIMIENTO);
+  mostrar(page, page.getByText(texto, typeof texto === "string" ? { exact: true } : undefined), ESPERA_SEGUIMIENTO);
