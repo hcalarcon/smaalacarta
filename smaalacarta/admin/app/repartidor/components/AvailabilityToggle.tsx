@@ -70,6 +70,7 @@ export default function AvailabilityToggle({
   return (
     <div className="flex items-center gap-2">
       <button
+        data-tour="available"
         type="button"
         role="switch"
         aria-checked={on}

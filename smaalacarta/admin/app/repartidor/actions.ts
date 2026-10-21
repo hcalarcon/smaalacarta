@@ -6,6 +6,7 @@ import { requireCourier } from "@/lib/auth/courier";
 import { validateReturn } from "@/lib/courier/panel";
 import { setCourierAvailable } from "@/lib/db/availability";
 import { acceptCourierTerms } from "@/lib/db/courier-terms";
+import { markTutorialSeen } from "@/lib/db/courier-tutorial";
 import { validatePreferences, type CourierPreferences } from "@/lib/courier/profile";
 import { validateEta, type EtaKind } from "@/lib/courier/times";
 import { validateVehicles, type CourierVehicles } from "@/lib/courier/vehicle";
@@ -51,6 +52,20 @@ export async function acceptTermsAction(version: number): Promise<CourierActionR
   if ("error" in result) return { ok: false, error: GENERIC };
 
   revalidatePath("/repartidor", "layout");
+  return { ok: true };
+}
+
+// Marcar el tutorial como visto (ENVIO-213), al terminarlo o saltearlo: el repartidor sale de la sesión y la hora la
+// pone la base. Si falla, el tutorial se cierra igual y la próxima vez vuelve a ofrecerse.
+export async function markTutorialSeenAction(): Promise<CourierActionResult> {
+  await requireCourier();
+
+  const result = await markTutorialSeen();
+  if ("error" in result) {
+    console.error("courier_mark_tutorial_seen falló:", result.error.code, result.error.message);
+    return { ok: false, error: GENERIC };
+  }
+
   return { ok: true };
 }
 

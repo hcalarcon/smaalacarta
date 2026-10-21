@@ -8,6 +8,7 @@ import { useSerialRefresh } from "@/lib/realtime/useSerialRefresh";
 import AvailableOrderCard from "./AvailableOrderCard";
 import CourierOrderCard from "./CourierOrderCard";
 import { useNewOrderAlert } from "./useNewOrderAlert";
+import { useTutorial } from "./tutorial-context";
 import {
   advanceOrderAction,
   declineOrderAction,
@@ -32,6 +33,7 @@ import { changeText, courierChanges, snapshotOrders } from "@/lib/courier/change
 import { courierTab, type CourierTab } from "@/lib/courier/nav";
 import { courierOrderState, grandTotals, totalsByBusiness } from "@/lib/courier/settlements";
 import { STATUS_LABELS, type OrderStatus } from "@/lib/orders/status";
+import { practiceAvailable, practiceTaken } from "@/lib/courier/tutorial";
 import { formatMoney } from "@/lib/promotions/pricing";
 
 // Respaldo por si Realtime se corta (ENVIO-209). Sin el canal conectado consulta cada 5 s; con él, el pulso lleva los
@@ -156,10 +158,21 @@ export default function CourierOrdersClient({
     }
   }
 
+  // El pedido de práctica del tutorial (ENVIO-216): vive acá, en el estado del cliente, y sus botones no llaman a
+  // ninguna acción del servidor. Va después de los pedidos reales, que se ven normales (ENVIO-217).
+  const tutorial = useTutorial();
+  const practicePhase = tutorial?.phase ?? null;
+  const practiceOffer =
+    tutorial && practicePhase === "available" ? practiceAvailable(tutorial.mode, tutorial.zonePrice, now) : null;
+  const practiceMine =
+    tutorial && (practicePhase === "taken" || practicePhase === "on_the_way")
+      ? practiceTaken(practicePhase, tutorial.zonePrice, now)
+      : null;
+
   const groups = splitOrders(orders);
   const disponibles = sortAvailable(available);
   // Los avisos de ofertas cerradas se ven un rato, pero no cuentan como pedidos para ofertar.
-  const openCount = disponibles.filter((item) => !item.resultado).length;
+  const openCount = disponibles.filter((item) => !item.resultado).length + (practiceOffer ? 1 : 0);
   const settlements = totalsByBusiness(orders);
   const settlementTotals = grandTotals(settlements);
   const toSettleCount = orders.filter((item) => courierOrderState(item) === "to_settle").length;
@@ -193,6 +206,7 @@ export default function CourierOrdersClient({
         ).map(([key, label]) => (
           <button
             key={key}
+            data-tour={key === "rendiciones" ? "settlements" : undefined}
             type="button"
             role="tab"
             aria-selected={tab === key}
@@ -337,7 +351,8 @@ export default function CourierOrdersClient({
 
       {tab === "pedidos" ? order.map((group) => {
         // Del historial se ven los últimos, pero nunca queda afuera un pedido sin rendir.
-        const total = group === "disponibles" ? openCount : groups[group].length;
+        const total =
+          group === "disponibles" ? openCount : groups[group].length + (group === "en_curso" && practiceMine ? 1 : 0);
         const list =
           group === "historial"
             ? groups[group].filter(
@@ -409,7 +424,7 @@ export default function CourierOrdersClient({
               <span className="rounded-full bg-white px-2 py-0.5 text-xs font-medium text-stone-600">{total}</span>
             </h2>
 
-            {group === "disponibles" && total === 0 && disponibles.length === 0 ? (
+            {group === "disponibles" && total === 0 && disponibles.length === 0 && !practiceOffer ? (
               <p className="rounded-2xl border border-dashed border-line-strong bg-white p-4 text-center text-sm text-stone-400">
                 {EMPTY[group]}
               </p>
@@ -430,6 +445,20 @@ export default function CourierOrdersClient({
                     onDecline={() => run(item.id, () => declineOrderAction(item.id))}
                   />
                 ))}
+                {practiceOffer ? (
+                  <AvailableOrderCard
+                    key={practiceOffer.id}
+                    order={practiceOffer}
+                    now={now}
+                    busy={false}
+                    error={null}
+                    practice
+                    onOffer={() => tutorial?.tap("take")}
+                    onTake={() => tutorial?.tap("take")}
+                    onWithdraw={() => {}}
+                    onDecline={() => {}}
+                  />
+                ) : null}
               </div>
             ) : (
               <div className="grid gap-3 xl:grid-cols-2">
@@ -446,6 +475,19 @@ export default function CourierOrdersClient({
                     onSettle={() => run(item.id, () => markSettledAction(item.id))}
                   />
                 ))}
+                {group === "en_curso" && practiceMine ? (
+                  <CourierOrderCard
+                    key={practiceMine.id}
+                    order={practiceMine}
+                    now={now}
+                    busy={false}
+                    error={null}
+                    practice
+                    onReturn={() => {}}
+                    onAdvance={(status) => tutorial?.tap(status)}
+                    onSettle={() => {}}
+                  />
+                ) : null}
               </div>
             )}
           </section>

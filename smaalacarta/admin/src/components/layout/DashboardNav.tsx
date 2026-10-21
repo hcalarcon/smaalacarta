@@ -32,6 +32,7 @@ export default function DashboardNav({
             href={link.href}
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
+            data-tour={link.tour}
             aria-label={
               collapsed
                 ? `${link.label}${navBadgeLabel(link.badge) ? `, ${link.badge} pendientes` : ""}`

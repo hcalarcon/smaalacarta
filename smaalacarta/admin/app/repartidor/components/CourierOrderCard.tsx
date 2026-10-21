@@ -44,6 +44,7 @@ export default function CourierOrderCard({
   onAdvance,
   onSetEta,
   onSettle,
+  practice = false,
 }: {
   order: CourierPanelOrder;
   now: Date;
@@ -58,6 +59,8 @@ export default function CourierOrderCard({
   onSetEta?: (kind: EtaKind, minutes: number) => void | Promise<void>;
   // Marca que ya rindió al local lo cobrado del pedido (ENVIO-42): no se deshace.
   onSettle: () => void | Promise<void>;
+  // El pedido de práctica del tutorial (ENVIO-216): se marca y lo puede señalar el tour.
+  practice?: boolean;
 }) {
   const [returning, setReturning] = useState(false);
   const [returnKind, setReturnKind] = useState<ReturnKind | null>(null);
@@ -110,14 +113,23 @@ export default function CourierOrderCard({
   }
 
   return (
-    <article className="rounded-2xl border border-line bg-white p-3 shadow-sm">
+    <article
+      data-tour={practice ? "practice-in-progress" : undefined}
+      className="rounded-2xl border border-line bg-white p-3 shadow-sm"
+    >
       {/* Línea 1: número, local y estado (ADMIN-REPARTIDOR-6). */}
       <header className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
         <p className="min-w-0 break-words text-base font-semibold text-brand">
-          #{order.numero} · {order.negocio.nombre}
+          {practice ? order.negocio.nombre : `#${order.numero} · ${order.negocio.nombre}`}
         </p>
 
         <div className="flex flex-wrap items-center gap-1.5">
+          {practice ? (
+            <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold tracking-wide text-white">
+              PRÁCTICA
+            </span>
+          ) : null}
+
           {when ? (
             <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-800">
               🕒 {when}
@@ -250,7 +262,7 @@ export default function CourierOrderCard({
       ) : null}
 
       {actions.onTheWay || actions.delivered ? (
-        <div className="mt-3">
+        <div data-tour={practice ? "advance" : undefined} className="mt-3">
           <PendingButton
             busy={busy}
             pendingLabel={actions.onTheWay ? "Marcando en camino…" : "Marcando entregado…"}

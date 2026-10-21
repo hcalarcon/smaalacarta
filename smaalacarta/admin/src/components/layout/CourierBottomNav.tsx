@@ -6,6 +6,9 @@ import { usePathname, useSearchParams } from "next/navigation";
 import { courierBarItems, courierTab } from "@/lib/courier/nav";
 import { navBadgeLabel } from "@/lib/layout/nav-badge";
 
+// Lo que el tutorial del repartidor señala en la barra (ENVIO-214).
+const TOUR_TARGETS: Partial<Record<string, string>> = { zonas: "zones", rendiciones: "settlements" };
+
 // La barra fija de abajo del panel del repartidor en el celular (ADMIN-MOVIL-7). En escritorio no se ve:
 // ahí siguen la barra lateral y las pestañas.
 export default function CourierBottomNav({ toSettleCount }: { toSettleCount: number }) {
@@ -24,6 +27,7 @@ export default function CourierBottomNav({ toSettleCount }: { toSettleCount: num
             <Link
               href={item.href}
               aria-current={item.active ? "page" : undefined}
+              data-tour={TOUR_TARGETS[item.key]}
               className={`relative flex min-h-14 flex-col items-center justify-center gap-0.5 px-2 text-xs font-semibold transition ${
                 item.active ? "text-brand" : "text-stone-500 hover:text-brand"
               }`}
