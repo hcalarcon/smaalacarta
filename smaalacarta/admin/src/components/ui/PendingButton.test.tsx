@@ -94,3 +94,107 @@ describe("botón con espera — ADMIN-PEDIDOS-51", () => {
     expect((screen.getByRole("button", { name: "Ofertar" }) as HTMLButtonElement).disabled).toBe(true);
   });
 });
+
+describe("sigue deshabilitado hasta que llega el estado nuevo — ADMIN-PEDIDOS-59", () => {
+  const press = async (name: string) => {
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name }));
+    });
+  };
+
+  it("con `settleKey`, al responder el servidor sigue gris y no se puede tocar de nuevo", async () => {
+    const onClick = vi.fn(() => Promise.resolve());
+
+    render(
+      <PendingButton onClick={onClick} pendingLabel="Tomando…" settleKey="ready">
+        Tomar
+      </PendingButton>,
+    );
+
+    await press("Tomar");
+
+    const button = screen.getByRole("button", { name: /Tomando/ }) as HTMLButtonElement;
+    expect(button.disabled).toBe(true);
+
+    fireEvent.click(button);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it("cuando cambia el `settleKey` (llegó el estado nuevo) vuelve a estar activo", async () => {
+    const { rerender } = render(
+      <PendingButton onClick={() => Promise.resolve()} pendingLabel="Tomando…" settleKey="ready">
+        Tomar
+      </PendingButton>,
+    );
+
+    await press("Tomar");
+    expect(screen.getByRole("button", { name: /Tomando/ })).toBeTruthy();
+
+    rerender(
+      <PendingButton onClick={() => Promise.resolve()} pendingLabel="Tomando…" settleKey="on_the_way">
+        En camino
+      </PendingButton>,
+    );
+
+    const button = screen.getByRole("button", { name: "En camino" }) as HTMLButtonElement;
+    expect(button.disabled).toBe(false);
+  });
+
+  it("si la acción responde `false` (falló y se muestra el error), vuelve a estar activo", async () => {
+    render(
+      <PendingButton onClick={() => Promise.resolve(false)} pendingLabel="Tomando…" settleKey="ready">
+        Tomar
+      </PendingButton>,
+    );
+
+    await press("Tomar");
+
+    expect((screen.getByRole("button", { name: "Tomar" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("si la acción lanza, vuelve a estar activo", async () => {
+    render(
+      <PendingButton onClick={() => Promise.reject(new Error("falló"))} pendingLabel="Tomando…" settleKey="ready">
+        Tomar
+      </PendingButton>,
+    );
+
+    await press("Tomar");
+
+    expect((screen.getByRole("button", { name: "Tomar" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("si el estado nuevo nunca llega, a los 10 segundos se libera", async () => {
+    vi.useFakeTimers();
+    try {
+      render(
+        <PendingButton onClick={() => Promise.resolve()} pendingLabel="Tomando…" settleKey="ready">
+          Tomar
+        </PendingButton>,
+      );
+
+      await press("Tomar");
+      expect(screen.getByRole("button", { name: /Tomando/ })).toBeTruthy();
+
+      await act(async () => {
+        vi.advanceTimersByTime(10_000);
+      });
+
+      expect((screen.getByRole("button", { name: "Tomar" }) as HTMLButtonElement).disabled).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("sin `settleKey` vuelve a estar activo al responder, como un botón de Guardar", async () => {
+    render(
+      <PendingButton onClick={() => Promise.resolve()} pendingLabel="Guardando…">
+        Guardar
+      </PendingButton>,
+    );
+
+    await press("Guardar");
+
+    expect((screen.getByRole("button", { name: "Guardar" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+});

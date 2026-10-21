@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
 import { useCourierOrderChanges } from "@/lib/realtime/useOrderChanges";
+import { useHoldUntilFresh } from "@/lib/realtime/useHoldUntilFresh";
 import { useSerialRefresh } from "@/lib/realtime/useSerialRefresh";
 import AvailableOrderCard from "./AvailableOrderCard";
 import CourierOrderCard from "./CourierOrderCard";
@@ -68,6 +69,9 @@ export default function CourierOrdersClient({
   // La hora arranca con la del servidor para que el primer render coincida en los dos lados.
   const [now, setNow] = useState(() => new Date(serverNow));
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Tras una acción que salió bien, el pedido sigue ocupado hasta que llegan datos nuevos (ADMIN-PEDIDOS-60).
+  const held = useHoldUntilFresh(serverNow);
+  const isBusy = (id: string) => busyId === id || held.holding(id);
   // La pestaña sale de la URL (ADMIN-MOVIL-8). Las pestañas de escritorio la cambian al toque y dejan la
   // URL al día; si la URL cambia por otro lado (la barra de abajo), manda la URL.
   const urlTab = courierTab(useSearchParams().get("tab"));
@@ -136,9 +140,10 @@ export default function CourierOrdersClient({
     return () => clearInterval(id);
   }, [refresh, soundOnRef, realtimeConnected]);
 
-  async function run(orderId: string, call: () => ReturnType<typeof makeOfferAction>) {
+  // Devuelve si salió bien: el botón que la llamó sigue esperando el estado nuevo solo si no falló (ADMIN-PEDIDOS-59).
+  async function run(orderId: string, call: () => ReturnType<typeof makeOfferAction>): Promise<boolean> {
     // Un segundo toque sobre el mismo pedido, aunque llegue en el mismo instante, no lanza otra acción.
-    if (inFlight.has(orderId)) return;
+    if (inFlight.has(orderId)) return true;
     inFlight.add(orderId);
 
     setError(null);
@@ -149,8 +154,11 @@ export default function CourierOrdersClient({
       const result = await call();
       if (!result.ok && result.closed) setNotice(result.error);
       else if (!result.ok) setError({ id: orderId, message: result.error });
+      if (result.ok) held.hold(orderId);
+      return result.ok;
     } catch {
       setError({ id: orderId, message: "No pudimos guardar el cambio. Probá de nuevo." });
+      return false;
     } finally {
       inFlight.delete(orderId);
       setBusyId(null);
@@ -379,7 +387,7 @@ export default function CourierOrdersClient({
                       key={item.id}
                       order={item}
                       now={now}
-                      busy={busyId === item.id}
+                      busy={isBusy(item.id)}
                       error={error?.id === item.id ? error.message : null}
                       onReturn={(kind, reason) => run(item.id, () => returnOrderAction(item.id, kind, reason ?? ""))}
                       onAdvance={(status, eta) => run(item.id, () => advanceOrderAction(item.id, status, eta, item.estado))}
@@ -435,7 +443,7 @@ export default function CourierOrdersClient({
                     key={item.id}
                     order={item}
                     now={now}
-                    busy={busyId === item.id}
+                    busy={isBusy(item.id)}
                     error={error?.id === item.id ? error.message : null}
                     onOffer={(input) =>
                       run(item.id, () => makeOfferAction(item.id, input, Number(item.envio.precio_lista ?? 0)))
@@ -467,7 +475,7 @@ export default function CourierOrdersClient({
                     key={item.id}
                     order={item}
                     now={now}
-                    busy={busyId === item.id}
+                    busy={isBusy(item.id)}
                     error={error?.id === item.id ? error.message : null}
                     onReturn={(kind, reason) => run(item.id, () => returnOrderAction(item.id, kind, reason ?? ""))}
                     onAdvance={(status, eta) => run(item.id, () => advanceOrderAction(item.id, status, eta, item.estado))}

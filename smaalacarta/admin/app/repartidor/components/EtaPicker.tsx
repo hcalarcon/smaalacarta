@@ -10,11 +10,14 @@ import PendingButton from "@/components/ui/PendingButton";
 export default function EtaPicker({
   title,
   busy,
+  settleKey,
   onPick,
 }: {
   title: string;
   busy: boolean;
-  onPick: (minutes: number) => void | Promise<void>;
+  // Cuando el botón cambia el estado del pedido: lo que cambia al llegar el estado nuevo (ADMIN-PEDIDOS-59).
+  settleKey?: unknown;
+  onPick: (minutes: number) => void | Promise<void | boolean>;
 }) {
   const [custom, setCustom] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +43,7 @@ export default function EtaPicker({
             key={minutes}
             busy={busy}
             pendingLabel="Guardando…"
+            settleKey={settleKey}
             onClick={() => onPick(minutes)}
             className="min-h-11 rounded-xl border border-line-strong bg-white px-4 py-2 text-sm font-semibold text-brand transition hover:bg-cream disabled:opacity-60"
           >

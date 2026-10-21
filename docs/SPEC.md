@@ -1507,6 +1507,15 @@ contradiga: ahora entra a los envíos, lleva opciones y nace confirmado)
   Aceptar manda `from = pending`. En el panel del repartidor, un segundo toque sobre el mismo pedido no lanza otra acción.
 - **ADMIN-PEDIDOS-58** Al confirmar la aceptación (con tiempo o sin él), el cartel de "Nuevo pedido" y la cuenta de sin
   atender se van en el momento, sin esperar al servidor; si la acción falla, vuelven y se muestra el error.
+- **ADMIN-PEDIDOS-59** El botón de un cambio de estado (Tomar, Ofertar, Aceptar, En camino, Entregado…) no vuelve a
+  habilitarse cuando responde el servidor sino cuando llega el estado nuevo: sigue gris, con spinner y en gerundio hasta
+  que cambia su `settleKey` (el estado del pedido), se desmonta, la acción falla (devuelve `false` o lanza) o pasan 10
+  segundos sin cambio (por si el refresco no llega). Así no se puede tocar en los segundos entre la respuesta y el
+  refresco. Un botón sin `settleKey` (Guardar, por ejemplo) vuelve a estar activo al responder, como hasta ahora.
+- **ADMIN-PEDIDOS-60** Con una acción de un pedido que salió bien, **todos** los botones de ese pedido (en el tablero del
+  local y en el panel del repartidor: los de "Llego en…", Rendido, Devolver, Rechazar, etc., no solo el que se tocó)
+  siguen deshabilitados hasta que llegan datos nuevos del servidor (`useHoldUntilFresh`, que mira la hora del servidor que
+  trae cada refresco) o pasan 10 segundos; si la acción falla se liberan enseguida. Los de otros pedidos no se tocan.
 
 
 ## MP — Cobro con Mercado Pago (Checkout Pro)

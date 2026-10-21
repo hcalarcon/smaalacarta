@@ -66,7 +66,7 @@ export default function OrderCard({
   now: Date;
   busy: boolean;
   // Puede devolver una promesa: el botón espera lo que tarde y no deja tocar de nuevo (ADMIN-PEDIDOS-51).
-  onAdvance: (status: string) => void | Promise<void>;
+  onAdvance: (status: string) => void | Promise<void | boolean>;
   onOpen: () => void;
   onConfirmSettlement?: () => void;
   // Los repartidores del local: sirven para nombrar al que tomó el pedido y al favorito.
@@ -371,6 +371,7 @@ export default function OrderCard({
           <PendingButton
             onClick={() => onAdvance(action.status)}
             pending={busy}
+            settleKey={order.status}
             pendingLabel={action.status === "confirmed" ? "Aceptando…" : "Guardando…"}
             disabled={blocked}
             title={blocked ? blockReason : undefined}
