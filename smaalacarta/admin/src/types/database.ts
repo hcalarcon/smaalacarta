@@ -670,6 +670,7 @@ export type Database = {
           id: string
           moto: boolean
           name: string
+          tutorial_seen_at: string | null
           whatsapp: string | null
         }
         Insert: {
@@ -679,6 +680,7 @@ export type Database = {
           id?: string
           moto?: boolean
           name: string
+          tutorial_seen_at?: string | null
           whatsapp?: string | null
         }
         Update: {
@@ -688,6 +690,7 @@ export type Database = {
           id?: string
           moto?: boolean
           name?: string
+          tutorial_seen_at?: string | null
           whatsapp?: string | null
         }
         Relationships: []
@@ -1688,6 +1691,7 @@ export type Database = {
         Returns: undefined
       }
       courier_mark_settled: { Args: { p_order_id: string }; Returns: undefined }
+      courier_mark_tutorial_seen: { Args: never; Returns: undefined }
       courier_offers_deadline: { Args: { p_order_id: string }; Returns: string }
       courier_offers_notice_window: { Args: never; Returns: string }
       courier_offers_window: { Args: never; Returns: string }
@@ -1736,6 +1740,7 @@ export type Database = {
       courier_terms_required: { Args: never; Returns: boolean }
       courier_terms_status: { Args: never; Returns: Json }
       courier_terms_version: { Args: never; Returns: number }
+      courier_tutorial_status: { Args: never; Returns: Json }
       courier_vehicle_ok: {
         Args: {
           p_auto: boolean
