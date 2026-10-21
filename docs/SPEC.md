@@ -1512,6 +1512,10 @@ contradiga: ahora entra a los envíos, lleva opciones y nace confirmado)
   que cambia su `settleKey` (el estado del pedido), se desmonta, la acción falla (devuelve `false` o lanza) o pasan 10
   segundos sin cambio (por si el refresco no llega). Así no se puede tocar en los segundos entre la respuesta y el
   refresco. Un botón sin `settleKey` (Guardar, por ejemplo) vuelve a estar activo al responder, como hasta ahora.
+- **ADMIN-PEDIDOS-60** Con una acción de un pedido que salió bien, **todos** los botones de ese pedido (en el tablero del
+  local y en el panel del repartidor: los de "Llego en…", Rendido, Devolver, Rechazar, etc., no solo el que se tocó)
+  siguen deshabilitados hasta que llegan datos nuevos del servidor (`useHoldUntilFresh`, que mira la hora del servidor que
+  trae cada refresco) o pasan 10 segundos; si la acción falla se liberan enseguida. Los de otros pedidos no se tocan.
 
 
 ## MP — Cobro con Mercado Pago (Checkout Pro)

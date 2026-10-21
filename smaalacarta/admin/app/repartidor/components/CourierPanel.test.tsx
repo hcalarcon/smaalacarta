@@ -909,12 +909,9 @@ describe("tras responder el servidor el botón espera el estado nuevo — ADMIN-
   });
 
   it("En camino sigue gris hasta que el pedido cambia de estado", async () => {
-    const view = (estado: string) => (
-      <CourierOrdersClient
-        orders={[order("c1", estado, "accepted")]}
-        available={[]}
-        serverNow="2026-10-09T22:05:00Z"
-      />
+    // Cada respuesta del servidor trae su hora: con el estado nuevo llega también una hora nueva.
+    const view = (estado: string, serverNow = "2026-10-09T22:05:00Z") => (
+      <CourierOrdersClient orders={[order("c1", estado, "accepted")]} available={[]} serverNow={serverNow} />
     );
     const { rerender } = render(view("handed_to_courier"));
 
@@ -924,7 +921,39 @@ describe("tras responder el servidor el botón espera el estado nuevo — ADMIN-
     await act(async () => {});
     expect((screen.getByRole("button", { name: /Marcando en camino/ }) as HTMLButtonElement).disabled).toBe(true);
 
-    rerender(view("on_the_way"));
+    rerender(view("on_the_way", "2026-10-09T22:05:05Z"));
     expect((screen.getByRole("button", { name: "Entregado" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+});
+
+describe("todo el pedido queda ocupado hasta que llegan datos nuevos — ADMIN-PEDIDOS-60", () => {
+  const view = (serverNow: string) => (
+    <CourierOrdersClient orders={[]} available={[offer("h1", { modo: "fixed" })]} serverNow={serverNow} />
+  );
+
+  it("tras tomar, los demás botones del pedido siguen deshabilitados; con datos nuevos se liberan", async () => {
+    const { rerender } = render(view("2026-10-09T22:05:00Z"));
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Tomar/ }));
+    });
+    await act(async () => {});
+
+    expect((screen.getByRole("button", { name: "Rechazar" }) as HTMLButtonElement).disabled).toBe(true);
+
+    rerender(view("2026-10-09T22:05:05Z"));
+    expect((screen.getByRole("button", { name: "Rechazar" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+
+  it("si la acción falla no queda ocupado", async () => {
+    mocks.take.mockResolvedValue({ ok: false, error: "No se pudo" });
+    render(view("2026-10-09T22:05:00Z"));
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Tomar/ }));
+    });
+    await act(async () => {});
+
+    expect((screen.getByRole("button", { name: "Rechazar" }) as HTMLButtonElement).disabled).toBe(false);
   });
 });

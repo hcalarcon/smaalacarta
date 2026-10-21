@@ -2,6 +2,7 @@
 
 import { availableCountText, orderZoneIsEmpty, type BusinessAvailability } from "@/lib/courier/availability";
 import { useOrderChanges } from "@/lib/realtime/useOrderChanges";
+import { useHoldUntilFresh } from "@/lib/realtime/useHoldUntilFresh";
 import { useSerialRefresh } from "@/lib/realtime/useSerialRefresh";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
@@ -125,6 +126,9 @@ export default function OrdersClient({
   // lados; después se actualiza sola.
   const [now, setNow] = useState(() => new Date(serverNow));
   const [busyId, setBusyId] = useState<string | null>(null);
+  // Tras una acción que salió bien, el pedido sigue ocupado hasta que llegan datos nuevos (ADMIN-PEDIDOS-60).
+  const held = useHoldUntilFresh(serverNow);
+  const isBusy = (id: string | null | undefined) => (id ? busyId === id || held.holding(id) : false);
   const [error, setError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [manualOpen, setManualOpen] = useState(false);
@@ -420,6 +424,7 @@ export default function OrdersClient({
 
       if (result.ok) {
         setPrepPicker(null);
+        held.hold(orderId);
         if (minutes !== null) saveLastPrep(slug, minutes);
       } else {
         setError(result.error);
@@ -447,6 +452,7 @@ export default function OrdersClient({
 
     try {
       const result = await setOrderStatusAction(orderId, status, note, from);
+      if (result.ok) held.hold(orderId);
       if (!result.ok) {
         setError(result.error);
         if (accepting) markAccepted(orderId, false);
@@ -476,7 +482,8 @@ export default function OrdersClient({
 
     try {
       const result = await run();
-      if (!result.ok) setError(result.error);
+      if (result.ok) held.hold(orderId);
+      else setError(result.error);
     } catch {
       setError("No pudimos guardar el cambio. Probá de nuevo.");
     } finally {
@@ -494,7 +501,8 @@ export default function OrdersClient({
 
     try {
       const result = await confirmSettlementAction(receivingId);
-      if (!result.ok) setError(result.error);
+      if (result.ok) held.hold(receivingId);
+      else setError(result.error);
     } catch {
       setError("No pudimos guardar el cambio. Probá de nuevo.");
     } finally {
@@ -667,7 +675,7 @@ export default function OrdersClient({
                           key={order.id}
                           order={order}
                           now={now}
-                          busy={busyId === order.id}
+                          busy={isBusy(order.id)}
                           onAdvance={(status) => requestStatus(order, status)}
                           onSetPrep={() => {
                             setError(null);
@@ -704,7 +712,7 @@ export default function OrdersClient({
       <OrderDetailDialog
         order={selected}
         slug={slug}
-        busy={busyId === selected?.id}
+        busy={isBusy(selected?.id)}
         onClose={() => setSelectedId(null)}
         onChangeStatus={(status, note) => selected && requestStatus(selected, status, note)}
         couriers={couriers}
@@ -744,7 +752,7 @@ export default function OrdersClient({
         <NewOrderAlert
           order={alertOrder}
           moreCount={count - 1}
-          busy={busyId === alertOrder.id}
+          busy={isBusy(alertOrder.id)}
           canSilence={soundOn && audioReady}
           silenced={mutedUntil !== null}
           onAccept={() => requestStatus(alertOrder, "confirmed")}
@@ -761,7 +769,7 @@ export default function OrdersClient({
           suggested={suggestedPrepMinutes}
           defaultMinutes={defaultPrepMinutes}
           lastUsed={activePicker.last}
-          busy={busyId === activePicker.orderId}
+          busy={isBusy(activePicker.orderId)}
           error={error}
           onConfirm={(minutes) => submitPrep(minutes)}
           onAcceptWithout={() => submitPrep(null)}
