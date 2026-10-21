@@ -1045,11 +1045,6 @@ h3 {
     aspect-ratio: 9 / 16;
   }
 
-  /* El plan destacado se ve primero. */
-  .plan-card.featured {
-    order: -1;
-  }
-
   /* El logo cede antes que el botón "Ver Demo" (LANDING-24). */
   .logo {
     min-width: 0;
@@ -1206,6 +1201,13 @@ h3 {
 
   .hero-video {
     max-width: none;
+  }
+}
+
+/* El plan destacado va primero mientras los planes están en una sola columna. */
+@media (max-width: 999px) {
+  .plan-card.featured {
+    order: -1;
   }
 }
 

@@ -256,71 +256,112 @@ describe("LANDING-19 — video demo en el inicio", () => {
 });
 
 describe("LANDING-19 — video: comportamiento", () => {
-  let video;
   let calls;
-  const prototypeMock = () => {
+  let reject;
+  // jsdom no reproduce video: se simula lo que hace el navegador, con sus eventos.
+  const mockMedia = () => {
     calls = [];
-    window.HTMLMediaElement.prototype.play = function () {
+    reject = false;
+    const state = new WeakMap();
+    const proto = window.HTMLMediaElement.prototype;
+    Object.defineProperty(proto, "paused", {
+      configurable: true,
+      get() {
+        return state.get(this) ?? true;
+      },
+    });
+    proto.play = function () {
       calls.push("play");
+      if (reject) return Promise.reject(new Error("bloqueado"));
+      state.set(this, false);
+      this.dispatchEvent(new Event("playing"));
       return Promise.resolve();
     };
-    window.HTMLMediaElement.prototype.pause = function () {
+    proto.pause = function () {
       calls.push("pause");
+      state.set(this, true);
+      this.dispatchEvent(new Event("pause"));
     };
+  };
+  const inView = (visible) => {
+    const frame = $(".hero-video");
+    observerOf(frame).cb([{ isIntersecting: visible, target: frame }]);
   };
 
   it("en compu baja solo el horizontal", async () => {
-    prototypeMock();
+    mockMedia();
     await loadPage();
-    video = $(".hero-video-el");
-    expect(video.getAttribute("src")).toBe("assets/video/explicativo-16x9.mp4");
-    expect(video.getAttribute("poster")).toBe("assets/video/poster-16x9.webp");
+    expect($(".hero-video-el").getAttribute("src")).toBe("assets/video/explicativo-16x9.mp4");
+    expect($(".hero-video-el").getAttribute("poster")).toBe("assets/video/poster-16x9.webp");
   });
 
   it("en el celular (menos de 768 px) baja solo el vertical", async () => {
-    prototypeMock();
+    mockMedia();
     await loadPage({ tall: true });
-    video = $(".hero-video-el");
-    expect(video.getAttribute("src")).toBe("assets/video/explicativo-9x16.mp4");
-    expect(video.getAttribute("poster")).toBe("assets/video/poster-9x16.webp");
+    expect($(".hero-video-el").getAttribute("src")).toBe("assets/video/explicativo-9x16.mp4");
+    expect($(".hero-video-el").getAttribute("poster")).toBe("assets/video/poster-9x16.webp");
   });
 
-  it("se pausa al salir de pantalla y sigue al volver", async () => {
-    prototypeMock();
+  it("no arranca hasta que el inicio está a la vista; se pausa al salir y sigue al volver", async () => {
+    mockMedia();
     await loadPage();
-    const frame = $(".hero-video");
-    expect(observerOf(frame)).toBeTruthy();
-    calls.length = 0;
-    observerOf(frame).cb([{ isIntersecting: false, target: frame }]);
-    expect(calls).toEqual(["pause"]);
-    observerOf(frame).cb([{ isIntersecting: true, target: frame }]);
-    expect(calls).toEqual(["pause", "play"]);
+    expect(observerOf($(".hero-video"))).toBeTruthy();
+    expect(calls).toEqual([]);
+    inView(true);
+    expect(calls).toEqual(["play"]);
+    inView(false);
+    expect(calls).toEqual(["play", "pause"]);
+    expect($(".hero-video").classList.contains("is-paused")).toBe(false);
+    inView(true);
+    expect(calls).toEqual(["play", "pause", "play"]);
   });
 
   it("el botón pausa y reproduce, y no se reanuda solo si la persona lo pausó", async () => {
-    prototypeMock();
+    mockMedia();
     await loadPage();
     const btn = $(".hero-video-play");
     const frame = $(".hero-video");
+    inView(true);
     expect(btn.hidden).toBe(false);
     expect(frame.classList.contains("is-paused")).toBe(false);
+    expect(btn.getAttribute("aria-label")).toMatch(/^Pausar video/);
     btn.click();
     expect(frame.classList.contains("is-paused")).toBe(true);
     expect(btn.getAttribute("aria-label")).toMatch(/^Reproducir video/);
     calls.length = 0;
-    observerOf(frame).cb([{ isIntersecting: true, target: frame }]);
+    inView(true);
     expect(calls).toEqual([]);
     btn.click();
     expect(frame.classList.contains("is-paused")).toBe(false);
     expect(calls).toEqual(["play"]);
   });
 
-  it("con prefers-reduced-motion no arranca solo: queda el póster con ▶ y sin autoplay", async () => {
-    prototypeMock();
+  it("si el navegador bloquea la reproducción, queda el ▶ y un toque la inicia", async () => {
+    mockMedia();
+    await loadPage();
+    reject = true;
+    inView(true);
+    await Promise.resolve();
+    await Promise.resolve();
+    expect($(".hero-video").classList.contains("is-paused")).toBe(true);
+    reject = false;
+    $(".hero-video-play").click();
+    expect($(".hero-video").classList.contains("is-paused")).toBe(false);
+  });
+
+  it("el atributo autoplay se quita: el arranque lo decide el script", async () => {
+    mockMedia();
+    await loadPage();
+    expect($(".hero-video-el").hasAttribute("autoplay")).toBe(false);
+  });
+
+  it("con prefers-reduced-motion no arranca solo: queda el póster con ▶", async () => {
+    mockMedia();
     await loadPage({ reducedMotion: true });
     expect($(".hero-video-el").hasAttribute("autoplay")).toBe(false);
     expect($(".hero-video").classList.contains("is-paused")).toBe(true);
     expect($(".hero-video-play").textContent).toContain("▶");
+    inView(true);
     expect(calls).toEqual([]);
     $(".hero-video-play").click();
     expect(calls).toEqual(["play"]);
@@ -380,7 +421,7 @@ describe("LANDING-30 — qué ofrecemos, beneficios, planes y limpieza del PDF",
   });
 
   it("en el celular el destacado se ve primero", () => {
-    expect(CSS).toMatch(/\.plan-card\.featured\s*\{\s*order:\s*-1/);
+    expect(CSS).toMatch(/@media \(max-width: 999px\)\s*\{\s*\.plan-card\.featured\s*\{\s*order:\s*-1/);
   });
 
   it("no queda el plan gratis ni el PDF como servicio", () => {

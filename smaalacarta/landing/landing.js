@@ -144,23 +144,45 @@ const heroPlay = document.querySelector(".hero-video-play");
 if (heroVideo && heroPlay) {
   const frame = heroVideo.parentElement;
   const tallQuery = typeof window.matchMedia === "function" ? window.matchMedia("(max-width: 767px)") : null;
-  const reduceMotion = prefersReducedMotion();
-  let wantsPlay = !reduceMotion; // la persona (o el navegador) quiere verlo en reproducción
-  let inView = true;
+  const hasObserver = "IntersectionObserver" in window;
+  let wantsPlay = !prefersReducedMotion(); // la persona no lo pausó (ni pidió menos movimiento)
+  let inView = !hasObserver; // con observer, arranca recién cuando el hero está a la vista
+  let pausedByScroll = false;
+  let showPlay = !wantsPlay;
 
-  const play = () => {
-    const result = heroVideo.play?.();
-    if (result?.catch) result.catch(() => {});
-  };
+  // El atributo `autoplay` arrancaría solo al cambiar el `src` aunque esté pausado o fuera de pantalla:
+  // el arranque lo decide este script.
+  heroVideo.autoplay = false;
+  heroVideo.removeAttribute("autoplay");
 
-  function renderPlayButton() {
-    const paused = !wantsPlay;
-    frame.classList.toggle("is-paused", paused);
+  const render = () => {
+    frame.classList.toggle("is-paused", showPlay);
     heroPlay.setAttribute(
       "aria-label",
-      (paused ? "Reproducir" : "Pausar") + " video: así funciona un pedido en SMA a la Carta",
+      (showPlay ? "Reproducir" : "Pausar") + " video: así funciona un pedido en SMA a la Carta",
     );
-  }
+  };
+
+  const play = () => {
+    pausedByScroll = false;
+    const result = heroVideo.play?.();
+    // Si el navegador bloquea la reproducción (ahorro de batería), queda el ▶ para tocar.
+    result?.catch?.(() => {
+      showPlay = true;
+      render();
+    });
+  };
+
+  heroVideo.addEventListener("playing", () => {
+    showPlay = false;
+    render();
+  });
+  heroVideo.addEventListener("pause", () => {
+    // Salir de pantalla pausa sin mostrar el ▶; cualquier otra pausa (la persona, el navegador) sí.
+    if (!pausedByScroll) showPlay = true;
+    pausedByScroll = false;
+    render();
+  });
 
   function loadSource() {
     const tall = tallQuery?.matches ?? false;
@@ -172,28 +194,33 @@ if (heroVideo && heroPlay) {
     if (wantsPlay && inView) play();
   }
 
-  if (reduceMotion) {
-    heroVideo.autoplay = false;
-    heroVideo.removeAttribute("autoplay");
-  }
   loadSource();
   tallQuery?.addEventListener?.("change", loadSource);
   heroPlay.hidden = false;
-  renderPlayButton();
+  render();
 
   heroPlay.addEventListener("click", () => {
-    wantsPlay = !wantsPlay;
-    if (wantsPlay) play();
-    else heroVideo.pause?.();
-    renderPlayButton();
+    if (heroVideo.paused) {
+      wantsPlay = true;
+      play();
+    } else {
+      wantsPlay = false;
+      heroVideo.pause?.();
+    }
   });
 
-  if ("IntersectionObserver" in window) {
+  if (hasObserver) {
     new IntersectionObserver(
       (entries) => {
         inView = entries.at(-1).isIntersecting;
-        if (!inView) heroVideo.pause?.();
-        else if (wantsPlay) play();
+        if (!inView) {
+          if (!heroVideo.paused) {
+            pausedByScroll = true;
+            heroVideo.pause?.();
+          }
+        } else if (wantsPlay && heroVideo.paused) {
+          play();
+        }
       },
       { threshold: 0.25 },
     ).observe(frame);
