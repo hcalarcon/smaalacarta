@@ -106,11 +106,12 @@ h3 {
   background: var(--color-action-hover);
 }
 
-.sma-tour-skip {
+.driver-popover.sma-tour .sma-tour-skip {
   min-height: 44px;
   padding: 0 10px;
   border: 0;
   background: none;
+  text-shadow: none;
   font-family: var(--font-sans);
   font-size: 13px;
   color: #57534e;
