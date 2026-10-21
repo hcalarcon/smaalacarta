@@ -12,6 +12,7 @@ import { vehicleLabel } from "/apps/tracker/lib/vehicles.js";
 import { etaView as buildEta } from "/apps/tracker/lib/prep.js";
 import { cancelReason, deliveryMode, progressSteps } from "/apps/tracker/lib/steps.js";
 import {
+  fetchCourierAvailability,
   fetchDelivery,
   fetchTracking,
   brandTheme,
@@ -803,12 +804,26 @@ async function start() {
   }
 
   async function refresh() {
-    const [result, delivery] = await Promise.all([
+    // La disponibilidad va en paralelo y solo mientras el envío todavía no tiene repartidor: es un aviso, no debe
+    // demorar el estado del pedido.
+    const mayBeSearching = !lastDelivery || lastDelivery.state === "waiting" || lastDelivery.state === "searching";
+    const [result, delivery, availability] = await Promise.all([
       fetchTracking({ url: SUPABASE.url, key: SUPABASE.key, code }),
       fetchDelivery({ url: SUPABASE.url, key: SUPABASE.key, code }),
+      mayBeSearching
+        ? fetchCourierAvailability({ url: SUPABASE.url, key: SUPABASE.key, code })
+        : Promise.resolve({ ok: false, none: false }),
     ]);
 
-    if (delivery.ok) lastDelivery = delivery.data;
+    if (delivery.ok) {
+      lastDelivery = delivery.data;
+
+      // Mientras busca repartidor, si su zona sigue sin disponibles se avisa (ENVIO-199). Es un dato aparte: si la
+      // consulta falla, no se muestra nada.
+      if (lastDelivery?.state === "searching") {
+        lastDelivery = { ...lastDelivery, noCouriers: availability.none };
+      }
+    }
 
     if (result.ok) {
       last = { ...result.data, envio: lastDelivery };

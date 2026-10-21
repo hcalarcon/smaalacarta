@@ -153,3 +153,37 @@ describe("fetchMenuPreview — ADMIN-CONFIG-46", () => {
     expect((await fetchMenuPreview(roto, "neg-1")).ok).toBe(false);
   });
 });
+
+describe("mergePreviewConfig con animaciones — PUBLICO-108", () => {
+  const look = {
+    menuAnimation: "dinamica",
+    loaderAnimation: "custom",
+    loaderCustomUrl: "https://x.test/business-animations/n/a.gif",
+    backgroundImageUrl: "https://x.test/business-images/n/f.webp",
+  };
+
+  it("el formulario pisa lo guardado: animación, cargador propio y fondo", () => {
+    const saved = { animacionMenu: "estandar", animacionCarga: "pizza", fondo: "https://x.test/viejo.jpg" };
+    const config = mergePreviewConfig(saved, draft({ look }));
+
+    expect(config).toMatchObject({
+      animacionMenu: "dinamica",
+      animacionCarga: "custom",
+      animacionCargaUrl: "https://x.test/business-animations/n/a.gif",
+      fondo: "https://x.test/business-images/n/f.webp",
+    });
+  });
+
+  it("lo que se vació en el formulario se quita, aunque estuviera guardado", () => {
+    const saved = { animacionCargaUrl: "https://x.test/viejo.gif", fondo: "https://x.test/viejo.jpg" };
+    const config = mergePreviewConfig(saved, draft({ look: { ...look, loaderAnimation: "sushi", backgroundImageUrl: "" } }));
+
+    expect(config).not.toHaveProperty("fondo");
+    expect(config).not.toHaveProperty("animacionCargaUrl");
+    expect(config.animacionCarga).toBe("sushi");
+  });
+
+  it("sin look en el borrador, queda lo guardado", () => {
+    expect(mergePreviewConfig({ animacionMenu: "suave" }, draft()).animacionMenu).toBe("suave");
+  });
+});

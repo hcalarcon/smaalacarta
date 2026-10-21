@@ -14,6 +14,8 @@ export function prepareSettings(input: SettingsInput): SettingsInput {
     headerImageUrl: input.headerImageUrl.trim(),
     logoUrl: input.logoUrl.trim(),
     menuPdfUrl: input.menuPdfUrl.trim(),
+    loaderCustomUrl: input.loaderCustomUrl.trim(),
+    backgroundImageUrl: input.backgroundImageUrl.trim(),
     schedule: normalizeSchedule(input.schedule),
     whatsapp: input.whatsapp.trim(),
   });

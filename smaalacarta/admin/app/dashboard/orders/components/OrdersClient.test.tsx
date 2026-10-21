@@ -109,6 +109,40 @@ function board(orders: Order[]) {
 
 const soundButton = () => screen.getByRole("button", { name: /sonido/i });
 
+describe("repartidores disponibles ahora — ENVIO-200", () => {
+  const withAvailability = (availability: { enabled: boolean; total: number; emptyZoneIds: string[] }) => (
+    <OrdersClient
+      slug="demo"
+      orders={[order("1")]}
+      manualSetup={manualSetup}
+      serverNow="2026-09-30T10:00:00Z"
+      availability={availability}
+    />
+  );
+
+  it("muestra la cantidad, sin nombres", () => {
+    render(withAvailability({ enabled: true, total: 3, emptyZoneIds: [] }));
+
+    const chip = screen.getByRole("status");
+    expect(chip.textContent).toBe("Repartidores disponibles ahora: 3");
+    expect(chip.className).not.toContain("amber");
+  });
+
+  it("con 0, en ámbar: Ningún repartidor disponible", () => {
+    render(withAvailability({ enabled: true, total: 0, emptyZoneIds: ["z1"] }));
+
+    const chip = screen.getByRole("status");
+    expect(chip.textContent).toBe("Ningún repartidor disponible");
+    expect(chip.className).toContain("amber");
+  });
+
+  it("con el interruptor de la plataforma apagado, no se muestra nada", () => {
+    render(withAvailability({ enabled: false, total: 0, emptyZoneIds: [] }));
+
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+});
+
 beforeEach(() => {
   mocks.refresh.mockClear();
   document.title = "Pedidos";

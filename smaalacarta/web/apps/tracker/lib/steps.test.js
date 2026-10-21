@@ -22,40 +22,44 @@ describe("deliveryMode — SEGUIMIENTO-25", () => {
 });
 
 describe("progressSteps — SEGUIMIENTO-25 y 26", () => {
-  it("con envío: Recibido, Aceptado, Listo, En camino, Entregado", () => {
+  it("con envío: Recibido, Aceptado, En preparación, Listo, En camino, Entregado", () => {
     expect(labels(progressSteps("pending", "courier", "es"))).toEqual([
       "Recibido",
       "Aceptado",
+      "En preparación",
       "Listo",
       "En camino",
       "Entregado",
     ]);
   });
 
-  it("para retirar: Recibido, Aceptado, Listo para retirar, Retirado", () => {
+  it("para retirar: Recibido, Aceptado, En preparación, Listo para retirar, Retirado", () => {
     expect(labels(progressSteps("pending", "pickup", "es"))).toEqual([
       "Recibido",
       "Aceptado",
+      "En preparación",
       "Listo para retirar",
       "Retirado",
     ]);
   });
 
   it.each([
-    ["pending", ["current", "todo", "todo", "todo", "todo"]],
-    ["confirmed", ["done", "current", "todo", "todo", "todo"]],
-    ["preparing", ["done", "current", "todo", "todo", "todo"]],
-    ["ready", ["done", "done", "current", "todo", "todo"]],
-    ["handed_to_courier", ["done", "done", "done", "current", "todo"]],
-    ["on_the_way", ["done", "done", "done", "current", "todo"]],
-    ["delivered", ["done", "done", "done", "done", "done"]],
+    ["pending", ["current", "todo", "todo", "todo", "todo", "todo"]],
+    // Confirmado cae directo en "En preparación", sin un click más del local (SEGUIMIENTO-52).
+    ["confirmed", ["done", "done", "current", "todo", "todo", "todo"]],
+    ["preparing", ["done", "done", "current", "todo", "todo", "todo"]],
+    ["ready", ["done", "done", "done", "current", "todo", "todo"]],
+    ["handed_to_courier", ["done", "done", "done", "done", "current", "todo"]],
+    ["on_the_way", ["done", "done", "done", "done", "current", "todo"]],
+    ["delivered", ["done", "done", "done", "done", "done", "done"]],
   ])("con envío, %s → hechos con tilde, el actual animado, los que faltan apagados", (status, expected) => {
     expect(states(progressSteps(status, "courier", "es"))).toEqual(expected);
   });
 
   it("para retirar, Listo es 'Listo para retirar' y Entregado cierra en 'Retirado'", () => {
-    expect(states(progressSteps("ready", "pickup", "es"))).toEqual(["done", "done", "current", "todo"]);
-    expect(states(progressSteps("delivered", "pickup", "es"))).toEqual(["done", "done", "done", "done"]);
+    expect(states(progressSteps("ready", "pickup", "es"))).toEqual(["done", "done", "done", "current", "todo"]);
+    expect(states(progressSteps("delivered", "pickup", "es"))).toEqual(["done", "done", "done", "done", "done"]);
+    expect(states(progressSteps("confirmed", "pickup", "es"))).toEqual(["done", "done", "current", "todo", "todo"]);
   });
 
   it("un pedido cancelado no tiene camino", () => {
@@ -63,17 +67,19 @@ describe("progressSteps — SEGUIMIENTO-25 y 26", () => {
   });
 
   it("un estado que no se conoce deja todo apagado sin romper", () => {
-    expect(states(progressSteps("volando", "courier", "es"))).toEqual(["todo", "todo", "todo", "todo", "todo"]);
+    expect(states(progressSteps("volando", "courier", "es"))).toEqual(["todo", "todo", "todo", "todo", "todo", "todo"]);
   });
 
   it("se traduce", () => {
     expect(labels(progressSteps("pending", "pickup", "en", ))).toEqual([
       "Received",
       "Accepted",
+      "Preparing",
       "Ready for pickup",
       "Picked up",
     ]);
-    expect(labels(progressSteps("pending", "courier", "pt"))[3]).toBe("A caminho");
+    expect(labels(progressSteps("pending", "courier", "pt"))[2]).toBe("Em preparo");
+    expect(labels(progressSteps("pending", "courier", "pt"))[4]).toBe("A caminho");
   });
 });
 

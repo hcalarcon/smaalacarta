@@ -18,6 +18,7 @@ describe("icon — SEGUIMIENTO-25", () => {
     for (const key of [
       "received",
       "accepted",
+      "preparing",
       "ready",
       "readyPickup",
       "onTheWay",

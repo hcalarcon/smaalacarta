@@ -4,6 +4,7 @@
 // pantalla: las direcciones, la mezcla y la lectura del menú.
 
 import type { Focus } from "./header-focus";
+import { lookToConfig, type MenuLook } from "./menu-look";
 import type { Schedule } from "./schedule";
 
 // Dónde está el menú. Un subdominio cualquiera de los menús sirve la app; para desarrollo se pisa con
@@ -40,6 +41,8 @@ export type PreviewDraft = {
   logoUrl: string;
   focus: Focus;
   schedule: Schedule;
+  // Animaciones y fondo sin guardar (Configuración → Animaciones). Sin esto, vale lo guardado.
+  look?: MenuLook;
 };
 
 const HTTPS = /^https:\/\/[^\s"'()<>]+$/;
@@ -76,6 +79,11 @@ export function mergePreviewConfig(saved: Json, draft: PreviewDraft): Json {
 
   if (Object.keys(draft.schedule).length > 0) config.horarios = draft.schedule;
   else drop("horarios");
+
+  if (draft.look) {
+    for (const key of ["animacionMenu", "animacionCarga", "animacionCargaUrl", "fondo"]) drop(key);
+    Object.assign(config, lookToConfig(draft.look));
+  }
 
   return config;
 }

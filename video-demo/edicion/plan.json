@@ -1,0 +1,76 @@
+{
+  "nota": "Plan de la edición. Cada toma se ancla a un paso de pasos.json (paso) y cuenta 'desde' segundos desde su inicio en el reloj de cada pantalla; 'fuente' son los segundos de grabación que cubre y 'velocidad' cuánto se acelera (dur = fuente / velocidad). 'en' reemplaza el ancla de una pantalla (para alinear dos grabaciones). 'estado' = {idx, en}: qué paso de la barra se enciende y a los cuántos segundos de la toma. 'nota' es una marca de tiempo que pasa de verdad. 'reflejo' (solo horizontal) pone dos pantallas lado a lado con una flecha de una a otra. Los focos de la cámara salen de pasos.json; 'rect' fuerza uno propio (px de la grabación).",
+  "fps": 30,
+  "estados": ["Recibido", "Aceptado", "En preparación", "Listo", "En camino", "Entregado"],
+  "intro": { "dur": 3.5, "titulo": "Así funciona un pedido en SMA a la Carta" },
+  "cierre": { "dur": 4, "texto": "Primer mes gratis", "url": "smaalacarta.com.ar/hola" },
+  "limites": { "h": [60, 75], "v": [50, 60], "redes": [30, 35] },
+  "omitidos": ["paneles"],
+  "explicativo": {
+    "h": [
+      { "id": "menu", "paso": "menu-abre", "desde": 0, "fuente": 18.6, "velocidad": 4, "actor": "cliente", "pasos": ["menu-abre", "menu-categorias"], "subtitulo": "El cliente abre tu menú desde el celular" },
+      { "id": "platos", "paso": "producto-opciones", "desde": 0, "fuente": 17.9, "velocidad": 3.5, "actor": "cliente", "pasos": ["producto-opciones", "producto-2", "producto-3"], "subtitulo": "Elige sus platos y las opciones" },
+      { "id": "datos", "paso": "carrito", "desde": 0, "fuente": 26, "velocidad": 5, "actor": "cliente", "pasos": ["carrito", "checkout"], "subtitulo": "Revisa el pedido y completa los datos de entrega" },
+      { "id": "confirma", "paso": "confirma", "desde": -0.4, "fuente": 3, "velocidad": 1, "salto": { "desde": 2.2, "hasta": 2.6 }, "actor": "cliente", "pasos": ["confirma"], "subtitulo": "Confirma el pedido", "estado": { "idx": 0, "en": 1.9 } },
+      {
+        "id": "llega", "paso": "recibido", "desde": 0.8, "fuente": 3.4, "velocidad": 1, "actor": "local", "pasos": ["recibido", "local-recibe"],
+        "en": { "local": { "paso": "local-recibe", "desde": 7.6 } },
+        "reflejo": { "de": "cliente", "a": "local", "llegada": 0.85 },
+        "focos": { "local": [{ "t": 0.85, "rect": { "x": 768, "y": 279, "w": 1024, "h": 1043 } }] }, "subtitulo": "A tu local le suena el aviso de pedido nuevo"
+      },
+      { "id": "acepta", "paso": "local-acepta", "desde": 10.2, "fuente": 14.3, "velocidad": 2.2, "actor": "local", "pasos": ["local-acepta"], "subtitulo": "Lo aceptás y le avisás cuánto demora", "estado": { "idx": 1, "en": 5.8 } },
+      {
+        "id": "disponibles", "paso": "local-acepta", "desde": 26.4, "fuente": 3.4, "velocidad": 1, "actor": "repartidor",
+        "reflejo": { "de": "local", "a": "repartidor", "llegada": 1.0 }, "subtitulo": "Al instante le aparece al repartidor en Disponibles"
+      },
+      { "id": "toma", "paso": "repartidor-ve", "desde": 0, "fuente": 6, "velocidad": 1.5, "actor": "repartidor", "pasos": ["repartidor-ve", "repartidor-toma"], "subtitulo": "El repartidor lo toma con un toque" },
+      { "id": "prepara", "paso": "local-prepara", "desde": 1.3, "fuente": 4, "velocidad": 1.3, "actor": "local", "pasos": ["local-prepara"], "nota": "unos minutos después", "subtitulo": "Lo pasás a cocina", "estado": { "idx": 2, "en": 1.5 } },
+      { "id": "listo", "paso": "local-listo", "desde": 0, "fuente": 3.4, "velocidad": 1.3, "actor": "local", "pasos": ["local-listo"], "subtitulo": "Cuando está, lo marcás como listo", "estado": { "idx": 3, "en": 1.0 } },
+      { "id": "entrega", "paso": "local-entrega", "desde": 1.2, "fuente": 4, "velocidad": 1.3, "actor": "local", "pasos": ["local-entrega"], "subtitulo": "Se lo entregás al repartidor" },
+      { "id": "camino", "paso": "repartidor-en-camino", "desde": 6.4, "fuente": 3.6, "velocidad": 1, "actor": "repartidor", "pasos": ["repartidor-en-camino"], "nota": "unos minutos después", "subtitulo": "El repartidor sale hacia el cliente", "estado": { "idx": 4, "en": 1.4 } },
+      { "id": "entregado", "paso": "repartidor-entrega", "desde": 0.2, "fuente": 3, "velocidad": 1, "actor": "repartidor", "pasos": ["repartidor-entrega"], "subtitulo": "Y le entrega el pedido" },
+      { "id": "fin", "paso": "fin", "desde": -1.5, "fuente": 5, "velocidad": 1, "actor": "cliente", "pasos": ["fin"], "subtitulo": "Pedido entregado", "estado": { "idx": 5, "en": 1.3 } }
+    ],
+    "v": [
+      { "id": "menu", "paso": "menu-abre", "desde": 0, "fuente": 18.6, "velocidad": 5, "actor": "cliente", "pasos": ["menu-abre", "menu-categorias"], "subtitulo": "El cliente abre tu menú desde el celular" },
+      { "id": "platos", "paso": "producto-opciones", "desde": 0, "fuente": 17.9, "velocidad": 4, "actor": "cliente", "pasos": ["producto-opciones", "producto-2", "producto-3"], "subtitulo": "Elige sus platos y las opciones" },
+      { "id": "datos", "paso": "carrito", "desde": 0, "fuente": 26, "velocidad": 6, "actor": "cliente", "pasos": ["carrito", "checkout"], "subtitulo": "Completa los datos de entrega" },
+      { "id": "confirma", "paso": "confirma", "desde": -0.4, "fuente": 3.6, "velocidad": 1, "salto": { "desde": 2.2, "hasta": 2.6 }, "actor": "cliente", "pasos": ["confirma"], "subtitulo": "Confirma el pedido", "estado": { "idx": 0, "en": 1.9 } },
+      { "id": "llega", "paso": "local-recibe", "desde": 7.6, "fuente": 3.6, "velocidad": 1, "actor": "local", "pasos": ["recibido", "local-recibe"], "focos": { "local": [{ "t": 0.85, "rect": { "x": 768, "y": 279, "w": 1024, "h": 1043 } }] }, "subtitulo": "A tu local le suena el aviso de pedido nuevo" },
+      { "id": "acepta", "paso": "local-acepta", "desde": 10.2, "fuente": 14.3, "velocidad": 3, "actor": "local", "pasos": ["local-acepta"], "focos": { "local": [{ "t": 0.1, "rect": { "x": 760, "y": 210, "w": 1040, "h": 1180 } }] }, "subtitulo": "Lo aceptás y le avisás cuánto demora", "estado": { "idx": 1, "en": 4.2 } },
+      { "id": "disponibles", "paso": "local-acepta", "desde": 26.4, "fuente": 3, "velocidad": 1, "actor": "repartidor", "subtitulo": "Al instante le aparece al repartidor" },
+      { "id": "toma", "paso": "repartidor-ve", "desde": 0, "fuente": 6, "velocidad": 1.5, "actor": "repartidor", "pasos": ["repartidor-ve", "repartidor-toma"], "subtitulo": "El repartidor lo toma con un toque" },
+      { "id": "prepara", "paso": "local-prepara", "desde": 1.3, "fuente": 4, "velocidad": 1.3, "actor": "local", "pasos": ["local-prepara"], "nota": "unos minutos después", "focos": { "local": [{ "t": 0.1, "rect": { "x": 1215, "y": 615, "w": 600, "h": 800 } }] }, "subtitulo": "Lo pasás a cocina", "estado": { "idx": 2, "en": 1.5 } },
+      { "id": "listo", "paso": "local-listo", "desde": 0, "fuente": 3.4, "velocidad": 1.3, "actor": "local", "pasos": ["local-listo"], "focos": { "local": [{ "t": 0.1, "rect": { "x": 1215, "y": 615, "w": 600, "h": 800 } }] }, "subtitulo": "Lo marcás como listo", "estado": { "idx": 3, "en": 1.0 } },
+      { "id": "entrega", "paso": "local-entrega", "desde": 1.2, "fuente": 4, "velocidad": 1.3, "actor": "local", "pasos": ["local-entrega"], "focos": { "local": [{ "t": 0.1, "rect": { "x": 1880, "y": 615, "w": 620, "h": 700 } }] }, "subtitulo": "Se lo entregás al repartidor" },
+      { "id": "camino", "paso": "repartidor-en-camino", "desde": 6.4, "fuente": 3.6, "velocidad": 1, "actor": "repartidor", "pasos": ["repartidor-en-camino"], "nota": "unos minutos después", "subtitulo": "El repartidor sale hacia el cliente", "estado": { "idx": 4, "en": 1.4 } },
+      { "id": "entregado", "paso": "repartidor-entrega", "desde": 0.2, "fuente": 3, "velocidad": 1, "actor": "repartidor", "pasos": ["repartidor-entrega"], "subtitulo": "Y se lo entrega al cliente" },
+      { "id": "fin", "paso": "fin", "desde": 7.35, "fuente": 5, "velocidad": 1, "actor": "cliente", "pasos": ["fin"], "subtitulo": "Pedido entregado", "estado": { "idx": 5, "en": 0.9 }, "celebra": 0.9 }
+    ]
+  },
+  "redes": {
+    "nota": "Una idea por vez, de 1,5 a 2,5 s, en este orden. Cada panel tiene sus cortes (dur en la grilla de 0,5 s, suman lo que dura la idea). 'rect' fuerza el foco (px de la grabación); 'llegada' es el segundo en que le suena al local; 'celebra', el segundo en que el seguimiento pasa a Entregado.",
+    "gancho": "Así le llega un pedido a tu local 👇",
+    "ideas": [
+      { "id": "gancho", "dur": 2.5, "titulo": "Así le llega un pedido a tu local 👇", "paneles": [{ "pantalla": "local", "cortes": [{ "dur": 2.5, "paso": "local-recibe", "desde": 9, "rect": { "x": 768, "y": 279, "w": 1024, "h": 1043 } }] }] },
+      { "id": "menu", "dur": 2, "titulo": "El cliente elige en el menú", "paneles": [{ "pantalla": "cliente", "cortes": [{ "dur": 2, "paso": "menu-categorias", "desde": 2.313, "velocidad": 2.25, "focos": [{ "t": 0.1, "rect": { "x": 78, "y": 400, "w": 494, "h": 500 } }] }] }] },
+      { "id": "platos", "dur": 2.5, "titulo": "Elige sus platos y opciones", "paneles": [{ "pantalla": "cliente", "cortes": [{ "dur": 2.5, "paso": "producto-opciones", "desde": 2.68, "velocidad": 2.2, "focos": [{ "t": 0.45, "rect": { "x": 24, "y": 200, "w": 732, "h": 200 } }, { "t": 2.1, "rect": { "x": 208, "y": 1500, "w": 494, "h": 200 } }] }] }] },
+      { "id": "confirma", "dur": 2, "titulo": "El cliente confirma", "paneles": [{ "pantalla": "cliente", "cortes": [{ "dur": 2, "paso": "confirma", "desde": -0.66, "focos": [{ "t": 1.0, "rect": { "x": 261, "y": 1480, "w": 456, "h": 200 } }] }] }] },
+      {
+        "id": "suena", "dur": 2.5, "titulo": "Te suena al instante", "split": true, "llegada": 0.75,
+        "paneles": [
+          { "pantalla": "cliente", "cortes": [{ "dur": 2.5, "paso": "confirma", "desde": 1.14, "salto": { "desde": 2.15, "hasta": 2.95 } }] },
+          { "pantalla": "local", "cortes": [{ "dur": 2.5, "paso": "local-recibe", "desde": 7.57, "rect": { "x": 768, "y": 279, "w": 1024, "h": 1043 } }] }
+        ]
+      },
+      { "id": "acepta", "dur": 2.5, "titulo": "Aceptás en 1 toque", "paneles": [{ "pantalla": "local", "cortes": [{ "dur": 1.5, "paso": "local-acepta", "desde": 10.6, "rect": { "x": 760, "y": 210, "w": 1040, "h": 1180 } }, { "dur": 1, "paso": "local-acepta", "desde": 17.3, "velocidad": 5, "rect": { "x": 760, "y": 210, "w": 1040, "h": 1180 } }] }] },
+      { "id": "aparece", "dur": 2, "titulo": "Le aparece al repartidor", "paneles": [{ "pantalla": "repartidor", "cortes": [{ "dur": 2, "paso": "local-acepta", "desde": 26.6 }] }] },
+      { "id": "toma", "dur": 2, "titulo": "Y lo toma con un toque", "paneles": [{ "pantalla": "repartidor", "cortes": [{ "dur": 2, "paso": "repartidor-toma", "desde": 0.6 }] }] },
+      { "id": "listo", "dur": 2.5, "titulo": "Lo preparás y lo marcás listo", "paneles": [{ "pantalla": "local", "cortes": [{ "dur": 1, "paso": "local-prepara", "desde": 1.8, "rect": { "x": 1215, "y": 615, "w": 600, "h": 800 } }, { "dur": 1.5, "paso": "local-listo", "desde": 0.2, "velocidad": 1.5, "rect": { "x": 1215, "y": 615, "w": 600, "h": 800 } }] }] },
+      { "id": "camino", "dur": 2, "titulo": "El repartidor sale a entregarlo", "paneles": [{ "pantalla": "repartidor", "cortes": [{ "dur": 2, "paso": "repartidor-en-camino", "desde": 6.5, "velocidad": 1.5 }] }] },
+      { "id": "vivo", "dur": 2.5, "titulo": "El cliente lo sigue en vivo", "paneles": [{ "pantalla": "cliente", "cortes": [{ "dur": 1, "paso": "local-prepara", "desde": 13.8 }, { "dur": 1.5, "paso": "repartidor-en-camino", "desde": 13.6 }] }] },
+      { "id": "entregado", "dur": 2.5, "titulo": "Entregado ✅", "celebra": 0.75, "paneles": [{ "pantalla": "cliente", "cortes": [{ "dur": 2.5, "paso": "fin", "desde": 7.5 }] }] }
+    ],
+    "cierre": { "dur": 3, "texto": "Primer mes gratis", "url": "smaalacarta.com.ar/hola" }
+  }
+}

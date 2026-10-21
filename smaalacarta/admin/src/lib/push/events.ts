@@ -56,6 +56,26 @@ export type PushEventKind =
 
 export type PushEvent = { kind: PushEventKind; order: OrderRecord };
 
+// Lo que manda el Database Webhook sobre `courier_availability_events` (ENVIO-194): un registro por cada
+// prendida o apagada del repartidor.
+export type AvailabilityEventRecord = {
+  id: string;
+  courier_id: string;
+  available: boolean;
+  reason: string;
+};
+
+// El repartidor al que se le apagó la disponibilidad por falta de actividad, o nulo si el cambio no es ese. Solo
+// el apagado automático avisa: el que apaga a mano ya sabe lo que hizo.
+export function detectAutoOff(payload: { type: string; table: string; record: unknown }): string | null {
+  if (payload.table !== "courier_availability_events" || payload.type !== "INSERT") return null;
+
+  const record = payload.record as Partial<AvailabilityEventRecord> | null;
+  if (!record || record.reason !== "auto_off" || record.available !== false) return null;
+
+  return typeof record.courier_id === "string" && record.courier_id ? record.courier_id : null;
+}
+
 // Dos horas son la misma si son el mismo instante, aunque vengan escritas distinto (`+00:00` o `Z`, con o
 // sin milisegundos, otra zona horaria): comparar el texto avisaría de un cambio que no existe (ENVIO-167).
 function isDifferentInstant(a: string, b: string | null): boolean {

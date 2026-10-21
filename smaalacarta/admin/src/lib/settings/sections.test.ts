@@ -12,6 +12,7 @@ describe("settingsSections (ADMIN-CONFIG-22)", () => {
       "compartir",
       "publicacion",
       "apariencia",
+      "animaciones",
       "pdf",
       "horarios",
       "anticipados",

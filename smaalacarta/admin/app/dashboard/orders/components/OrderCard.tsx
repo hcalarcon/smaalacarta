@@ -37,6 +37,7 @@ import { formatMoney } from "@/lib/promotions/pricing";
 import ItemNote from "@/components/ui/ItemNote";
 import PendingButton from "@/components/ui/PendingButton";
 import VehicleIcons from "@/components/ui/VehicleIcon";
+import { NO_COURIERS_BADGE } from "@/lib/courier/availability";
 
 const SHOWN_ITEMS = 2;
 
@@ -55,9 +56,12 @@ export default function OrderCard({
   onSetPrep,
   onAdjust,
   vehicleEnabled = false,
+  noCouriers = false,
 }: {
   // El interruptor del vehículo (ENVIO-175): apagado, no se ven ni "Necesita auto" ni los íconos.
   vehicleEnabled?: boolean;
+  // La zona del pedido no tiene repartidores disponibles ahora (ENVIO-200).
+  noCouriers?: boolean;
   order: Order;
   now: Date;
   busy: boolean;
@@ -298,6 +302,13 @@ export default function OrderCard({
               <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 font-semibold text-sky-900">
                 <VehicleIcons vehicles={["auto"]} />
                 Necesita auto
+              </span>
+            </p>
+          ) : null}
+          {noCouriers ? (
+            <p className="mt-0.5">
+              <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 font-semibold text-amber-900">
+                {NO_COURIERS_BADGE}
               </span>
             </p>
           ) : null}

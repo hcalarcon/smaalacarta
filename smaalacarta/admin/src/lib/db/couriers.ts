@@ -15,6 +15,8 @@ export type CourierSummary = {
   // Moto y/o auto (ENVIO-174).
   moto: boolean;
   auto: boolean;
+  // La última versión de los términos que aceptó y cuándo (ENVIO-185); nulo si nunca aceptó.
+  terms: { version: number; acceptedAt: string } | null;
 };
 
 type Supabase = Awaited<ReturnType<typeof createClient>>;
@@ -42,6 +44,22 @@ async function withEmails(supabase: Supabase, rows: CourierRow[]): Promise<Couri
     for (const profile of data ?? []) emails.set(profile.id, profile.email);
   }
 
+  // El RLS deja al superadmin leer todas las aceptaciones: se queda con la última de cada repartidor.
+  const terms = new Map<string, { version: number; acceptedAt: string }>();
+  if (rows.length > 0) {
+    const { data } = await supabase
+      .from("courier_terms_acceptances")
+      .select("courier_id, version, accepted_at")
+      .in(
+        "courier_id",
+        rows.map((row) => row.id),
+      )
+      .order("version", { ascending: false });
+    for (const item of data ?? []) {
+      if (!terms.has(item.courier_id)) terms.set(item.courier_id, { version: item.version, acceptedAt: item.accepted_at });
+    }
+  }
+
   return rows.map((row) => ({
     id: row.id,
     name: row.name,
@@ -49,6 +67,7 @@ async function withEmails(supabase: Supabase, rows: CourierRow[]): Promise<Couri
     active: row.active,
     moto: row.moto,
     auto: row.auto,
+    terms: terms.get(row.id) ?? null,
     zoneCount: row.courier_zone_coverage[0]?.count ?? 0,
     email: row.courier_users[0] ? (emails.get(row.courier_users[0].user_id) ?? null) : null,
   }));

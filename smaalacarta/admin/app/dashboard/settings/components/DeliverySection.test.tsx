@@ -141,3 +141,41 @@ describe("Configuración → Envíos — ENVIO-58", () => {
     expect(saveSettings).not.toHaveBeenCalled();
   });
 });
+
+describe("Configuración → Vehículos con los que trabajo — ENVIO-203", () => {
+  const withVehicles: DeliveryOptions = { ...options, vehicles: { moto: true, auto: true }, vehicle_enabled: true };
+
+  it("sin el interruptor del superadmin no se ve", () => {
+    renderSection({ ...options, vehicles: { moto: true, auto: true }, vehicle_enabled: false });
+
+    expect(screen.queryByText("Vehículos con los que trabajo")).toBeNull();
+  });
+
+  it("con el interruptor prendido muestra Moto y Auto marcados", () => {
+    renderSection(withVehicles);
+
+    expect((screen.getByRole("checkbox", { name: "Moto" }) as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByRole("checkbox", { name: "Auto" }) as HTMLInputElement).checked).toBe(true);
+  });
+
+  it("guarda la elección con las zonas", async () => {
+    renderSection(withVehicles);
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Auto" }));
+    fireEvent.click(saveButton());
+
+    await waitFor(() => expect(saveDelivery).toHaveBeenCalled());
+    expect(saveDelivery.mock.calls[0][0]).toMatchObject({ vehicles: { moto: true, auto: false } });
+  });
+
+  it("no deja guardar sin ningún vehículo", () => {
+    renderSection(withVehicles);
+
+    fireEvent.click(screen.getByRole("checkbox", { name: "Auto" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Moto" }));
+    fireEvent.click(saveButton());
+
+    expect(screen.getByText("Elegí al menos un vehículo: moto o auto.")).toBeTruthy();
+    expect(saveDelivery).not.toHaveBeenCalled();
+  });
+});

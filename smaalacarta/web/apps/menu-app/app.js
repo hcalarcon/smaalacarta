@@ -28,8 +28,12 @@ let CART_LINES = null;
 let NOTES = null;
 let PROMO_INFO;
 let LANGUAGE = null;
+let LOOK = null;
 // Envío con repartidor (ENVIO-20): los barrios del negocio, o null si no tiene o falló.
 let DZ = null;
+// Aviso de "puede que no haya repartidores" (ENVIO-198).
+let AVAILABILITY = null;
+let checkZoneCouriers = null;
 let COURIER_ZONES = null;
 // Zona del cliente al entrar (PUBLICO-73 a 78): `ZONE_ON` es si el local la pregunta; `ZONE_STEP` es
 // qué muestra la tarjeta (ask, zones, notListed, confirmed o null si está cerrada).
@@ -92,8 +96,16 @@ function rememberLoaderTheme() {
 // Termina la carga con un fade (PUBLICO-85): el menú entra (`entrando`) mientras el loader se
 // desvanece y recién después se saca de la página. Si no hay transición (movimiento reducido)
 // se saca enseguida.
+const LOADER_MIN_MS = 1000;
+
 function finishLoading() {
   const loader = document.getElementById("loader");
+  // La animación elegida se deja ver al menos un segundo, aunque el menú ya esté listo.
+  const seen = Date.now() - Number(loader?.dataset.desde || 0);
+  if (loader && loader.dataset.desde && seen < LOADER_MIN_MS) {
+    setTimeout(finishLoading, LOADER_MIN_MS - seen);
+    return;
+  }
   document.body.classList.add("entrando");
   document.body.classList.remove("loading");
   if (!loader) return;
@@ -194,6 +206,13 @@ function resolveAppConfig(resolveHost, resolveDemo) {
 // Menú publicado desde el admin (PUBLICO-6). Devuelve null si Supabase no está
 // configurado, el negocio no está publicado o algo falla: entonces se usan los JSON.
 async function loadFromSupabase(slug) {
+  // El pedido que index.html ya hizo al abrir (una sola vez): llega antes que si se empezara recién ahora.
+  const early = window.__menuEarly;
+  if (early?.slug === slug) {
+    window.__menuEarly = null;
+    return early.promise;
+  }
+
   try {
     const [{ fetchPublicMenu, isSupabaseConfigured }, { SUPABASE }] =
       await Promise.all([
@@ -236,6 +255,7 @@ async function init() {
       cartLinesLib,
       deliveryZonesLib,
       cartStorageLib,
+      loaderLib,
     ] = await Promise.all([
       import("/apps/menu-app/lib/hostname.js"),
       import("/apps/menu-app/lib/html.js"),
@@ -259,7 +279,9 @@ async function init() {
       import("/apps/menu-app/lib/cart-lines.js"),
       import("/apps/menu-app/lib/delivery-zones.js"),
       import("/apps/menu-app/lib/cart-storage.js"),
+      import("/apps/menu-app/lib/loader.js"),
     ]);
+    LOOK = await import("/apps/menu-app/lib/menu-look.js");
     // Nota por producto (PUBLICO-65): la limpieza y las reglas puras viven en lib/item-notes.js.
     NOTES = await import("/apps/menu-app/lib/item-notes.js");
     // Vigencia y últimas unidades de las promociones (PUBLICO-68 y 69).
@@ -267,6 +289,11 @@ async function init() {
     // Idioma elegido y sugerencia según el celular (PUBLICO-88 a 90).
     LANGUAGE = await import("/apps/menu-app/lib/language.js");
     ZONE = await import("/apps/menu-app/lib/zone-choice.js");
+    // Aviso de "puede que no haya repartidores" en el checkout (ENVIO-198).
+    AVAILABILITY = await import("/apps/menu-app/lib/courier-availability.js");
+    checkZoneCouriers = AVAILABILITY.createZoneChecker((zoneId) =>
+      AVAILABILITY.fetchZoneHasCouriers({ ...SUPABASE_CFG, zoneId }),
+    );
     DZ = deliveryZonesLib;
     OPTIONS = optionsLib;
     OPTIONS_SHEET = optionsSheetLib;
@@ -345,6 +372,14 @@ async function init() {
       loaderNegocio.textContent = config.nombre || "";
       loaderNegocio.hidden = !config.nombre;
     }
+    loaderLib.applyLoaderAnimation(config);
+    loaderLib.rememberLoaderLook(
+      window.localStorage,
+      THEME.loaderThemeKey(location.hostname, location.pathname, location.search),
+      config,
+    );
+    // Cómo se anima el menú y su imagen de fondo, según lo que eligió el negocio (PUBLICO-102 a 107).
+    LOOK.applyMenuLook(document, config);
 
     window.CONFIG = config;
     // Barrios del envío con repartidor: solo los negocios de Supabase pueden tenerlo. Si falla,
@@ -1941,6 +1976,28 @@ function renderZoneNotice() {
   const chosen = zone.disabled ? null : DZ.findZone(COURIER_ZONES, zone.value);
   notice.hidden = !chosen;
   notice.textContent = chosen ? tr("checkout.zoneNotice", DZ.zoneNoticeVars(chosen, PRICE.formatPrice)) : "";
+
+  renderNoCouriersNotice(chosen);
+}
+
+// Aviso de "puede que no haya repartidores" (ENVIO-198): con envío y una zona elegida, si la base dice que no
+// hay nadie disponible. No bloquea nada: se puede pedir igual. Si la consulta falla, no se muestra.
+let noCouriersToken = 0;
+async function renderNoCouriersNotice(chosen) {
+  const notice = document.querySelector("#aviso-sin-repartidores");
+  if (!notice) return;
+
+  // Solo vale la respuesta de la última zona elegida: una más lenta de la anterior no pisa a la nueva.
+  const token = ++noCouriersToken;
+  notice.hidden = true;
+  if (!chosen || !AVAILABILITY || !MENU_SOURCE) return;
+
+  const result = await checkZoneCouriers(chosen.id);
+  if (token !== noCouriersToken) return;
+
+  const show = AVAILABILITY.showNoCouriersNotice(result);
+  notice.hidden = !show;
+  notice.textContent = show ? tr("checkout.noCouriers") : "";
 }
 
 function initCourierFields() {
@@ -2403,6 +2460,10 @@ function resetCheckout() {
 // llegan varias seguidas, se dibuja la última. Nada de esto se ejecuta fuera de `?preview=1`.
 async function startPreview() {
   const PV = await import("/apps/menu-app/lib/preview.js");
+  const LOADER = await import("/apps/menu-app/lib/loader.js");
+  // La sección "Animaciones" del panel abre la vista previa con `look=1`: se deja ver el cargador un momento antes
+  // de que entre el menú, para que se vea la animación de carga elegida y después la de entrada (PUBLICO-108).
+  const HOLD_LOADER = new URLSearchParams(window.location.search).get("look") === "1";
 
   document.body.classList.add("preview");
   document.querySelector(".cta-section")?.setAttribute("hidden", "");
@@ -2448,6 +2509,8 @@ async function startPreview() {
       COLORS.brandVariables(config.colores),
       brandNames,
     );
+    LOOK.applyMenuLook(document, config);
+    if (firstDraw) LOADER.applyLoaderAnimation(config);
     await loadTemplate(PV.previewTemplate(config));
     configureModernHeader();
 
@@ -2459,6 +2522,7 @@ async function startPreview() {
     applyStaticTexts();
     renderHeader(config);
 
+    if (firstDraw && HOLD_LOADER) await new Promise((resolve) => setTimeout(resolve, 2800));
     finishLoading();
 
     if (firstDraw && typeof ResizeObserver !== "undefined") {

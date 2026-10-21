@@ -33,6 +33,8 @@ type DashboardShellProps = {
   // Aviso de negocio suspendido (ADMIN-SUSPENSION-1): se ve en todo el panel,
   // no aplica a /superadmin.
   banner?: React.ReactNode;
+  // Un estado chico junto al título (por ejemplo, "Conectado" del repartidor).
+  statusSlot?: React.ReactNode;
   // Barra fija arriba de todo el panel (ADMIN-PEDIDOS-30): va dentro del header pegajoso para que no se
   // vaya al hacer scroll. Solo la pasa el panel del negocio con pedidos por menú.
   alertBar?: React.ReactNode;
@@ -55,6 +57,7 @@ export default function DashboardShell({
   quickLinks,
   showChangePassword = true,
   banner,
+  statusSlot,
   alertBar,
   showAppControls = false,
   bottomNav,
@@ -81,7 +84,7 @@ export default function DashboardShell({
       {/* Escritorio: barra lateral fija, que se achica a solo íconos. */}
       <aside
         className={`fixed inset-y-0 left-0 hidden flex-col border-r border-line bg-white transition-[width] motion-reduce:transition-none lg:flex ${
-          collapsed ? "w-16" : "w-60"
+          collapsed ? "w-20" : "w-60"
         }`}
       >
         <div
@@ -156,7 +159,7 @@ export default function DashboardShell({
         </div>
       ) : null}
 
-      <div className={`transition-[padding] motion-reduce:transition-none ${collapsed ? "lg:pl-16" : "lg:pl-60"}`}>
+      <div className={`transition-[padding] motion-reduce:transition-none ${collapsed ? "lg:pl-20" : "lg:pl-60"}`}>
         <header className="sticky top-0 z-30 border-b border-line bg-white/90 backdrop-blur">
           {alertBar}
           <div className="flex items-center justify-between gap-4 px-4 py-3 md:px-6 lg:px-8">
@@ -189,6 +192,8 @@ export default function DashboardShell({
                   {subtitle}
                 </p>
               </div>
+
+              {statusSlot ? <div className="shrink-0">{statusSlot}</div> : null}
             </div>
 
             {/* Celular y tableta: un solo botón ⋯ con todo lo demás (ADMIN-MOVIL-1). */}

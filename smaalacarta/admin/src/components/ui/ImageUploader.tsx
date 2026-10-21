@@ -18,11 +18,27 @@ export default function ImageUploader({
   label,
   value,
   onChange,
+  bucket = IMAGE_BUCKET,
+  validate = validateImageFile,
+  makePath = imagePath,
+  accept = "image/jpeg,image/png,image/webp",
+  hint = "JPG, PNG o WebP, hasta 2 MB.",
+  fit = "cover",
+  thumbClassName = "h-20 w-20",
 }: {
   businessId: string;
   label: string;
   value: string;
   onChange: (url: string) => void;
+  // Por defecto, las imágenes del negocio (JPG, PNG o WebP, 2 MB). Otras subidas, como la animación de carga
+  // propia, traen su bucket, su validación y su ruta: la carpeta del negocio y el límite los hace cumplir Storage.
+  bucket?: string;
+  validate?: (file: { type: string; size: number }) => { ok: true } | { ok: false; error: string };
+  makePath?: (businessId: string, mimeType: string, id: string) => string;
+  accept?: string;
+  hint?: string;
+  fit?: "cover" | "contain";
+  thumbClassName?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -34,7 +50,7 @@ export default function ImageUploader({
   async function handleFile(file: File) {
     setError(null);
 
-    const check = validateImageFile(file);
+    const check = validate(file);
     if (!check.ok) {
       setError(check.error);
       return;
@@ -44,10 +60,10 @@ export default function ImageUploader({
 
     try {
       const supabase = createClient();
-      const path = imagePath(businessId, file.type, crypto.randomUUID());
+      const path = makePath(businessId, file.type, crypto.randomUUID());
 
       const { error: uploadError } = await supabase.storage
-        .from(IMAGE_BUCKET)
+        .from(bucket)
         .upload(path, file, {
           contentType: file.type,
           cacheControl: "31536000",
@@ -59,7 +75,7 @@ export default function ImageUploader({
         return;
       }
 
-      const { data } = supabase.storage.from(IMAGE_BUCKET).getPublicUrl(path);
+      const { data } = supabase.storage.from(bucket).getPublicUrl(path);
 
       onChange(data.publicUrl);
     } catch {
@@ -76,14 +92,16 @@ export default function ImageUploader({
       <span className="mb-1.5 block text-sm font-medium text-brand">{label}</span>
 
       <div className="flex items-center gap-4">
-        <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-line bg-cream">
+        <div
+          className={`flex shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-line bg-cream ${thumbClassName}`}
+        >
           {value && !broken ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={value}
               alt=""
               onError={() => setBrokenUrl(value)}
-              className="h-full w-full object-cover"
+              className={`h-full w-full ${fit === "contain" ? "object-contain" : "object-cover"}`}
             />
           ) : (
             <span className="text-xs text-stone-400">Sin imagen</span>
@@ -113,14 +131,14 @@ export default function ImageUploader({
             ) : null}
           </div>
 
-          <p className="text-xs text-stone-500">JPG, PNG o WebP, hasta 2 MB.</p>
+          <p className="text-xs text-stone-500">{hint}</p>
         </div>
       </div>
 
       <input
         ref={inputRef}
         type="file"
-        accept="image/jpeg,image/png,image/webp"
+        accept={accept}
         className="hidden"
         onChange={(event) => {
           const file = event.target.files?.[0];

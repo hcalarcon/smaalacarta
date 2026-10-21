@@ -4,9 +4,13 @@
   "type": "module",
   "scripts": {
     "test": "vitest run --passWithNoTests",
-    "capture-demos": "node scripts/capture-demos.mjs"
+    "capture-demos": "node scripts/capture-demos.mjs",
+    "video-demo": "node scripts/video-demo.mjs",
+    "video-demo:borrar": "node scripts/video-demo.mjs --borrar",
+    "video-demo:editar": "node scripts/video-demo-editar.mjs"
   },
   "devDependencies": {
+    "hyperframes": "^0.8.181",
     "jsdom": "^30.0.1",
     "playwright": "^1.63.0",
     "sharp": "^0.35.5",

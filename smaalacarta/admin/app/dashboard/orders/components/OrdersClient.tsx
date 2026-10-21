@@ -1,7 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { availableCountText, orderZoneIsEmpty, type BusinessAvailability } from "@/lib/courier/availability";
 import { useOrderChanges } from "@/lib/realtime/useOrderChanges";
+import { useSerialRefresh } from "@/lib/realtime/useSerialRefresh";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import ManualOrderDialog from "./ManualOrderDialog";
@@ -91,6 +92,8 @@ export default function OrdersClient({
   suggestedPrepMinutes = null,
   defaultPrepMinutes = 20,
   vehicleEnabled = false,
+  canAskForCar = true,
+  availability = { enabled: false, total: 0, emptyZoneIds: [] },
 }: {
   slug: string;
   orders: Order[];
@@ -108,10 +111,15 @@ export default function OrdersClient({
   defaultPrepMinutes?: number;
   // El interruptor del vehículo del repartidor (ENVIO-175): apagado, no se ve nada de moto/auto.
   vehicleEnabled?: boolean;
+  // "Necesita auto" solo tiene sentido si el negocio trabaja con moto y con auto (ENVIO-205).
+  canAskForCar?: boolean;
+  // Cuántos repartidores disponibles cubren las zonas del local y cuáles zonas están en 0 (ENVIO-200).
+  availability?: BusinessAvailability;
 }) {
-  const router = useRouter();
   // Un cambio en la base trae los datos nuevos al instante (ENVIO-172); la consulta de abajo queda de respaldo.
-  useOrderChanges(() => router.refresh());
+  // Un refresco a la vez (ENVIO-210).
+  const refresh = useSerialRefresh(serverNow);
+  useOrderChanges(refresh);
 
   // La hora arranca con la del servidor para que el primer render coincida en los dos
   // lados; después se actualiza sola.
@@ -258,12 +266,12 @@ export default function OrdersClient({
     const id = setInterval(() => {
       if (document.visibilityState === "visible" || soundOnRef.current) {
         setNow(new Date());
-        router.refresh();
+        refresh();
       }
     }, REFRESH_MS);
 
     return () => clearInterval(id);
-  }, [router]);
+  }, [refresh]);
 
   // Con ofertas abiertas la cuenta regresiva ("se elige sola en m:ss") avanza cada segundo, y al vencer
   // se vuelve a pedir el tablero para ver el repartidor elegido (ENVIO-117).
@@ -280,12 +288,12 @@ export default function OrdersClient({
 
       if (current.getTime() >= nextDeadline) {
         clearInterval(id);
-        router.refresh();
+        refresh();
       }
     }, 1000);
 
     return () => clearInterval(id);
-  }, [nextDeadline, router]);
+  }, [nextDeadline, refresh]);
 
   // Pantalla encendida mientras el sonido esté activado. El navegador suelta el bloqueo
   // al ocultarse la pestaña, así que se vuelve a pedir al volver a verla.
@@ -408,7 +416,7 @@ export default function OrdersClient({
 
     try {
       const result =
-        mode === "accept" ? await acceptOrderAction(orderId, minutes, vehicleEnabled && acceptNeedsCar) : await setPrepAction(orderId, minutes ?? 0, null);
+        mode === "accept" ? await acceptOrderAction(orderId, minutes, vehicleEnabled && canAskForCar && acceptNeedsCar) : await setPrepAction(orderId, minutes ?? 0, null);
 
       if (result.ok) {
         setPrepPicker(null);
@@ -423,7 +431,7 @@ export default function OrdersClient({
     } finally {
       inFlight.current = false;
       setBusyId(null);
-      router.refresh();
+      refresh();
     }
   }
 
@@ -449,7 +457,7 @@ export default function OrdersClient({
     } finally {
       inFlight.current = false;
       setBusyId(null);
-      router.refresh();
+      refresh();
     }
   }
 
@@ -472,7 +480,7 @@ export default function OrdersClient({
     } finally {
       inFlight.current = false;
       setBusyId(null);
-      router.refresh();
+      refresh();
     }
   }
 
@@ -490,7 +498,7 @@ export default function OrdersClient({
     } finally {
       setBusyId(null);
       setReceivingId(null);
-      router.refresh();
+      refresh();
     }
   }
 
@@ -521,6 +529,20 @@ export default function OrdersClient({
           <p className="mt-2 text-stone-500">
             Se actualiza solo cada pocos segundos.
           </p>
+          {availability.enabled ? (
+            <p
+              role="status"
+              className={`mt-2 inline-flex min-h-8 items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold ${
+                availability.total === 0 ? "bg-amber-100 text-amber-900" : "bg-emerald-50 text-emerald-900"
+              }`}
+            >
+              <span
+                aria-hidden="true"
+                className={`h-2 w-2 rounded-full ${availability.total === 0 ? "bg-amber-500" : "bg-emerald-500"}`}
+              />
+              {availableCountText(availability.total)}
+            </p>
+          ) : null}
         </div>
 
         <div className="flex flex-wrap gap-3">
@@ -652,6 +674,7 @@ export default function OrdersClient({
                           onAdjust={(delta, reason) =>
                             resolveDelivery(order.id, () => adjustPrepAction(order.id, delta, reason))
                           }
+                          noCouriers={orderZoneIsEmpty(order, availability)}
                           onOpen={() => setSelectedId(order.id)}
                           onConfirmSettlement={() => setReceivingId(order.id)}
                           couriers={couriers}
@@ -691,8 +714,10 @@ export default function OrdersClient({
         }
         onSelfDelivery={() => selected && resolveDelivery(selected.id, () => selfDeliveryAction(selected.id))}
         vehicleEnabled={vehicleEnabled}
-        onNeedsCar={(needsCar) =>
-          selected && resolveDelivery(selected.id, () => setNeedsCarAction(selected.id, needsCar))
+        onNeedsCar={
+          canAskForCar
+            ? (needsCar) => selected && resolveDelivery(selected.id, () => setNeedsCarAction(selected.id, needsCar))
+            : undefined
         }
         onConfirmSettlement={() => selected && setReceivingId(selected.id)}
       />
@@ -741,7 +766,7 @@ export default function OrdersClient({
           onClose={() => setPrepPicker(null)}
           needsCar={acceptNeedsCar}
           onNeedsCarChange={
-            vehicleEnabled && prepOrder.courier_status ? (value) => setAcceptNeedsCar(value) : undefined
+            vehicleEnabled && canAskForCar && prepOrder.courier_status ? (value) => setAcceptNeedsCar(value) : undefined
           }
         />
       ) : null}
@@ -750,7 +775,7 @@ export default function OrdersClient({
         open={manualOpen}
         setup={manualSetup}
         onClose={() => setManualOpen(false)}
-        onCreated={() => router.refresh()}
+        onCreated={() => refresh()}
       />
     </div>
   );

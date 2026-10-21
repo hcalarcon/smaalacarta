@@ -745,6 +745,12 @@ ADMIN-CONFIG-49 y 50, SEGUIMIENTO-37 a 42). Migración `20261031000000_tiempo_de
       detrás de un interruptor del superadmin, apagado de fábrica. Migración `20261113000000_vehiculo_del_repartidor.sql`
       (a prod con `npx supabase db push --db-url "<prod>"` al mergear)
 
+## Realtime del panel del repartidor (tarea 37)
+
+- [x] [herni] Pulso de pedidos del repartidor: tabla `courier_order_pulse` (RLS por `courier_id`, escritura solo por
+      los triggers de `orders`), en la publicación de Realtime; el panel `/repartidor` la escucha y su respaldo baja a
+      5 s (ENVIO-208 y 209). Migración `20261122000000_pulso_de_pedidos_del_repartidor.sql`
+
 ## Promociones con imagen y vigencia
 
 - [ ] [herni] Imagen propia o de un producto, "válida hasta" y unidades disponibles en las promociones: migración,

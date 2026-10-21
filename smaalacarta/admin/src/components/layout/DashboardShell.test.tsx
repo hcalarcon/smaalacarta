@@ -62,14 +62,23 @@ describe("DashboardShell — menú lateral achicable, ADMIN-PEDIDOS-56", () => {
     fireEvent.click(screen.getByRole("button", { name: "Achicar menú lateral" }));
 
     const link = screen.getByRole("link", { name: "Pedidos, 3 pendientes" });
-    expect(link.getAttribute("title")).toBe("Pedidos");
-    expect(link.textContent).toBe("3");
+    // El nombre se ve escrito debajo del ícono, junto al contador.
+    expect(link.textContent).toBe("Pedidos3");
     expect(localStorage.getItem("sma.sidebar.collapsed")).toBe("1");
 
     unmount();
     render(<DashboardShell {...withLinks}>contenido</DashboardShell>);
 
     expect(screen.getByRole("button", { name: "Expandir menú lateral" })).toBeTruthy();
+  });
+
+  // ADMIN-PEDIDOS-56
+  it("achicado, cada ícono lleva su nombre escrito, sin depender de pasar el mouse", () => {
+    localStorage.setItem("sma.sidebar.collapsed", "1");
+    render(<DashboardShell {...withLinks}>contenido</DashboardShell>);
+
+    expect(screen.getByRole("link", { name: "Resumen" }).textContent).toBe("Resumen");
+    expect(screen.queryByTestId("nav-tooltip")).toBeNull();
   });
 
   it("al expandirlo vuelven los nombres", () => {

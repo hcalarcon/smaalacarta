@@ -34,6 +34,8 @@ export default function MenuPreviewFrame({
   height,
   cropHeight,
   adminOrigin,
+  reloadKey = 0,
+  loaderPreview = false,
 }: {
   title: string;
   // Lo que se le manda al menú (ver `previewPayload`).
@@ -47,6 +49,10 @@ export default function MenuPreviewFrame({
   // Si se pasa, solo se ve esa altura de arriba (la vista compacta).
   cropHeight?: number;
   adminOrigin?: string;
+  // Cambiar este número vuelve a cargar el menú desde cero ("Ver de nuevo" en Animaciones).
+  reloadKey?: number;
+  // Deja ver la animación de carga antes de que entre el menú (`look=1`, PUBLICO-108).
+  loaderPreview?: boolean;
 }) {
   const { naturalSize, probe, hasImage } = useImageProbe(imageUrl);
 
@@ -59,7 +65,7 @@ export default function MenuPreviewFrame({
   const [failedAttempt, setFailedAttempt] = useState<number | null>(null);
 
   const menuOrigin = useMemo(() => new URL(MENU_ASSETS_URL).origin, []);
-  const src = previewSrc(MENU_ASSETS_URL, adminOrigin);
+  const src = previewSrc(MENU_ASSETS_URL, adminOrigin) + (loaderPreview ? "&look=1" : "");
 
   // Lo que escucha el iframe: solo se acepta lo que viene de él y de la dirección del menú.
   useEffect(() => {
@@ -103,6 +109,15 @@ export default function MenuPreviewFrame({
     return () => clearTimeout(timer);
   }, [attempt, rect]);
   const failed = !rect && failedAttempt === attempt;
+
+  // Una recarga pedida desde afuera arranca de cero, igual que "Reintentar".
+  const [seenReload, setSeenReload] = useState(reloadKey);
+  if (seenReload !== reloadKey) {
+    setSeenReload(reloadKey);
+    setRect(null);
+    setReady(0);
+    setAttempt((n) => n + 1);
+  }
 
   function retry() {
     setRect(null);

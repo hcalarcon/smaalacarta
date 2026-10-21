@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { createClient } from "@/lib/supabase-browser";
 
@@ -8,13 +8,37 @@ import { createClient } from "@/lib/supabase-browser";
 // casi a la vez) antes de pedir los datos nuevos.
 const DEBOUNCE_MS = 250;
 
-// Con la página abierta, avisa apenas la base cambia un pedido o una oferta (ENVIO-172), en lugar de esperar
+// Con la página abierta, avisa apenas la base cambia un pedido, una oferta o la disponibilidad de los repartidores
+// (ENVIO-172 y 202), en lugar de esperar
 // a la consulta periódica. No trae datos: solo dispara `onChange` (un `router.refresh()`), y los avisos que
 // suenan los siguen decidiendo las pantallas al comparar lo que ya tenían con lo nuevo. El RLS filtra lo que
 // llega: el local ve lo suyo y el repartidor, lo que puede ver. Si el canal no se puede abrir, queda la
 // consulta periódica de cada pantalla.
 export function useOrderChanges(onChange: () => void) {
+  return useTableChanges(ORDER_TABLES, onChange);
+}
+
+// El panel del repartidor (ENVIO-208): a su cuenta no le llega nada de `orders` (solo lo lee el negocio), así que
+// escucha `courier_order_pulse`, que la base sube para él cada vez que cambia un pedido que le importa.
+//
+// Devuelve si el canal está conectado (ENVIO-210): mientras lo está, la consulta periódica no hace falta a cada rato.
+export function useCourierOrderChanges(onChange: () => void) {
+  return useTableChanges(COURIER_TABLES, onChange);
+}
+
+// Solo la disponibilidad de los repartidores (ENVIO-202): el interruptor del repartidor no necesita enterarse
+// de cada pedido.
+export function useAvailabilityChanges(onChange: () => void) {
+  return useTableChanges(AVAILABILITY_TABLES, onChange);
+}
+
+const ORDER_TABLES = ["orders", "courier_offers", "courier_availability_pulse"] as const;
+const COURIER_TABLES = ["courier_order_pulse", "courier_offers", "courier_availability_pulse"] as const;
+const AVAILABILITY_TABLES = ["courier_availability_pulse"] as const;
+
+function useTableChanges(tables: readonly string[], onChange: () => void): boolean {
   const latest = useRef(onChange);
+  const [connected, setConnected] = useState(false);
 
   useEffect(() => {
     latest.current = onChange;
@@ -35,12 +59,14 @@ export function useOrderChanges(onChange: () => void) {
 
     try {
       client = createClient();
-      channel = client
-        // Nombre propio por montaje: uno fijo devuelve el canal anterior si todavía se está cerrando.
-        .channel(`order-changes-${Math.random().toString(36).slice(2)}`)
-        .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, changed)
-        .on("postgres_changes", { event: "*", schema: "public", table: "courier_offers" }, changed)
-        .subscribe();
+      // Nombre propio por montaje: uno fijo devuelve el canal anterior si todavía se está cerrando.
+      let builder = client.channel(`order-changes-${Math.random().toString(36).slice(2)}`);
+      // `courier_availability_pulse` es un contador sin datos de nadie: sube cuando algún repartidor se prende o
+      // se apaga (ENVIO-202).
+      for (const table of tables) {
+        builder = builder.on("postgres_changes", { event: "*", schema: "public", table }, changed);
+      }
+      channel = builder.subscribe((status) => setConnected(status === "SUBSCRIBED"));
     } catch {
       return;
     }
@@ -49,5 +75,9 @@ export function useOrderChanges(onChange: () => void) {
       if (timer) clearTimeout(timer);
       void client.removeChannel(channel);
     };
+    // `tables` es una constante de módulo: no cambia entre renders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  return connected;
 }

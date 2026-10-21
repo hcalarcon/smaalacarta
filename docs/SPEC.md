@@ -425,6 +425,46 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   marca completa, y lleva un texto accesible "Cargando…" (es/en/pt).
 - **PUBLICO-85** Al terminar de cargar, el loader se desvanece mientras el menú aparece con un fade suave (sin
   corte), y en tema oscuro el loader ya se ve oscuro; con `prefers-reduced-motion` el cambio es inmediato.
+- **PUBLICO-101** El loader interactivo permite elegir en `config.animacionCarga` una animación propia de comida:
+  `hamburguesa`, `pizza`, `cafe`, `helado`, `parrilla`, `sushi`, `pastas` o `panificados`. Si falta o el valor no es
+  válido, usa `hamburguesa`. Cada opción tiene su propia ilustración SVG y animación CSS, decorativas y sin
+  dependencias; respetan `prefers-reduced-motion`, el tema y el fade actuales. En `helado`, la bocha cae y se asienta
+  sobre un cucurucho con trama antes de que caiga la cereza. La elección se hace desde Configuración → Animaciones
+  (PUBLICO-103).
+- **PUBLICO-102** Cada negocio elige cómo se anima su menú al entrar (`business_settings.menu_animation`, que llega al
+  menú como `config.animacionMenu` y se aplica en `html[data-animacion-menu]`): `estandar` (el fundido de siempre, es lo
+  que tienen hoy todos los negocios), `suave` (títulos y productos suben despacio, escalonados), `dinamica` (los
+  productos rebotan y los títulos se deslizan) o `ninguna` ("Sin animaciones": no se mueve nada del menú, ni
+  transiciones). Un valor que falta o no vale se lee como `estandar`. Disponible en todos los planes.
+- **PUBLICO-103** En Configuración hay una sección **Animaciones** (después de Apariencia) con: la animación del menú
+  (las cuatro de arriba), la animación de carga (las ocho de comida de PUBLICO-101 o **La mía**) y la imagen de fondo.
+  Se guarda con "Guardar cambios", junto con el resto, con `save_menu_look()`, que vuelve a
+  validar todo (`22023`) y deja el negocio de la sesión como único dueño de lo que cambia. Los negocios que ya
+  existían quedan en `estandar`, `hamburguesa` y sin fondo.
+- **PUBLICO-104** La animación de carga propia es una imagen animada (GIF, WebP o PNG animado) del propio negocio:
+  `loader_animation = 'custom'` exige `loader_custom_url`, y el menú la muestra en el loader con `config.animacionCargaUrl`.
+  Con `prefers-reduced-motion` no se usa (un GIF no se puede pausar) y queda la de comida, que se ve quieta. Lottie
+  (`.json`) queda para después: hoy no hay librería de Lottie en el loader.
+- **PUBLICO-105** Los archivos van a Storage con la sesión del negocio. Las animaciones, al bucket `business-animations`
+  (público para leer, **1 MB** y solo GIF, WebP o PNG); el fondo, a `business-images` (**2 MB**, JPG, PNG o WebP). En los
+  dos, cada negocio escribe solo en su carpeta `<business_id>/…` (mismas políticas que el logo). El tipo y el tamaño los
+  hace cumplir el bucket, no el navegador (que avisa antes); la dirección guardada tiene que ser de la carpeta del
+  propio negocio y del bucket correcto, tanto en `save_menu_look()` como en un CHECK de la tabla.
+- **PUBLICO-106** Un negocio no puede cambiar la elección de otro ni subir a su carpeta; sin sesión no se guarda nada.
+- **PUBLICO-107** La imagen de fondo del menú es opcional (por defecto no hay, y el menú no cambia). Se ve en las tres
+  plantillas y en celular: una capa fija detrás de todo (`html.con-fondo::before`), `cover` sin deformar, sin
+  `background-attachment: fixed`, con encima una capa del color de la página (`--bg`: cambia con la plantilla y con el
+  tema claro u oscuro) para que el texto se lea siempre; los productos y tarjetas tienen su fondo y no se tapan. Solo se
+  usa una dirección https sin comillas ni paréntesis.
+- **PUBLICO-108** Junto a las opciones hay una vista previa tipo celular con el menú real (la misma de Apariencia,
+  `?preview=1`), que reproduce lo que está elegido sin guardar: primero la animación de carga (`look=1` la deja ver
+  unos segundos) y después la entrada del menú, con el fondo. Cada cambio de animación y el botón **Ver de nuevo** la
+  repiten. La vista de Apariencia también muestra el fondo.
+- **PUBLICO-109** Con `prefers-reduced-motion: reduce` el menú no se anima aunque el negocio haya elegido una
+  animación: las que mueven algo viven dentro de `@media (prefers-reduced-motion: no-preference)`. No se cargan
+  librerías: todo es CSS y una imagen.
+- **PUBLICO-110** `public_menu` (por `build_public_menu`) entrega `animacionMenu`, `animacionCarga`,
+  `animacionCargaUrl` (solo con la propia) y `fondo` (solo si hay); `menu_preview` también.
 
 ## BUSQUEDA — Buscador
 
@@ -629,6 +669,14 @@ llegando al negocio por WhatsApp.
   no entrega `pedido.prep` aunque la hora esté cargada y el cliente no ve el tiempo; al volver a encenderlo, sí.
 - **SEGUIMIENTO-51** La línea de la hora ("Listo aprox. 13:40 · faltan 25 min") se muestra en un tamaño de texto normal
   destacado (1 rem, negrita), sin competir con el estado del pedido.
+- **SEGUIMIENTO-52** La línea de pasos suma "En preparación" entre "Aceptado" y "Listo": Recibido → Aceptado → En
+  preparación → Listo → En camino → Entregado (para retirar: … → Listo para retirar → Retirado; si lo lleva el local:
+  … → Listo → Entregado). El local no tiene un botón más: apenas acepta el pedido (`confirmed`), "Aceptado" queda hecho
+  y "En preparación" es el paso activo, con la cuenta regresiva de la hora de listo si `show_prep_time` está prendido;
+  si el local marca `preparing` a mano, cae en el mismo paso. Ícono de olla con vapor animado, que se apaga con
+  `prefers-reduced-motion`. Textos en es/en/pt.
+- **SEGUIMIENTO-53** Los íconos de moto y auto son `motorbike` y `car` de Tabler Icons (licencia MIT), pegados como SVG
+  (no la librería), los mismos en el seguimiento, las ofertas, la tarjeta del local y el panel del repartidor.
 - **ADMIN-REPARTIDOR-8** La tarjeta del pedido del repartidor, en orden: #número · local · estado, **destino** (ícono
   de ubicación, barrio y dirección de entrega en grande), retiro en {local} más chico, hora de listo, la plata en una sola
   línea chica (lo que cobra por el envío y un chip "Cobrar $X" si tiene que cobrar al cliente) y la acción principal.
@@ -1451,6 +1499,8 @@ contradiga: ahora entra a los envíos, lleva opciones y nace confirmado)
 - **ADMIN-PEDIDOS-56** El menú lateral de escritorio se achica a solo íconos con el nombre en el tooltip, y el contenido
   usa todo el ancho. La elección se recuerda en el navegador (`localStorage`, con `try/catch`, `src/lib/layout/sidebar-pref.ts`).
   En el celular sigue la hamburguesa.
+  Achicado, el nombre de cada ícono se ve escrito debajo de él (no como tooltip: un ícono solo no dice qué es), el
+  enlace lleva `aria-label` con los pendientes, y el menú pasa de 4 a 5 rem de ancho.
 - **ADMIN-PEDIDOS-57** Todo cambio de estado lleva el estado que la persona veía (`from`; `p_from` en
   `set_order_status` y `courier_set_status`, migración `20261112000000`) y solo se aplica si el pedido sigue ahí: si no,
   la base no hace nada, no registra evento y no da error. Un doble click, dos pestañas o Realtime nunca avanzan dos pasos.
@@ -2114,6 +2164,118 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   junto a su nombre en la tarjeta y el detalle del pedido del local, en cada oferta, y en el seguimiento del cliente
   (`public_order_delivery()` suma `vehiculo` del repartidor asignado y de cada oferta). En la tarjeta del
   repartidor, el chip "Necesita auto" cuando el pedido lo pide. El texto accesible del seguimiento va en es/en/pt.
+- **ENVIO-179** Los términos para repartidores tienen una versión (arranca en 1, vive en `platform_settings.courier_terms_version`
+  y la lee el servidor con `courier_terms_version()`). El texto vive en `admin/src/content/terminos-repartidores.md`
+  con su número al lado; un test comprueba que el archivo y la base dicen la misma versión, así que cambiar los
+  términos es editar el archivo, subir el número y una migración que actualice la versión.
+- **ENVIO-180** Cada aceptación es una fila de `courier_terms_acceptances` (repartidor, versión y `accepted_at` del
+  servidor), que no se pisa ni se borra: es la prueba. Se crea solo con `courier_accept_terms(versión)`, que exige la
+  versión vigente. El repartidor lee solo las suyas, no ve ni crea las de otro, y el superadmin las lee todas.
+- **ENVIO-181** El superadmin tiene el interruptor "Exigir términos a repartidores" en `platform_settings`
+  (`courier_terms_required`), junto al modo de envíos y al vehículo. **Arranca prendido.** Lo lee el servidor con
+  `courier_terms_required()` y solo el superadmin lo cambia. Apagado no se muestra la pantalla ni se bloquea nada.
+- **ENVIO-182** Con el interruptor prendido, el repartidor que no aceptó la versión vigente no ve pedidos disponibles
+  (`courier_available_orders()` devuelve vacío y `courier_sees_order()` es falso), y tomar u ofertar da el error
+  `P0025` ("Tenés que aceptar los términos para repartidores"). Aceptar lo habilita; subir la versión vuelve a
+  bloquear a todos hasta que acepten otra vez.
+- **ENVIO-183** Al entrar al panel del repartidor sin haber aceptado la versión vigente, en lugar del panel se ve la
+  pantalla de términos: el texto, la casilla "Leí y acepto los términos" y el botón "Aceptar" (deshabilitado hasta
+  marcar la casilla). Los textos de la pantalla van en es/en/pt (según el idioma del navegador); los términos, solo
+  en español.
+- **ENVIO-184** En "Mi perfil" el repartidor tiene el link "Términos para repartidores" para releerlos
+  (`/repartidor/terminos`), con "Versión N, aceptada el …".
+- **ENVIO-185** En la lista de repartidores del superadmin, cada uno muestra "Términos": la versión aceptada y la fecha,
+  o "Pendiente" (con el interruptor prendido y la versión vigente sin aceptar).
+- **ENVIO-186** Con "Exigir términos a repartidores" prendido, el aviso push de pedido nuevo no le llega al repartidor que
+  no aceptó la versión vigente (`courier_push_eligible()`, que usa el endpoint del webhook). Apagado, les llega a todos.
+- **ENVIO-187** Con el interruptor prendido, la elección automática de ofertas (`settle_courier_offers`) ignora las
+  ofertas de quien no aceptó la versión vigente (pasa si se sube la versión con ofertas abiertas). Apagado, elige entre todas.
+- **ENVIO-188** Con el interruptor prendido, el local no puede asignar a mano un pedido a un repartidor que no aceptó la
+  versión vigente (error `P0026`, "todavía no aceptó los términos") y ese repartidor no aparece en la lista para elegir
+  (`business_delivery_options`). Apagado, se asigna a cualquiera.
+- **ENVIO-189** Si falla la consulta del estado de los términos, el panel del repartidor no se cae: se muestra igual y la
+  base sigue exigiéndolos al ver, tomar y ofertar.
+- **ENVIO-190** En la lista de repartidores del superadmin, con el interruptor apagado la columna "Términos" dice "No se
+  exige" (en lugar de "Pendiente") a quien no aceptó la versión vigente.
+- **ENVIO-191** El repartidor tiene junto al título de su panel un estado chico que también es el interruptor: un
+  círculo verde con "Conectado" o rojo con "No conectado" (la hora "Disponible desde las HH:MM" y la regla de las 4 horas
+  van en el tooltip, para no ocupar lugar). Todos arrancan No conectado (sin fila en
+  `courier_availability`). Solo el propio repartidor lo cambia (`courier_set_available()`); nadie escribe la tabla
+  directo. Cada repartidor lee solo su fila y el superadmin las ve todas.
+- **ENVIO-192** Cada vez que el estado cambia de verdad se guarda un registro en `courier_availability_events`
+  (repartidor, disponible sí/no, `at` del servidor y `reason`: `manual` o `auto_off`). Nadie lo edita ni lo borra: es
+  para medir la prueba. El repartidor lee los suyos y el superadmin todos.
+- **ENVIO-193** El superadmin tiene el interruptor "Disponibilidad de repartidores" en `platform_settings`
+  (`courier_availability_enabled`), junto a los otros. **Arranca prendido.** Lo lee el servidor con
+  `courier_availability_enabled()` y solo el superadmin lo cambia. Apagado: no se ve el interruptor del repartidor ni
+  ningún aviso (menú, seguimiento, local), prender da `P0027`, y el aviso push de pedido nuevo les llega a todos
+  como antes.
+- **ENVIO-194** Un repartidor disponible se apaga solo a las 4 horas sin actividad. Actividad es prender el interruptor,
+  tomar u ofertar un pedido, o cambiar el estado de un pedido propio (no cuenta lo que haga el local ni el cliente).
+  `courier_availability_expire()`, con pg_cron cada minuto, lo apaga y deja un registro `auto_off`; y como cuenta
+  disponible solo con actividad en las últimas 4 horas, el conteo es correcto aunque el cron se atrase. Si tiene
+  avisos push activados, se le avisa: "Te pusimos como No disponible porque pasaron 4 horas sin actividad".
+  El aviso sale de un Database Webhook de Supabase sobre `courier_availability_events` (solo Insert) que llama al mismo
+  endpoint y con el mismo secreto que el de `orders`; sin él, el repartidor se apaga igual pero no se entera.
+- **ENVIO-195** Un repartidor No disponible igual ve los pedidos de su panel y puede tomarlos u ofertar, pero no recibe
+  el aviso push de pedido nuevo (`courier_push_eligible()`). Los avisos de pedidos que ya son suyos (listo, cambio
+  de demora, cancelado, faltan 10 minutos) le llegan siempre.
+- **ENVIO-196** Un repartidor cuenta como disponible para una zona si está disponible (con actividad en las últimas 4
+  horas), está activo, cubre esa zona y, con "Exigir términos a repartidores" prendido, aceptó la versión vigente.
+- **ENVIO-197** Para el público hay dos funciones que solo responden sí o no, sin nombres ni cantidades:
+  `public_zone_has_couriers(zona)` y `public_order_has_couriers(código)` (nulo si el pedido ya no busca repartidor).
+  Con el interruptor apagado, o con una zona que no existe, no hay nada que avisar. Las tablas no se leen sin sesión.
+- **ENVIO-198** En el menú, si el cliente eligió envío y su zona no tiene repartidores disponibles, antes de confirmar
+  ve el aviso "Ahora puede que no haya repartidores disponibles para tu zona. Podés pedir igual o elegir retiro en
+  el local." Puede pedir igual. Si hay alguno, o si falla la consulta, no se muestra nada. Va en es/en/pt.
+- **ENVIO-199** En el seguimiento, mientras el pedido busca repartidor y su zona sigue sin disponibles, se ve "Puede
+  que tarde en aparecer un repartidor"; se va solo cuando aparece uno o el pedido tiene repartidor. Va en es/en/pt.
+- **ENVIO-200** En la pantalla de pedidos del local hay un indicador "Repartidores disponibles ahora: N" (solo la
+  cantidad, de los que cubren al menos una de sus zonas de envío); con 0 se ve en ámbar: "Ningún repartidor
+  disponible". Cada pedido con envío sin repartidor cuya zona está en 0 lleva la misma marca. No hay push al local
+  por esto. Lo calcula `business_courier_availability(negocio)` con el negocio que pone el servidor, y solo lo
+  contesta a un miembro de ese negocio.
+- **ENVIO-201** El superadmin ve la lista de repartidores disponibles ahora, con desde qué hora y qué zonas cubren.
+- **ENVIO-202** El interruptor del repartidor, el indicador del local y el aviso del seguimiento se actualizan sin
+  recargar: `courier_availability_pulse` (un contador sin datos de nadie, en la publicación de Realtime) sube con cada
+  cambio de disponibilidad y los paneles vuelven a pedir los datos; el seguimiento lo consulta en cada vuelta.
+- **ENVIO-203** En Configuración, en Envíos, el negocio elige "Vehículos con los que trabajo": Moto y Auto, al menos uno
+  (`business_settings.vehicle_moto` / `vehicle_auto`; la base lo exige con un CHECK y `save_business_vehicles()` da
+  `22023`). Los negocios que ya existían quedan con los dos. Solo se ve con el interruptor "Vehículo del repartidor"
+  del superadmin prendido, y se guarda con "Guardar cambios" junto con las zonas. Cada negocio cambia solo los suyos
+  (el negocio sale de la sesión).
+- **ENVIO-204** Con el interruptor prendido, un repartidor ve, toma, oferta y recibe por asignación a mano un pedido
+  solo si tiene al menos uno de los vehículos del negocio (`courier_vehicle_ok()`, usada por `courier_sees_order()`);
+  si lo intenta igual, la base da `P0024`. Un negocio solo Moto no le muestra sus pedidos a un repartidor solo Auto.
+  El aviso push de pedido nuevo respeta lo mismo (`withBusinessVehicles`). Apagado el interruptor, no se filtra nada.
+- **ENVIO-205** "Necesita auto" por pedido (ENVIO-176) sigue igual, pero el botón solo aparece si el negocio trabaja con
+  Moto y con Auto: si trabaja solo con Auto, todos sus pedidos ya van solo a repartidores con auto.
+- **ENVIO-206** Al cambiar los vehículos del negocio, las ofertas abiertas de repartidores que ya no le sirven se cierran.
+- **ENVIO-207** El conteo de repartidores disponibles (ENVIO-196 a 202) respeta el vehículo: el panel del local, el
+  aviso del seguimiento y, si recibe el negocio, el del menú (`public_zone_has_couriers(zona, negocio)`) cuentan solo a
+  quienes sirven a ese negocio.
+- **ENVIO-208** El panel del repartidor se entera al instante de un cambio que le importa. Como `orders` solo la lee el
+  negocio (el RLS no le manda a la cuenta repartidor ningún evento de esa tabla), la base sube un pulso en
+  `courier_order_pulse` (migración `*_pulso_de_pedidos_del_repartidor.sql`): una fila por repartidor con el último
+  pedido que lo tocó y la hora, sin datos del cliente ni de nadie más. Cada repartidor lee solo su fila; nadie escribe
+  desde la app (solo los triggers de `orders`); un upsert por repartidor, así que no crece. La tabla está en la
+  publicación `supabase_realtime` y el panel la escucha (`useCourierOrderChanges`) junto con sus ofertas y la
+  disponibilidad. ENVIO-172 vale para el local; el repartidor usa esto.
+- **ENVIO-209** Quién recibe el pulso: el repartidor asignado (y el anterior, si el pedido se devolvió), los que ven el
+  pedido en Disponibles según `courier_sees_order()` —la misma regla de `courier_available_orders()`— y los que
+  ofertaron. Cuando un pedido deja de estar en búsqueda (lo toma otro, se cancela, se elige otro), el pulso va a quienes
+  lo veían antes del cambio, para que se les retire de Disponibles. Un pedido sin envío con repartidor no pulsa a nadie.
+  La consulta periódica del panel del repartidor, que queda de respaldo si Realtime se corta, pasa de 15 a 5 segundos.
+- **ENVIO-210** Los pedidos de datos nuevos de un panel (`router.refresh()`) no se amontonan: mientras uno sigue en
+  camino, el pulso de Realtime, la consulta periódica y el resto de las fuentes no lanzan otro sino que dejan uno
+  pendiente, que sale apenas llega la respuesta (`useSerialRefresh`). Apilados, cada respuesta tarda más que el
+  intervalo, Next los encadena en una sola transición que no se muestra hasta que termina el último, y el pedido
+  aceptado no aparecía nunca aunque el servidor ya lo devolvía. Si la respuesta no llega en 10 segundos se libera
+  igual. Lo usan el panel del repartidor y el tablero del local.
+- **ENVIO-211** Con el canal de Realtime conectado, el panel del repartidor no consulta cada 5 segundos: el respaldo pasa
+  a una red de seguridad de 30 segundos, así el pulso no se encuentra con un refresco del respaldo en camino y no espera
+  su respuesta. Si el canal no está conectado (no abrió, se cayó), vuelve a los 5 segundos. Los hooks de Realtime
+  devuelven si el canal está suscrito.
 
 
 

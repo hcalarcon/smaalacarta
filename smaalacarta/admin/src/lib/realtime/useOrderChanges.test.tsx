@@ -1,4 +1,4 @@
-import { act, cleanup, render } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 type Handler = () => void;
@@ -7,6 +7,7 @@ const state = vi.hoisted(() => ({
   handlers: [] as { table: string; handler: Handler }[],
   removed: 0,
   throwOnCreate: false,
+  onStatus: null as null | ((status: string) => void),
 }));
 
 vi.mock("@/lib/supabase-browser", () => ({
@@ -18,7 +19,10 @@ vi.mock("@/lib/supabase-browser", () => ({
         state.handlers.push({ table: filter.table, handler });
         return channel;
       },
-      subscribe: () => channel,
+      subscribe: (callback?: (status: string) => void) => {
+        state.onStatus = callback ?? null;
+        return channel;
+      },
     };
 
     return {
@@ -30,11 +34,16 @@ vi.mock("@/lib/supabase-browser", () => ({
   },
 }));
 
-import { useOrderChanges } from "./useOrderChanges";
+import { useCourierOrderChanges, useOrderChanges } from "./useOrderChanges";
 
 function Probe({ onChange }: { onChange: () => void }) {
   useOrderChanges(onChange);
   return null;
+}
+
+function CourierProbe({ onChange }: { onChange: () => void }) {
+  const connected = useCourierOrderChanges(onChange);
+  return <p>{connected ? "conectado" : "sin conexión"}</p>;
 }
 
 beforeEach(() => {
@@ -42,6 +51,7 @@ beforeEach(() => {
   state.handlers = [];
   state.removed = 0;
   state.throwOnCreate = false;
+  state.onStatus = null;
 });
 
 afterEach(() => {
@@ -49,11 +59,54 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
+describe("cambios del repartidor en tiempo real — ENVIO-209", () => {
+  it("escucha su pulso de pedidos, sus ofertas y la disponibilidad, y no `orders` (no le llega por el RLS)", () => {
+    render(<CourierProbe onChange={vi.fn()} />);
+
+    expect(state.handlers.map((entry) => entry.table).sort()).toEqual([
+      "courier_availability_pulse",
+      "courier_offers",
+      "courier_order_pulse",
+    ]);
+  });
+
+  it("un pulso vuelve a pedir los datos, juntando los que llegan casi a la vez", () => {
+    const onChange = vi.fn();
+    render(<CourierProbe onChange={onChange} />);
+
+    const pulse = state.handlers.find((entry) => entry.table === "courier_order_pulse")!;
+    act(() => {
+      pulse.handler();
+      pulse.handler();
+      vi.advanceTimersByTime(300);
+    });
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("el panel sabe si Realtime está conectado — ENVIO-210", () => {
+  it("avisa que está conectado cuando el canal se suscribe y que no lo está si se cae", () => {
+    render(<CourierProbe onChange={vi.fn()} />);
+    expect(screen.getByText("sin conexión")).toBeTruthy();
+
+    act(() => state.onStatus?.("SUBSCRIBED"));
+    expect(screen.getByText("conectado")).toBeTruthy();
+
+    act(() => state.onStatus?.("CHANNEL_ERROR"));
+    expect(screen.getByText("sin conexión")).toBeTruthy();
+  });
+});
+
 describe("cambios de pedidos en tiempo real — ENVIO-172", () => {
-  it("escucha los pedidos y las ofertas", () => {
+  it("escucha los pedidos, las ofertas y la disponibilidad de los repartidores", () => {
     render(<Probe onChange={vi.fn()} />);
 
-    expect(state.handlers.map((entry) => entry.table).sort()).toEqual(["courier_offers", "orders"]);
+    expect(state.handlers.map((entry) => entry.table).sort()).toEqual([
+      "courier_availability_pulse",
+      "courier_offers",
+      "orders",
+    ]);
   });
 
   it("un cambio dispara una sola actualización aunque lleguen varios seguidos", () => {

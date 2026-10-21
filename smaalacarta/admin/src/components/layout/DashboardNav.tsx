@@ -15,7 +15,7 @@ export default function DashboardNav({
 }: {
   links: NavLink[];
   onNavigate?: () => void;
-  // Solo íconos, con el nombre en el tooltip (ADMIN-PEDIDOS-55).
+  // Solo íconos, con el nombre escrito debajo de cada uno: un ícono solo no dice qué es (ADMIN-PEDIDOS-55 y 56).
   collapsed?: boolean;
 }) {
   const pathname = usePathname();
@@ -32,14 +32,13 @@ export default function DashboardNav({
             href={link.href}
             onClick={onNavigate}
             aria-current={active ? "page" : undefined}
-            title={collapsed ? link.label : undefined}
             aria-label={
               collapsed
                 ? `${link.label}${navBadgeLabel(link.badge) ? `, ${link.badge} pendientes` : ""}`
                 : undefined
             }
             className={`relative flex items-center rounded-xl text-sm font-medium transition ${
-              collapsed ? "justify-center py-3" : "gap-3 px-4 py-3"
+              collapsed ? "flex-col justify-center gap-1 px-1 py-2" : "gap-3 px-4 py-3"
             } ${
               active
                 ? "bg-brand text-white shadow-sm"
@@ -58,7 +57,11 @@ export default function DashboardNav({
             >
               <path d={link.icon} />
             </svg>
-            {collapsed ? null : link.label}
+            {collapsed ? (
+              <span className="w-full truncate text-center text-[11px] font-medium leading-tight">{link.label}</span>
+            ) : (
+              link.label
+            )}
             {navBadgeLabel(link.badge) ? (
               <span
                 className={`rounded-full text-xs font-bold ${
