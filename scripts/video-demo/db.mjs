@@ -2,12 +2,15 @@
 import { createRequire } from "node:module";
 
 const require = createRequire(new URL("../../smaalacarta/admin/package.json", import.meta.url));
-const { createClient } = require("@supabase/supabase-js");
 
 const opciones = { auth: { persistSession: false, autoRefreshToken: false } };
 
-export const clienteAnonimo = (url, key) => createClient(url, key, opciones);
-export const clienteServicio = (url, serviceKey) => createClient(url, serviceKey, opciones);
+// Se carga al crear el cliente, no al importar: el CI de la raíz no instala las dependencias del admin y los tests
+// de este directorio importan módulos que pasan por acá sin crear ningún cliente.
+const crear = (url, key) => require("@supabase/supabase-js").createClient(url, key, opciones);
+
+export const clienteAnonimo = (url, key) => crear(url, key);
+export const clienteServicio = (url, serviceKey) => crear(url, serviceKey);
 
 // Devuelve { client, user } con la sesión de la cuenta, o lanza un mensaje claro.
 export async function iniciarSesion(url, key, email, password, quien) {
