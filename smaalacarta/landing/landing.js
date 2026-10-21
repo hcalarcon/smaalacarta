@@ -132,6 +132,75 @@ if ("IntersectionObserver" in window && !prefersReducedMotion()) {
 }
 
 // =====================================================
+// VIDEO DEL INICIO
+// Un solo archivo por visita: horizontal desde 768 px, vertical en el celular. El HTML no
+// trae `src` para que el celular no baje el que no usa. Se pausa al salir de pantalla, y con
+// `prefers-reduced-motion` no arranca solo: queda el póster con el botón ▶.
+// El botón cubre el cuadro: tocarlo pausa o reproduce (también con el teclado).
+// =====================================================
+const heroVideo = document.querySelector(".hero-video-el");
+const heroPlay = document.querySelector(".hero-video-play");
+
+if (heroVideo && heroPlay) {
+  const frame = heroVideo.parentElement;
+  const tallQuery = typeof window.matchMedia === "function" ? window.matchMedia("(max-width: 767px)") : null;
+  const reduceMotion = prefersReducedMotion();
+  let wantsPlay = !reduceMotion; // la persona (o el navegador) quiere verlo en reproducción
+  let inView = true;
+
+  const play = () => {
+    const result = heroVideo.play?.();
+    if (result?.catch) result.catch(() => {});
+  };
+
+  function renderPlayButton() {
+    const paused = !wantsPlay;
+    frame.classList.toggle("is-paused", paused);
+    heroPlay.setAttribute(
+      "aria-label",
+      (paused ? "Reproducir" : "Pausar") + " video: así funciona un pedido en SMA a la Carta",
+    );
+  }
+
+  function loadSource() {
+    const tall = tallQuery?.matches ?? false;
+    const { srcTall, srcWide, posterTall, posterWide } = heroVideo.dataset;
+    const src = tall ? srcTall : srcWide;
+    if (heroVideo.getAttribute("src") === src) return;
+    heroVideo.poster = tall ? posterTall : posterWide;
+    heroVideo.src = src;
+    if (wantsPlay && inView) play();
+  }
+
+  if (reduceMotion) {
+    heroVideo.autoplay = false;
+    heroVideo.removeAttribute("autoplay");
+  }
+  loadSource();
+  tallQuery?.addEventListener?.("change", loadSource);
+  heroPlay.hidden = false;
+  renderPlayButton();
+
+  heroPlay.addEventListener("click", () => {
+    wantsPlay = !wantsPlay;
+    if (wantsPlay) play();
+    else heroVideo.pause?.();
+    renderPlayButton();
+  });
+
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(
+      (entries) => {
+        inView = entries.at(-1).isIntersecting;
+        if (!inView) heroVideo.pause?.();
+        else if (wantsPlay) play();
+      },
+      { threshold: 0.25 },
+    ).observe(frame);
+  }
+}
+
+// =====================================================
 // EASTER EGG: código Konami → el mapa del Chaco y Pico Frank
 // El audio (`assets/pico-frank.mp3`) es hoy un sonido de prueba propio; el dueño lo reemplaza por el tema; si falta o el navegador lo bloquea,
 // el mapa aparece igual y se cierra solo.

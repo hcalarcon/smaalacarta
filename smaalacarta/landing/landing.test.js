@@ -177,8 +177,10 @@ const heroCss = () => CSS.replace(/\/\*[\s\S]*?\*\//g, "").match(/[^{}]*\.hero[^
 describe("LANDING-18 — el inicio no depende de una foto", () => {
   const doc = parse();
 
-  it("no hay imágenes en el hero", () => {
+  it("el hero no lleva fotos: solo el video demo y su póster", () => {
     expect(doc.querySelector("#inicio img")).toBeNull();
+    expect(doc.querySelectorAll("#inicio video")).toHaveLength(1);
+    expect(HTML).not.toMatch(/\.hero[^{]*\{[^}]*background(-image)?:[^;}]*url\((?!"?data:)/);
   });
 
   it("el CSS del hero no deforma ni estira nada", () => {
@@ -201,25 +203,212 @@ describe("LANDING-18 — el inicio no depende de una foto", () => {
   });
 });
 
-describe("LANDING-19 — teléfono animado decorativo", () => {
+describe("LANDING-19 — video demo en el inicio", () => {
   const doc = parse();
-  const phone = doc.querySelector("#inicio .hp");
+  const video = doc.querySelector("#inicio video");
+  const WIDE = "assets/video/explicativo-16x9.mp4";
+  const TALL = "assets/video/explicativo-9x16.mp4";
 
-  it("es decorativo y tiene las 4 pantallas", () => {
-    expect(phone.getAttribute("aria-hidden")).toBe("true");
-    expect(phone.querySelectorAll(".hp-screen")).toHaveLength(4);
+  it("no queda el teléfono animado", () => {
+    expect(doc.querySelector("#inicio .hp")).toBeNull();
+    expect(CSS).not.toMatch(/\.hp-|@keyframes hp-screen/);
   });
 
-  it("su CSS es propio (prefijo hp-) y con prefers-reduced-motion queda quieto", () => {
-    expect(CSS).toMatch(/@keyframes hp-screen/);
-    expect(CSS).toMatch(/@keyframes hp-ring/);
-    const reduce = CSS.slice(CSS.lastIndexOf("@media (prefers-reduced-motion: reduce)"));
-    expect(reduce).toMatch(/animation:\s*none\s*!important/);
-    expect(reduce).toMatch(/\.hp-screen:nth-child\(3\)\s*\{[^}]*opacity:\s*1/);
+  it("es mudo, en bucle, sin botón de sonido y con descripción en español", () => {
+    for (const attr of ["autoplay", "muted", "loop", "playsinline"]) expect(video.hasAttribute(attr), attr).toBe(true);
+    expect(video.getAttribute("preload")).toBe("metadata");
+    expect(video.hasAttribute("controls")).toBe(false);
+    expect(video.getAttribute("aria-label")).toBe("Video: así funciona un pedido en SMA a la Carta");
+    expect(doc.querySelector("#inicio [aria-label*='onido']")).toBeNull();
   });
 
-  it("no usa JavaScript", () => {
-    expect(phone.outerHTML).not.toMatch(/<script|onclick/);
+  it("el HTML no trae src: el celular no baja el archivo que no usa", () => {
+    expect(video.hasAttribute("src")).toBe(false);
+    expect(video.querySelector("source")).toBeNull();
+  });
+
+  it("los videos y pósters existen: sin audio, ≤ 3 MB, póster WebP", () => {
+    for (const file of [WIDE, TALL]) {
+      const size = statSync(join(DIR, file)).size;
+      expect(size, file).toBeLessThanOrEqual(3 * 1024 * 1024);
+      const head = readFileSync(join(DIR, file)).subarray(0, 64 * 1024).toString("latin1");
+      expect(head, file).toContain("ftyp");
+    }
+    for (const attr of ["posterWide", "posterTall"]) {
+      const file = video.dataset[attr];
+      expect(file).toMatch(/\.webp$/);
+      expect(statSync(join(DIR, file)).size).toBeLessThan(100 * 1024);
+    }
+    expect(video.dataset.srcWide).toBe(WIDE);
+    expect(video.dataset.srcTall).toBe(TALL);
+  });
+
+  it("no se suben los originales pesados y se borró lo del PDF", () => {
+    expect(() => statSync(join(DIR, "assets/pdf-demo.webp"))).toThrow();
+    expect(() => statSync(join(DIR, "assets/qr.png"))).toThrow();
+  });
+
+  it("el marco respeta la proporción y con movimiento reducido el CSS apaga lo animado", () => {
+    expect(CSS).toMatch(/\.hero-video\s*\{[^}]*aspect-ratio:\s*16\s*\/\s*9/);
+    expect(CSS).toMatch(/\.hero-video\s*\{\s*max-width:\s*280px;\s*aspect-ratio:\s*9\s*\/\s*16/);
+    expect(CSS).toMatch(/\.hero-video-el\s*\{[^}]*object-fit:\s*contain/);
+  });
+});
+
+describe("LANDING-19 — video: comportamiento", () => {
+  let video;
+  let calls;
+  const prototypeMock = () => {
+    calls = [];
+    window.HTMLMediaElement.prototype.play = function () {
+      calls.push("play");
+      return Promise.resolve();
+    };
+    window.HTMLMediaElement.prototype.pause = function () {
+      calls.push("pause");
+    };
+  };
+
+  it("en compu baja solo el horizontal", async () => {
+    prototypeMock();
+    await loadPage();
+    video = $(".hero-video-el");
+    expect(video.getAttribute("src")).toBe("assets/video/explicativo-16x9.mp4");
+    expect(video.getAttribute("poster")).toBe("assets/video/poster-16x9.webp");
+  });
+
+  it("en el celular (menos de 768 px) baja solo el vertical", async () => {
+    prototypeMock();
+    await loadPage({ tall: true });
+    video = $(".hero-video-el");
+    expect(video.getAttribute("src")).toBe("assets/video/explicativo-9x16.mp4");
+    expect(video.getAttribute("poster")).toBe("assets/video/poster-9x16.webp");
+  });
+
+  it("se pausa al salir de pantalla y sigue al volver", async () => {
+    prototypeMock();
+    await loadPage();
+    const frame = $(".hero-video");
+    expect(observerOf(frame)).toBeTruthy();
+    calls.length = 0;
+    observerOf(frame).cb([{ isIntersecting: false, target: frame }]);
+    expect(calls).toEqual(["pause"]);
+    observerOf(frame).cb([{ isIntersecting: true, target: frame }]);
+    expect(calls).toEqual(["pause", "play"]);
+  });
+
+  it("el botón pausa y reproduce, y no se reanuda solo si la persona lo pausó", async () => {
+    prototypeMock();
+    await loadPage();
+    const btn = $(".hero-video-play");
+    const frame = $(".hero-video");
+    expect(btn.hidden).toBe(false);
+    expect(frame.classList.contains("is-paused")).toBe(false);
+    btn.click();
+    expect(frame.classList.contains("is-paused")).toBe(true);
+    expect(btn.getAttribute("aria-label")).toMatch(/^Reproducir video/);
+    calls.length = 0;
+    observerOf(frame).cb([{ isIntersecting: true, target: frame }]);
+    expect(calls).toEqual([]);
+    btn.click();
+    expect(frame.classList.contains("is-paused")).toBe(false);
+    expect(calls).toEqual(["play"]);
+  });
+
+  it("con prefers-reduced-motion no arranca solo: queda el póster con ▶ y sin autoplay", async () => {
+    prototypeMock();
+    await loadPage({ reducedMotion: true });
+    expect($(".hero-video-el").hasAttribute("autoplay")).toBe(false);
+    expect($(".hero-video").classList.contains("is-paused")).toBe(true);
+    expect($(".hero-video-play").textContent).toContain("▶");
+    expect(calls).toEqual([]);
+    $(".hero-video-play").click();
+    expect(calls).toEqual(["play"]);
+  });
+});
+
+describe("LANDING-30 — qué ofrecemos, beneficios, planes y limpieza del PDF", () => {
+  const doc = parse();
+  const titles = (sel) => [...doc.querySelectorAll(sel)].map((e) => e.textContent.trim());
+  const plan = (name) => [...doc.querySelectorAll(".plan-card")].find((p) => p.querySelector(".plan-name").textContent.trim() === name);
+
+  it("hay cuatro tarjetas, sin el PDF, y los envíos van como nuevo y opcional", () => {
+    expect(titles(".offer-title")).toEqual([
+      "Menú digital interactivo",
+      "Pedidos por WhatsApp",
+      "Panel para manejar tu negocio",
+      "Envíos a domicilio",
+    ]);
+    const envios = doc.querySelector(".offer-card-new");
+    expect(envios.textContent).toContain("Nuevo");
+    expect(envios.textContent).toContain("Opcional");
+    expect(envios.textContent).toContain("tu propio delivery");
+    expect(envios.textContent).toContain("no cambia nada");
+  });
+
+  it("el panel se vende aunque no haya pedidos", () => {
+    const text = doc.querySelector("#que-ofrecemos").textContent.replace(/\s+/g, " ");
+    expect(text).toContain("Aunque no uses pedidos");
+    expect(text).toContain("métricas");
+  });
+
+  it("el beneficio del panel sirve sin pedidos y 'sin comisión' sigue", () => {
+    const benefit = [...doc.querySelectorAll(".benefit-card")].find((b) => b.textContent.includes("Todo desde un panel"));
+    expect(benefit.textContent.replace(/\s+/g, " ")).toContain("aunque no recibas pedidos");
+    expect(titles(".benefit-title")).toContain("Sin comisión por pedido");
+  });
+
+  it("los planes son Menú Web, Pedidos Online y Pedidos + Envíos, con precios y destacado", () => {
+    expect(titles(".plan-name")).toEqual(["Menú Web", "Pedidos Online", "Pedidos + Envíos"]);
+    expect(plan("Menú Web").textContent).toContain("$15.000");
+    expect(plan("Pedidos Online").textContent).toContain("$25.000");
+    const nuevo = plan("Pedidos + Envíos");
+    expect(nuevo.textContent).toContain("$25.000");
+    expect(nuevo.classList.contains("featured")).toBe(true);
+    expect(nuevo.textContent).toContain("Precio de lanzamiento · por tiempo limitado");
+    expect(doc.querySelectorAll(".plan-card.featured")).toHaveLength(1);
+    expect(plan("Pedidos Online").textContent).toContain("Panel de administración: menú, promociones, pedidos y métricas");
+  });
+
+  it("el plan Pedidos + Envíos incluye lo prometido y su botón dice el mensaje", () => {
+    const nuevo = plan("Pedidos + Envíos");
+    for (const item of ["Todo lo de Pedidos Online", "costo visible para tu cliente", "Repartidores de SMA", "Tu propio delivery como favorito", "Lo llevo yo", "Seguimiento del envío"]) {
+      expect(nuevo.textContent.replace(/\s+/g, " ")).toContain(item);
+    }
+    const url = new URL(nuevo.querySelector("a.plan-btn").href);
+    expect(url.searchParams.get("text")).toBe("Hola, quiero el plan Pedidos + Envíos con primer mes gratis. ¿Cómo empiezo?");
+  });
+
+  it("en el celular el destacado se ve primero", () => {
+    expect(CSS).toMatch(/\.plan-card\.featured\s*\{\s*order:\s*-1/);
+  });
+
+  it("no queda el plan gratis ni el PDF como servicio", () => {
+    const text = doc.body.textContent.replace(/\s+/g, " ");
+    expect(text).not.toMatch(/QR \+ PDF|Menú QR|Sitio Web/i);
+    expect(text).not.toContain("en los planes pagos");
+    expect(doc.querySelector(".hero-checks").textContent).toContain("1er mes gratis");
+    expect(doc.querySelector("#demosModal").textContent).not.toContain("PDF");
+    expect(doc.querySelector(".qr-pdf-container")).toBeNull();
+  });
+
+  it("el pie lista los tres planes y los metadatos hablan de envíos, no del PDF", () => {
+    const links = [...doc.querySelectorAll(".footer-links a")].map((a) => [a.textContent.trim(), a.getAttribute("href")]);
+    expect(links).toEqual([
+      ["Menú Web", "#planes"],
+      ["Pedidos Online", "#planes"],
+      ["Pedidos + Envíos", "#planes"],
+    ]);
+    expect(doc.title).toContain("envíos");
+    for (const sel of ['meta[name="description"]', 'meta[property="og:description"]', 'meta[name="twitter:description"]']) {
+      expect(doc.querySelector(sel).content).toContain("envíos");
+    }
+    const ld = JSON.parse(doc.querySelector('script[type="application/ld+json"]').textContent);
+    expect(ld.description).toContain("envíos");
+  });
+
+  it("el paso 3 ofrece cargar zonas y delivery", () => {
+    expect(doc.querySelector("#como-funciona").textContent.replace(/\s+/g, " ")).toContain("Si querés envíos, cargamos tus zonas y tu delivery");
   });
 });
 
@@ -356,14 +545,15 @@ document.addEventListener = (type, fn, opts) => {
   addDocListener(type, fn, opts);
 };
 
-async function loadPage({ reducedMotion = false, observer = true } = {}) {
+async function loadPage({ reducedMotion = false, observer = true, tall = false } = {}) {
   vi.resetModules();
   docListeners.splice(0).forEach(([type, fn, opts]) => document.removeEventListener(type, fn, opts));
   document.documentElement.className = "";
   document.documentElement.innerHTML = HTML.replace(/<script src="\.\/landing\.js"><\/script>/, "");
   window.scrollTo = vi.fn();
+  window.__ios = [];
   window.matchMedia = (query) => ({
-    matches: reducedMotion && query.includes("prefers-reduced-motion"),
+    matches: (reducedMotion && query.includes("prefers-reduced-motion")) || (tall && query.includes("max-width: 767px")),
     media: query,
     addEventListener() {},
     removeEventListener() {},
@@ -371,7 +561,7 @@ async function loadPage({ reducedMotion = false, observer = true } = {}) {
   if (observer) {
     window.IntersectionObserver = class {
       constructor(cb) {
-        window.__io = this;
+        (window.__ios ??= []).push(this);
         this.cb = cb;
         this.seen = [];
       }
@@ -388,6 +578,8 @@ async function loadPage({ reducedMotion = false, observer = true } = {}) {
 }
 
 const $ = (sel) => document.querySelector(sel);
+// El observer que mira ese elemento (la página crea uno para la animación de entrada y otro para el video).
+const observerOf = (el) => window.__ios.find((io) => io.seen.includes(el));
 const key = (k, extra = {}) => document.dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true, ...extra }));
 
 describe("LANDING-5 — menú del celular", () => {
@@ -508,7 +700,7 @@ describe("LANDING-7 — animación de entrada", () => {
     expect(document.documentElement.classList.contains("js-reveal")).toBe(true);
     const el = $(".plan-card");
     expect(el.classList.contains("reveal")).toBe(true);
-    window.__io.cb([{ isIntersecting: true, target: el }]);
+    observerOf(el).cb([{ isIntersecting: true, target: el }]);
     expect(el.classList.contains("is-visible")).toBe(true);
   });
 
