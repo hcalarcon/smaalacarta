@@ -437,6 +437,13 @@ h3 {
   background: transparent;
   color: var(--white);
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* El marco recorta (overflow: hidden): el contorno va por dentro para que se vea. */
+.hero-video-play:focus-visible {
+  outline-offset: -6px;
 }
 
 .hero-video-play[hidden] {
