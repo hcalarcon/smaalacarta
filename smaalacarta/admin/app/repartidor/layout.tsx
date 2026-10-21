@@ -14,19 +14,23 @@ import { listCourierOrders } from "@/lib/db/courier";
 import { courierOrderState } from "@/lib/courier/settlements";
 import AvailabilityToggle from "./components/AvailabilityToggle";
 import TermsGate from "./components/TermsGate";
+import TutorialProvider from "./components/TutorialProvider";
+import { getTutorialStatus } from "@/lib/db/courier-tutorial";
 import { getCourierAvailability } from "@/lib/db/availability";
 import { pickAvailabilityLang } from "@/lib/courier/availability";
 
 export default async function CourierLayout({ children }: { children: React.ReactNode }) {
   // Sin sesión va a /login; quien no es repartidor, a su panel (ENVIO-30).
   const { user, courierId } = await requireCourier();
-  const [name, orders, terms, availability] = await Promise.all([
+  const [name, orders, terms, availability, tutorial] = await Promise.all([
     getCourierName(courierId),
     listCourierOrders(),
     // Si esta consulta falla no se cae todo el panel: la base exige los términos igual al ver, tomar y ofertar.
     getCourierTermsStatus().catch(() => null),
     // Sin este dato no se muestra el estado, pero el panel anda igual (ENVIO-189).
     getCourierAvailability().catch(() => null),
+    // Sin este dato no hay tutorial, pero el panel anda igual (ENVIO-213).
+    getTutorialStatus().catch(() => null),
   ]);
   // Sin aceptar los términos vigentes no hay panel (ENVIO-183): la base tampoco le da pedidos (ENVIO-182).
   const gated = terms !== null && mustAccept(terms);
@@ -62,6 +66,10 @@ export default async function CourierLayout({ children }: { children: React.Reac
           version={terms!.version}
           lang={pickLang((await headers()).get("accept-language"))}
         />
+      ) : tutorial ? (
+        <TutorialProvider mode={tutorial.mode} zonePrice={tutorial.zonePrice} autoStart={!tutorial.seen}>
+          {children}
+        </TutorialProvider>
       ) : (
         children
       )}

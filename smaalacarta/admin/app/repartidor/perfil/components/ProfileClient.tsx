@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 
 import { savePreferencesAction, saveVehiclesAction } from "../../actions";
+import { useTutorial } from "../../components/tutorial-context";
 import PendingButton from "@/components/ui/PendingButton";
 import VehicleIcons from "@/components/ui/VehicleIcon";
 import { formatAcceptedAt } from "@/lib/courier/terms";
@@ -24,6 +25,7 @@ export default function ProfileClient({
   // La última versión de los términos que aceptó y cuándo (ENVIO-184).
   terms?: { version: number | null; at: string | null } | null;
 }) {
+  const tutorial = useTutorial();
   const [value, setValue] = useState(initial);
   const [saved, setSaved] = useState(initial);
   const [vehicle, setVehicle] = useState(vehicles);
@@ -108,6 +110,22 @@ export default function ProfileClient({
         <div role="alert" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
           {error}
         </div>
+      ) : null}
+
+      {tutorial ? (
+        <section className="rounded-3xl border border-line bg-white p-5 shadow-sm" aria-labelledby="tutorial-title">
+          <h2 id="tutorial-title" className="font-semibold text-stone-800">
+            Tutorial
+          </h2>
+          <p className="text-sm text-stone-500">Un recorrido de 1 minuto con un pedido de práctica, que no es real.</p>
+          <button
+            type="button"
+            onClick={tutorial.request}
+            className="mt-2 min-h-11 rounded-xl border border-line-strong bg-white px-5 text-sm font-semibold text-brand transition hover:bg-cream"
+          >
+            ¿Cómo funciona?
+          </button>
+        </section>
       ) : null}
 
       <section className="rounded-3xl border border-line bg-white p-5 shadow-sm" aria-labelledby="terms-title">

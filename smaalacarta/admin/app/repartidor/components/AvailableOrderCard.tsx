@@ -58,6 +58,7 @@ export default function AvailableOrderCard({
   onTake,
   onWithdraw,
   onDecline,
+  practice = false,
 }: {
   order: AvailableOrder;
   now: Date;
@@ -69,6 +70,8 @@ export default function AvailableOrderCard({
   onTake: () => void | Promise<void>;
   onWithdraw: () => void | Promise<void>;
   onDecline: () => void | Promise<void>;
+  // El pedido de práctica del tutorial (ENVIO-216): se marca y lo puede señalar el tour.
+  practice?: boolean;
 }) {
   const [editing, setEditing] = useState(false);
   const [declining, setDeclining] = useState(false);
@@ -104,12 +107,18 @@ export default function AvailableOrderCard({
 
   return (
     <article
+      data-tour={practice ? "practice-available" : undefined}
       className={`rounded-2xl border p-3 shadow-sm ${notice ? "border-stone-200 bg-stone-50" : "border-line bg-white"}`}
     >
       <header className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
         <p className="min-w-0 break-words text-base font-semibold text-brand">
-          #{order.numero} · {order.negocio.nombre}
+          {practice ? order.negocio.nombre : `#${order.numero} · ${order.negocio.nombre}`}
         </p>
+        {practice ? (
+          <span className="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold tracking-wide text-white">
+            PRÁCTICA
+          </span>
+        ) : null}
 
         {order.necesita_auto ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-sky-100 px-2 py-0.5 text-xs font-semibold text-sky-900">
@@ -163,6 +172,8 @@ export default function AvailableOrderCard({
         </p>
       ) : null}
 
+      {/* Un contenedor estable para el tutorial: las acciones cambian por dentro (Ofertar abre el formulario). */}
+      <div data-tour={practice && !notice ? "take" : undefined}>
       {notice ? null : fixed ? (
         <div className="mt-3 flex flex-wrap gap-2">
           <PendingButton
@@ -276,6 +287,8 @@ export default function AvailableOrderCard({
           </MoreOptions>
         </div>
       )}
+
+      </div>
 
       <details className="mt-3 rounded-xl border border-line">
         <summary className="flex min-h-11 cursor-pointer items-center px-3 text-sm font-semibold text-brand">

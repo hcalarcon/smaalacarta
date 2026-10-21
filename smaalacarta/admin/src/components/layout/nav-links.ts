@@ -7,6 +7,8 @@ export type NavLink = {
   badge?: number;
   // Otras rutas que también dejan este link activo (por ejemplo, el detalle).
   alsoActiveOn?: string[];
+  // Marca para que un tutorial pueda señalarlo (`data-tour`).
+  tour?: string;
 };
 
 export const dashboardLinks: NavLink[] = [
@@ -81,6 +83,7 @@ export const courierLinks: NavLink[] = [
   {
     href: "/repartidor/zonas",
     label: "Mis zonas",
+    tour: "zones",
     icon: "M12 21s-7-6.2-7-11a7 7 0 1114 0c0 4.8-7 11-7 11zM12 12a2 2 0 100-4 2 2 0 000 4z",
   },
   {

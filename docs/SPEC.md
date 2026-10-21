@@ -2276,6 +2276,28 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   a una red de seguridad de 30 segundos, así el pulso no se encuentra con un refresco del respaldo en camino y no espera
   su respuesta. Si el canal no está conectado (no abrió, se cayó), vuelve a los 5 segundos. Los hooks de Realtime
   devuelven si el canal está suscrito.
+- **ENVIO-212** El repartidor tiene un tutorial interactivo (`tutorial_seen_at timestamptz` en `couriers`, migración
+  `*_tutorial_del_repartidor.sql`). Solo el propio repartidor lo marca, con `courier_mark_tutorial_seen()` (SECURITY
+  DEFINER, con `my_courier_id()`, nunca un id del navegador): pone la hora una sola vez, no la pisa si ya estaba. Lo lee con
+  `courier_tutorial_status()`, que devuelve si ya lo vio, el modo de envíos de la plataforma (`fixed` u `offers`) y el precio
+  de lista de una zona real (la más barata que cubre) para el pedido de práctica.
+  Sin sesión de repartidor, las dos dan `42501`.
+- **ENVIO-213** El tutorial arranca solo la primera vez que el repartidor entra al panel, una vez aceptados los términos
+  (o de entrada si "Exigir términos" está apagado), y no vuelve a salir si ya lo vio, aunque cambie de celular. Se marca
+  como visto al terminar o al saltear. El botón "¿Cómo funciona?" de Mi perfil lo repite cuando quiera.
+- **ENVIO-214** El tour va sobre la pantalla real (driver.js) en 10 pasos, en este orden: bienvenida, interruptor
+  Disponible, Mis zonas, pedido de práctica en Disponibles, Tomar u Ofertar, Mis envíos en curso, En camino, Entregado,
+  Rendiciones y cierre. Cada burbuja tiene "Saltear" y el contador "N de 10". Si un elemento no existe (por ejemplo el
+  interruptor con la disponibilidad apagada), ese paso se saltea y los números se ajustan.
+- **ENVIO-215** El paso 5 depende del modo: en `fixed` explica Tomar; en `offers`, ofertar con el precio de lista u otro
+  con un motivo. Los pasos 5, 7 y 8 esperan que el repartidor toque el botón real del pedido de práctica y avanzan solos.
+- **ENVIO-216** El pedido de práctica vive solo en el estado del cliente: sus botones (Tomar/Ofertar, En camino,
+  Entregado) cambian su estado local y nunca llaman a las acciones del servidor, así que no crean pedidos, ofertas,
+  pulsos ni avisos, ni suman a Rendiciones. Se marca con la etiqueta "PRÁCTICA", local "Local de práctica", zona Centro.
+- **ENVIO-217** El pedido de práctica usa las mismas tarjetas que uno real y desaparece al terminar o saltear el tour.
+  Un pedido real que llegue mientras dura el tour se ve normal, arriba del de práctica.
+- **ENVIO-218** La burbuja nunca tapa el botón que señala ni se sale de la pantalla (390 px): si el elemento queda
+  cerca de la barra de abajo, la burbuja va arriba. Con `prefers-reduced-motion` no hay animaciones.
 
 
 
