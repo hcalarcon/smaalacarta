@@ -874,3 +874,57 @@ describe("Necesita auto en la tarjeta del repartidor — ENVIO-178", () => {
     expect(screen.queryByText("Necesita auto")).toBeNull();
   });
 });
+
+describe("tras responder el servidor el botón espera el estado nuevo — ADMIN-PEDIDOS-59", () => {
+  it("Tomar sigue gris cuando la acción respondió bien, y no se puede tocar de nuevo", async () => {
+    render(
+      <CourierOrdersClient orders={[]} available={[offer("t1", { modo: "fixed" })]} serverNow="2026-10-09T22:05:00Z" />,
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Tomar/ }));
+    });
+    await act(async () => {});
+
+    const waiting = screen.getByRole("button", { name: /Tomando/ }) as HTMLButtonElement;
+    expect(waiting.disabled).toBe(true);
+
+    fireEvent.click(waiting);
+    expect(mocks.take).toHaveBeenCalledTimes(1);
+  });
+
+  it("si la acción falla, el botón vuelve a estar activo y se muestra el error", async () => {
+    mocks.take.mockResolvedValue({ ok: false, error: "No se pudo" });
+    render(
+      <CourierOrdersClient orders={[]} available={[offer("t2", { modo: "fixed" })]} serverNow="2026-10-09T22:05:00Z" />,
+    );
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: /^Tomar/ }));
+    });
+    await act(async () => {});
+
+    expect((screen.getByRole("button", { name: /^Tomar/ }) as HTMLButtonElement).disabled).toBe(false);
+    expect(screen.getByRole("alert").textContent).toContain("No se pudo");
+  });
+
+  it("En camino sigue gris hasta que el pedido cambia de estado", async () => {
+    const view = (estado: string) => (
+      <CourierOrdersClient
+        orders={[order("c1", estado, "accepted")]}
+        available={[]}
+        serverNow="2026-10-09T22:05:00Z"
+      />
+    );
+    const { rerender } = render(view("handed_to_courier"));
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "En camino" }));
+    });
+    await act(async () => {});
+    expect((screen.getByRole("button", { name: /Marcando en camino/ }) as HTMLButtonElement).disabled).toBe(true);
+
+    rerender(view("on_the_way"));
+    expect((screen.getByRole("button", { name: "Entregado" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+});

@@ -52,13 +52,13 @@ export default function CourierOrderCard({
   error: string | null;
   // Devuelve el pedido, con motivo (ENVIO-66): vuelve a buscarse entre los demás repartidores.
   // Pueden devolver una promesa: el botón espera lo que tarde y no deja tocar de nuevo (ENVIO-144).
-  onReturn: (kind: ReturnKind, reason: string | null) => void | Promise<void>;
+  onReturn: (kind: ReturnKind, reason: string | null) => void | Promise<void | boolean>;
   // Al marcar En camino puede llevar los minutos que tarda en llegar al cliente (ENVIO-163).
-  onAdvance: (status: "on_the_way" | "delivered", etaMinutes?: number) => void | Promise<void>;
+  onAdvance: (status: "on_the_way" | "delivered", etaMinutes?: number) => void | Promise<void | boolean>;
   // "Llego al local en X" / "Llego al cliente en X" (ENVIO-157).
-  onSetEta?: (kind: EtaKind, minutes: number) => void | Promise<void>;
+  onSetEta?: (kind: EtaKind, minutes: number) => void | Promise<void | boolean>;
   // Marca que ya rindió al local lo cobrado del pedido (ENVIO-42): no se deshace.
-  onSettle: () => void | Promise<void>;
+  onSettle: () => void | Promise<void | boolean>;
   // El pedido de práctica del tutorial (ENVIO-216): se marca y lo puede señalar el tour.
   practice?: boolean;
 }) {
@@ -239,6 +239,7 @@ export default function CourierOrderCard({
         <EtaPicker
           title="Salgo hacia el cliente: llego en…"
           busy={busy}
+          settleKey={order.estado}
           onPick={(minutes) => onAdvance("on_the_way", minutes)}
         />
       ) : null}
@@ -266,6 +267,7 @@ export default function CourierOrderCard({
           <PendingButton
             busy={busy}
             pendingLabel={actions.onTheWay ? "Marcando en camino…" : "Marcando entregado…"}
+            settleKey={order.estado}
             onClick={() => onAdvance(actions.onTheWay ? "on_the_way" : "delivered")}
             className="min-h-11 w-full rounded-xl bg-action px-5 py-2 text-sm font-semibold text-white transition hover:bg-action-hover disabled:opacity-60 sm:w-auto"
           >

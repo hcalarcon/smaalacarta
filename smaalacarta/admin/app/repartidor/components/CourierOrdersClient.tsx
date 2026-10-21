@@ -136,9 +136,10 @@ export default function CourierOrdersClient({
     return () => clearInterval(id);
   }, [refresh, soundOnRef, realtimeConnected]);
 
-  async function run(orderId: string, call: () => ReturnType<typeof makeOfferAction>) {
+  // Devuelve si salió bien: el botón que la llamó sigue esperando el estado nuevo solo si no falló (ADMIN-PEDIDOS-59).
+  async function run(orderId: string, call: () => ReturnType<typeof makeOfferAction>): Promise<boolean> {
     // Un segundo toque sobre el mismo pedido, aunque llegue en el mismo instante, no lanza otra acción.
-    if (inFlight.has(orderId)) return;
+    if (inFlight.has(orderId)) return true;
     inFlight.add(orderId);
 
     setError(null);
@@ -149,8 +150,10 @@ export default function CourierOrdersClient({
       const result = await call();
       if (!result.ok && result.closed) setNotice(result.error);
       else if (!result.ok) setError({ id: orderId, message: result.error });
+      return result.ok;
     } catch {
       setError({ id: orderId, message: "No pudimos guardar el cambio. Probá de nuevo." });
+      return false;
     } finally {
       inFlight.delete(orderId);
       setBusyId(null);

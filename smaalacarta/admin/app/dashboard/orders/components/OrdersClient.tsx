@@ -393,7 +393,7 @@ export default function OrdersClient({
   // Aceptar un pedido pendiente (con hora de entrega ya marcada o no) pasa por el selector del tiempo; lo
   // programado y anticipado ya tiene su hora y se confirma directo (ADMIN-PEDIDOS-31).
   // Devuelve la promesa de la acción para que el botón que la llamó espere (ENVIO-168).
-  function requestStatus(order: Order, status: string, note?: string): Promise<void> | undefined {
+  function requestStatus(order: Order, status: string, note?: string): Promise<boolean> | undefined {
     if (status === "confirmed" && order.status === "pending" && acceptsPrepTime(order)) {
       setError(null);
       setAcceptNeedsCar(false);
@@ -437,8 +437,8 @@ export default function OrdersClient({
 
   // `from`: el estado que el usuario veía al tocar; la base solo aplica el cambio si el pedido sigue ahí, así un
   // doble click o dos pestañas nunca avanzan dos pasos.
-  async function changeStatus(orderId: string, status: string, note?: string, from?: string, accepting = false) {
-    if (inFlight.current) return;
+  async function changeStatus(orderId: string, status: string, note?: string, from?: string, accepting = false): Promise<boolean> {
+    if (inFlight.current) return true;
 
     inFlight.current = true;
     setError(null);
@@ -451,9 +451,11 @@ export default function OrdersClient({
         setError(result.error);
         if (accepting) markAccepted(orderId, false);
       }
+      return result.ok;
     } catch {
       setError("No pudimos guardar el cambio. Probá de nuevo.");
       if (accepting) markAccepted(orderId, false);
+      return false;
     } finally {
       inFlight.current = false;
       setBusyId(null);

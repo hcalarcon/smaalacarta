@@ -65,11 +65,12 @@ export default function AvailableOrderCard({
   busy: boolean;
   error: string | null;
   // Pueden devolver una promesa: el botón espera lo que tarde y no deja tocar de nuevo (ENVIO-144).
-  onOffer: (input: OfferInput) => void | Promise<void>;
+  // `false` = falló: el botón se libera enseguida; si no, espera el estado nuevo (ADMIN-PEDIDOS-59).
+  onOffer: (input: OfferInput) => void | Promise<void | boolean>;
   // Precio fijo: toma el pedido al precio de lista (ENVIO-153).
-  onTake: () => void | Promise<void>;
-  onWithdraw: () => void | Promise<void>;
-  onDecline: () => void | Promise<void>;
+  onTake: () => void | Promise<void | boolean>;
+  onWithdraw: () => void | Promise<void | boolean>;
+  onDecline: () => void | Promise<void | boolean>;
   // El pedido de práctica del tutorial (ENVIO-216): se marca y lo puede señalar el tour.
   practice?: boolean;
 }) {
@@ -179,6 +180,7 @@ export default function AvailableOrderCard({
           <PendingButton
             busy={busy}
             pendingLabel="Tomando…"
+            settleKey={order.id}
             onClick={onTake}
             className="min-h-11 rounded-xl bg-action px-5 py-2 text-sm font-semibold text-white transition hover:bg-action-hover disabled:opacity-60"
           >
@@ -257,6 +259,7 @@ export default function AvailableOrderCard({
             <PendingButton
               busy={busy}
               pendingLabel={mine ? "Cambiando…" : "Ofertando…"}
+            settleKey={order.id}
               onClick={() => submit({ price, reason })}
               className="min-h-11 rounded-xl bg-action px-4 py-2 text-sm font-semibold text-white transition hover:bg-action-hover disabled:opacity-60"
             >
@@ -269,6 +272,7 @@ export default function AvailableOrderCard({
           <PendingButton
             busy={busy}
             pendingLabel="Ofertando…"
+            settleKey={order.id}
             onClick={() => submit({ price: String(listPrice), reason: "" })}
             className="min-h-11 rounded-xl bg-action px-5 py-2 text-sm font-semibold text-white transition hover:bg-action-hover disabled:opacity-60"
           >
