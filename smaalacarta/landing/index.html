@@ -4,12 +4,12 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>
-      SMA a la Carta | Menús digitales con QR y pedidos por WhatsApp
+      SMA a la Carta | Menús digitales con QR, pedidos por WhatsApp y envíos
     </title>
 
     <meta
       name="description"
-      content="Menú con QR y pedidos por WhatsApp para restaurantes, bares y rotiserías de San Martín de los Andes. Sin comisión por pedido."
+      content="Menú con QR, pedidos por WhatsApp y envíos a domicilio opcionales para restaurantes, bares y rotiserías de San Martín de los Andes. Sin comisión por pedido."
     />
 
     <!-- SEO extra -->
@@ -27,7 +27,7 @@
     />
     <meta
       property="og:description"
-      content="Menú con QR y pedidos por WhatsApp para restaurantes, bares y rotiserías de San Martín de los Andes. Sin comisión por pedido."
+      content="Menú con QR, pedidos por WhatsApp y envíos a domicilio opcionales para restaurantes, bares y rotiserías de San Martín de los Andes. Sin comisión por pedido."
     />
     <meta property="og:url" content="https://www.smaalacarta.com.ar/" />
     <meta property="og:site_name" content="SMA a la Carta" />
@@ -40,7 +40,7 @@
     <meta property="og:image:height" content="630" />
     <meta
       property="og:image:alt"
-      content="SMA a la Carta: menús digitales con QR y pedidos por WhatsApp"
+      content="SMA a la Carta: menús digitales con QR, pedidos por WhatsApp y envíos"
     />
 
     <!-- Twitter Card -->
@@ -51,7 +51,7 @@
     />
     <meta
       name="twitter:description"
-      content="Menú con QR y pedidos por WhatsApp para restaurantes, bares y rotiserías de San Martín de los Andes. Sin comisión por pedido."
+      content="Menú con QR, pedidos por WhatsApp y envíos a domicilio opcionales para restaurantes, bares y rotiserías de San Martín de los Andes. Sin comisión por pedido."
     />
     <meta
       name="twitter:image"
@@ -85,7 +85,7 @@
         "@context": "https://schema.org",
         "@type": "LocalBusiness",
         "name": "SMA a la Carta",
-        "description": "Menús digitales con QR y pedidos por WhatsApp para restaurantes y bares.",
+        "description": "Menús digitales con QR, pedidos por WhatsApp y envíos a domicilio opcionales para restaurantes y bares.",
         "url": "https://www.smaalacarta.com.ar/",
         "image": "https://www.smaalacarta.com.ar/assets/og-image.jpg",
         "telephone": "+5493644277105",
@@ -190,48 +190,34 @@
             <ul class="hero-checks">
               <li>Menú listo en menos de 48 horas</li>
               <li>Sin comisión por pedido</li>
-              <li>1er mes gratis en los planes pagos</li>
+              <li>1er mes gratis</li>
             </ul>
           </div>
 
-          <div class="hp" aria-hidden="true">
-            <div class="hp-screen hp-s1" style="--i: 0">
-              <svg width="120" height="120" viewBox="0 0 21 21" fill="#1f2937">
-                <path d="M0 0h7v7H0zM14 0h7v7h-7zM0 14h7v7H0z" />
-                <path fill="#fff" d="M1 1h5v5H1zM15 1h5v5h-5zM1 15h5v5H1z" />
-                <path
-                  d="M2 2h3v3H2zM16 2h3v3h-3zM2 16h3v3H2zM9 1h2v2H9zM9 5h3v1H9zM8 8h2v2H8zM12 9h3v2h-3zM16 8h2v2h-2zM9 12h2v3H9zM13 13h2v2h-2zM17 12h3v2h-3zM12 17h2v3h-2zM16 16h2v2h-2zM19 18h2v3h-2z"
-                />
-              </svg>
-              <p>Escaneá el QR</p>
-            </div>
-            <div class="hp-screen hp-s2" style="--i: 1">
-              <ul>
-                <li><span>Milanesa napolitana</span> <b>$9.800</b> <i>+</i></li>
-                <li><span>Provoleta</span> <b>$6.500</b> <i>+</i></li>
-                <li><span>Cerveza artesanal</span> <b>$4.200</b> <i>+</i></li>
-              </ul>
-              <div class="hp-carrito">Ver carrito (2) · $16.300</div>
-            </div>
-            <div class="hp-screen hp-s3" style="--i: 2">
-              <div class="hp-burbuja">
-                <p>🍔 Nuevo pedido #12</p>
-                <p>👤 Lucía</p>
-                <p>🚚 Retiro</p>
-                <p>• Milanesa napolitana x1</p>
-                <p>• Provoleta x1</p>
-                <p>💰 TOTAL: $16.300</p>
-                <p>🔎 Seguí tu pedido</p>
-              </div>
-            </div>
-            <div class="hp-screen hp-s4" style="--i: 3">
-              <h3>Pedido #12</h3>
-              <ol class="hp-linea">
-                <li>Confirmado ✓</li>
-                <li>En preparación ✓</li>
-                <li class="hp-actual">Listo</li>
-              </ol>
-            </div>
+          <div class="hero-video" id="heroVideo">
+            <video
+              class="hero-video-el"
+              autoplay
+              muted
+              loop
+              playsinline
+              preload="metadata"
+              width="1280"
+              height="720"
+              aria-label="Video: así funciona un pedido en SMA a la Carta"
+              data-src-wide="assets/video/explicativo-16x9.mp4"
+              data-src-tall="assets/video/explicativo-9x16.mp4"
+              data-poster-wide="assets/video/poster-16x9.webp"
+              data-poster-tall="assets/video/poster-9x16.webp"
+            ></video>
+            <button
+              type="button"
+              class="hero-video-play"
+              aria-label="Reproducir video: así funciona un pedido en SMA a la Carta"
+              hidden
+            >
+              <span aria-hidden="true">▶</span>
+            </button>
           </div>
         </div>
       </section>
@@ -247,16 +233,6 @@
           </div>
 
           <div class="offer-grid">
-            <!-- Card 1 -->
-            <div class="offer-card">
-              <h3 class="offer-title">Menú en PDF con QR</h3>
-              <p class="offer-description">
-                Tu carta en PDF accesible desde un código QR, ideal para mesas,
-                mostrador o redes sociales.
-              </p>
-            </div>
-
-            <!-- Card 2 -->
             <div class="offer-card featured">
               <h3 class="offer-title">Menú digital interactivo</h3>
               <p class="offer-description">
@@ -265,12 +241,36 @@
               </p>
             </div>
 
-            <!-- Card 3 -->
             <div class="offer-card">
               <h3 class="offer-title">Pedidos por WhatsApp</h3>
               <p class="offer-description">
                 Los clientes arman el pedido, te lo envían por WhatsApp y siguen
                 su estado con un link.
+              </p>
+            </div>
+
+            <div class="offer-card">
+              <h3 class="offer-title">Panel para manejar tu negocio</h3>
+              <p class="offer-description">
+                Aunque no uses pedidos, desde el panel cargás y editás tu menú,
+                lo personalizás, armás promociones y ves métricas de tu
+                negocio. Sin depender de nadie.
+              </p>
+            </div>
+
+            <div class="offer-card offer-card-new">
+              <p class="offer-tags">
+                <span class="offer-tag">Nuevo</span>
+                <span class="offer-optional">Opcional</span>
+              </p>
+              <h3 class="offer-title">Envíos a domicilio</h3>
+              <p class="offer-description">
+                Tu cliente elige envío, ve el costo según su zona y sigue el
+                pedido. Lo llevan repartidores de San Martín de los Andes que
+                cubren tu zona, y si tenés tu propio delivery, lo sumamos y
+                queda como tu favorito. Si un día no hay repartidor, lo llevás
+                vos. Si no querés envíos, no cambia nada: seguís como hasta
+                ahora.
               </p>
             </div>
           </div>
@@ -305,7 +305,8 @@
             <li class="step">
               <h3 class="step-title">Publicamos y empezás a recibir pedidos</h3>
               <p class="step-description">
-                Te entregamos tu link y tu código QR listos para compartir.
+                Te entregamos tu link y tu código QR listos para compartir. Si
+                querés envíos, cargamos tus zonas y tu delivery.
               </p>
             </li>
           </ol>
@@ -357,8 +358,8 @@
                 <div class="benefit-content">
                   <h3 class="benefit-title">Todo desde un panel</h3>
                   <p class="benefit-description">
-                    Cargá productos, armá promociones y seguí tus pedidos desde
-                    un panel simple, sin depender de nadie
+                    Menú, precios, promos y métricas en un panel simple. Te
+                    sirve aunque no recibas pedidos, y sin depender de nadie
                   </p>
                 </div>
               </div>
@@ -401,33 +402,6 @@
           <div class="plans-grid">
             <!-- PLAN 1 -->
             <div class="plan-card">
-              <div class="plan-header">
-                <h3 class="plan-name">Menú QR + PDF</h3>
-                <p class="plan-description">
-                  Ideal para empezar sin complicaciones
-                </p>
-                <div class="plan-price">Gratis</div>
-              </div>
-
-              <ul class="plan-features">
-                <li>QR personalizado para tu negocio</li>
-                <li>Tu menú PDF</li>
-                <li>Optimizado para celular</li>
-                <li>Cambios y actualizaciones a pedido</li>
-                <li>Soporte técnico</li>
-              </ul>
-
-              <a
-                class="plan-btn secondary"
-                href="https://api.whatsapp.com/send?phone=5493644277105&text=Hola%20quiero%20el%20plan%20Men%C3%BA%20QR%20%2B%20PDF%20gratis.%20%20Por%20favor%20me%20asesor%C3%ADas?"
-                target="_blank"
-                rel="noopener"
-                >Quiero mi QR con PDF</a
-              >
-            </div>
-
-            <!-- PLAN 2 - DESTACADO -->
-            <div class="plan-card">
               <span class="plan-badge">1er mes gratis</span>
               <div class="plan-header">
                 <h3 class="plan-name">Menú Web</h3>
@@ -457,8 +431,8 @@
               >
             </div>
 
-            <!-- PLAN 3 -->
-            <div class="plan-card featured">
+            <!-- PLAN 2 -->
+            <div class="plan-card">
               <span class="plan-badge">1er mes gratis</span>
               <div class="plan-header">
                 <h3 class="plan-name">Pedidos Online</h3>
@@ -477,18 +451,52 @@
                 <li>Se instala en el celular como una app</li>
                 <li>Pedidos por WhatsApp con seguimiento para tu cliente</li>
                 <li>
-                  Panel de administración: productos, promociones y pedidos
+                  Panel de administración: menú, promociones, pedidos y métricas
                 </li>
                 <li>Diseño personalizable</li>
                 <li>Escalable a nuevas funciones</li>
               </ul>
 
               <a
-                class="plan-btn primary"
+                class="plan-btn secondary"
                 href="https://api.whatsapp.com/send?phone=5493644277105&text=Hola%20quiero%20el%20plan%20Pedidos%20Online%20con%20primer%20mes%20gratis.%20%20Qu%C3%A9%20incluye%20y%20c%C3%B3mo%20inicio?"
                 target="_blank"
                 rel="noopener"
                 >Quiero recibir pedidos online</a
+              >
+            </div>
+
+            <!-- PLAN 3 - DESTACADO -->
+            <div class="plan-card featured">
+              <span class="plan-ribbon">Precio de lanzamiento · por tiempo limitado</span>
+              <div class="plan-header">
+                <h3 class="plan-name">Pedidos + Envíos</h3>
+                <p class="plan-description">
+                  Pedidos online y envíos a domicilio, todo en un solo plan
+                </p>
+                <div class="plan-price">
+                  $25.000 <span class="price-period">/ mes</span>
+                </div>
+              </div>
+
+              <ul class="plan-features">
+                <li>Todo lo de Pedidos Online</li>
+                <li>
+                  Envíos a domicilio por zona, con el costo visible para tu
+                  cliente
+                </li>
+                <li>Repartidores de SMA que cubren tu zona</li>
+                <li>Tu propio delivery como favorito</li>
+                <li>Opción «Lo llevo yo» cuando no hay repartidor</li>
+                <li>Seguimiento del envío para tu cliente</li>
+              </ul>
+
+              <a
+                class="plan-btn primary"
+                href="https://api.whatsapp.com/send?phone=5493644277105&text=Hola%2C%20quiero%20el%20plan%20Pedidos%20%2B%20Env%C3%ADos%20con%20primer%20mes%20gratis.%20%C2%BFC%C3%B3mo%20empiezo%3F"
+                target="_blank"
+                rel="noopener"
+                >Quiero pedidos y envíos</a
               >
             </div>
           </div>
@@ -637,9 +645,9 @@
           <div class="footer-links">
             <h3>Servicios</h3>
             <ul>
-              <li><a href="#planes">Menú Digital</a></li>
-              <li><a href="#planes">QR + PDF</a></li>
-              <li><a href="#planes">Sitio Web</a></li>
+              <li><a href="#planes">Menú Web</a></li>
+              <li><a href="#planes">Pedidos Online</a></li>
+              <li><a href="#planes">Pedidos + Envíos</a></li>
             </ul>
           </div>
 
@@ -765,29 +773,6 @@
               />
               <span class="card-label">Menú minimalista</span>
             </a>
-          </div>
-        </section>
-
-        <!-- QR+PDF Section -->
-        <section class="demo-section">
-          <h3 class="section-heading">QR + PDF</h3>
-          <div class="qr-pdf-container">
-            <img
-              src="./assets/pdf-demo.webp"
-              alt="Menú en PDF de ejemplo"
-              class="pdf-image"
-              width="798"
-              height="548"
-              loading="lazy"
-            />
-            <img
-              src="./assets/qr.png"
-              alt="Código QR de ejemplo"
-              class="qr-image"
-              width="282"
-              height="278"
-              loading="lazy"
-            />
           </div>
         </section>
       </div>

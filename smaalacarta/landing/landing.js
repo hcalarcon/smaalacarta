@@ -132,6 +132,102 @@ if ("IntersectionObserver" in window && !prefersReducedMotion()) {
 }
 
 // =====================================================
+// VIDEO DEL INICIO
+// Un solo archivo por visita: horizontal desde 768 px, vertical en el celular. El HTML no
+// trae `src` para que el celular no baje el que no usa. Se pausa al salir de pantalla, y con
+// `prefers-reduced-motion` no arranca solo: queda el póster con el botón ▶.
+// El botón cubre el cuadro: tocarlo pausa o reproduce (también con el teclado).
+// =====================================================
+const heroVideo = document.querySelector(".hero-video-el");
+const heroPlay = document.querySelector(".hero-video-play");
+
+if (heroVideo && heroPlay) {
+  const frame = heroVideo.parentElement;
+  const tallQuery = typeof window.matchMedia === "function" ? window.matchMedia("(max-width: 767px)") : null;
+  const hasObserver = "IntersectionObserver" in window;
+  let wantsPlay = !prefersReducedMotion(); // la persona no lo pausó (ni pidió menos movimiento)
+  let inView = !hasObserver; // con observer, arranca recién cuando el hero está a la vista
+  let pausedByScroll = false;
+  let showPlay = !wantsPlay;
+
+  // El atributo `autoplay` arrancaría solo al cambiar el `src` aunque esté pausado o fuera de pantalla:
+  // el arranque lo decide este script.
+  heroVideo.autoplay = false;
+  heroVideo.removeAttribute("autoplay");
+
+  const render = () => {
+    frame.classList.toggle("is-paused", showPlay);
+    heroPlay.setAttribute(
+      "aria-label",
+      (showPlay ? "Reproducir" : "Pausar") + " video: así funciona un pedido en SMA a la Carta",
+    );
+  };
+
+  const play = () => {
+    pausedByScroll = false;
+    const result = heroVideo.play?.();
+    // Si el navegador bloquea la reproducción (ahorro de batería), queda el ▶ para tocar.
+    result?.catch?.(() => {
+      showPlay = true;
+      render();
+    });
+  };
+
+  heroVideo.addEventListener("playing", () => {
+    showPlay = false;
+    render();
+  });
+  heroVideo.addEventListener("pause", () => {
+    // Salir de pantalla pausa sin mostrar el ▶; cualquier otra pausa (la persona, el navegador) sí.
+    if (!pausedByScroll) showPlay = true;
+    pausedByScroll = false;
+    render();
+  });
+
+  function loadSource() {
+    const tall = tallQuery?.matches ?? false;
+    const { srcTall, srcWide, posterTall, posterWide } = heroVideo.dataset;
+    const src = tall ? srcTall : srcWide;
+    if (heroVideo.getAttribute("src") === src) return;
+    heroVideo.poster = tall ? posterTall : posterWide;
+    heroVideo.src = src;
+    if (wantsPlay && inView) play();
+  }
+
+  loadSource();
+  tallQuery?.addEventListener?.("change", loadSource);
+  heroPlay.hidden = false;
+  render();
+
+  heroPlay.addEventListener("click", () => {
+    if (heroVideo.paused) {
+      wantsPlay = true;
+      play();
+    } else {
+      wantsPlay = false;
+      heroVideo.pause?.();
+    }
+  });
+
+  if (hasObserver) {
+    new IntersectionObserver(
+      (entries) => {
+        inView = entries.at(-1).isIntersecting;
+        if (!inView) {
+          if (!heroVideo.paused) {
+            pausedByScroll = true;
+            heroVideo.pause?.();
+          }
+        } else if (wantsPlay && heroVideo.paused) {
+          play();
+        }
+      },
+      { threshold: 0.25 },
+    ).observe(frame);
+  }
+}
+
+// =====================================================
 // EASTER EGG: código Konami → el mapa del Chaco y Pico Frank
 // El audio (`assets/pico-frank.mp3`) es hoy un sonido de prueba propio; el dueño lo reemplaza por el tema; si falta o el navegador lo bloquea,
 // el mapa aparece igual y se cierra solo.
