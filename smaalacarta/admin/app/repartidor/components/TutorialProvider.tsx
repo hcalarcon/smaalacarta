@@ -86,6 +86,7 @@ export default function TutorialProvider({
   if (active && pathname !== "/repartidor") {
     setIndex(-1);
     setSteps([]);
+    setAutoStarted(false);
   }
 
   const value = useMemo<Tutorial>(

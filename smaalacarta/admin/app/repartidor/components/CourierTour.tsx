@@ -19,8 +19,14 @@ export default function CourierTour() {
   const step = tutorial?.step ?? null;
   const index = tutorial?.index ?? 0;
   const total = tutorial?.steps.length ?? 0;
-  const next = tutorial?.next;
-  const skip = tutorial?.skip;
+  // Siempre los últimos, sin que cambiarlos vuelva a dibujar la burbuja.
+  const next = useRef(tutorial?.next);
+  const skip = useRef(tutorial?.skip);
+
+  useEffect(() => {
+    next.current = tutorial?.next;
+    skip.current = tutorial?.skip;
+  });
 
   // Una sola instancia mientras dura el tour. `allowClose` apagado: el fondo y Esc no lo cierran; se sale con Saltear.
   useEffect(() => {
@@ -45,7 +51,7 @@ export default function CourierTour() {
   }, []);
 
   useEffect(() => {
-    if (!step || !drv.current || !next || !skip) return;
+    if (!step || !drv.current) return;
 
     const instance = drv.current;
     let cancelled = false;
@@ -68,13 +74,13 @@ export default function CourierTour() {
           progressText: `${index + 1} de ${total}`,
           showButtons: step.waitsForTap ? [] : ["next"],
           nextBtnText: step.action ?? (index + 1 >= total ? "Empezar" : "Siguiente"),
-          onNextClick: () => next(),
+          onNextClick: () => next.current?.(),
           onPopoverRender: (popover) => {
             const button = document.createElement("button");
             button.type = "button";
             button.className = "sma-tour-skip";
             button.textContent = TUTORIAL_SKIP_LABEL;
-            button.addEventListener("click", () => skip());
+            button.addEventListener("click", () => skip.current?.());
             popover.footerButtons.prepend(button);
           },
         },
@@ -97,7 +103,7 @@ export default function CourierTour() {
       cancelled = true;
       cancelAnimationFrame(frame);
     };
-  }, [step, index, total, next, skip]);
+  }, [step, index, total]);
 
   return null;
 }

@@ -172,8 +172,10 @@ export default function AvailableOrderCard({
         </p>
       ) : null}
 
+      {/* Un contenedor estable para el tutorial: las acciones cambian por dentro (Ofertar abre el formulario). */}
+      <div data-tour={practice && !notice ? "take" : undefined}>
       {notice ? null : fixed ? (
-        <div data-tour={practice ? "take" : undefined} className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           <PendingButton
             busy={busy}
             pendingLabel="Tomando…"
@@ -215,7 +217,7 @@ export default function AvailableOrderCard({
           </div>
         </div>
       ) : editing ? (
-        <div data-tour={practice ? "take" : undefined} className="mt-3 space-y-3 rounded-xl border border-line p-3">
+        <div className="mt-3 space-y-3 rounded-xl border border-line p-3">
           <label className="block text-sm text-stone-700">
             Precio de tu oferta
             <input
@@ -263,7 +265,7 @@ export default function AvailableOrderCard({
           </div>
         </div>
       ) : (
-        <div data-tour={practice ? "take" : undefined} className="mt-3 flex flex-wrap gap-2">
+        <div className="mt-3 flex flex-wrap gap-2">
           <PendingButton
             busy={busy}
             pendingLabel="Ofertando…"
@@ -285,6 +287,8 @@ export default function AvailableOrderCard({
           </MoreOptions>
         </div>
       )}
+
+      </div>
 
       <details className="mt-3 rounded-xl border border-line">
         <summary className="flex min-h-11 cursor-pointer items-center px-3 text-sm font-semibold text-brand">
