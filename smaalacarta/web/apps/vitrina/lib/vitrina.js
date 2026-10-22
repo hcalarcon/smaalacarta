@@ -14,7 +14,7 @@ export const LOGO = "https://www.smaalacarta.com.ar/assets/logo.png";
 
 // `listo` dice si el tema ya tiene su carpeta; un test lo compara con el disco.
 export const TEMAS = [
-  { id: "arcade", nombre: "Arcade", lema: "Insertá una moneda y elegí tu nivel", listo: false },
+  { id: "arcade", nombre: "Arcade", lema: "Insertá una moneda y elegí tu nivel", listo: true },
   { id: "floral", nombre: "Floral delicado", lema: "Una carta de casamiento que florece", listo: false },
   { id: "futurista", nombre: "Futurista", lema: "Interfaz de nave espacial", listo: false },
   { id: "natural", nombre: "Natural", lema: "Cordillera y lagos, de día a noche", listo: false },
@@ -92,8 +92,9 @@ function idUnico(nombre, usados) {
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "") || "seccion";
-  let id = base;
-  for (let n = 2; usados.has(id); n += 1) id = `${base}-${n}`;
+  // El prefijo evita chocar con los ids fijos de cada tema (`menu`, `contenido`, `titulo`…).
+  let id = `cat-${base}`;
+  for (let n = 2; usados.has(id); n += 1) id = `cat-${base}-${n}`;
   usados.add(id);
   return id;
 }

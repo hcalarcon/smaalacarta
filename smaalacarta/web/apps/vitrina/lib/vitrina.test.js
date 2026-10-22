@@ -44,7 +44,7 @@ describe("buildSections (WEB-VITRINA-03)", () => {
   it("arma categorías con id, precio formateado y destacado aparte", () => {
     const { categorias, destacado } = buildSections(MENU, "es");
 
-    expect(categorias.map((c) => c.id)).toEqual(["hamburguesas", "pizzas", "pizzas-2"]);
+    expect(categorias.map((c) => c.id)).toEqual(["cat-hamburguesas", "cat-pizzas", "cat-pizzas-2"]);
     expect(categorias[0].items[0]).toMatchObject({ nombre: "Santa Julia", precio: "26.900", destacado: true });
     expect(destacado.nombre).toBe("Santa Julia");
   });
@@ -118,13 +118,9 @@ describe("escape de datos (WEB-VITRINA-09)", () => {
     expect(categorias[0].items[0].nombre).toBe('<script>alert("x")</script>');
   });
 
-  it("los temas escapan lo que pintan con innerHTML", () => {
-    // Se mira el disco y no `listo`, para que un tema nuevo no se escape de la revisión.
-    const hechos = TEMAS.filter((tema) => existsSync(aqui(`../${tema.id}/tema.js`)));
-    for (const tema of hechos) {
-      const codigo = readFileSync(aqui(`../${tema.id}/tema.js`), "utf8");
-      expect(codigo, tema.id).toContain("escapeHtml");
-      expect(codigo, tema.id).not.toMatch(/\.innerHTML\s*=\s*[^;]*\$\{(?!escapeHtml)/);
+  it("las piezas de cada tema escapan lo que arman (comprobado en <tema>/piezas.test.js)", () => {
+    for (const tema of TEMAS.filter((t) => existsSync(aqui(`../${t.id}/index.html`)))) {
+      expect(existsSync(aqui(`../${tema.id}/piezas.test.js`)), tema.id).toBe(true);
     }
   });
 });

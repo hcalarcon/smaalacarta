@@ -2686,8 +2686,13 @@ precios en 0; no existe "incluye N y el resto cuesta X".
 - **WEB-VITRINA-04** Un producto con opciones las muestra como texto informativo (grupo, opciones con su extra y la regla de elección), sin carrito ni selección.
 - **WEB-VITRINA-05** El botón "Quiero uno así para mi local" abre WhatsApp al `5493644277105` con el texto `Hola Herni, vi el menú <tema> y quiero uno así para mi local. Mi local se llama: `, codificado.
 - **WEB-VITRINA-06** Todos los temas llevan una barra fija con "Hecho por SMA a la Carta" (link a `https://smaalacarta.com.ar`), "Ver otros estilos" (`/vitrina`) y el botón de WhatsApp.
+- **WEB-VITRINA-07** Cada tema ofrece los idiomas ES/EN/PT (nombres y descripciones traducidos, con el español de respaldo), guarda la elección y pone el `lang` del documento.
+- **WEB-VITRINA-08** Con `prefers-reduced-motion: reduce` cada tema se ve completo y quieto: sin animaciones, sin partículas ni desplazamiento suave.
 - **WEB-VITRINA-09** Todo texto del negocio que un tema arma como HTML pasa por `escapeHtml`, y las fotos solo se aceptan si son http(s).
+- **WEB-VITRINA-10** El sonido de un tema arranca apagado, con un botón para prenderlo; nunca suena solo.
+- **WEB-VITRINA-11** Cada tema lleva `title`, `description` y Open Graph propios ("Santa Julia · Menú <tema> · SMA a la Carta").
 - **WEB-VITRINA-12** La galería lista los 5 temas; los que no tienen carpeta salen como "Próximamente", sin link.
+- **WEB-VITRINA-13** Arcade: pantalla "INSERT COIN" que, al tocarla, muestra "PLAYER 1 READY" y carga la carta; categorías como mundos; el destacado es el ítem legendario y el puntaje HI-SCORE sube con el scroll.
 
 ---
 

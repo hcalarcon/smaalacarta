@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Santa Julia · Menú Arcade · SMA a la Carta</title>
+  <meta name="description" content="La carta de Santa Julia Resto como una máquina arcade: insertá una moneda y elegí tu nivel.">
+  <meta property="og:title" content="Santa Julia · Menú Arcade · SMA a la Carta">
+  <meta property="og:description" content="Insertá una moneda y elegí tu nivel. Un menú digital que parece un videojuego.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://www.smaalacarta.com.ar/assets/logo.png">
+  <meta name="theme-color" content="#0b0b1a">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap">
+  <link rel="stylesheet" href="/apps/vitrina/lib/barra.css">
+  <link rel="stylesheet" href="/apps/vitrina/arcade/styles.css">
+</head>
+<body>
+  <div class="crt" aria-hidden="true"></div>
+
+  <header class="hud">
+    <p class="hud-puntaje"><span class="hud-etiqueta">HI-SCORE</span> <output id="puntaje" aria-hidden="true">000000</output></p>
+    <div class="hud-controles">
+      <button type="button" class="sonido" aria-pressed="false">SND OFF</button>
+      <div data-idiomas-lugar></div>
+    </div>
+    <nav class="mundos" id="mundos" aria-label="Mundos"></nav>
+  </header>
+
+  <main data-menu id="menu">
+    <section class="portada" aria-labelledby="titulo">
+      <p class="parpadea">1UP</p>
+      <h1 id="titulo">SANTA JULIA</h1>
+      <p class="sub">RESTO ARCADE</p>
+    </section>
+    <div id="contenido"></div>
+  </main>
+
+  <div class="puerta" id="puerta" role="dialog" aria-modal="true" aria-label="Insert coin">
+    <p class="puerta-titulo">SANTA JULIA</p>
+    <button type="button" class="puerta-boton" id="empezar">
+      <span class="puerta-coin parpadea">INSERT COIN</span>
+      <span class="puerta-toca" id="toca">TOCÁ PARA EMPEZAR</span>
+    </button>
+    <button type="button" class="sonido" aria-pressed="false">SND OFF</button>
+    <p class="puerta-listo" id="listo" hidden>PLAYER 1 READY</p>
+    <div class="puerta-barra" id="barra-carga" hidden><i></i></div>
+  </div>
+
+  <script type="module" src="/apps/vitrina/arcade/tema.js"></script>
+</body>
+</html>

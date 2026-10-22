@@ -43,6 +43,8 @@ export async function arrancar({ tema, render }) {
       textContent: texto("cargando", lang),
     });
     document.querySelector("[data-menu]")?.replaceChildren(aviso);
+    // Para que un tema con pantalla de entrada la abra y deje ver el aviso.
+    document.dispatchEvent(new CustomEvent("vitrina:error"));
     return;
   }
 
