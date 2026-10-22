@@ -26,7 +26,7 @@ describe("cada tema hecho", () => {
 
     it("carga la barra y no usa más de 2 familias de Google Fonts (WEB-VITRINA-06)", () => {
       expect(html).toContain("/apps/vitrina/lib/barra.css");
-      const familias = (html.match(/family=/g) ?? []).length;
+      const familias = (html.match(/[?&]family=/g) ?? []).length;
       expect(familias).toBeLessThanOrEqual(2);
       expect(html).toContain("display=swap");
     });

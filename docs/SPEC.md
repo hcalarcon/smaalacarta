@@ -2693,6 +2693,7 @@ precios en 0; no existe "incluye N y el resto cuesta X".
 - **WEB-VITRINA-11** Cada tema lleva `title`, `description` y Open Graph propios ("Santa Julia · Menú <tema> · SMA a la Carta").
 - **WEB-VITRINA-12** La galería lista los 5 temas; los que no tienen carpeta salen como "Próximamente", sin link.
 - **WEB-VITRINA-13** Arcade: pantalla "INSERT COIN" que, al tocarla, muestra "PLAYER 1 READY" y carga la carta; categorías como mundos; el destacado es el ítem legendario y el puntaje HI-SCORE sube con el scroll.
+- **WEB-VITRINA-14** Floral: ramas y flores que se dibujan solas alrededor del nombre, pétalos que caen, un separador floral por categoría que se abre al llegar y el destacado como sugerencia del chef con sello de lacre.
 
 ---
 
