@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Santa Julia · Menú Natural · SMA a la Carta</title>
+  <meta name="description" content="La carta de Santa Julia Resto entre la cordillera y los lagos: montañas con parallax y un cielo que pasa del día a la noche mientras bajás.">
+  <meta property="og:title" content="Santa Julia · Menú Natural · SMA a la Carta">
+  <meta property="og:description" content="Una carta digital con montañas que se mueven y un cielo que cambia con la hora.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://www.smaalacarta.com.ar/assets/logo.png">
+  <meta name="theme-color" content="#3f86d1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Source+Sans+3:wght@400;600&display=swap">
+  <link rel="stylesheet" href="/apps/vitrina/lib/barra.css">
+  <link rel="stylesheet" href="/apps/vitrina/natural/styles.css">
+</head>
+<body>
+  <div class="paisaje" id="paisaje" aria-hidden="true">
+    <div class="estrellas"></div>
+    <div class="astro" id="astro"></div>
+    <svg class="capa capa-lejos" id="lejos" viewBox="0 0 800 300" preserveAspectRatio="none" focusable="false">
+      <path d="M0 300V170l70-60 60 40 80-90 90 100 70-50 110 110 90-80 90 70 70-40 70 60v70z" fill="currentColor"/>
+      <path d="M210 60l-18 22 18-6 14 10zM520 140l-14 16 12-4 10 8zM640 80l-16 20 16-5 12 9z" fill="#fff" opacity=".75"/>
+    </svg>
+    <svg class="capa capa-media" id="media" viewBox="0 0 800 300" preserveAspectRatio="none" focusable="false">
+      <path d="M0 300V200l90-70 70 50 100-80 80 70 90-40 120 80 80-50 170 60v80z" fill="currentColor"/>
+    </svg>
+    <svg class="capa capa-cerca" id="cerca" viewBox="0 0 800 300" preserveAspectRatio="none" focusable="false">
+      <path d="M0 300V230l30-70 30 70 25-90 30 90 20-60 25 60 35-100 35 100 30-50 30 50 25-80 30 80 35-60 35 60 30-90 30 90 25-60 30 60 35-70 35 70v70z" fill="currentColor"/>
+    </svg>
+  </div>
+
+  <header class="barra-top">
+    <nav class="senderos" id="senderos" aria-label="Senderos"></nav>
+    <div data-idiomas-lugar></div>
+  </header>
+
+  <main data-menu id="menu">
+    <section class="portada" aria-labelledby="titulo">
+      <div class="portada-cartel">
+        <p class="sobre">San Martín de los Andes</p>
+        <h1 id="titulo">Santa Julia</h1>
+        <p class="sobre">Resto · Cocina de montaña</p>
+      </div>
+    </section>
+    <div id="contenido"></div>
+  </main>
+
+  <script type="module" src="/apps/vitrina/natural/tema.js"></script>
+</body>
+</html>

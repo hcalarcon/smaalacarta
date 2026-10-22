@@ -2695,6 +2695,7 @@ precios en 0; no existe "incluye N y el resto cuesta X".
 - **WEB-VITRINA-13** Arcade: pantalla "INSERT COIN" que, al tocarla, muestra "PLAYER 1 READY" y carga la carta; categorías como mundos; el destacado es el ítem legendario y el puntaje HI-SCORE sube con el scroll.
 - **WEB-VITRINA-14** Floral: ramas y flores que se dibujan solas alrededor del nombre, pétalos que caen, un separador floral por categoría que se abre al llegar y el destacado como sugerencia del chef con sello de lacre.
 - **WEB-VITRINA-15** Futurista: una línea de luz escanea la pantalla y una terminal escribe sola al entrar (y se retira sola); las categorías son sectores, los productos fichas de datos con "composición" y "créditos" (precio real) que se inclinan en 3D, y el destacado es el objetivo prioritario.
+- **WEB-VITRINA-16** Natural: tres capas de montañas con parallax y un cielo que arranca en el momento real del día (amanecer, día, atardecer o noche) y pasa a la noche al bajar por la carta (con movimiento reducido queda quieto, en el momento real del día), con estrellas solo de noche; las categorías son senderos, los productos postales con el precio real en una etiqueta de madera y el destacado, el imperdible del lugar.
 
 ---
 

@@ -17,7 +17,7 @@ export const TEMAS = [
   { id: "arcade", nombre: "Arcade", lema: "Insertá una moneda y elegí tu nivel", listo: true },
   { id: "floral", nombre: "Floral delicado", lema: "Una carta de casamiento que florece", listo: true },
   { id: "futurista", nombre: "Futurista", lema: "Interfaz de nave espacial", listo: true },
-  { id: "natural", nombre: "Natural", lema: "Cordillera y lagos, de día a noche", listo: false },
+  { id: "natural", nombre: "Natural", lema: "Cordillera y lagos, de día a noche", listo: true },
   { id: "fantasia", nombre: "Fantasía", lema: "La carta de una taberna encantada", listo: false },
 ];
 
@@ -105,6 +105,7 @@ function producto(item, lang) {
     nombre: String(local.nombre ?? ""),
     descripcion: String(local.descripcion ?? ""),
     precio: formatPrice(local.precio),
+    valor: Number(local.precio),
     imagen: safeHttpUrl(local.imagen),
     destacado: local.destacado === true,
     agotado: local.agotado === true,
