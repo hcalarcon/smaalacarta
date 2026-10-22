@@ -23,10 +23,28 @@ button { font: inherit; color: inherit; cursor: pointer; }
   background-size: 210px 160px; }
 .astro { position: absolute; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: var(--astro); box-shadow: 0 0 40px 12px color-mix(in srgb, var(--astro) 55%, transparent); }
 .astro.luna { box-shadow: inset -10px -4px 0 0 rgba(20, 30, 60, .22), 0 0 34px 8px rgba(238, 242, 255, .5); }
-.capa { position: absolute; left: 0; width: 100%; display: block; }
-.capa-lejos { color: var(--lejos); height: 62%; bottom: 18%; transform: translate3d(0, var(--p-lejos), 0); }
-.capa-media { color: var(--media); height: 50%; bottom: 6%; transform: translate3d(0, var(--p-media), 0); }
-.capa-cerca { color: var(--cerca); height: 38%; bottom: 0; transform: translate3d(0, var(--p-cerca), 0); }
+.capa { position: absolute; left: 0; width: 100%; height: auto; display: block; }
+.capa-lejos { aspect-ratio: 400 / 320; bottom: 16%; transform: translate3d(0, var(--p-lejos), 0); }
+.capa-media { aspect-ratio: 400 / 320; bottom: 3%; transform: translate3d(0, var(--p-media), 0); }
+.capa-cerca { aspect-ratio: 400 / 170; bottom: -1px; transform: translate3d(0, var(--p-cerca), 0); }
+/* Niebla entre capas y nubes lentas: dan profundidad y aire. */
+.niebla { position: absolute; left: -10%; width: 120%; height: 22%; pointer-events: none; opacity: calc(.75 - var(--estrellas) * .45);
+  background: linear-gradient(transparent, color-mix(in srgb, var(--c2) 70%, #fff) 55%, transparent); }
+.niebla-1 { bottom: 26%; }
+.niebla-2 { bottom: 9%; opacity: calc(.6 - var(--estrellas) * .4); }
+.nubes i { position: absolute; width: 150px; height: 38px; border-radius: 50%; filter: blur(12px); opacity: calc(.7 - var(--estrellas) * .55);
+  background: color-mix(in srgb, #fff 80%, var(--c2)); }
+.nubes i:nth-child(1) { top: 14%; left: -10%; }
+.nubes i:nth-child(2) { top: 27%; left: 55%; width: 190px; height: 44px; }
+.nubes i:nth-child(3) { top: 40%; left: 15%; width: 120px; }
+@media (prefers-reduced-motion: no-preference) {
+  .nubes i { animation: deriva 90s linear infinite alternate; }
+  .nubes i:nth-child(2) { animation-duration: 120s; }
+  .nubes i:nth-child(3) { animation-duration: 75s; }
+  .niebla { animation: respira 14s ease-in-out infinite alternate; }
+  @keyframes deriva { to { transform: translateX(120px); } }
+  @keyframes respira { to { transform: translateX(-24px); } }
+}
 
 .barra-top { position: sticky; top: 0; z-index: 40; display: flex; align-items: center; gap: 6px; padding: 0 8px 0 4px; background: rgba(20, 34, 26, .88); backdrop-filter: blur(6px); }
 .senderos { flex: 1; display: flex; overflow-x: auto; scrollbar-width: none; }

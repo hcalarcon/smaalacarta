@@ -23,6 +23,24 @@ con `listo: false` en `lib/vitrina.js` y desaparece el link de la galería).
 `requestAnimationFrame` y WebAudio alcanzaron para todo; así `web/` sigue sin build ni dependencias de CDN
 (solo Google Fonts, con `display=swap`).
 
+## 1.b Cambios después de la primera prueba
+
+- **Solo celulares** (`WEB-VITRINA-18`): con más de 480 px de ancho, todas las páginas muestran «Usá tu celu para ver
+  este menú». Está en `lib/barra.css`. Si querés otro corte, es el `481px` de ese archivo.
+- **Se ve como un menú real** (`WEB-VITRINA-20`): `data/santa-julia.json` trae 7 categorías, 31 productos con foto
+  (las del banco de imágenes de `landing/assets/defaults`, Pexels), opciones, ES/EN/PT y precios de 2026 (hamburguesa
+  Santa Julia $26.900, pizza muzzarella $15.900, bife de chorizo $32.900, café $3.900). Se usa **solo si la base no
+  tiene publicado a Santa Julia** (en la base de producción hoy no está). Si la base responde, se ve lo que tenga la
+  base: sus fotos y sus precios.
+- **Natural sin el SVG feo** (`WEB-VITRINA-19`): el relieve ya no es un dibujo fijo. `natural/relieve.js` genera las
+  crestas con ruido (las lejanas en punta y con nieve, las del medio suaves, un bosque de pinos delante), con niebla
+  entre capas y nubes lentas. No lo pude mirar en pantalla. Otras opciones, si no te convence:
+  1. **Fotos reales** de la cordillera (Pexels, licencia libre) en capas recortadas: es lo más natural, pero hay que
+     elegirlas y bajarlas a mano.
+  2. **Un video corto** en loop de un lago o el bosque de fondo (pesa, y mal en 4G).
+  3. **Capas de papel recortado** (estilo ilustración plana, como los juegos de montaña): se parece a lo actual pero
+     más estilizado.
+
 ## 2. Cómo probarlo
 
 **En la Preview de Vercel de `dev-herni`** (la forma buena, con los rewrites y la base de prueba):

@@ -8,6 +8,7 @@ import { marcarSeccionActual } from "../lib/navegacion.js";
 import { idiomasHtml, temaPorId } from "../lib/vitrina.js";
 import { faseInicial, paleta, posicion } from "./cielo.js";
 import { enlaceSendero, imperdible, sendero, textos } from "./piezas.js";
+import { capasDelPaisaje } from "./relieve.js";
 
 const TEMA = temaPorId("natural");
 
@@ -41,9 +42,9 @@ function pintarCielo() {
   estilo.setProperty("--cerca", c.cerca);
   estilo.setProperty("--astro", c.astro);
   estilo.setProperty("--estrellas", c.estrellas.toFixed(2));
-  estilo.setProperty("--p-lejos", `${quieto ? 0 : Math.min(60, scrollY * 0.03).toFixed(1)}px`);
-  estilo.setProperty("--p-media", `${quieto ? 0 : Math.min(110, scrollY * 0.08).toFixed(1)}px`);
-  estilo.setProperty("--p-cerca", `${quieto ? 0 : Math.min(170, scrollY * 0.16).toFixed(1)}px`);
+  estilo.setProperty("--p-lejos", `${quieto ? 0 : Math.min(30, scrollY * 0.02).toFixed(1)}px`);
+  estilo.setProperty("--p-media", `${quieto ? 0 : Math.min(50, scrollY * 0.05).toFixed(1)}px`);
+  estilo.setProperty("--p-cerca", `${quieto ? 0 : Math.min(60, scrollY * 0.1).toFixed(1)}px`);
 
   const astro = $("astro");
   astro.style.left = `${c.astroX.toFixed(1)}%`;
@@ -89,6 +90,9 @@ document.addEventListener(
   },
   true,
 );
+
+// El relieve se genera una vez, con semilla fija.
+for (const [id, svg] of Object.entries(capasDelPaisaje())) $(id).innerHTML = svg;
 
 medir();
 pintarCielo();

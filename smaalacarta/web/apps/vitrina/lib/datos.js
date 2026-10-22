@@ -1,5 +1,5 @@
-// Carga del menú de Santa Julia para la vitrina: Supabase (`public_menu`) con respaldo en los JSON de
-// `data/clientes/santa-julia-resto/`, igual que el menú de siempre. Solo en el navegador.
+// Carga del menú de Santa Julia para la vitrina: Supabase (`public_menu`) con respaldo en
+// `data/santa-julia.json` (el menú de la vitrina). Solo en el navegador.
 
 import { fetchPublicMenu, isSupabaseConfigured, normalizePublicMenu } from "../../menu-app/lib/public-menu.js";
 import { SLUG } from "./vitrina.js";
@@ -15,18 +15,13 @@ async function desdeSupabase() {
   }
 }
 
+// Respaldo propio de la vitrina: un menú completo (fotos, opciones, ES/EN/PT, precios de 2026) para que
+// se vea como una carta real aunque la base no tenga publicado a Santa Julia.
 async function desdeJson() {
-  const base = `/data/clientes/${SLUG}`;
-  const [config, menu] = await Promise.all(
-    ["config.json", "menu.json"].map((archivo) =>
-      fetch(`${base}/${archivo}`).then((res) => {
-        if (!res.ok) throw new Error(`${archivo}: ${res.status}`);
-        return res.json();
-      }),
-    ),
-  );
-  const datos = normalizePublicMenu({ config, menu });
-  if (!datos) throw new Error("menu.json no es un menú");
+  const res = await fetch("/apps/vitrina/data/santa-julia.json");
+  if (!res.ok) throw new Error(`santa-julia.json: ${res.status}`);
+  const datos = normalizePublicMenu(await res.json());
+  if (!datos) throw new Error("santa-julia.json no es un menú");
   return datos;
 }
 

@@ -1,0 +1,618 @@
+{
+  "config": {
+    "nombre": "Santa Julia Resto",
+    "descripcion": "Cocina de montaña en San Martín de los Andes",
+    "telefono": "5493644277105",
+    "horarios": {},
+    "colores": {}
+  },
+  "menu": {
+    "categorias": [
+      {
+        "nombre": "Entradas",
+        "nombre_en": "Starters",
+        "nombre_pt": "Entradas",
+        "items": [
+          {
+            "nombre": "Empanadas de carne",
+            "nombre_en": "Beef empanadas",
+            "nombre_pt": "Empadas de carne",
+            "descripcion": "Cortadas a cuchillo, al horno. Por unidad.",
+            "descripcion_en": "Hand-cut beef, baked. Per unit.",
+            "descripcion_pt": "Carne cortada na faca, assadas. Por unidade.",
+            "precio": 3200,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/empanada.jpg"
+          },
+          {
+            "nombre": "Provoleta a la parrilla",
+            "nombre_en": "Grilled provolone",
+            "nombre_pt": "Provoleta na parrilla",
+            "descripcion": "Con orégano, tomate y un hilo de oliva.",
+            "descripcion_en": "With oregano, tomato and olive oil.",
+            "descripcion_pt": "Com orégano, tomate e azeite.",
+            "precio": 11900,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/queso.jpg"
+          },
+          {
+            "nombre": "Rabas crocantes",
+            "nombre_en": "Crispy calamari",
+            "nombre_pt": "Lulas crocantes",
+            "descripcion": "Con alioli de limón.",
+            "descripcion_en": "With lemon aioli.",
+            "descripcion_pt": "Com aioli de limão.",
+            "precio": 17500,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/camaron.jpg"
+          },
+          {
+            "nombre": "Tabla de fiambres y quesos",
+            "nombre_en": "Cold cuts and cheese board",
+            "nombre_pt": "Tábua de frios e queijos",
+            "descripcion": "Para compartir entre dos, con pan casero.",
+            "descripcion_en": "To share between two, with homemade bread.",
+            "descripcion_pt": "Para dividir em dois, com pão caseiro.",
+            "precio": 24900,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/pan.jpg"
+          }
+        ]
+      },
+      {
+        "nombre": "Hamburguesas",
+        "nombre_en": "Burgers",
+        "nombre_pt": "Hambúrgueres",
+        "items": [
+          {
+            "nombre": "Santa Julia",
+            "nombre_en": "Santa Julia",
+            "nombre_pt": "Santa Julia",
+            "descripcion": "Blend de carne de 180 g, cheddar, panceta crocante, cebolla caramelizada y salsa de la casa en pan de papa.",
+            "descripcion_en": "180 g beef blend, cheddar, crispy bacon, caramelized onion and house sauce on a potato bun.",
+            "descripcion_pt": "Blend de carne de 180 g, cheddar, bacon crocante, cebola caramelizada e molho da casa no pão de batata.",
+            "precio": 26900,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/hamburguesa.jpg",
+            "destacado": true,
+            "opciones": [
+              {
+                "nombre": "Guarnición",
+                "nombre_en": "Side",
+                "nombre_pt": "Acompanhamento",
+                "min": 1,
+                "max": 1,
+                "opciones": [
+                  {
+                    "nombre": "Papas fritas",
+                    "nombre_en": "French fries",
+                    "nombre_pt": "Batata frita",
+                    "precio": 0
+                  },
+                  {
+                    "nombre": "Papas rústicas",
+                    "nombre_en": "Rustic potatoes",
+                    "nombre_pt": "Batata rústica",
+                    "precio": 0
+                  },
+                  {
+                    "nombre": "Ensalada mixta",
+                    "nombre_en": "Mixed salad",
+                    "nombre_pt": "Salada mista",
+                    "precio": 0
+                  },
+                  {
+                    "nombre": "Puré de calabaza",
+                    "nombre_en": "Pumpkin purée",
+                    "nombre_pt": "Purê de abóbora",
+                    "precio": 1500
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "nombre": "Clásica",
+            "nombre_en": "Classic",
+            "nombre_pt": "Clássica",
+            "descripcion": "Carne, lechuga, tomate y queso.",
+            "descripcion_en": "Beef, lettuce, tomato and cheese.",
+            "descripcion_pt": "Carne, alface, tomate e queijo.",
+            "precio": 21900,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/hamburguesa.jpg",
+            "opciones": [
+              {
+                "nombre": "Guarnición",
+                "nombre_en": "Side",
+                "nombre_pt": "Acompanhamento",
+                "min": 1,
+                "max": 1,
+                "opciones": [
+                  {
+                    "nombre": "Papas fritas",
+                    "nombre_en": "French fries",
+                    "nombre_pt": "Batata frita",
+                    "precio": 0
+                  },
+                  {
+                    "nombre": "Papas rústicas",
+                    "nombre_en": "Rustic potatoes",
+                    "nombre_pt": "Batata rústica",
+                    "precio": 0
+                  },
+                  {
+                    "nombre": "Ensalada mixta",
+                    "nombre_en": "Mixed salad",
+                    "nombre_pt": "Salada mista",
+                    "precio": 0
+                  },
+                  {
+                    "nombre": "Puré de calabaza",
+                    "nombre_en": "Pumpkin purée",
+                    "nombre_pt": "Purê de abóbora",
+                    "precio": 1500
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "nombre": "Crispy de pollo",
+            "nombre_en": "Crispy chicken",
+            "nombre_pt": "Frango crocante",
+            "descripcion": "Pollo apanado, repollo y mayonesa picante.",
+            "descripcion_en": "Breaded chicken, cabbage and spicy mayo.",
+            "descripcion_pt": "Frango empanado, repolho e maionese picante.",
+            "precio": 22500,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/pollo.jpg",
+            "opciones": [
+              {
+                "nombre": "Guarnición",
+                "nombre_en": "Side",
+                "nombre_pt": "Acompanhamento",
+                "min": 1,
+                "max": 1,
+                "opciones": [
+                  {
+                    "nombre": "Papas fritas",
+                    "nombre_en": "French fries",
+                    "nombre_pt": "Batata frita",
+                    "precio": 0
+                  },
+                  {
+                    "nombre": "Papas rústicas",
+                    "nombre_en": "Rustic potatoes",
+                    "nombre_pt": "Batata rústica",
+                    "precio": 0
+                  },
+                  {
+                    "nombre": "Ensalada mixta",
+                    "nombre_en": "Mixed salad",
+                    "nombre_pt": "Salada mista",
+                    "precio": 0
+                  },
+                  {
+                    "nombre": "Puré de calabaza",
+                    "nombre_en": "Pumpkin purée",
+                    "nombre_pt": "Purê de abóbora",
+                    "precio": 1500
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "nombre": "Veggie",
+            "nombre_en": "Veggie",
+            "nombre_pt": "Veggie",
+            "descripcion": "Medallón de lentejas y hongos, palta y rúcula.",
+            "descripcion_en": "Lentil and mushroom patty, avocado and arugula.",
+            "descripcion_pt": "Hambúrguer de lentilha e cogumelos, abacate e rúcula.",
+            "precio": 20500,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/verduras.jpg",
+            "opciones": [
+              {
+                "nombre": "Guarnición",
+                "nombre_en": "Side",
+                "nombre_pt": "Acompanhamento",
+                "min": 1,
+                "max": 1,
+                "opciones": [
+                  {
+                    "nombre": "Papas fritas",
+                    "nombre_en": "French fries",
+                    "nombre_pt": "Batata frita",
+                    "precio": 0
+                  },
+                  {
+                    "nombre": "Papas rústicas",
+                    "nombre_en": "Rustic potatoes",
+                    "nombre_pt": "Batata rústica",
+                    "precio": 0
+                  },
+                  {
+                    "nombre": "Ensalada mixta",
+                    "nombre_en": "Mixed salad",
+                    "nombre_pt": "Salada mista",
+                    "precio": 0
+                  },
+                  {
+                    "nombre": "Puré de calabaza",
+                    "nombre_en": "Pumpkin purée",
+                    "nombre_pt": "Purê de abóbora",
+                    "precio": 1500
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "nombre": "Pizzas",
+        "nombre_en": "Pizzas",
+        "nombre_pt": "Pizzas",
+        "items": [
+          {
+            "nombre": "Muzzarella",
+            "nombre_en": "Mozzarella",
+            "nombre_pt": "Muçarela",
+            "descripcion": "Salsa de tomate, muzzarella y aceitunas.",
+            "descripcion_en": "Tomato sauce, mozzarella and olives.",
+            "descripcion_pt": "Molho de tomate, muçarela e azeitonas.",
+            "precio": 15900,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/pizza.jpg"
+          },
+          {
+            "nombre": "Fugazzeta",
+            "nombre_en": "Fugazzeta",
+            "nombre_pt": "Fugazzeta",
+            "descripcion": "Cebolla, muzzarella y orégano.",
+            "descripcion_en": "Onion, mozzarella and oregano.",
+            "descripcion_pt": "Cebola, muçarela e orégano.",
+            "precio": 18900,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/focaccia.jpg"
+          },
+          {
+            "nombre": "Napolitana",
+            "nombre_en": "Napolitan",
+            "nombre_pt": "Napolitana",
+            "descripcion": "Tomate fresco, ajo y albahaca.",
+            "descripcion_en": "Fresh tomato, garlic and basil.",
+            "descripcion_pt": "Tomate fresco, alho e manjericão.",
+            "precio": 18500,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/tomate.jpg"
+          },
+          {
+            "nombre": "Cuatro quesos",
+            "nombre_en": "Four cheese",
+            "nombre_pt": "Quatro queijos",
+            "descripcion": "Muzzarella, provolone, roquefort y parmesano.",
+            "descripcion_en": "Mozzarella, provolone, blue cheese and parmesan.",
+            "descripcion_pt": "Muçarela, provolone, gorgonzola e parmesão.",
+            "precio": 21500,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/queso.jpg"
+          }
+        ]
+      },
+      {
+        "nombre": "Pastas",
+        "nombre_en": "Pasta",
+        "nombre_pt": "Massas",
+        "items": [
+          {
+            "nombre": "Ñoquis de papa",
+            "nombre_en": "Potato gnocchi",
+            "nombre_pt": "Nhoque de batata",
+            "descripcion": "Con salsa fileto o crema de hongos.",
+            "descripcion_en": "With tomato sauce or mushroom cream.",
+            "descripcion_pt": "Com molho de tomate ou creme de cogumelos.",
+            "precio": 17900,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/pasta.jpg"
+          },
+          {
+            "nombre": "Sorrentinos de jamón y queso",
+            "nombre_en": "Ham and cheese sorrentinos",
+            "nombre_pt": "Sorrentinos de presunto e queijo",
+            "descripcion": "Con salsa mixta.",
+            "descripcion_en": "With mixed sauce.",
+            "descripcion_pt": "Com molho misto.",
+            "precio": 22900,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/pasta.jpg"
+          },
+          {
+            "nombre": "Ravioles de verdura",
+            "nombre_en": "Vegetable ravioli",
+            "nombre_pt": "Ravióli de legumes",
+            "descripcion": "Con manteca y salvia.",
+            "descripcion_en": "With butter and sage.",
+            "descripcion_pt": "Com manteiga e sálvia.",
+            "precio": 21500,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/pasta.jpg"
+          },
+          {
+            "nombre": "Tallarines al pesto",
+            "nombre_en": "Pesto tagliatelle",
+            "nombre_pt": "Tagliatelle ao pesto",
+            "descripcion": "Albahaca, nueces y queso.",
+            "descripcion_en": "Basil, walnuts and cheese.",
+            "descripcion_pt": "Manjericão, nozes e queijo.",
+            "precio": 18900,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/hongos.jpg"
+          }
+        ]
+      },
+      {
+        "nombre": "Parrilla",
+        "nombre_en": "Grill",
+        "nombre_pt": "Parrilla",
+        "items": [
+          {
+            "nombre": "Bife de chorizo",
+            "nombre_en": "Sirloin steak",
+            "nombre_pt": "Bife de chorizo",
+            "descripcion": "400 g, con guarnición a elección.",
+            "descripcion_en": "400 g, with a side of your choice.",
+            "descripcion_pt": "400 g, com acompanhamento à escolha.",
+            "precio": 32900,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/carne.jpg",
+            "opciones": [
+              {
+                "nombre": "Guarnición",
+                "nombre_en": "Side",
+                "nombre_pt": "Acompanhamento",
+                "min": 1,
+                "max": 1,
+                "opciones": [
+                  {
+                    "nombre": "Papas fritas",
+                    "nombre_en": "French fries",
+                    "nombre_pt": "Batata frita",
+                    "precio": 0
+                  },
+                  {
+                    "nombre": "Papas rústicas",
+                    "nombre_en": "Rustic potatoes",
+                    "nombre_pt": "Batata rústica",
+                    "precio": 0
+                  },
+                  {
+                    "nombre": "Ensalada mixta",
+                    "nombre_en": "Mixed salad",
+                    "nombre_pt": "Salada mista",
+                    "precio": 0
+                  },
+                  {
+                    "nombre": "Puré de calabaza",
+                    "nombre_en": "Pumpkin purée",
+                    "nombre_pt": "Purê de abóbora",
+                    "precio": 1500
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "nombre": "Vacío",
+            "nombre_en": "Flank steak",
+            "nombre_pt": "Vazio",
+            "descripcion": "Cocción lenta, con guarnición a elección.",
+            "descripcion_en": "Slow cooked, with a side of your choice.",
+            "descripcion_pt": "Cozimento lento, com acompanhamento à escolha.",
+            "precio": 29900,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/carne-hueso.jpg",
+            "opciones": [
+              {
+                "nombre": "Guarnición",
+                "nombre_en": "Side",
+                "nombre_pt": "Acompanhamento",
+                "min": 1,
+                "max": 1,
+                "opciones": [
+                  {
+                    "nombre": "Papas fritas",
+                    "nombre_en": "French fries",
+                    "nombre_pt": "Batata frita",
+                    "precio": 0
+                  },
+                  {
+                    "nombre": "Papas rústicas",
+                    "nombre_en": "Rustic potatoes",
+                    "nombre_pt": "Batata rústica",
+                    "precio": 0
+                  },
+                  {
+                    "nombre": "Ensalada mixta",
+                    "nombre_en": "Mixed salad",
+                    "nombre_pt": "Salada mista",
+                    "precio": 0
+                  },
+                  {
+                    "nombre": "Puré de calabaza",
+                    "nombre_en": "Pumpkin purée",
+                    "nombre_pt": "Purê de abóbora",
+                    "precio": 1500
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "nombre": "Entraña",
+            "nombre_en": "Skirt steak",
+            "nombre_pt": "Fraldinha",
+            "descripcion": "Jugosa, con chimichurri.",
+            "descripcion_en": "Juicy, with chimichurri.",
+            "descripcion_pt": "Suculenta, com chimichurri.",
+            "precio": 34500,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/carne.jpg",
+            "opciones": [
+              {
+                "nombre": "Guarnición",
+                "nombre_en": "Side",
+                "nombre_pt": "Acompanhamento",
+                "min": 1,
+                "max": 1,
+                "opciones": [
+                  {
+                    "nombre": "Papas fritas",
+                    "nombre_en": "French fries",
+                    "nombre_pt": "Batata frita",
+                    "precio": 0
+                  },
+                  {
+                    "nombre": "Papas rústicas",
+                    "nombre_en": "Rustic potatoes",
+                    "nombre_pt": "Batata rústica",
+                    "precio": 0
+                  },
+                  {
+                    "nombre": "Ensalada mixta",
+                    "nombre_en": "Mixed salad",
+                    "nombre_pt": "Salada mista",
+                    "precio": 0
+                  },
+                  {
+                    "nombre": "Puré de calabaza",
+                    "nombre_en": "Pumpkin purée",
+                    "nombre_pt": "Purê de abóbora",
+                    "precio": 1500
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "nombre": "Parrillada para dos",
+            "nombre_en": "Grill platter for two",
+            "nombre_pt": "Parrillada para dois",
+            "descripcion": "Asado, vacío, chorizo, morcilla y provoleta.",
+            "descripcion_en": "Short ribs, flank, sausage, blood sausage and provolone.",
+            "descripcion_pt": "Costela, vazio, linguiça, morcela e provoleta.",
+            "precio": 69900,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/carne-hueso.jpg"
+          },
+          {
+            "nombre": "Milanesa napolitana",
+            "nombre_en": "Napolitan schnitzel",
+            "nombre_pt": "Milanesa à napolitana",
+            "descripcion": "Con jamón, queso y salsa. Papas fritas.",
+            "descripcion_en": "With ham, cheese and sauce. French fries.",
+            "descripcion_pt": "Com presunto, queijo e molho. Batata frita.",
+            "precio": 26500,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/pollo.jpg"
+          }
+        ]
+      },
+      {
+        "nombre": "Postres",
+        "nombre_en": "Desserts",
+        "nombre_pt": "Sobremesas",
+        "items": [
+          {
+            "nombre": "Flan casero",
+            "nombre_en": "Homemade flan",
+            "nombre_pt": "Pudim caseiro",
+            "descripcion": "Con dulce de leche y crema.",
+            "descripcion_en": "With dulce de leche and cream.",
+            "descripcion_pt": "Com doce de leite e creme.",
+            "precio": 8900,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/flan.jpg"
+          },
+          {
+            "nombre": "Panqueque de dulce de leche",
+            "nombre_en": "Dulce de leche crêpe",
+            "nombre_pt": "Panqueca de doce de leite",
+            "descripcion": "Flambeado, con helado de crema.",
+            "descripcion_en": "Flambéed, with vanilla ice cream.",
+            "descripcion_pt": "Flambada, com sorvete de creme.",
+            "precio": 9500,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/panqueque.jpg"
+          },
+          {
+            "nombre": "Brownie con helado",
+            "nombre_en": "Brownie with ice cream",
+            "nombre_pt": "Brownie com sorvete",
+            "descripcion": "Tibio, con salsa de chocolate.",
+            "descripcion_en": "Warm, with chocolate sauce.",
+            "descripcion_pt": "Quente, com calda de chocolate.",
+            "precio": 10900,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/chocolate.jpg"
+          },
+          {
+            "nombre": "Helado artesanal",
+            "nombre_en": "Artisan ice cream",
+            "nombre_pt": "Sorvete artesanal",
+            "descripcion": "Tres bochas a elección.",
+            "descripcion_en": "Three scoops of your choice.",
+            "descripcion_pt": "Três bolas à escolha.",
+            "precio": 9900,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/helado.jpg"
+          }
+        ]
+      },
+      {
+        "nombre": "Bebidas",
+        "nombre_en": "Drinks",
+        "nombre_pt": "Bebidas",
+        "items": [
+          {
+            "nombre": "Agua mineral",
+            "nombre_en": "Mineral water",
+            "nombre_pt": "Água mineral",
+            "descripcion": "Con o sin gas, 500 ml.",
+            "descripcion_en": "Still or sparkling, 500 ml.",
+            "descripcion_pt": "Com ou sem gás, 500 ml.",
+            "precio": 3200,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/agua.jpg"
+          },
+          {
+            "nombre": "Gaseosa",
+            "nombre_en": "Soda",
+            "nombre_pt": "Refrigerante",
+            "descripcion": "Línea Coca-Cola, 500 ml.",
+            "descripcion_en": "Coca-Cola line, 500 ml.",
+            "descripcion_pt": "Linha Coca-Cola, 500 ml.",
+            "precio": 3800,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/gaseosa.jpg"
+          },
+          {
+            "nombre": "Limonada de menta y jengibre",
+            "nombre_en": "Mint and ginger lemonade",
+            "nombre_pt": "Limonada de hortelã e gengibre",
+            "descripcion": "Jarra de 500 ml.",
+            "descripcion_en": "500 ml jug.",
+            "descripcion_pt": "Jarra de 500 ml.",
+            "precio": 5900,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/limon.jpg"
+          },
+          {
+            "nombre": "Cerveza artesanal",
+            "nombre_en": "Craft beer",
+            "nombre_pt": "Cerveja artesanal",
+            "descripcion": "Pinta de la cervecería local: rubia, roja o negra.",
+            "descripcion_en": "Pint from the local brewery: blonde, red or stout.",
+            "descripcion_pt": "Pint da cervejaria local: loira, ruiva ou preta.",
+            "precio": 7500,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/cerveza.jpg"
+          },
+          {
+            "nombre": "Copa de Malbec",
+            "nombre_en": "Glass of Malbec",
+            "nombre_pt": "Taça de Malbec",
+            "descripcion": "Vino de bodega mendocina.",
+            "descripcion_en": "Wine from a Mendoza winery.",
+            "descripcion_pt": "Vinho de vinícola mendocina.",
+            "precio": 7900,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/vino.jpg"
+          },
+          {
+            "nombre": "Café",
+            "nombre_en": "Coffee",
+            "nombre_pt": "Café",
+            "descripcion": "Espresso, cortado o lágrima.",
+            "descripcion_en": "Espresso, cortado or latte macchiato.",
+            "descripcion_pt": "Espresso, cortado ou macchiato.",
+            "precio": 3900,
+            "imagen": "https://www.smaalacarta.com.ar/assets/defaults/cafe.jpg"
+          }
+        ]
+      }
+    ]
+  }
+}
