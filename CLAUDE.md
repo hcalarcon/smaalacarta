@@ -154,6 +154,12 @@ negocio nuevo funciona apenas existe y está publicado, sin tocar código.
   local; el subdominio `demo.*` (sin nombre de demo) muestra siempre el mismo PDF de
   ejemplo. El estático (`static-menu.js`) todavía no tiene ese respaldo para las
   demos: solo funciona con negocios reales, en Supabase.
+- **Vitrina de menús extraordinarios** (`apps/vitrina`, `WEB-VITRINA-*`): `/vitrina` es una galería de temas
+  llamativos pensados para redes (`arcade`, `floral`, …) y `/vitrina/<tema>` abre cada uno, en cualquier subdominio.
+  Es solo de lectura y **siempre muestra Santa Julia Resto** (`santa-julia-resto`), con el mismo camino de datos del
+  menú (`public_menu` y respaldo en el JSON). La lógica va en `lib/vitrina.js` con tests; cada tema es una carpeta con
+  su `index.html`, `styles.css` y `tema.js`, aparte de las plantillas del menú. Un tema nuevo se suma a `TEMAS` y a la
+  regla de `vercel.json`. Ver `apps/vitrina/LEEME.md`.
 - **Funciones en `web/api/`** (Vercel, sin build): `manifest.js` (PWA por negocio) y
   `static-menu.js`. No se prueban con un servidor estático: hace falta una preview de
   Vercel. La lógica va en `lib/*.js` con tests; el handler es solo el conector.

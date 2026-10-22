@@ -28,6 +28,16 @@
     },
 
     {
+      "source": "/vitrina",
+      "destination": "/apps/vitrina/index.html"
+    },
+
+    {
+      "source": "/vitrina/:tema(arcade|floral|futurista|natural|fantasia)",
+      "destination": "/apps/vitrina/:tema/index.html"
+    },
+
+    {
       "source": "/((?!api|apps|data|templates|.*\\..*).*)",
       "destination": "/apps/menu-app/index.html"
     }

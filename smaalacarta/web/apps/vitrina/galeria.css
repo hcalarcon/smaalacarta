@@ -1,0 +1,56 @@
+:root {
+  --oscuro: #241d16; --bosque: #12332c; --hueso: #f0f2ee; --naranja: #d97706; --accion: #047857;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: radial-gradient(120% 70% at 50% 0%, #1d4a40 0%, var(--bosque) 55%, var(--oscuro) 100%) fixed;
+  color: var(--hueso); font: 400 16px/1.5 "Instrument Sans", system-ui, sans-serif;
+}
+.portada { max-width: 760px; margin: 0 auto; padding: 44px 20px 12px; text-align: center; }
+.sello { display: inline-block; margin: 0 0 14px; padding: 4px 12px; border: 1px solid var(--naranja); border-radius: 999px; color: #fbbf24; font-weight: 600; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; }
+h1 { margin: 0 0 12px; font: 800 clamp(2rem, 8vw, 3.6rem)/1.05 "Bricolage Grotesque", system-ui, sans-serif; letter-spacing: -.02em; }
+.bajada { margin: 0 auto; max-width: 520px; color: #cfd8d2; }
+main { max-width: 980px; margin: 0 auto; padding: 24px 16px 16px; }
+.tarjetas { list-style: none; margin: 0; padding: 0; display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+.tarjeta { position: relative; display: flex; flex-direction: column; gap: 4px; height: 100%; padding: 12px 12px 16px; border-radius: 18px; background: rgba(240, 242, 238, .06); border: 1px solid rgba(240, 242, 238, .16); color: inherit; text-decoration: none; transition: transform .2s, border-color .2s; }
+a.tarjeta:hover, a.tarjeta:focus-visible { transform: translateY(-4px); border-color: var(--naranja); }
+a.tarjeta:focus-visible { outline: 3px solid #fbbf24; outline-offset: 3px; }
+.tarjeta-nombre { margin-top: 10px; font: 800 1.35rem/1.1 "Bricolage Grotesque", system-ui, sans-serif; }
+.tarjeta-lema { color: #cfd8d2; font-size: .95rem; }
+.tarjeta-boton { align-self: flex-start; display: inline-flex; align-items: center; min-height: 44px; margin-top: 10px; padding: 0 20px; border-radius: 999px; background: var(--accion); color: #fff; font-weight: 600; }
+.proximamente { opacity: .65; }
+.proximamente .tarjeta-boton { background: transparent; border: 1px dashed rgba(240, 242, 238, .5); color: var(--hueso); }
+.aviso { text-align: center; }
+
+/* Adelantos en movimiento: puro CSS, sin imágenes. */
+.vista { display: block; position: relative; height: 150px; border-radius: 12px; overflow: hidden; background: #333; }
+.vista::before, .vista::after { content: ""; position: absolute; inset: 0; }
+
+.vista-arcade { background: #0b0b1a; }
+.vista-arcade::before { background: repeating-linear-gradient(0deg, rgba(255,255,255,.07) 0 2px, transparent 2px 4px); z-index: 2; }
+.vista-arcade::after { content: "INSERT COIN"; display: grid; place-items: center; font: 400 15px "Courier New", monospace; font-weight: 700; letter-spacing: .12em; color: #ffe14d; text-shadow: 0 0 10px #ff2fd6, 0 0 2px #ff2fd6; animation: parpadeo 1s steps(1) infinite; }
+@keyframes parpadeo { 50% { opacity: 0; } }
+
+.vista-floral { background: radial-gradient(circle at 30% 20%, #fbf3e4, #efe2c8); }
+.vista-floral::before { inset: auto; left: 50%; top: -12px; width: 12px; height: 16px; border-radius: 80% 0 80% 0; background: #c98a95; box-shadow: -70px 14px 0 #d9a3ab, 62px 30px 0 #b76e79, -30px 60px 0 #e1b3b9; animation: caer 4.5s linear infinite; }
+.vista-floral::after { content: "Santa Julia"; display: grid; place-items: center; font: italic 600 26px Georgia, serif; color: #5b6f5d; }
+@keyframes caer { to { transform: translateY(170px) rotate(160deg); } }
+
+.vista-futurista { background: linear-gradient(135deg, #04121f, #0a2a44); }
+.vista-futurista::before { background: linear-gradient(180deg, transparent 0 45%, rgba(80, 220, 255, .55) 50%, transparent 55% 100%); animation: escaneo 2.4s linear infinite; }
+.vista-futurista::after { background: repeating-linear-gradient(90deg, rgba(80,220,255,.15) 0 1px, transparent 1px 22px); }
+@keyframes escaneo { from { transform: translateY(-100%); } to { transform: translateY(100%); } }
+
+.vista-natural { background: linear-gradient(#f6b27a, #9ec7d8 70%); }
+.vista-natural::before { top: 40%; background: #2f5d4b; clip-path: polygon(0 100%, 0 55%, 25% 15%, 45% 60%, 65% 5%, 100% 50%, 100% 100%); animation: deriva 6s ease-in-out infinite alternate; }
+.vista-natural::after { top: 62%; background: #1f4034; clip-path: polygon(0 100%, 0 40%, 30% 70%, 60% 20%, 100% 60%, 100% 100%); }
+@keyframes deriva { to { transform: translateX(-14px); } }
+
+.vista-fantasia { background: radial-gradient(circle at 50% 60%, #7a4a1d, #2a170a 70%); }
+.vista-fantasia::before { inset: auto; left: calc(50% - 6px); top: 38px; width: 12px; height: 34px; border-radius: 50% 50% 40% 40%; background: radial-gradient(#ffe9a8, #ff9a1f 70%); box-shadow: 0 0 36px 14px rgba(255, 170, 40, .5); animation: vela .9s ease-in-out infinite alternate; }
+.vista-fantasia::after { top: auto; height: 40px; background: #4a2c12; }
+@keyframes vela { to { transform: scale(1.12, .92); opacity: .85; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .vista *, .vista::before, .vista::after, .tarjeta { animation: none !important; transition: none !important; }
+}

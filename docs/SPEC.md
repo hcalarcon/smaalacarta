@@ -2676,6 +2676,21 @@ precios en 0; no existe "incluye N y el resto cuesta X".
 
 ---
 
+## WEB-VITRINA — Vitrina de menús extraordinarios
+
+*Aplicado por `web/apps/vitrina/` (`lib/vitrina.js` con la lógica, `lib/arranque.js` y `lib/datos.js` con el navegador) y las rutas de `web/vercel.json`. Cubierto por `lib/vitrina.test.js`. Es solo de lectura y no toca `admin/`, la base ni las plantillas del menú de siempre.*
+
+- **WEB-VITRINA-01** `/vitrina` abre la galería y `/vitrina/:tema` el tema, en cualquier subdominio; las dos rutas van antes del comodín del menú y no pisan `/pdf`, `/menu.html` ni `/pedido/:code`.
+- **WEB-VITRINA-02** La vitrina siempre muestra el menú de `santa-julia-resto`, venga del subdominio que venga: lo pide a `public_menu` y, si no responde, usa los JSON de `data/clientes/santa-julia-resto/`.
+- **WEB-VITRINA-03** Las secciones salen de las categorías con productos, cada una con un id para saltar, el precio con formato `26.900` y el producto marcado `destacado` aparte.
+- **WEB-VITRINA-04** Un producto con opciones las muestra como texto informativo (grupo, opciones con su extra y la regla de elección), sin carrito ni selección.
+- **WEB-VITRINA-05** El botón "Quiero uno así para mi local" abre WhatsApp al `5493644277105` con el texto `Hola Herni, vi el menú <tema> y quiero uno así para mi local. Mi local se llama: `, codificado.
+- **WEB-VITRINA-06** Todos los temas llevan una barra fija con "Hecho por SMA a la Carta" (link a `https://smaalacarta.com.ar`), "Ver otros estilos" (`/vitrina`) y el botón de WhatsApp.
+- **WEB-VITRINA-09** Todo texto del negocio que un tema arma como HTML pasa por `escapeHtml`, y las fotos solo se aceptan si son http(s).
+- **WEB-VITRINA-12** La galería lista los 5 temas; los que no tienen carpeta salen como "Próximamente", sin link.
+
+---
+
 ## No especificado deliberadamente
 
 Lo que está fuera a propósito. Un requisito para cualquiera de estas cosas se
