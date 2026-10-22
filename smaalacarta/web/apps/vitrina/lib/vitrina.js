@@ -16,7 +16,7 @@ export const LOGO = "https://www.smaalacarta.com.ar/assets/logo.png";
 export const TEMAS = [
   { id: "arcade", nombre: "Arcade", lema: "Insertá una moneda y elegí tu nivel", listo: true },
   { id: "floral", nombre: "Floral delicado", lema: "Una carta de casamiento que florece", listo: true },
-  { id: "futurista", nombre: "Futurista", lema: "Interfaz de nave espacial", listo: false },
+  { id: "futurista", nombre: "Futurista", lema: "Interfaz de nave espacial", listo: true },
   { id: "natural", nombre: "Natural", lema: "Cordillera y lagos, de día a noche", listo: false },
   { id: "fantasia", nombre: "Fantasía", lema: "La carta de una taberna encantada", listo: false },
 ];

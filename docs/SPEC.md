@@ -2694,6 +2694,7 @@ precios en 0; no existe "incluye N y el resto cuesta X".
 - **WEB-VITRINA-12** La galería lista los 5 temas; los que no tienen carpeta salen como "Próximamente", sin link.
 - **WEB-VITRINA-13** Arcade: pantalla "INSERT COIN" que, al tocarla, muestra "PLAYER 1 READY" y carga la carta; categorías como mundos; el destacado es el ítem legendario y el puntaje HI-SCORE sube con el scroll.
 - **WEB-VITRINA-14** Floral: ramas y flores que se dibujan solas alrededor del nombre, pétalos que caen, un separador floral por categoría que se abre al llegar y el destacado como sugerencia del chef con sello de lacre.
+- **WEB-VITRINA-15** Futurista: una línea de luz escanea la pantalla y una terminal escribe sola al entrar (y se retira sola); las categorías son sectores, los productos fichas de datos con "composición" y "créditos" (precio real) que se inclinan en 3D, y el destacado es el objetivo prioritario.
 
 ---
 

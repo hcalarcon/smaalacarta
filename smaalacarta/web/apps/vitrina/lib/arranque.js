@@ -7,7 +7,7 @@ import { barraHtml, buildSections, texto } from "./vitrina.js";
 
 const CLAVE_IDIOMA = "sma-idioma";
 
-function idiomaInicial() {
+export export function idiomaInicial() {
   let guardado = null;
   try {
     guardado = normalizeLang(localStorage.getItem(CLAVE_IDIOMA));

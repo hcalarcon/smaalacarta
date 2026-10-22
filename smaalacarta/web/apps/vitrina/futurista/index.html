@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Santa Julia · Menú Futurista · SMA a la Carta</title>
+  <meta name="description" content="La carta de Santa Julia Resto como la interfaz de una nave espacial: escaneo, fichas de datos y hologramas que se inclinan.">
+  <meta property="og:title" content="Santa Julia · Menú Futurista · SMA a la Carta">
+  <meta property="og:description" content="Una carta digital con interfaz de nave: se escribe sola y se inclina con tu mano.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://www.smaalacarta.com.ar/assets/logo.png">
+  <meta name="theme-color" content="#050b14">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;600;800&family=Space+Grotesk:wght@400;500&display=swap">
+  <link rel="stylesheet" href="/apps/vitrina/lib/barra.css">
+  <link rel="stylesheet" href="/apps/vitrina/futurista/styles.css">
+</head>
+<body>
+  <div class="fondo" aria-hidden="true"></div>
+  <div class="escaneo" aria-hidden="true"></div>
+
+  <div class="arranque" aria-hidden="true">
+    <pre id="terminal"></pre>
+  </div>
+
+  <header class="barra-top">
+    <nav class="sectores" id="sectores" aria-label="Sectores"></nav>
+    <div data-idiomas-lugar></div>
+  </header>
+
+  <main data-menu id="menu">
+    <section class="portada" aria-labelledby="titulo">
+      <p class="etiqueta">// ESTACIÓN GASTRONÓMICA</p>
+      <h1 id="titulo">SANTA JULIA</h1>
+      <p class="sub">RESTO · v5.1</p>
+    </section>
+    <div id="contenido"></div>
+  </main>
+
+  <script type="module" src="/apps/vitrina/futurista/tema.js"></script>
+</body>
+</html>
