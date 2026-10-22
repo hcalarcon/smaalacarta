@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   --fondo: #050b14; --cian: #5cf0ff; --cian-osc: #1fa9bd; --magenta: #ff6ae6; --texto: #dff6ff; --apagado: #8fb0bf;
   --vidrio: rgba(14, 32, 52, .82); --borde: rgba(92, 240, 255, .35);
   --titulo: "Orbitron", "Segoe UI", sans-serif; --cuerpo: "Space Grotesk", system-ui, sans-serif;

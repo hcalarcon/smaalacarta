@@ -29,7 +29,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .idiomas button { min-height: 44px; min-width: 44px; background: transparent; border: 1px solid transparent; border-radius: 22px; font: 600 .95rem var(--serif); color: var(--salvia-osc); }
 .idiomas button[aria-pressed="true"] { background: var(--salvia-osc); color: #fff; }
 
-main { max-width: 640px; margin: 0 auto; padding: 0 16px; }
+/* El sello agrandado de la entrada no puede ensanchar la página. */
+main { max-width: 640px; margin: 0 auto; padding: 0 16px; overflow-x: clip; }
 
 /* Entrada: las ramas se dibujan solas */
 .hero { position: relative; max-width: 520px; margin: 8px auto 0; }

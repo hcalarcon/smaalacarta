@@ -15,3 +15,7 @@ body { padding-bottom: 76px; }
 .vitrina-barra a:focus-visible { outline: 3px solid #fbbf24; outline-offset: 2px; }
 .vitrina-error { padding: 40px 20px; text-align: center; font: 600 16px system-ui, sans-serif; }
 @media (max-width: 520px) { .vitrina-barra-firma { display: none; } body { padding-bottom: 60px; } }
+
+/* Toque sin demora de doble toque, y títulos que no quedan con una palabra sola. */
+a, button { touch-action: manipulation; }
+h1, h2 { text-wrap: balance; }

@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   --fondo: #0b0b1a; --panel: #15153a; --texto: #ececff; --rosa: #ff3ee0; --cian: #2ff3ff; --amarillo: #ffe14d; --verde: #62ff85;
   --pixel: "Press Start 2P", "Courier New", monospace; --lectura: "VT323", "Courier New", monospace;
   --hud: 118px;

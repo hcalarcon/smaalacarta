@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "test": "vitest run --passWithNoTests",
+    "vitrina:humo": "node scripts/vitrina-humo.mjs",
     "capture-demos": "node scripts/capture-demos.mjs",
     "video-demo": "node scripts/video-demo.mjs",
     "video-demo:borrar": "node scripts/video-demo.mjs --borrar",

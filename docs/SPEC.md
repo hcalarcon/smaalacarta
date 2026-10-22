@@ -2696,6 +2696,7 @@ precios en 0; no existe "incluye N y el resto cuesta X".
 - **WEB-VITRINA-14** Floral: ramas y flores que se dibujan solas alrededor del nombre, pétalos que caen, un separador floral por categoría que se abre al llegar y el destacado como sugerencia del chef con sello de lacre.
 - **WEB-VITRINA-15** Futurista: una línea de luz escanea la pantalla y una terminal escribe sola al entrar (y se retira sola); las categorías son sectores, los productos fichas de datos con "composición" y "créditos" (precio real) que se inclinan en 3D, y el destacado es el objetivo prioritario.
 - **WEB-VITRINA-16** Natural: tres capas de montañas con parallax y un cielo que arranca en el momento real del día (amanecer, día, atardecer o noche) y pasa a la noche al bajar por la carta (con movimiento reducido queda quieto, en el momento real del día), con estrellas solo de noche; las categorías son senderos, los productos postales con el precio real en una etiqueta de madera y el destacado, el imperdible del lugar.
+- **WEB-VITRINA-17** Fantasía: un libro cerrado con el sello de Santa Julia se abre al tocarlo, con luz de vela que parpadea; las categorías son lugares de un mapa con nombre de fantasía (el nombre real siempre visible) a los que se viaja con un toque, y cada provisión muestra su precio en monedas de oro y en pesos reales, con la equivalencia a la vista.
 
 ---
 

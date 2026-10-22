@@ -156,7 +156,9 @@ function render({ lang, secciones }) {
   const t = textos(lang);
   const { categorias, destacado } = secciones;
 
-  $("toca").textContent = t.toca;
+  // La puerta de entrada ya no está cuando se cambia de idioma con la carta abierta.
+  const toca = $("toca");
+  if (toca) toca.textContent = t.toca;
   const lugar = document.querySelector("[data-idiomas-lugar]");
   if (lugar && !lugar.firstElementChild) lugar.innerHTML = idiomasHtml(lang);
 
