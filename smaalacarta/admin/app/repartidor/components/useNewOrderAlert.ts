@@ -16,13 +16,12 @@ import {
   type CourierAlert,
 } from "@/lib/courier/alerts";
 import { pendingCount, tabTitle } from "@/lib/orders/alerts";
-import { sharedAudioContext, unlockSharedAudio } from "@/lib/orders/sound-pref";
+import { sharedAudioContext } from "@/lib/orders/sound-pref";
 import { ALARM_LOOP_MS, playAlarmSound, playChosenSound } from "@/lib/orders/sound";
-import { cancelSpeech, primeSpeech, speakText } from "@/lib/orders/speech";
+import { cancelSpeech, speakText } from "@/lib/orders/speech";
+import { useAudioUnlock } from "@/lib/orders/use-audio-unlock";
 
 const SOUND_PREF_KEY = "sma-courier-sound";
-// Lo que habilita el audio y la voz: el primer toque en cualquier lugar del panel.
-const UNLOCK_EVENTS = ["pointerup", "click", "keydown"] as const;
 
 function readPref(): boolean {
   try {
@@ -57,7 +56,6 @@ export function useNewOrderAlert<T extends { id: string }>({
   label: string;
 }) {
   const [soundOn, setSoundOn] = useState(true);
-  const [audioReady, setAudioReady] = useState(false);
   const [alerts, setAlerts] = useState<CourierAlert[]>([]);
   const soundOnRef = useRef(true);
   const seenIds = useRef<Set<string>>(new Set(orders.map((o) => o.id)));
@@ -86,40 +84,8 @@ export function useNewOrderAlert<T extends { id: string }>({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orders]);
 
-  // El primer toque en cualquier lugar habilita el audio y la voz; el navegador no deja hacerlo antes.
-  // Un toque dispara varios eventos (pointerup, click): uno solo desbloquea a la vez.
-  const unlocking = useRef(false);
-
-  async function unlockAudio() {
-    if (unlocking.current) return;
-    unlocking.current = true;
-
-    try {
-      const ctx = await unlockSharedAudio();
-      setAudioReady(ctx !== null);
-
-      if (ctx) {
-        primeSpeech();
-        // El sistema puede suspender el audio después (bloqueo de pantalla, una llamada): vuelve a pedir un toque.
-        ctx.onstatechange = () => setAudioReady(ctx.state === "running");
-      }
-    } catch {
-      // Sin audio el panel funciona igual, solo que sin aviso sonoro.
-    } finally {
-      unlocking.current = false;
-    }
-  }
-
-  useEffect(() => {
-    if (!soundOn) return;
-
-    const unlock = () => {
-      if (sharedAudioContext()?.state !== "running") void unlockAudio();
-    };
-    UNLOCK_EVENTS.forEach((name) => document.addEventListener(name, unlock, { capture: true }));
-
-    return () => UNLOCK_EVENTS.forEach((name) => document.removeEventListener(name, unlock, { capture: true }));
-  }, [soundOn]);
+  // El primer toque en cualquier lugar habilita el audio y la voz (ENVIO-240).
+  const { audioReady, unlock: unlockAudio } = useAudioUnlock(soundOn);
 
   const playing = shouldPlayAlert({ alerts: alerts.length, soundOn, audioReady });
   const phrase = alertPhrase(alerts);

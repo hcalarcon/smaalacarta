@@ -2,15 +2,18 @@
 // comparten el tablero de Pedidos y la barra de avisos del panel: activar el sonido desde la barra deja el
 // audio ya habilitado cuando se abre Pedidos, sin tener que tocar dos veces.
 
+import { soundPrefValue } from "@/lib/courier/alerts";
+
 export const SOUND_PREF_KEY = "sma-orders-sound";
 // Se dispara en `window` cuando cambia la preferencia o el audio queda habilitado.
 export const SOUND_CHANGE_EVENT = "sma-orders-sound-change";
 
+// Sin nada guardado el sonido está prendido (ADMIN-PWA-39); solo apagarlo a propósito lo deja apagado.
 export function readSoundPref(): boolean {
   try {
-    return localStorage.getItem(SOUND_PREF_KEY) === "1";
+    return soundPrefValue(localStorage.getItem(SOUND_PREF_KEY));
   } catch {
-    return false;
+    return true;
   }
 }
 
