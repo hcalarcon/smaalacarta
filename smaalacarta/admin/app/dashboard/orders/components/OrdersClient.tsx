@@ -251,7 +251,8 @@ export default function OrdersClient({
     // Un solo sonido aunque lleguen varios avisos juntos, y solo con el sonido del local activado.
     const ctx = sharedAudioContext();
     if (soundOnRef.current && ctx?.state === "running") {
-      (fresh[0].kind === "taken" ? playChosenSound : playReturnedSound)(ctx);
+      // Si llegan mezclados, gana el devuelto: es el que pide actuar.
+      (fresh.some((notice) => notice.kind === "returned") ? playReturnedSound : playChosenSound)(ctx);
     }
   }, [orders]);
 
@@ -271,9 +272,10 @@ export default function OrdersClient({
     const target = orders.find((order) => order.id === orderId);
     const column = target ? boardColumn(target.status) : null;
     if (column && column !== "cerrados") setTab(column);
+    // Un momento para que la pestaña elegida se muestre antes de ir a la tarjeta.
     setTimeout(
       () => document.getElementById(`order-card-${orderId}`)?.scrollIntoView({ block: "center", behavior: "smooth" }),
-      0,
+      50,
     );
   }
 
@@ -678,7 +680,16 @@ export default function OrdersClient({
         </div>
       ) : null}
 
-      <CourierNotices notices={notices} onSeen={noticeSeen} onGo={goToOrder} />
+      <CourierNotices
+        notices={notices.filter((notice) => {
+          // Un aviso que ya no vale (pedido cerrado, o el envío cambió de mano otra vez) no queda colgado.
+          const current = orders.find((o) => o.id === notice.orderId);
+          if (!current || current.status === "delivered" || current.status === "cancelled") return false;
+          return current.courier_status === (notice.kind === "taken" ? "accepted" : "searching");
+        })}
+        onSeen={noticeSeen}
+        onGo={goToOrder}
+      />
 
       {orders.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-line-strong bg-white p-10 text-center text-stone-500">
