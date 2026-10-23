@@ -1536,6 +1536,17 @@ contradiga: ahora entra a los envíos, lleva opciones y nace confirmado)
   local y en el panel del repartidor: los de "Llego en…", Rendido, Devolver, Rechazar, etc., no solo el que se tocó)
   siguen deshabilitados hasta que llegan datos nuevos del servidor (`useHoldUntilFresh`, que mira la hora del servidor que
   trae cada refresco) o pasan 10 segundos; si la acción falla se liberan enseguida. Los de otros pedidos no se tocan.
+- **ADMIN-PEDIDOS-61** Con Pedidos abierto, cuando un repartidor toma un pedido (`courier_status` pasa de `searching` a
+  `accepted` con `courier_id`: ofertas, precio fijo o "Del repartidor") o lo devuelve (de `accepted` a `searching`, sin
+  repartidor), arriba del tablero aparece un cartel (`role="status"`) que queda hasta que el local toca "Visto":
+  "Pedido #N: tomado por {nombre}" o "Pedido #N: {nombre} lo devolvió. Buscando otro repartidor", con el motivo de la
+  devolución en una línea chica si lo hay. Varios avisos se apilan, cada uno con su "Visto"; tocar el texto lleva a la
+  tarjeta del pedido. No avisa lo que el propio local hizo (asignación a mano, "Lo llevo yo"), ni lo que ya había pasado
+  al abrir la pantalla: solo compara el estado anterior con el nuevo de cada pedido (`src/lib/orders/courier-events.ts`).
+- **ADMIN-PEDIDOS-62** El aviso de ADMIN-PEDIDOS-61 suena una vez, corto y distinto del pedido nuevo y de la alarma (tomado:
+  tres tonos que suben; devuelto: tres que bajan), solo con el sonido del local activado y el audio habilitado; con el
+  sonido apagado el cartel se ve igual. Silenciar la alarma de pedidos nuevos no lo apaga. La tarjeta del pedido lleva un
+  borde verde (tomado) o naranja (devuelto) hasta el "Visto" o 2 minutos, lo que pase primero.
 
 
 ## MP — Cobro con Mercado Pago (Checkout Pro)
