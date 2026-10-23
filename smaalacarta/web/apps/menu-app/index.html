@@ -262,6 +262,8 @@
 
     <!-- ZONA DE ENTREGA (PUBLICO-73 a 77): tarjeta que arma app.js -->
     <section id="zona-card" class="zona-card" aria-labelledby="zona-titulo" hidden></section>
+    <!-- Aviso de la zona elegida (PUBLICO-111): app.js lo llena y lo vacía solo -->
+    <div id="zona-aviso" class="zona-aviso" role="status" aria-live="polite"></div>
 
     <!-- CATEGORÍAS -->
     <nav id="categorias" class="categorias sticky-categorias"></nav>
@@ -343,9 +345,9 @@
       </div>
 
       <form id="form-pedido">
-        <input name="nombre" placeholder="Nombre y Apellido" data-i18n-placeholder="checkout.name" required />
+        <input name="nombre" enterkeyhint="next" placeholder="Nombre y Apellido" data-i18n-placeholder="checkout.name" required />
         <!-- El teléfono se pide en todos los pedidos, con o sin envío (ENVIO-87): es cómo el local te contacta. -->
-        <input name="telefono" type="tel" inputmode="tel" placeholder="Teléfono de contacto" data-i18n-placeholder="checkout.phone" minlength="8" maxlength="25" autocomplete="tel" required />
+        <input name="telefono" enterkeyhint="next" type="tel" inputmode="tel" placeholder="Teléfono de contacto" data-i18n-placeholder="checkout.phone" minlength="8" maxlength="25" autocomplete="tel" required />
 
         <select name="entrega">
           <option disabled selected data-i18n="checkout.deliveryType">-- Tipo de entrega --</option>
@@ -359,7 +361,7 @@
           <select name="barrio" disabled>
             <option value="" disabled selected data-i18n="checkout.zone">-- Barrio --</option>
           </select>
-          <input name="direccion" placeholder="Dirección (calle y número)" data-i18n-placeholder="checkout.address" minlength="5" maxlength="200" autocomplete="street-address" disabled />
+          <input name="direccion" enterkeyhint="next" placeholder="Dirección (calle y número)" data-i18n-placeholder="checkout.address" minlength="5" maxlength="200" autocomplete="street-address" disabled />
           <p id="aviso-barrio" class="aviso-entrega" hidden></p>
           <p id="aviso-sin-repartidores" class="aviso-entrega aviso-sin-repartidores" role="status" hidden></p>
         </div>
@@ -385,7 +387,7 @@
           <option value="mercadopago" data-i18n="checkout.mercadopago">Mercado Pago</option>
         </select>
         <div id="datos-transferencia" class="datos-transferencia" hidden></div>
-        <textarea name="notas" placeholder="Notas" data-i18n-placeholder="checkout.notes"></textarea>
+        <textarea name="notas" enterkeyhint="done" placeholder="Notas" data-i18n-placeholder="checkout.notes"></textarea>
         <!-- Total y confirmar (PUBLICO-94): en Moderna y Minimalista quedan fijos abajo de la hoja -->
         <div class="checkout-pie">
           <p class="checkout-total"><span data-i18n="cart.total">Total</span> <span id="checkout-total" class="precio-pastilla">$0</span></p>

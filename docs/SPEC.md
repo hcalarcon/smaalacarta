@@ -356,9 +356,10 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   locales (y en los menús de un JSON) no aparece nada nuevo.
 - **PUBLICO-74** "Retirar" cierra la tarjeta y deja el checkout en "Retiro en el local". "Envío" muestra las zonas del
   local con un buscador que ignora acentos y mayúsculas.
-- **PUBLICO-75** Elegir una zona muestra "Enviamos a {zona} · ${precio} aprox." (precio de referencia de
-  `public_delivery_zones`) y deja el checkout con entrega "delivery" y esa zona preseleccionada. El checkout valida la zona
-  como siempre: la tarjeta solo ayuda.
+- **PUBLICO-75** Elegir una zona cierra el diálogo al instante y deja el checkout con entrega "delivery" y esa zona
+  preseleccionada; un aviso chico abajo (`role="status"`) dice "Enviamos a {zona} · Envío ${precio}" (o "Envío aprox."
+  si el precio puede cambiar) y se va solo a los pocos segundos (PUBLICO-111). El checkout valida la zona como siempre: la
+  tarjeta solo ayuda.
 - **PUBLICO-76** "Mi barrio no está" muestra "No hay envío a tu barrio. Podés retirar en el local." (sin la segunda frase si
   el local no ofrece retiro) y ofrece retirar; además bloquea el envío (ver PUBLICO-80).
 - **PUBLICO-77** La elección se guarda en `localStorage` por negocio (slug), con `try/catch`; si falla, el menú anda igual.
@@ -465,6 +466,25 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   librerías: todo es CSS y una imagen.
 - **PUBLICO-110** `public_menu` (por `build_public_menu`) entrega `animacionMenu`, `animacionCarga`,
   `animacionCargaUrl` (solo con la propia) y `fondo` (solo si hay); `menu_preview` también.
+- **PUBLICO-111** El aviso de la zona elegida vive en un elemento `role="status"` fijo abajo (por encima de la barra de
+  abajo y del botón del carrito, sin recibir toques), con el texto de `zone.available` o `zone.availableFixed` en es, en
+  y pt, y se oculta solo a los 4 segundos. "Retiro en el local" y "Mi barrio no está" no lo muestran.
+- **PUBLICO-112** En el checkout, entrega, cuándo, hora y pago se eligen con botones grandes (`role="radiogroup"` con
+  `role="radio"`, 44 px o más, foco visible); cada botón escribe el valor en el `<select>` de siempre, que queda en el
+  formulario sin verse, y dispara `change`. Un grupo no se ve si su select está oculto (un solo tipo de entrega o de pago;
+  la hora sin "Programar").
+- **PUBLICO-113** El barrio es un botón que muestra el barrio elegido con su precio (o "Elegí tu barrio") y abre la misma
+  lista con buscador del selector de zona; elegir un barrio cierra la lista y escribe el valor en el select de barrio con
+  `change`. La lista sale siempre de `public_delivery_zones`, también cuando el precio es "Del repartidor".
+- **PUBLICO-114** Si falta elegir en un grupo obligatorio, el error se ve en el grupo ("Elegí una opción") y se va al elegir;
+  el formulario sigue validando con los select.
+- **PUBLICO-115** Enter en un campo del checkout pasa al campo siguiente y nunca manda el pedido; el teclado del celular
+  muestra "Siguiente" en nombre, teléfono y dirección y "Listo" en notas.
+- **PUBLICO-116** Con el teclado abierto en el celular, la hoja del checkout ocupa solo el área visible
+  (`window.visualViewport`: `--kb`, `--vv-top` y `--vv-h`), el campo con foco se centra en pantalla y el pie con el total
+  se oculta mientras se escribe en un campo de texto.
+- **PUBLICO-117** Los campos del checkout tienen `line-height` y alto suficientes para que no se corte ninguna letra con
+  cola (p, y, g, j, q) en las tres plantillas.
 
 ## BUSQUEDA — Buscador
 

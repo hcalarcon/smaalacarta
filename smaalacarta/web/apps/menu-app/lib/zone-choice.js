@@ -85,3 +85,20 @@ export function nextFocusIndex(current, count, backwards) {
   if (current < 0) return backwards ? count - 1 : 0;
   return (current + (backwards ? -1 : 1) + count) % count;
 }
+
+// Qué paso muestra el diálogo después de elegir (PUBLICO-75): una zona o el retiro lo cierran al instante
+// (null) y el aviso chico confirma; "Mi barrio no está" sigue en su propio paso, con el aviso de que no hay envío.
+export function stepAfterChoice(choice) {
+  return choice?.type === "notListed" ? "notListed" : null;
+}
+
+// Cuánto dura el aviso de la zona elegida (PUBLICO-111).
+export const ZONE_TOAST_MS = 4000;
+
+// Texto del aviso chico: la clave de i18n y sus variables, o null si no hay nada que avisar (solo una zona avisa).
+export function choiceToast(choice, zones, formatPrice) {
+  if (choice?.type !== "zone") return null;
+  const zone = zones?.zones.find((item) => item.id === choice.zoneId);
+  if (!zone) return null;
+  return { key: zoneLabelKey(zone), vars: zoneLabel(zone, formatPrice) };
+}

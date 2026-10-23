@@ -242,3 +242,69 @@ describe("imágenes de muestra y logo de reemplazo — PUBLICO-56 y 57", () => {
     expect(base).toMatch(/img\.imagen-logo\s*\{[^}]*background:\s*var\(--bg/);
   });
 });
+
+describe("plantillas — checkout con botones (PUBLICO-111 a 117)", () => {
+  // Las clases que arman checkout-controls.js y app.js para el checkout y el aviso de la zona.
+  const controls = read("./checkout-controls.js");
+  const emitted = new Set(
+    [...controls.matchAll(/el\(doc, "\w+", "([^"$]+)"/g)].flatMap((match) => match[1].split(/\s+/)),
+  );
+  // Las que el módulo arma con una plantilla de texto (`opcion-botones opcion-<campo>`) o agrega con classList.
+  ["opcion-botones", "opcion-hora", "opcion-select"].forEach((name) => emitted.add(name));
+  emitted.add("zona-aviso");
+  emitted.add("con-error");
+  emitted.add("elegido");
+
+  it("las piezas que arma el código existen", () => {
+    for (const name of ["opcion-grupo", "opcion-etiqueta", "opcion-botones", "opcion-boton", "opcion-error"]) {
+      expect(emitted.has(name)).toBe(true);
+    }
+  });
+
+  it("toda clase de los controles tiene estilo en base.css, que las tres plantillas comparten", () => {
+    // `opcion-<campo>` es solo un gancho por campo: el estilo es el de `opcion-botones` (y `opcion-hora`).
+    const sinEstilo = [...emitted].filter(
+      (name) => !/^opcion-(entrega|cuando|pago)$/.test(name) && !new RegExp(`\\.${name}(?![\\w-])`).test(base),
+    );
+    expect(sinEstilo).toEqual([]);
+  });
+
+  it("las tres plantillas definen los colores que usan los botones (claro y oscuro)", () => {
+    for (const name of TEMPLATES) {
+      for (const variable of ["--card", "--text", "--border", "--muted"]) {
+        const count = templateCss[name].split(`${variable}:`).length - 1;
+        expect(count, `${name} define ${variable} en claro y en oscuro`).toBeGreaterThanOrEqual(2);
+      }
+    }
+  });
+
+  it("los botones usan los colores de la plantilla y del local, no colores fijos de fondo o texto", () => {
+    const start = base.indexOf(".opcion-boton {");
+    const rule = base.slice(start, base.indexOf("}", start));
+    expect(rule).toMatch(/background:\s*var\(--card/);
+    expect(rule).toMatch(/color:\s*var\(--text/);
+    expect(rule).toMatch(/min-height:\s*48px/);
+    expect(base).toMatch(/\.opcion-boton\[aria-checked="true"\]\s*\{[^}]*var\(--opcion-acento\)/);
+    expect(base).toMatch(/\.opcion-boton:focus-visible\s*\{[^}]*outline/);
+  });
+
+  it("el aviso de la zona queda arriba de la barra de abajo y no recibe toques", () => {
+    const start = base.indexOf(".zona-aviso {");
+    const rule = base.slice(start, base.indexOf("}", start));
+    expect(rule).toMatch(/bottom:\s*calc\(var\(--app-bar-h/);
+    expect(rule).toMatch(/pointer-events:\s*none/);
+  });
+
+  it("los campos del checkout tienen interlineado propio para que no se corten las letras con cola", () => {
+    expect(base).toMatch(
+      /html\[data-template\] \.checkout :is\(input, textarea\)[^{]*\{[^}]*line-height:\s*1\.4/,
+    );
+    expect(base).toMatch(/html\[data-template\] \.checkout textarea\s*\{[^}]*line-height/);
+  });
+
+  it("la hoja y los diálogos de zona siguen el área visible cuando sube el teclado", () => {
+    expect(base).toMatch(/\.zona-card\s*\{[^}]*var\(--kb/);
+    expect(base).toMatch(/html\[data-template\] \.checkout\s*\{[^}]*var\(--kb[^}]*\}/);
+    expect(read("../cara-de-app.css")).toMatch(/bottom:\s*var\(--kb, 0px\)/);
+  });
+});

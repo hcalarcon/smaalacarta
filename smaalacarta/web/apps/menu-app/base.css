@@ -624,10 +624,10 @@ html[data-template] .checkout {
   top: auto;
   left: 50%;
   right: auto;
-  bottom: 15px;
+  bottom: calc(15px + var(--kb, 0px));
   width: min(92vw, 560px);
   max-height: calc(100vh - 30px);
-  max-height: calc(100dvh - 30px);
+  max-height: calc(var(--vv-h, 100dvh) - 30px);
   overflow-y: auto;
   overscroll-behavior: contain;
   box-sizing: border-box;
@@ -1465,7 +1465,7 @@ body.no-scroll-opciones {
    escritorio. El fondo es #zona-card; el contenido, .zona-dialogo. */
 .zona-card {
   position: fixed;
-  inset: 0;
+  inset: var(--vv-top, 0px) 0 var(--kb, 0px) 0;
   z-index: 300;
   display: flex;
   align-items: flex-end;
@@ -1480,6 +1480,7 @@ body.no-scroll-opciones {
   gap: 0.7rem;
   width: 100%;
   max-height: 85vh;
+  max-height: min(85vh, calc(var(--vv-h, 100vh) - 1rem));
   overflow-y: auto;
   overscroll-behavior: contain;
   padding: 1.1rem 3.25rem max(1.25rem, env(safe-area-inset-bottom)) 1.1rem;
@@ -1579,6 +1580,7 @@ body.zona-abierta {
   flex-direction: column;
   gap: 0.4rem;
   max-height: 40vh;
+  max-height: min(40vh, calc(var(--vv-h, 100vh) - 12rem));
   overflow-y: auto;
   overscroll-behavior: contain;
 }
@@ -1707,4 +1709,208 @@ html.con-fondo[data-tema="oscuro"]::before {
 
 .loader[data-animacion="custom"] .loader-custom {
   display: block;
+}
+
+/* ==========================================================================
+   Aviso de la zona elegida (PUBLICO-111). Un elemento fijo con role="status": el texto cambia y se anuncia; sin
+   texto no se ve. Queda arriba de la barra de abajo y del botón del carrito, y no recibe toques.
+   ========================================================================== */
+.zona-aviso {
+  position: fixed;
+  left: 50%;
+  bottom: calc(var(--app-bar-h, 4rem) + 1.5rem + env(safe-area-inset-bottom));
+  z-index: 320;
+  width: max-content;
+  max-width: min(92vw, 28rem);
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--border, #ddd);
+  border-radius: 14px;
+  background: var(--card, #fff);
+  color: var(--text, #111);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+  font-size: 0.95rem;
+  font-weight: 600;
+  line-height: 1.4;
+  text-align: center;
+  overflow-wrap: anywhere;
+  opacity: 0;
+  transform: translate(-50%, 8px);
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+  pointer-events: none;
+}
+
+.zona-aviso.visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .zona-aviso {
+    transition: none;
+  }
+}
+
+/* ==========================================================================
+   Checkout con botones (PUBLICO-112 a 114). Entrega, barrio, cuándo, hora y pago son botones grandes; el
+   <select> de cada uno sigue en el formulario como fuente del valor, sin verse. Colores de la plantilla del
+   local, en claro y oscuro.
+   ========================================================================== */
+.opcion-grupo {
+  --opcion-acento: var(--color-primary, var(--brand, var(--primary, #111)));
+  --opcion-error: #b3261e;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-width: 0;
+}
+
+:root[data-tema="oscuro"] .opcion-grupo {
+  --opcion-error: #ff8a80;
+}
+
+.opcion-grupo[hidden] {
+  display: none;
+}
+
+.opcion-etiqueta {
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--muted, inherit);
+}
+
+.opcion-botones {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.5rem;
+}
+
+/* Las horas son muchas y cortas: más columnas y, si no entran, scroll propio. */
+.opcion-botones.opcion-hora {
+  grid-template-columns: repeat(auto-fill, minmax(5.25rem, 1fr));
+  max-height: 12.5rem;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.opcion-boton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-width: 0;
+  min-height: 48px;
+  padding: 0.55rem 0.9rem;
+  border: 1.5px solid var(--border, #ddd);
+  border-radius: 12px;
+  background: var(--card, #fff);
+  color: var(--text, #111);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  overflow-wrap: anywhere;
+}
+
+.opcion-boton[aria-checked="true"] {
+  border-color: var(--opcion-acento);
+  background: var(--opcion-acento);
+  color: var(--on-brand, #fff);
+}
+
+.opcion-boton:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.opcion-boton:focus-visible {
+  outline: 3px solid var(--text, #111);
+  outline-offset: 2px;
+}
+
+/* Botón de barrio: nombre a la izquierda, precio y flecha a la derecha. */
+.opcion-selector {
+  justify-content: space-between;
+  text-align: left;
+  font-weight: 500;
+  color: var(--muted, #6b7280);
+}
+
+.opcion-selector.elegido {
+  font-weight: 600;
+  color: var(--text, #111);
+}
+
+.opcion-selector::after {
+  flex: none;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-left: 0.25rem;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: translateY(-20%) rotate(45deg);
+  content: "";
+}
+
+.opcion-nombre {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.opcion-aparte {
+  flex: none;
+  margin-left: auto;
+  font-weight: 500;
+  color: var(--muted, #6b7280);
+}
+
+/* El select escondido sigue en su lugar (abajo del grupo): si el navegador lo marca como faltante, el aviso sale de
+   ahí. Gana a lo que cada plantilla define para ".checkout select". */
+.checkout .opcion-select {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 1px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.opcion-error {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--opcion-error);
+}
+
+.opcion-error[hidden] {
+  display: none;
+}
+
+.opcion-grupo.con-error .opcion-boton {
+  border-color: var(--opcion-error);
+}
+
+/* ==========================================================================
+   Campos del checkout sin letras cortadas (PUBLICO-117): interlineado propio y alto que crece con el texto, en las tres
+   plantillas (cada una pone su padding; acá solo se asegura el alto de la línea).
+   ========================================================================== */
+html[data-template] .checkout :is(input, textarea):not([type="checkbox"], [type="radio"]) {
+  min-height: 48px;
+  padding-block: 0.7rem;
+  line-height: 1.4;
+}
+
+html[data-template] .checkout textarea {
+  min-height: 6rem;
+  line-height: 1.45;
+  resize: vertical;
 }

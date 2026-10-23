@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { describe, expect, it, vi } from "vitest";
 
 import {
@@ -14,6 +17,9 @@ import {
   isFixedPrice,
 } from "./delivery-zones.js";
 import { formatPrice } from "./price.js";
+import { filterZones } from "./zone-choice.js";
+
+const APP_JS = readFileSync(join(import.meta.dirname, "..", "app.js"), "utf8");
 
 const ID_A = "11111111-1111-4111-8111-111111111111";
 const ID_B = "22222222-2222-4222-8222-222222222222";
@@ -263,5 +269,39 @@ describe("precio fijo o aproximado — ENVIO-223 y 228", () => {
     expect(courierWhatsappLines(aprox, { address: "Calle 1" }, formatPrice)).toContain("🛵 Envío aprox.: $4.500");
     expect(courierWhatsappLines(fijo, { address: "Calle 1" }, formatPrice)).toContain("🛵 Envío: $4.500");
     expect(courierWhatsappLines(sinDato, { address: "Calle 1" }, formatPrice)).toContain("🛵 Envío aprox.: $4.500");
+  });
+});
+
+describe("zonas de un negocio con precio 'Del repartidor' — PUBLICO-113", () => {
+  const cfg = { url: "https://x.supabase.co", key: "sb_publishable_abc", slug: "ana" };
+  // `public_delivery_zones` ya resuelve el tipo de precio: con 'courier' entrega solo las zonas propias del favorito.
+  const PROPIAS = {
+    repartidor: "Juan",
+    zonas: [
+      { id: ID_A, nombre: "Barrio Norte", precio: 3800, fijo: false },
+      { id: ID_B, nombre: "Los Álamos", precio: 4100, fijo: false },
+    ],
+  };
+
+  it("el checkout y el selector usan esas zonas, con su precio y sin inventar otras", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, json: async () => PROPIAS });
+    const r = await fetchDeliveryZones({ ...cfg, fetchImpl });
+
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+    expect(r.zones.map((z) => [z.name, z.price, z.fixed])).toEqual([
+      ["Barrio Norte", 3800, false],
+      ["Los Álamos", 4100, false],
+    ]);
+    expect(findZone(r, ID_B)?.name).toBe("Los Álamos");
+    expect(filterZones(r.zones, "alamos").map((z) => z.name)).toEqual(["Los Álamos"]);
+  });
+
+  it("ningún lugar del menú público arma la lista de barrios por otro lado", () => {
+    const assigned = [...APP_JS.matchAll(/COURIER_ZONES\s*=\s*([^;]+);/g)].map((m) => m[1].trim());
+    expect(assigned.length).toBeGreaterThan(0);
+    for (const value of assigned) {
+      expect(value).toMatch(/^(null|await DZ\.fetchDeliveryZones\()/);
+    }
+    expect(APP_JS).not.toMatch(/delivery_zones|business_zone_prices|courier_own_zones/);
   });
 });
