@@ -10,6 +10,8 @@ export type BusinessDeliveryPricing = {
   pricing: DeliveryPricing;
   editable: boolean;
   offers_enabled: boolean;
+  // El favorito guardado; `courier` es el efectivo, que sin uno guardado puede ser el repartidor por defecto.
+  favorite_id: string | null;
   // El favorito efectivo y cuántas zonas propias tiene; nulo si no hay.
   courier: { id: string; name: string; active: boolean; zones: number } | null;
   courier_zones: { id: string; name: string; price: number; active: boolean }[];

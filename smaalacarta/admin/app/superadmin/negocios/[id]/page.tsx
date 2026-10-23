@@ -90,7 +90,7 @@ export default async function BusinessDetailPage({
               <FavoriteCourierForm
                 businessId={business.id}
                 candidates={favoriteCandidates}
-                current={pricing.courier?.id ?? null}
+                current={pricing.favorite_id}
               />
             </div>
           ) : null}

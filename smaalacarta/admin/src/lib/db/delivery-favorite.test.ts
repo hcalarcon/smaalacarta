@@ -154,6 +154,37 @@ describe("el local con tipo courier — ENVIO-230", () => {
   });
 });
 
+describe("guardar Configuración con el favorito fijado — ENVIO-230", () => {
+  it("el local guarda sus ajustes sin tocar el favorito, que queda como estaba", async () => {
+    await business("delivery_pricing = 'courier'");
+    expect((await setFavorite(SUPER, SOLO_PROPIAS)).ok).toBe(true);
+
+    const guardar = await call(
+      ANA,
+      `select public.save_business_settings(
+         '${NEG}'::uuid, true, 'moderno', '', '#463AE5', '#9A6CE0', null, '{}'::jsonb, '5493510000000', '', '', '',
+         false, '', null::date, null, null, 'claro', array['delivery']::text[], array['efectivo']::text[], null, null,
+         true, 30, false, '{}'::jsonb, 50, 50, true)`,
+    );
+
+    expect(guardar.ok).toBe(true);
+    expect(await favorite()).toBe(SOLO_PROPIAS);
+  });
+
+  it("el superadmin ve el favorito guardado, no el efectivo", async () => {
+    await business("delivery_pricing = 'courier'");
+    const pricing = async () => {
+      const r = await call(SUPER, `select public.business_delivery_pricing('${NEG}') as p`);
+      if (!r.ok) throw new Error(r.error);
+      return r.rows[0].p as { favorite_id: string | null };
+    };
+
+    expect((await pricing()).favorite_id).toBeNull();
+    await setFavorite(SUPER, SOLO_PROPIAS);
+    expect((await pricing()).favorite_id).toBe(SOLO_PROPIAS);
+  });
+});
+
 describe("el tablero y la asignación a mano — ENVIO-231 y 232", () => {
   it("las opciones traen las zonas propias y al repartidor que solo tiene esas", async () => {
     const r = await call(ANA, "select public.business_delivery_options() as o");
