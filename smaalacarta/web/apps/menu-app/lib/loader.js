@@ -58,9 +58,11 @@ export function applyLoaderAnimation(config, doc = document) {
     const logo = logoLoaderUrl(config);
     const image = doc.querySelector("#loader-logo");
 
-    if (logo && image && loader) {
+    // Una segunda llamada (el menú aplica la animación dos veces) no vuelve a mostrar un logo que ya falló.
+    if (logo && image && loader && image.logoRoto !== logo) {
       // Si el logo no carga, queda el de SMA a la Carta en vez de un hueco.
       image.onerror = () => {
+        image.logoRoto = logo;
         loader.dataset.animacion = "marca";
       };
       image.src = logo;

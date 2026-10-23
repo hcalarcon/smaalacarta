@@ -229,6 +229,16 @@ describe("imagen de logo — PUBLICO-118 y 119", () => {
     expect(loader.dataset.animacion).toBe("marca");
   });
 
+  it("si el logo ya falló, aplicar otra vez no lo vuelve a mostrar", () => {
+    const { loader, image, doc } = page();
+
+    applyLoaderAnimation({ logo }, doc);
+    image.onerror();
+
+    expect(applyLoaderAnimation({ logo }, doc)).toBe("marca");
+    expect(loader.dataset.animacion).toBe("marca");
+  });
+
   it("una elección explícita no se pisa: con 'pizza' sigue la pizza aunque haya logo", () => {
     const { loader, doc } = page();
 
