@@ -7,10 +7,10 @@ const look = (extra: Partial<MenuLook> = {}): MenuLook => ({ ...DEFAULT_MENU_LOO
 const GIF = "https://x.supabase.co/storage/v1/object/public/business-animations/n/a.gif";
 
 describe("valores por defecto — PUBLICO-102", () => {
-  it("un negocio nuevo (o que ya existía) queda como se ve hoy", () => {
+  it("un negocio nuevo carga con su logo (PUBLICO-118) y el menú entra como siempre", () => {
     expect(DEFAULT_MENU_LOOK).toEqual({
       menuAnimation: "estandar",
-      loaderAnimation: "hamburguesa",
+      loaderAnimation: "logo",
       loaderCustomUrl: "",
       backgroundImageUrl: "",
     });
@@ -33,6 +33,8 @@ describe("validateMenuLook — PUBLICO-103 a 105", () => {
       "sushi",
       "pastas",
       "panificados",
+      "empanada",
+      "logo",
     ]) {
       expect(validateMenuLook(look({ loaderAnimation }))).toEqual({});
     }
@@ -67,7 +69,11 @@ describe("validateMenuLook — PUBLICO-103 a 105", () => {
 
 describe("lookToConfig — PUBLICO-108", () => {
   it("manda la animación y el cargador; el archivo propio y el fondo, solo si hay", () => {
-    expect(lookToConfig(look())).toEqual({ animacionMenu: "estandar", animacionCarga: "hamburguesa" });
+    expect(lookToConfig(look())).toEqual({ animacionMenu: "estandar", animacionCarga: "logo" });
+    expect(lookToConfig(look({ loaderAnimation: "hamburguesa" }))).toEqual({
+      animacionMenu: "estandar",
+      animacionCarga: "hamburguesa",
+    });
     expect(
       lookToConfig(look({ loaderAnimation: "custom", loaderCustomUrl: GIF, backgroundImageUrl: "https://x.com/f.jpg" })),
     ).toEqual({

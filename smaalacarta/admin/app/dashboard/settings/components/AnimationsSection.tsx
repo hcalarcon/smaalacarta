@@ -8,6 +8,7 @@ import ImageUploader from "@/components/ui/ImageUploader";
 import {
   CUSTOM_LOADER,
   LOADER_PRESETS,
+  LOGO_LOADER,
   MENU_ANIMATIONS,
   type MenuLook,
   type MenuLookErrors,
@@ -99,6 +100,22 @@ export default function AnimationsSection({
           <fieldset>
             <legend className="mb-1.5 block text-sm font-medium text-brand">Animación de carga</legend>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <label className={`${card(look.loaderAnimation === LOGO_LOADER)} col-span-2 sm:col-span-4`}>
+                <input
+                  type="radio"
+                  name="animacion-carga"
+                  value={LOGO_LOADER}
+                  checked={look.loaderAnimation === LOGO_LOADER}
+                  onChange={() => update({ loaderAnimation: LOGO_LOADER })}
+                  className="mt-0.5 h-5 w-5 shrink-0"
+                />
+                <span>
+                  <span className="block font-medium text-stone-900">Usar imagen de logo</span>
+                  <span className="block text-stone-500">
+                    Tu logo con un pulso suave. Si todavía no subiste uno, se ve el de SMA a la Carta.
+                  </span>
+                </span>
+              </label>
               {LOADER_PRESETS.map((option) => (
                 <label key={option.key} className={card(look.loaderAnimation === option.key)}>
                   <input

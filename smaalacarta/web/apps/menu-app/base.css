@@ -83,7 +83,9 @@ textarea {
 .loader[data-animacion="parrilla"] .loader-parrilla,
 .loader[data-animacion="sushi"] .loader-sushi,
 .loader[data-animacion="pastas"] .loader-pastas,
-.loader[data-animacion="panificados"] .loader-panificados {
+.loader[data-animacion="panificados"] .loader-panificados,
+.loader[data-animacion="empanada"] .loader-empanada,
+.loader[data-animacion="marca"] .loader-marca-sma {
   display: block;
 }
 
@@ -228,6 +230,27 @@ textarea {
   .loader-panificados-vapor-2 { animation-delay: 0.55s; }
   .loader-panificados-vapor-3 { animation-delay: 1.1s; }
 
+  .loader-empanada-cuerpo {
+    transform-box: fill-box;
+    transform-origin: center bottom;
+    animation: loader-empanada-saltar 1.8s ease-in-out infinite;
+  }
+  .loader-empanada-sombra {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: loader-empanada-sombra 1.8s ease-in-out infinite;
+  }
+  .loader-empanada-vapor {
+    animation: loader-empanada-vapor 2s ease-out infinite;
+  }
+  .loader-empanada-vapor-2 { animation-delay: 0.6s; }
+  .loader-empanada-vapor-3 { animation-delay: 1.2s; }
+
+  .loader-logo,
+  .loader-marca-sma {
+    animation: loader-logo-pulso 1.8s ease-in-out infinite;
+  }
+
   .loader {
     transition: opacity 0.45s ease;
   }
@@ -332,6 +355,28 @@ textarea {
   0% { opacity: 0; transform: translateY(4px); }
   35%, 65% { opacity: 0.65; }
   100% { opacity: 0; transform: translateY(-12px); }
+}
+
+@keyframes loader-empanada-saltar {
+  0%, 100% { transform: translateY(0) rotate(-3deg) scale(1.03, 0.96); }
+  45% { transform: translateY(-9px) rotate(3deg) scale(0.98, 1.03); }
+  70% { transform: translateY(0) rotate(0deg) scale(1.02, 0.97); }
+}
+
+@keyframes loader-empanada-sombra {
+  0%, 100% { transform: scale(1); opacity: 0.12; }
+  45% { transform: scale(0.8); opacity: 0.07; }
+}
+
+@keyframes loader-empanada-vapor {
+  0% { opacity: 0; transform: translateY(4px); }
+  35%, 65% { opacity: 0.65; }
+  100% { opacity: 0; transform: translateY(-12px); }
+}
+
+@keyframes loader-logo-pulso {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.06); }
 }
 
 @keyframes menu-entra {
@@ -1697,6 +1742,18 @@ html.con-fondo[data-tema="oscuro"]::before {
     ),
     var(--fondo-url) center / cover no-repeat,
     var(--bg, #15161a);
+}
+
+/* LOGO DEL NEGOCIO COMO CARGADOR (PUBLICO-118): su imagen con un pulso suave; sin logo, el de SMA a la Carta. */
+.loader-logo {
+  display: none;
+  max-width: min(50vw, 160px);
+  max-height: 130px;
+  object-fit: contain;
+}
+
+.loader[data-animacion="logo"] .loader-logo {
+  display: block;
 }
 
 /* ANIMACIÓN DE CARGA PROPIA (PUBLICO-104): un GIF, WebP o PNG animado del negocio, en lugar de la de comida. */

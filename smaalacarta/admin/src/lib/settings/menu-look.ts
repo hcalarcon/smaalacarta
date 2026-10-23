@@ -20,11 +20,15 @@ export const LOADER_PRESETS = [
   { key: "sushi", label: "Sushi" },
   { key: "pastas", label: "Pastas" },
   { key: "panificados", label: "Panificados" },
+  { key: "empanada", label: "Empanada" },
 ] as const;
 
 export const CUSTOM_LOADER = "custom";
 
-export type LoaderKey = (typeof LOADER_PRESETS)[number]["key"] | typeof CUSTOM_LOADER;
+// El logo del negocio (PUBLICO-118): el mismo de Apariencia, con un pulso suave; sin logo, el de SMA a la Carta.
+export const LOGO_LOADER = "logo";
+
+export type LoaderKey = (typeof LOADER_PRESETS)[number]["key"] | typeof CUSTOM_LOADER | typeof LOGO_LOADER;
 
 // Los cuatro datos, tal como viajan en `SettingsInput`.
 export type MenuLook = {
@@ -35,10 +39,10 @@ export type MenuLook = {
   backgroundImageUrl: string;
 };
 
-// Los negocios que ya existían quedan como se ven hoy.
+// Un negocio nuevo, que todavía no eligió, carga con su logo. Los que ya tenían una elegida no cambian.
 export const DEFAULT_MENU_LOOK: MenuLook = {
   menuAnimation: "estandar",
-  loaderAnimation: "hamburguesa",
+  loaderAnimation: LOGO_LOADER,
   loaderCustomUrl: "",
   backgroundImageUrl: "",
 };
@@ -56,7 +60,9 @@ export function validateMenuLook(look: MenuLook): MenuLookErrors {
   }
 
   const known =
-    look.loaderAnimation === CUSTOM_LOADER || LOADER_PRESETS.some((option) => option.key === look.loaderAnimation);
+    look.loaderAnimation === CUSTOM_LOADER ||
+    look.loaderAnimation === LOGO_LOADER ||
+    LOADER_PRESETS.some((option) => option.key === look.loaderAnimation);
   if (!known) {
     errors.loaderAnimation = "Elegí una de las animaciones de carga.";
   }

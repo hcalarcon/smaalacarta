@@ -498,6 +498,16 @@ _Sin requisitos todavía._
 
 _Sin requisitos todavía._
 
+- **PUBLICO-118** La animación de carga suma **Empanada** (un SVG con CSS liviano, sin archivos: la empanada salta y
+  largan vapor; dentro de `prefers-reduced-motion: no-preference`, quieta si el visitante pidió menos movimiento) y
+  **Usar imagen de logo**: el loader muestra el logo del negocio (`config.logo`, misma validación https que hoy y
+  siempre por `src`, nunca como HTML) con un pulso suave. Si no cargó logo, o el archivo no carga, se ve el logo de
+  SMA a la Carta en SVG, también con pulso. Se ven bien en las tres plantillas y a 360 px, en claro y oscuro.
+- **PUBLICO-119** El valor por defecto de la animación de carga es **logo**, solo para negocios que nunca eligieron
+  una: la columna `loader_animation` pasa a `DEFAULT 'logo'` (migración nueva, sin tocar filas existentes) y, en el
+  menú, una elección que falta se lee como logo. Un negocio que ya tenía una elegida (de comida o la propia) no
+  cambia. `save_menu_look()` y el CHECK aceptan `empanada` y `logo`; en Configuración → Animaciones las dos opciones
+  están en el selector y la vista previa las reproduce sin guardar.
 - **CARRITO-1** En las plantillas de cara de app, la pastilla del precio de cada producto en el carrito conserva el
   ancho necesario para contener el importe y su relleno, aunque el espacio del nombre esté reducido por los
   controles de cantidad.
