@@ -46,8 +46,14 @@ async function envio(zone: string) {
 
 const assign = (user: string, order: string, courier: string) =>
   call(user, `select public.business_assign_courier('${order}', '${courier}')`);
+// `null` es "Sin favorito" a propósito: hay que decirlo con `p_clear` (ENVIO-233).
 const setFavorite = (user: string, courier: string | null) =>
-  call(user, `select public.superadmin_set_favorite_courier('${NEG}', ${courier ? `'${courier}'` : "null"})`);
+  call(
+    user,
+    courier
+      ? `select public.superadmin_set_favorite_courier('${NEG}', '${courier}')`
+      : `select public.superadmin_set_favorite_courier('${NEG}', null, true)`,
+  );
 
 beforeAll(async () => {
   db = await createTestDb({ deliveryMode: "offers" });
@@ -124,6 +130,62 @@ describe("el superadmin fija el favorito — ENVIO-229", () => {
     await setFavorite(SUPER, SOLO_PROPIAS);
     expect((await setFavorite(SUPER, null)).ok).toBe(true);
     expect(await favorite()).toBeNull();
+  });
+});
+
+describe("sacar el favorito solo a propósito — ENVIO-233", () => {
+  const OTRO = "a2a2a2a2-0000-0000-0000-000000000002";
+
+  it("un null sin avisar que es a propósito no saca el favorito", async () => {
+    await business("delivery_pricing = 'courier'");
+    await setFavorite(SUPER, SOLO_PROPIAS);
+
+    const r = await call(SUPER, `select public.superadmin_set_favorite_courier('${NEG}', null)`);
+    expect(!r.ok && r.code).toBe("22023");
+    expect(await favorite()).toBe(SOLO_PROPIAS);
+  });
+
+  it("no se puede pedir 'sacar' y a la vez fijar a alguien", async () => {
+    const r = await call(SUPER, `select public.superadmin_set_favorite_courier('${NEG}', '${SOLO_PROPIAS}', true)`);
+    expect(!r.ok && r.code).toBe("22023");
+  });
+
+  it("sacar solo toca el favorito: el resto de la configuración queda igual", async () => {
+    await business("delivery_pricing = 'courier'");
+    await setFavorite(SUPER, SOLO_PROPIAS);
+    expect((await setFavorite(SUPER, null)).ok).toBe(true);
+
+    const row = (await db.query<{ published: boolean; address: string; f: string | null }>(
+      "select published, address, favorite_courier_id as f from business_settings where business_id = $1",
+      [NEG],
+    )).rows[0];
+    expect(row).toEqual({ published: true, address: "San Martín 100", f: null });
+  });
+
+  it("sacar el favorito de un negocio sin configuración no crea una fila vacía", async () => {
+    await db.exec(`
+      insert into businesses (id, name, slug, whatsapp, plan_completo, courier_delivery)
+      values ('${OTRO}', 'Otro', 'otro', '5493510000002', true, true)`);
+
+    const r = await call(SUPER, `select public.superadmin_set_favorite_courier('${OTRO}', null, true)`);
+    expect(r.ok).toBe(true);
+    const rows = await db.query("select 1 from business_settings where business_id = $1", [OTRO]);
+    expect(rows.rows).toHaveLength(0);
+
+    await db.exec(`delete from businesses where id = '${OTRO}'`);
+  });
+
+  it("un local no puede vaciar el favorito fijado con un upsert que trae null", async () => {
+    await business("delivery_pricing = 'courier'");
+    await setFavorite(SUPER, SOLO_PROPIAS);
+
+    const r = await call(
+      ANA,
+      `insert into business_settings (business_id, favorite_courier_id) values ('${NEG}', null)
+         on conflict (business_id) do update set favorite_courier_id = excluded.favorite_courier_id`,
+    );
+    expect(!r.ok && r.code).toBe("P0030");
+    expect(await favorite()).toBe(SOLO_PROPIAS);
   });
 });
 

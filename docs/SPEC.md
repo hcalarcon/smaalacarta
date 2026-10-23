@@ -2375,6 +2375,9 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   uno con zona común, a los que la cubren, como siempre.
 - **ENVIO-232** `business_assign_courier` asigna un pedido con zona propia a su dueño y rechaza (`22023`) a cualquier otro
   repartidor.
+- **ENVIO-233** `superadmin_set_favorite_courier(negocio, repartidor)` fija el favorito; `(negocio, null, true)` ("Sin favorito") lo
+  saca, solo actualiza una fila de `business_settings` que ya existe (no crea una vacía) y solo ese campo; un `null` sin
+  `p_clear`, o un repartidor con `p_clear`, es un error (`22023`) y no cambia nada.
 
 
 

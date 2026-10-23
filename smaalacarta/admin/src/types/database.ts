@@ -2203,7 +2203,7 @@ export type Database = {
         Returns: number
       }
       superadmin_set_favorite_courier: {
-        Args: { p_business_id: string; p_courier_id: string }
+        Args: { p_business_id: string; p_clear?: boolean; p_courier_id: string }
         Returns: undefined
       }
       vehicle_enabled: { Args: never; Returns: boolean }

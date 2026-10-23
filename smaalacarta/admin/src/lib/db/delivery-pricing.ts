@@ -105,7 +105,7 @@ export async function listCourierFavoriteCandidates(): Promise<{ id: string; nam
     .filter((courier) => courier.zones > 0);
 }
 
-// Solo el superadmin (la función de la base lo exige). `null` saca el favorito.
+// Solo el superadmin (la función de la base lo exige). `null` es "Sin favorito": se pide a propósito con `p_clear`.
 export async function setBusinessFavoriteCourier(
   businessId: string,
   courierId: string | null,
@@ -115,6 +115,7 @@ export async function setBusinessFavoriteCourier(
   const { error } = await supabase.rpc("superadmin_set_favorite_courier", {
     p_business_id: businessId,
     p_courier_id: courierId as string,
+    p_clear: courierId === null,
   });
 
   return error ? { error: { code: error.code, message: error.message } } : { ok: true };
