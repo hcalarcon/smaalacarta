@@ -38,7 +38,12 @@ describe("aviso del pedido nuevo del repartidor", () => {
     mocks.alarm.mockClear();
     mocks.speak.mockClear();
     mocks.unlock.mockReset();
-    mocks.unlock.mockResolvedValue(mocks.ctx);
+    // El navegador arranca el audio suspendido: lo habilita el primer toque.
+    mocks.ctx.state = "suspended";
+    mocks.unlock.mockImplementation(async () => {
+      mocks.ctx.state = "running";
+      return mocks.ctx;
+    });
     localStorage.clear();
   });
 
@@ -51,7 +56,7 @@ describe("aviso del pedido nuevo del repartidor", () => {
     return hook;
   }
 
-  it("antes del primer toque muestra el aviso chico, y el toque lo saca y lo recuerda", async () => {
+  it("antes del primer toque muestra el aviso chico, y el toque lo saca", async () => {
     const { result } = renderHook(() => useNewOrderAlert(props([])));
     expect(result.current.hint).toBe("Tocá la pantalla para activar el sonido");
 
@@ -61,7 +66,6 @@ describe("aviso del pedido nuevo del repartidor", () => {
 
     expect(result.current.hint).toBeNull();
     expect(result.current.audioReady).toBe(true);
-    expect(localStorage.getItem("sma-courier-sound")).toBe("1");
   });
 
   it("un pedido nuevo suena al máximo, se repite y dice la zona; los que ya estaban no avisan", async () => {

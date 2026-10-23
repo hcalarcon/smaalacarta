@@ -87,30 +87,39 @@ export function useNewOrderAlert<T extends { id: string }>({
   }, [orders]);
 
   // El primer toque en cualquier lugar habilita el audio y la voz; el navegador no deja hacerlo antes.
+  // Un toque dispara varios eventos (pointerup, click): uno solo desbloquea a la vez.
+  const unlocking = useRef(false);
+
   async function unlockAudio() {
+    if (unlocking.current) return;
+    unlocking.current = true;
+
     try {
       const ctx = await unlockSharedAudio();
-      const ready = ctx !== null;
-      setAudioReady(ready);
+      setAudioReady(ctx !== null);
 
-      if (ready) {
+      if (ctx) {
         primeSpeech();
-        // Si el toque fue el de apagar la campana, la preferencia ya quedó apagada y no se pisa.
-        if (readPref()) savePref(true);
+        // El sistema puede suspender el audio después (bloqueo de pantalla, una llamada): vuelve a pedir un toque.
+        ctx.onstatechange = () => setAudioReady(ctx.state === "running");
       }
     } catch {
       // Sin audio el panel funciona igual, solo que sin aviso sonoro.
+    } finally {
+      unlocking.current = false;
     }
   }
 
   useEffect(() => {
-    if (!soundOn || audioReady) return;
+    if (!soundOn) return;
 
-    const unlock = () => void unlockAudio();
+    const unlock = () => {
+      if (sharedAudioContext()?.state !== "running") void unlockAudio();
+    };
     UNLOCK_EVENTS.forEach((name) => document.addEventListener(name, unlock, { capture: true }));
 
     return () => UNLOCK_EVENTS.forEach((name) => document.removeEventListener(name, unlock, { capture: true }));
-  }, [soundOn, audioReady]);
+  }, [soundOn]);
 
   const playing = shouldPlayAlert({ alerts: alerts.length, soundOn, audioReady });
   const phrase = alertPhrase(alerts);
@@ -162,12 +171,21 @@ export function useNewOrderAlert<T extends { id: string }>({
   }
 
   // El local marcó Listo (ENVIO-238): el aviso de siempre y, después, la voz con el nombre del local.
+  const readyVoice = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (readyVoice.current) clearTimeout(readyVoice.current);
+    };
+  }, []);
+
   function announceReady(business: string) {
     playChosen();
 
     const ctx = sharedAudioContext();
     if (soundOnRef.current && ctx?.state === "running") {
-      setTimeout(() => speakText(readyPhrase(business)), ALERT_VOICE_DELAY_MS / 2);
+      if (readyVoice.current) clearTimeout(readyVoice.current);
+      readyVoice.current = setTimeout(() => speakText(readyPhrase(business)), ALERT_VOICE_DELAY_MS / 2);
     }
   }
 
@@ -180,12 +198,15 @@ export function useNewOrderAlert<T extends { id: string }>({
     if (soundOn) {
       setSoundOn(false);
       savePref(false);
+      if (readyVoice.current) clearTimeout(readyVoice.current);
       cancelSpeech();
       return;
     }
 
     setSoundOn(true);
     savePref(true);
+    // Los avisos que pasaron con el sonido apagado no estallan de golpe al volver a prenderlo.
+    setAlerts([]);
     await unlockAudio();
   }
 
