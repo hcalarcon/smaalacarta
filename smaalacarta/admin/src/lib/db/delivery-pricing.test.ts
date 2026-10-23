@@ -97,6 +97,7 @@ beforeEach(async () => {
     update business_settings set favorite_courier_id = null;
     update couriers set can_edit_zones = false, active = true;
     delete from business_zone_prices;
+    update orders set courier_zone_id = null;
     delete from courier_own_zones;
     update platform_settings set delivery_mode = 'offers';
   `);
@@ -339,6 +340,32 @@ describe("permisos de edición — ENVIO-220 y 221", () => {
     await own(PROPIO, "Barrio Norte", 1500);
     const anon = await call(null, "select * from courier_own_zones");
     expect(anon.ok && anon.rows).toEqual([]);
+  });
+});
+
+describe("ajustes de la revisión — ENVIO-220 y 221", () => {
+  it("una zona propia con pedido en curso no se borra; sin pedido, sí", async () => {
+    await business("delivery_pricing = 'courier'");
+    await db.exec(`update business_settings set favorite_courier_id = '${PROPIO}' where business_id = '${NEG_ANA}'`);
+    await db.exec(`update couriers set can_edit_zones = true where id = '${PROPIO}'`);
+    await own(PROPIO, "Barrio Norte", 1500);
+    await own(PROPIO, "Barrio Libre", 900);
+    await envio((await zones())!.find((z) => z.nombre === "Barrio Norte")!.id);
+
+    const busy = await call(REPA_USER, "delete from courier_own_zones where name = 'Barrio Norte'");
+    expect(!busy.ok && busy.code).toBe("P0029");
+    const free = await call(REPA_USER, "delete from courier_own_zones where name = 'Barrio Libre'");
+    expect(free.ok && free.affected).toBe(1);
+  });
+
+  it("el negocio solo carga precios de zonas que tiene tildadas", async () => {
+    await business("delivery_pricing = 'business', delivery_prices_editable = true");
+    const otra = (await db.query<{ id: string }>("select id from delivery_zones where name = 'Oasis'")).rows[0].id;
+    const r = await call(
+      ANA,
+      `insert into business_zone_prices (business_id, zone_id, price) values ('${NEG_ANA}', '${otra}', 10)`,
+    );
+    expect(r.ok).toBe(false);
   });
 });
 

@@ -93,7 +93,8 @@ export default function OwnZonesEditor({
   function startEdit(zone: OwnZone) {
     setEditingId(zone.id);
     setEditName(zone.name);
-    setEditPrice(String(zone.price));
+    // Con coma decimal: `parsePrice` lee el punto como separador de miles.
+    setEditPrice(String(zone.price).replace(".", ","));
     setEditErrors({});
   }
 

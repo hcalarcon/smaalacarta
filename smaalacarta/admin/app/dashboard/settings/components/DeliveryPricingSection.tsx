@@ -54,7 +54,7 @@ function BusinessPrices({ pricing }: { pricing: BusinessDeliveryPricing }) {
   const router = useRouter();
 
   const initial = (zone: BusinessDeliveryPricing["zones"][number]) =>
-    zone.business_price === null ? "" : String(zone.business_price);
+    zone.business_price === null ? "" : String(zone.business_price).replace(".", ",");
 
   const [values, setValues] = useState<Record<string, string>>(() =>
     Object.fromEntries(pricing.zones.map((zone) => [zone.id, initial(zone)])),

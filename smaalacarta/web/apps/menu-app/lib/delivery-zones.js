@@ -130,7 +130,7 @@ export function courierOrderFields({ zones, delivery, zoneId, address }) {
 export function courierWhatsappLines(zone, { address }, formatPrice) {
   return [
     `📍 Barrio: ${zone.name}`,
-    `🛵 Envío${zone.fixed === false ? " aprox." : ""}: $${formatPrice(zone.price)}, se paga al repartidor`,
+    `🛵 Envío${isFixedPrice(zone) ? "" : " aprox."}: $${formatPrice(zone.price)}, se paga al repartidor`,
     `🏠 Dirección: ${address}`,
     "",
   ].join("\n");

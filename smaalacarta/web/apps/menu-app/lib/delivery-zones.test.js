@@ -180,7 +180,7 @@ describe("courierOrderFields — ENVIO-21 y 87", () => {
 });
 
 describe("courierWhatsappLines — ENVIO-22 y 88", () => {
-  const zone = { id: ID_B, name: "Cantera", price: 5000 };
+  const zone = { id: ID_B, name: "Cantera", price: 5000, fixed: true };
 
   it("dice barrio, envío (se paga al repartidor) y dirección, en español, sin nombrar al repartidor", () => {
     const text = courierWhatsappLines(zone, { address: "Av. Siempre Viva 742" }, formatPrice);
@@ -259,9 +259,9 @@ describe("precio fijo o aproximado — ENVIO-223 y 228", () => {
     expect(zoneNoticeKey(sinDato)).toBe("checkout.zoneNotice");
   });
 
-  it("el mensaje de WhatsApp dice 'aprox.' solo si el servidor dijo que puede cambiar", () => {
+  it("el mensaje de WhatsApp dice 'aprox.' salvo que el servidor diga que el precio es fijo", () => {
     expect(courierWhatsappLines(aprox, { address: "Calle 1" }, formatPrice)).toContain("🛵 Envío aprox.: $4.500");
     expect(courierWhatsappLines(fijo, { address: "Calle 1" }, formatPrice)).toContain("🛵 Envío: $4.500");
-    expect(courierWhatsappLines(sinDato, { address: "Calle 1" }, formatPrice)).toContain("🛵 Envío: $4.500");
+    expect(courierWhatsappLines(sinDato, { address: "Calle 1" }, formatPrice)).toContain("🛵 Envío aprox.: $4.500");
   });
 });

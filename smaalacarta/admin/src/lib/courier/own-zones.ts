@@ -27,6 +27,11 @@ function failed(error: { code?: string }): OwnZoneResult {
     };
   }
 
+  // P0029: la zona tiene un pedido en curso.
+  if (error.code === "P0029") {
+    return { ok: false, error: "Esa zona tiene un pedido en curso. Desactivala en vez de borrarla." };
+  }
+
   // 42501: sin permiso. La pantalla ya lo oculta; esto cubre un permiso quitado mientras estaba abierta.
   if (error.code === "42501") {
     return { ok: false, error: "No tenés permiso para editar tus zonas y precios." };
