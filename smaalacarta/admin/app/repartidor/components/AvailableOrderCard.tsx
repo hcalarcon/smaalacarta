@@ -142,6 +142,13 @@ export default function AvailableOrderCard({
         </p>
       ) : null}
 
+      {notice ? null : (
+        <p className="mt-3 break-words rounded-xl bg-brand px-3 py-2 text-base font-bold text-white">
+          <span aria-hidden="true">📍 </span>
+          Zona {order.envio.zona ?? "-"}
+        </p>
+      )}
+
       {when ? (
         <p className="mt-3 rounded-xl bg-amber-100 px-3 py-2 text-base font-bold text-amber-900">
           🕒 {when}

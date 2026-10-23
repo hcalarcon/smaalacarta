@@ -5,11 +5,13 @@ import type { CourierPanelOrder } from "./panel";
 // del panel. Los demás cambios de estado no avisan. Reglas puras; el componente solo suena y pinta.
 export type CourierChangeKind = "ready" | "prep_changed" | "cancelled";
 
-export type CourierChange = { id: string; numero: string; kind: CourierChangeKind };
+export type CourierChange = { id: string; numero: string; negocio: string; kind: CourierChangeKind };
 
 type Seen = { estado: string; listo: number | null };
 
-type Order = Pick<CourierPanelOrder, "id" | "numero" | "estado" | "tiempos">;
+type Order = Pick<CourierPanelOrder, "id" | "numero" | "estado" | "tiempos"> & {
+  negocio: Pick<CourierPanelOrder["negocio"], "nombre">;
+};
 
 // Dos horas son la misma si son el mismo instante, escritas como sea (ENVIO-167).
 function instant(value: string | null | undefined): number | null {
@@ -29,7 +31,8 @@ export function courierChanges(before: Map<string, Seen>, orders: Order[]): Cour
     const seen = before.get(order.id);
     if (!seen) continue;
 
-    const at = (kind: CourierChangeKind) => changes.push({ id: order.id, numero: order.numero, kind });
+    const at = (kind: CourierChangeKind) =>
+      changes.push({ id: order.id, numero: order.numero, negocio: order.negocio.nombre, kind });
     const ready = instant(order.tiempos?.listo_a);
 
     if (order.estado === "cancelled" && seen.estado !== "cancelled") at("cancelled");
@@ -49,7 +52,7 @@ export function courierChanges(before: Map<string, Seen>, orders: Order[]): Cour
 export function changeText(change: CourierChange): string {
   switch (change.kind) {
     case "ready":
-      return `Pedido #${change.numero}: listo para retirar.`;
+      return `Pedido #${change.numero}: listo para retirar${change.negocio ? ` en ${change.negocio}` : ""}.`;
     case "prep_changed":
       return `Pedido #${change.numero}: el local cambió la demora.`;
     case "cancelled":

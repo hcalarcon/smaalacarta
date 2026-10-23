@@ -44,6 +44,9 @@ const REFRESH_MS = 5_000;
 const REFRESH_CONNECTED_MS = 30_000;
 const HISTORY_SHOWN = 20;
 
+// La zona que se dice en voz alta (ENVIO-235).
+const zoneOfAvailable = (order: AvailableOrder) => order.envio.zona;
+
 const EMPTY: Record<PanelGroup, string> = {
   disponibles: "No hay pedidos para ofertar ahora.",
   en_curso: "No hay envíos en curso.",
@@ -85,11 +88,13 @@ export default function CourierOrdersClient({
   // Aviso general: "El pedido ya no recibe ofertas" (el pedido desaparece de la lista al refrescar).
   const [notice, setNotice] = useState<string | null>(null);
 
-  const { soundOn, audioReady, toggleSound, soundOnRef, playChosen } = useNewOrderAlert({
-    orders: available,
-    isPending: isToRespond,
-    label: "Pedido disponible",
-  });
+  const { soundOn, audioReady, toggleSound, soundOnRef, playChosen, announceReady, alerts, alertText, dismissAlerts, hint } =
+    useNewOrderAlert({
+      orders: available,
+      isPending: isToRespond,
+      zoneOf: zoneOfAvailable,
+      label: "Pedido disponible",
+    });
 
   // Los pedidos por los que ofertó: cuando uno aparece entre sus envíos en curso, lo eligieron y suena un
   // aviso distinto (ENVIO-116). Los que ya estaban en curso al abrir la pantalla no suenan.
@@ -121,7 +126,10 @@ export default function CourierOrdersClient({
     seenOrders.current = snapshotOrders(orders);
 
     if (found.length > 0) {
-      playChosen();
+      // Con Listo suena además la voz con el nombre del local (ENVIO-238).
+      const ready = found.find((change) => change.kind === "ready");
+      if (ready) announceReady(ready.negocio);
+      else playChosen();
       setChanges((current) => [...found.map(changeText), ...current].slice(0, 3));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -186,7 +194,7 @@ export default function CourierOrdersClient({
   const toSettleCount = orders.filter((item) => courierOrderState(item) === "to_settle").length;
   // Lo que hay que hacer ahora primero: los envíos en curso, después lo que se puede ofertar (ADMIN-REPARTIDOR-5).
   const order: PanelGroup[] = ["en_curso", "disponibles", "historial"];
-  const soundLabel = !soundOn ? "Activar sonido" : audioReady ? "Sonido activado" : "Tocá para activar el sonido";
+  const soundLabel = !soundOn ? "Activar sonido" : audioReady ? "Sonido activado" : "Apagar el sonido";
 
   return (
     <div className="space-y-6">
@@ -203,6 +211,28 @@ export default function CourierOrdersClient({
           <span aria-hidden="true">{soundOn && audioReady ? "🔔" : "🔕"}</span>
         </button>
       </section>
+
+      {hint ? (
+        <p className="-mt-3 text-xs text-stone-500">
+          {hint}
+        </p>
+      ) : null}
+
+      {alerts.length > 0 ? (
+        <div
+          role="alert"
+          className="flex items-center justify-between gap-3 rounded-xl border-2 border-accent bg-accent-soft px-4 py-3"
+        >
+          <p className="min-w-0 break-words text-base font-bold text-stone-900">🔔 {alertText}</p>
+          <button
+            type="button"
+            onClick={dismissAlerts}
+            className="min-h-11 shrink-0 rounded-lg bg-accent px-4 text-sm font-semibold text-white transition hover:bg-accent-hover"
+          >
+            Visto
+          </button>
+        </div>
+      ) : null}
 
       {/* En el celular las reemplaza la barra de abajo. */}
       <div role="tablist" aria-label="Secciones" className="hidden gap-2 lg:flex">
