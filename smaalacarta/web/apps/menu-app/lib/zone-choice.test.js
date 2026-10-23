@@ -10,6 +10,7 @@ import {
   saveChoice,
   validateChoice,
   zoneLabel,
+  zoneLabelKey,
 } from "./zone-choice.js";
 import { formatPrice } from "./price.js";
 
@@ -67,6 +68,14 @@ describe("filterZones — PUBLICO-74", () => {
 describe("zoneLabel — PUBLICO-75", () => {
   it("arma las variables del texto con el precio formateado", () => {
     expect(zoneLabel(ZONES.zones[0], formatPrice)).toEqual({ zona: "Centro", precio: formatPrice(4500) });
+  });
+});
+
+describe("zoneLabelKey — ENVIO-228", () => {
+  it("'Envío $X' con precio fijo; 'Envío aprox. $X' si puede cambiar o no se sabe", () => {
+    expect(zoneLabelKey({ ...ZONES.zones[0], fixed: true })).toBe("zone.availableFixed");
+    expect(zoneLabelKey({ ...ZONES.zones[0], fixed: false })).toBe("zone.available");
+    expect(zoneLabelKey(ZONES.zones[0])).toBe("zone.available");
   });
 });
 

@@ -696,7 +696,8 @@ describe("lo que ve el cliente — ENVIO-16 y 17", () => {
     expect(Object.keys(z)).toEqual(["zonas"]);
     expect(z.zonas).toHaveLength(39);
     expect(z.zonas[0]).toMatchObject({ nombre: "Centro (hasta Av. Koessler)", precio: 4500 });
-    expect(Object.keys(z.zonas[0]).sort()).toEqual(["id", "nombre", "precio"]);
+    // `fijo` se suma en ENVIO-223: sigue sin repartidor ni WhatsApp.
+    expect(Object.keys(z.zonas[0]).sort()).toEqual(["fijo", "id", "nombre", "precio"]);
   });
 
   it("aunque el repartidor tenga WhatsApp, al pedir no sale: todavía no hay repartidor", async () => {

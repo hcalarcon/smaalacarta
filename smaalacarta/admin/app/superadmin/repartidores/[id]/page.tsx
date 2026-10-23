@@ -2,9 +2,20 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import CanEditZonesToggle from "../components/CanEditZonesToggle";
 import CourierProfileForm from "../components/CourierProfileForm";
+import {
+  createOwnZoneAction,
+  deleteOwnZoneAction,
+  reorderOwnZonesAction,
+  setCanEditZonesAction,
+  setOwnZoneActiveAction,
+  updateOwnZoneAction,
+} from "../actions";
 import ResetPasswordButton from "../../components/ResetPasswordButton";
+import OwnZonesEditor from "@/components/courier/OwnZonesEditor";
 import VehicleIcons from "@/components/ui/VehicleIcon";
+import { canEditOwnZones, listOwnZones } from "@/lib/db/courier-own-zones";
 import { getCourier } from "@/lib/db/couriers";
 import { isVehicleEnabled } from "@/lib/db/vehicle";
 
@@ -19,7 +30,11 @@ export default async function CourierDetailPage({ params }: { params: Promise<{ 
   const courier = await getCourier(id);
   if (!courier) notFound();
 
-  const vehicleEnabled = await isVehicleEnabled();
+  const [vehicleEnabled, ownZones, canEdit] = await Promise.all([
+    isVehicleEnabled(),
+    listOwnZones(courier.id),
+    canEditOwnZones(courier.id),
+  ]);
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
@@ -52,6 +67,31 @@ export default async function CourierDetailPage({ params }: { params: Promise<{ 
             name={courier.name}
             whatsapp={courier.whatsapp ?? ""}
             active={courier.active}
+          />
+        </div>
+      </section>
+
+      <section className="rounded-3xl border border-line bg-white p-6 shadow-sm">
+        <h2 className="text-xl font-semibold text-brand">Zonas y precios propios</h2>
+        <p className="mt-2 text-sm text-stone-500">
+          Solo se ofrecen en los negocios con precio &ldquo;Del repartidor&rdquo; cuyo favorito es esta persona. Son
+          independientes de las zonas comunes.
+        </p>
+        <div className="mt-4 space-y-4">
+          <CanEditZonesToggle
+            canEdit={canEdit}
+            action={setCanEditZonesAction.bind(null, courier.id)}
+          />
+          <OwnZonesEditor
+            zones={ownZones}
+            readOnly={false}
+            api={{
+              create: createOwnZoneAction.bind(null, courier.id),
+              update: updateOwnZoneAction.bind(null, courier.id),
+              setActive: setOwnZoneActiveAction.bind(null, courier.id),
+              remove: deleteOwnZoneAction.bind(null, courier.id),
+              reorder: reorderOwnZonesAction.bind(null, courier.id),
+            }}
           />
         </div>
       </section>

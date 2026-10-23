@@ -240,6 +240,21 @@ describe("ofertas con otro precio — ENVIO-226", () => {
     expect((await offer(db, REPA_USER, id)).ok).toBe(true);
   });
 
+  it("el repartidor sabe si puede ofertar otro precio", async () => {
+    const r = await envio(cantera);
+    const id = (r as { id: string }).id;
+    const otro = async () => {
+      const l = await call(REPA_USER, "select public.courier_available_orders() as l");
+      if (!l.ok) throw new Error(l.error);
+      return (l.rows[0].l as { id: string; envio: { otro_precio: boolean } }[]).find((o) => o.id === id)?.envio
+        .otro_precio;
+    };
+
+    expect(await otro()).toBe(true);
+    await business("delivery_offers_enabled = false");
+    expect(await otro()).toBe(false);
+  });
+
   it("prendidas: la oferta distinta con motivo se acepta", async () => {
     const r = await envio(cantera);
     const id = (r as { id: string }).id;
@@ -334,9 +349,8 @@ describe("lo que ve el panel — ENVIO-227", () => {
     await own(PROPIO, "Barrio Norte", 1500);
 
     const r = await call(ANA, `select public.business_delivery_pricing('${NEG_ANA}') as p`);
-    expect(r.ok).toBe(true);
-    const p = (r as { rows: { p: { pricing: string; courier: { id: string; zones: number }; courier_zones: unknown[] } }[] })
-      .rows[0].p;
+    if (!r.ok) throw new Error(r.error);
+    const p = r.rows[0].p as { pricing: string; courier: { id: string; zones: number }; courier_zones: unknown[] };
     expect(p.pricing).toBe("courier");
     expect(p.courier.id).toBe(PROPIO);
     expect(p.courier.zones).toBe(1);

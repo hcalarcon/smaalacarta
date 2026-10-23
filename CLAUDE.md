@@ -272,6 +272,12 @@ negocio nuevo funciona apenas existe y está publicado, sin tocar código.
   corre cada minuto con pg_cron para todos los pedidos vencidos (así el aviso llega aunque
   nadie mire); los 5 minutos viven solo en `courier_offers_window()`. El favorito del local (`favorite_courier_id`) solo ordena y
   desempata; ya no hay ventana exclusiva.
+- **Tipo de precio del envío** (`businesses.delivery_pricing`, solo superadmin): `common`, `business` (precio por zona en
+  `business_zone_prices`, editable por el local con `delivery_prices_editable`) o `courier` (zonas propias del favorito
+  efectivo en `courier_own_zones`, editables por el repartidor con `couriers.can_edit_zones`). Las zonas de un negocio las
+  resuelve **solo** `delivery_zones_for_business()`; con `courier` el pedido guarda `orders.courier_zone_id` y lo ve y oferta
+  solo el dueño de la zona. `delivery_offers_enabled` apagado: `courier_make_offer` rechaza otro precio (`P0028`) y el menú
+  dice "Envío $X" en vez de "Envío aprox. $X".
 - **Vehículo del repartidor** (`couriers.moto`/`auto`, `orders.needs_car`): detrás de `platform_settings.vehicle_enabled`
   (superadmin, apagado de fábrica), que el servidor lee con `vehicle_enabled()`. Apagado, `needs_car` se ignora y no
   se muestra nada. La regla de quién ve un pedido que necesita auto vive en `courier_sees_order()` (más el error

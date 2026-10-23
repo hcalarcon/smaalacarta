@@ -13,6 +13,7 @@ export const ORDER: OrderRecord = {
   delivery: "delivery",
   customer_name: "Lucía",
   delivery_zone_id: "e1e1e1e1-0000-0000-0000-000000000001",
+  courier_zone_id: null,
   delivery_zone_name: "Cantera",
   delivery_fee_list: 5000,
   delivery_fee: 5000,

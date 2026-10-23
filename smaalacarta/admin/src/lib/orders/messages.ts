@@ -21,6 +21,8 @@ export function orderErrorMessage(error: DbError) {
       return "Ese repartidor todavía no aceptó los términos para repartidores.";
     case "P0023":
       return "Este pedido funciona de otra manera. Actualizá la pantalla.";
+    case "P0028":
+      return "Este negocio solo acepta el precio de lista del envío.";
     case "P0021":
       return "Contá por qué cambia el precio del envío (de 3 a 140 caracteres).";
     case "P0002":

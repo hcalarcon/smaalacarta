@@ -9,7 +9,9 @@ import {
   isValidPhone,
   needsCourier,
   normalizeZones,
+  zoneNoticeKey,
   zoneNoticeVars,
+  isFixedPrice,
 } from "./delivery-zones.js";
 import { formatPrice } from "./price.js";
 
@@ -231,5 +233,35 @@ describe("deliveryProblem — PUBLICO-82", () => {
   it("sin barrios cargados no se exige zona", () => {
     expect(deliveryProblem({ zones: { zones: [] }, delivery: "delivery", zoneId: "" })).toBeNull();
     expect(deliveryProblem({ zones: null, delivery: "delivery", zoneId: "" })).toBeNull();
+  });
+});
+
+describe("precio fijo o aproximado — ENVIO-223 y 228", () => {
+  const fijo = normalizeZones({ zonas: [{ id: ID_A, nombre: "Centro", precio: 4500, fijo: true }] }).zones[0];
+  const aprox = normalizeZones({ zonas: [{ id: ID_A, nombre: "Centro", precio: 4500, fijo: false }] }).zones[0];
+  const sinDato = normalizeZones({ zonas: [{ id: ID_A, nombre: "Centro", precio: 4500 }] }).zones[0];
+
+  it("lee `fijo` del servidor; si no lo manda, no afirma nada", () => {
+    expect(fijo.fixed).toBe(true);
+    expect(aprox.fixed).toBe(false);
+    expect("fixed" in sinDato).toBe(false);
+  });
+
+  it("solo el precio fijo es fijo: sin dato se muestra como aproximado", () => {
+    expect(isFixedPrice(fijo)).toBe(true);
+    expect(isFixedPrice(aprox)).toBe(false);
+    expect(isFixedPrice(sinDato)).toBe(false);
+  });
+
+  it("el aviso del checkout cambia de texto según el precio", () => {
+    expect(zoneNoticeKey(fijo)).toBe("checkout.zoneNoticeFixed");
+    expect(zoneNoticeKey(aprox)).toBe("checkout.zoneNotice");
+    expect(zoneNoticeKey(sinDato)).toBe("checkout.zoneNotice");
+  });
+
+  it("el mensaje de WhatsApp dice 'aprox.' solo si el servidor dijo que puede cambiar", () => {
+    expect(courierWhatsappLines(aprox, { address: "Calle 1" }, formatPrice)).toContain("🛵 Envío aprox.: $4.500");
+    expect(courierWhatsappLines(fijo, { address: "Calle 1" }, formatPrice)).toContain("🛵 Envío: $4.500");
+    expect(courierWhatsappLines(sinDato, { address: "Calle 1" }, formatPrice)).toContain("🛵 Envío: $4.500");
   });
 });

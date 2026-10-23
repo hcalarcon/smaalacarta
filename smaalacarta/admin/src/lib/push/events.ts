@@ -16,6 +16,8 @@ export type OrderRecord = {
   delivery: string | null;
   customer_name: string | null;
   delivery_zone_id: string | null;
+  // Zona propia del repartidor (tipo de precio `courier`): reemplaza a la zona común.
+  courier_zone_id: string | null;
   delivery_zone_name: string | null;
   delivery_fee_list: number | null;
   delivery_fee: number | null;
@@ -98,7 +100,7 @@ function isOfferable(order: OrderRecord | null): boolean {
     !!order &&
     order.courier_status === "searching" &&
     order.courier_id === null &&
-    order.delivery_zone_id !== null &&
+    (order.delivery_zone_id !== null || order.courier_zone_id !== null) &&
     order.status !== "delivered" &&
     order.status !== "cancelled" &&
     order.payment_status !== "awaiting" &&

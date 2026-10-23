@@ -3,6 +3,14 @@
 import { revalidatePath } from "next/cache";
 
 import { requireCourier } from "@/lib/auth/courier";
+import {
+  createOwnZoneFor,
+  deleteOwnZoneFor,
+  reorderOwnZonesFor,
+  setOwnZoneActiveFor,
+  updateOwnZoneFor,
+  type OwnZoneResult,
+} from "@/lib/courier/own-zones";
 import { validateReturn } from "@/lib/courier/panel";
 import { setCourierAvailable } from "@/lib/db/availability";
 import { acceptCourierTerms } from "@/lib/db/courier-terms";
@@ -298,4 +306,44 @@ export async function markSettledAction(orderId: string): Promise<CourierActionR
 
   revalidatePath("/repartidor");
   return { ok: true };
+}
+
+// "Mis zonas y precios" (ENVIO-221 y 227): el repartidor sale de la sesión y la base solo deja escribir con el permiso
+// que le dio el superadmin (`couriers.can_edit_zones`).
+export async function createOwnZoneAction(input: { name: string; price: string }): Promise<OwnZoneResult> {
+  const { courierId } = await requireCourier();
+  const result = await createOwnZoneFor(courierId, input);
+  if (result.ok) revalidatePath("/repartidor/zonas");
+  return result;
+}
+
+export async function updateOwnZoneAction(
+  zoneId: string,
+  input: { name: string; price: string },
+): Promise<OwnZoneResult> {
+  const { courierId } = await requireCourier();
+  const result = await updateOwnZoneFor(courierId, zoneId, input);
+  if (result.ok) revalidatePath("/repartidor/zonas");
+  return result;
+}
+
+export async function setOwnZoneActiveAction(zoneId: string, active: boolean): Promise<OwnZoneResult> {
+  const { courierId } = await requireCourier();
+  const result = await setOwnZoneActiveFor(courierId, zoneId, active);
+  if (result.ok) revalidatePath("/repartidor/zonas");
+  return result;
+}
+
+export async function deleteOwnZoneAction(zoneId: string): Promise<OwnZoneResult> {
+  const { courierId } = await requireCourier();
+  const result = await deleteOwnZoneFor(courierId, zoneId);
+  if (result.ok) revalidatePath("/repartidor/zonas");
+  return result;
+}
+
+export async function reorderOwnZonesAction(orderedIds: string[]): Promise<OwnZoneResult> {
+  const { courierId } = await requireCourier();
+  const result = await reorderOwnZonesFor(courierId, orderedIds);
+  if (result.ok) revalidatePath("/repartidor/zonas");
+  return result;
 }

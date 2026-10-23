@@ -37,7 +37,8 @@ export type AvailableOrder = {
   total: number;
   pago: string | null;
   pago_estado: string;
-  envio: { zona: string | null; precio_lista: number | null };
+  // `otro_precio`: el negocio acepta ofertas con otro precio (ENVIO-226); falta en los datos viejos y vale `true`.
+  envio: { zona: string | null; precio_lista: number | null; otro_precio?: boolean };
   // Cómo se reparte (ENVIO-145): `fixed` se toma al precio de lista, `offers` se oferta.
   modo?: "fixed" | "offers" | null;
   // Cuántas ofertas abiertas hay (sin nombres ni precios de los demás) y la propia, si ya ofertó.

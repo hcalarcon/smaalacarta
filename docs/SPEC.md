@@ -2332,7 +2332,7 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   guardan su precio de lista. Con `courier` el pedido guarda la zona del repartidor en `orders.courier_zone_id`
   (`delivery_zone_id` queda vacío) más el nombre en `delivery_zone_name`.
 - **ENVIO-225** Un pedido con zona del repartidor lo ven, toman y ofertan solo el dueño de esa zona (no se necesita
-  cobertura de zonas comunes). El local puede asignarlo solo a ese repartidor.
+  cobertura de zonas comunes). La base deja al local asignarlo solo a ese repartidor (el tablero no lista otros).
 - **ENVIO-226** Con las ofertas con otro precio apagadas, `courier_make_offer` rechaza (`P0028`) un precio distinto al
   de lista; el de lista sí se acepta.
 - **ENVIO-227** El superadmin ve y edita el tipo de precio, los dos permisos del negocio y las zonas propias de cada

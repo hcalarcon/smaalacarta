@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 
 import { requireSuperAdmin } from "@/lib/auth/superadmin";
+import { parseDeliveryPricing } from "@/lib/delivery-pricing";
+import { updateDeliveryPricing } from "@/lib/db/delivery-pricing";
 import { removeMember, updateBusinessPlan, updateCourierDelivery } from "@/lib/db/superadmin";
 import {
   addMemberByEmail,
@@ -120,6 +122,36 @@ export async function updateCourierDeliveryAction(
       ? "Envío con repartidores habilitado."
       : "Envío con repartidores deshabilitado.",
   };
+}
+
+// Tipo de precio del envío del negocio y sus dos permisos (ENVIO-219). El trigger de la base también exige superadmin.
+export async function updateDeliveryPricingAction(
+  _prev: SuperAdminFormState,
+  formData: FormData,
+): Promise<SuperAdminFormState> {
+  await requireSuperAdmin();
+
+  const businessId = text(formData, "businessId");
+  const pricing = parseDeliveryPricing(text(formData, "pricing"));
+
+  if (!pricing) {
+    return { error: "Elegí un tipo de precio." };
+  }
+
+  const result = await updateDeliveryPricing(businessId, {
+    pricing,
+    pricesEditable: checkbox(formData, "pricesEditable"),
+    offersEnabled: checkbox(formData, "offersEnabled"),
+  });
+
+  if ("error" in result) {
+    return { error: "No pudimos guardar los cambios. Probá de nuevo." };
+  }
+
+  revalidatePath(`/superadmin/negocios/${businessId}`);
+  revalidatePath("/dashboard/settings");
+
+  return { message: "Precio del envío actualizado." };
 }
 
 export async function addMemberAction(

@@ -46,11 +46,15 @@ export function buildPushDeps(): PushDeps {
       return (data?.name as string | undefined) ?? "";
     },
 
-    async coveringCourierIds(orderId, zoneId) {
-      const covering = ids(
-        await rows(supabase.from("courier_zone_coverage").select("courier_id").eq("zone_id", zoneId)),
-        "courier_id",
-      );
+    async coveringCourierIds(orderId, zoneId, ownZoneId) {
+      const covering = ownZoneId
+        ? ids(await rows(supabase.from("courier_own_zones").select("courier_id").eq("id", ownZoneId)), "courier_id")
+        : zoneId
+          ? ids(
+              await rows(supabase.from("courier_zone_coverage").select("courier_id").eq("zone_id", zoneId)),
+              "courier_id",
+            )
+          : [];
       if (covering.length === 0) return [];
 
       const [active, declined, order, platform] = await Promise.all([

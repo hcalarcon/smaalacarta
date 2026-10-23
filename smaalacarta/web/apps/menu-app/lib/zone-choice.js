@@ -24,7 +24,12 @@ export function filterZones(zones, query) {
   return zones.filter((zone) => fold(zone.name).includes(needle));
 }
 
-// Variables de "Enviamos a {zona} · ${precio} aprox." (el texto vive en i18n.js).
+// Qué texto lleva la tarjeta: "Envío $X" con precio fijo y "Envío aprox. $X" si puede cambiar (ENVIO-228).
+export function zoneLabelKey(zone) {
+  return zone?.fixed === true ? "zone.availableFixed" : "zone.available";
+}
+
+// Variables de "Enviamos a {zona} · Envío aprox. ${precio}" (el texto vive en i18n.js).
 export function zoneLabel(zone, formatPrice) {
   return { zona: zone.name, precio: formatPrice(zone.price) };
 }

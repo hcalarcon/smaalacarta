@@ -1975,7 +1975,7 @@ function renderZoneNotice() {
 
   const chosen = zone.disabled ? null : DZ.findZone(COURIER_ZONES, zone.value);
   notice.hidden = !chosen;
-  notice.textContent = chosen ? tr("checkout.zoneNotice", DZ.zoneNoticeVars(chosen, PRICE.formatPrice)) : "";
+  notice.textContent = chosen ? tr(DZ.zoneNoticeKey(chosen), DZ.zoneNoticeVars(chosen, PRICE.formatPrice)) : "";
 
   renderNoCouriersNotice(chosen);
 }
@@ -2278,7 +2278,7 @@ function renderZone() {
       renderZone();
       return;
     }
-    title.textContent = tr("zone.available", ZONE.zoneLabel(zone, PRICE.formatPrice));
+    title.textContent = tr(ZONE.zoneLabelKey(zone), ZONE.zoneLabel(zone, PRICE.formatPrice));
     panel.append(close, title);
   }
 
