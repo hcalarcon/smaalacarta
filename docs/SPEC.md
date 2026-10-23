@@ -2308,6 +2308,40 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
 - **ENVIO-218** La burbuja nunca tapa el botón que señala ni se sale de la pantalla (390 px): si el elemento queda
   cerca de la barra de abajo, la burbuja va arriba. Con `prefers-reduced-motion` no hay animaciones.
 
+### Tipo de precio del envío (tarea 47)
+
+- **ENVIO-219** Cada negocio tiene un tipo de precio de envío (`businesses.delivery_pricing`): `common` (por defecto: las
+  zonas comunes con su precio de referencia), `business` (las mismas zonas comunes con el precio que carga el negocio) o
+  `courier` (las zonas y precios propios del favorito efectivo del negocio, `effective_favorite_courier`). Solo lo
+  cambia el superadmin, igual que `delivery_prices_editable` ("el negocio puede editar sus precios", por defecto no) y
+  `delivery_offers_enabled` ("ofertas con otro precio", por defecto sí).
+- **ENVIO-220** `business_zone_prices` guarda el precio del negocio por zona común. Si falta la fila de una zona tildada,
+  vale el precio común. El negocio lee los suyos y los escribe solo con `delivery_prices_editable`; nunca los de otro.
+- **ENVIO-221** `courier_own_zones` guarda las zonas propias de cada repartidor (nombre, precio, activa, orden).
+  `couriers.can_edit_zones` ("puede editar sus zonas y precios", por defecto no). El repartidor lee las suyas y las
+  escribe solo con ese permiso; nunca ve ni toca las de otro. El superadmin hace todo. El público no las lee: solo por
+  las funciones.
+- **ENVIO-222** `delivery_zones_for_business(negocio)` es el único lugar que resuelve las zonas de un negocio: devuelve
+  id, origen (`common` o `courier`), nombre, precio de lista y si el precio es fijo. Con `common` y `business` aplica
+  las reglas de siempre (zona activa, tildada por el local y cubierta por un repartidor activo). Con `courier` devuelve
+  las zonas activas del favorito efectivo si ese repartidor está activo; sin favorito activo, ninguna: el negocio no
+  ofrece envío.
+- **ENVIO-223** El precio es fijo si la plataforma está en modo `fixed` o el negocio tiene las ofertas con otro precio
+  apagadas; si no, es aproximado. `public_delivery_zones` entrega `id`, `nombre`, `precio` y `fijo` por zona.
+- **ENVIO-224** `create_public_order` y `create_manual_order` validan el barrio con `delivery_zones_for_business` y
+  guardan su precio de lista. Con `courier` el pedido guarda la zona del repartidor en `orders.courier_zone_id`
+  (`delivery_zone_id` queda vacío) más el nombre en `delivery_zone_name`.
+- **ENVIO-225** Un pedido con zona del repartidor lo ven, toman y ofertan solo el dueño de esa zona (no se necesita
+  cobertura de zonas comunes). El local puede asignarlo solo a ese repartidor.
+- **ENVIO-226** Con las ofertas con otro precio apagadas, `courier_make_offer` rechaza (`P0028`) un precio distinto al
+  de lista; el de lista sí se acepta.
+- **ENVIO-227** El superadmin ve y edita el tipo de precio, los dos permisos del negocio y las zonas propias de cada
+  repartidor con su permiso. El repartidor ve "Mis zonas y precios" (editable solo con permiso). En Configuración →
+  Envíos, con `business` y permiso el local edita el precio de cada zona tildada; con `courier` ve las zonas del
+  repartidor en solo lectura.
+- **ENVIO-228** El menú (tarjeta de zona y checkout) muestra "Envío $X" si el precio es fijo y "Envío aprox. $X" si no,
+  en es/en/pt.
+
 
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
