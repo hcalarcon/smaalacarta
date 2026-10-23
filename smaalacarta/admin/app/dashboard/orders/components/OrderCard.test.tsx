@@ -318,7 +318,7 @@ describe("pedido con envío — ENVIO-80 a 85", () => {
       ...extra,
     } as unknown as Partial<Order>);
 
-  const card2 = (o: Order, at = now, offers?: OrderOffers) =>
+  const card2 = (o: Order, at = now, offers?: OrderOffers, assignMinutes?: number) =>
     render(
       <OrderCard
         order={o}
@@ -328,6 +328,7 @@ describe("pedido con envío — ENVIO-80 a 85", () => {
         onOpen={vi.fn()}
         couriers={couriers}
         offers={offers}
+        assignMinutes={assignMinutes}
       />,
     );
 
@@ -384,21 +385,31 @@ describe("pedido con envío — ENVIO-80 a 85", () => {
     expect(screen.getByText("2 ofertas, el cliente está eligiendo (se elige sola en 3:00)")).toBeTruthy();
     expect(screen.getByText(/⭐ Damián · \$\s?5\.000/)).toBeTruthy();
     expect(screen.getByText(/Moto Express · \$\s?4\.500/)).toBeTruthy();
-    // Con ofertas no hay aviso de "nadie ofertó", aunque pasen los 10 minutos.
+    // Con ofertas no hay aviso de "nadie ofertó", aunque pasen los 5 minutos.
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("a los 10 minutos sin ninguna oferta avisa y ofrece resolverlo", () => {
-    card2(searching(), new Date("2026-10-08T10:10:00Z"));
+  it("a los 5 minutos sin ninguna oferta avisa y ofrece resolverlo (ENVIO-241 y 243)", () => {
+    card2(searching(), new Date("2026-10-08T10:05:00Z"));
 
     expect(screen.getByRole("alert").textContent).toMatch(/Nadie ofertó todavía/);
     expect(screen.getByRole("button", { name: "Resolver envío" })).toBeTruthy();
   });
 
-  it("antes de los 10 minutos no avisa", () => {
-    card2(searching(), new Date("2026-10-08T10:09:00Z"));
+  it("antes de los 5 minutos no avisa", () => {
+    card2(searching(), new Date("2026-10-08T10:04:00Z"));
     expect(screen.queryByRole("alert")).toBeNull();
     expect(screen.queryByRole("button", { name: "Resolver envío" })).toBeNull();
+  });
+
+  it("con otro tiempo de la plataforma avisa a ese (ENVIO-243)", () => {
+    card2(searching(), new Date("2026-10-08T10:03:00Z"), undefined, 3);
+    expect(screen.getByRole("alert").textContent).toMatch(/Nadie ofertó todavía \(3 min\)/);
+  });
+
+  it("con un tiempo más largo, a los 5 minutos todavía no avisa (ENVIO-243)", () => {
+    card2(searching(), new Date("2026-10-08T10:07:00Z"), undefined, 15);
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("tomado: dice quién lo tomó", () => {
@@ -519,7 +530,7 @@ describe("pedido con envío — ENVIO-80 a 85", () => {
     expect(onSelf).toHaveBeenCalledTimes(1);
   });
 
-  it("a los 10 minutos las dos acciones siguen igual y el aviso aparece en el detalle", () => {
+  it("a los 12 minutos las dos acciones siguen igual y el aviso aparece en el detalle", () => {
     full(searching(), {}, new Date("2026-10-08T10:12:00Z"));
 
     expect(screen.getByRole("alert").textContent).toMatch(/Nadie ofertó todavía \(12 min\)/);

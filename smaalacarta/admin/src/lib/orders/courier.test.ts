@@ -138,13 +138,19 @@ describe("las ofertas del pedido — ENVIO-117", () => {
 });
 
 describe("aviso 'Nadie ofertó todavía' — ENVIO-118", () => {
-  it("antes de los 10 minutos no avisa", () => {
-    expect(searchWarning(order(), at("2026-10-09T22:09:59Z"))).toBeNull();
+  it("antes de los 5 minutos no avisa", () => {
+    expect(searchWarning(order(), at("2026-10-09T22:04:59Z"))).toBeNull();
   });
 
-  it("a los 10 minutos avisa y dice cuánto pasó", () => {
-    expect(searchWarning(order(), at("2026-10-09T22:10:00Z"))).toMatch(/Nadie ofertó todavía \(10 min\)/);
+  it("a los 5 minutos avisa y dice cuánto pasó", () => {
+    expect(searchWarning(order(), at("2026-10-09T22:05:00Z"))).toMatch(/Nadie ofertó todavía \(5 min\)/);
     expect(searchWarning(order(), at("2026-10-09T22:25:00Z"))).toMatch(/\(25 min\)/);
+  });
+
+  it("con otro tiempo configurado (ENVIO-241) usa ese", () => {
+    expect(searchWarning(order(), at("2026-10-09T22:02:59Z"), 0, 3)).toBeNull();
+    expect(searchWarning(order(), at("2026-10-09T22:03:00Z"), 0, 3)).toMatch(/\(3 min\)/);
+    expect(searchWarning(order(), at("2026-10-09T22:10:00Z"), 0, 15)).toBeNull();
   });
 
   it("no avisa si ya hay ofertas", () => {
@@ -154,9 +160,9 @@ describe("aviso 'Nadie ofertó todavía' — ENVIO-118", () => {
   it("en precio fijo dice 'Nadie lo tomó todavía' y no habla de ofertas — ENVIO-154", () => {
     const fixed = order({ delivery_mode: "fixed" });
 
-    expect(searchWarning(fixed, at("2026-10-09T22:09:59Z"))).toBeNull();
-    expect(searchWarning(fixed, at("2026-10-09T22:10:00Z"))).toMatch(/Nadie lo tomó todavía \(10 min\)/);
-    expect(searchWarning(fixed, at("2026-10-09T22:10:00Z"))).not.toMatch(/ofert/i);
+    expect(searchWarning(fixed, at("2026-10-09T22:04:59Z"))).toBeNull();
+    expect(searchWarning(fixed, at("2026-10-09T22:05:00Z"))).toMatch(/Nadie lo tomó todavía \(5 min\)/);
+    expect(searchWarning(fixed, at("2026-10-09T22:05:00Z"))).not.toMatch(/ofert/i);
   });
 
   it("solo los pedidos de ofertas muestran conteo y lista de ofertas — ENVIO-154", () => {

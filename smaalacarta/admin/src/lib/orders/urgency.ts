@@ -38,7 +38,7 @@ type Urgent = {
 };
 
 // 2 = atrasado o sin repartidor (rojo), 1 = por vencer o sin atender (ámbar), 0 = en orden.
-export function orderUrgency(order: Urgent, now: Date, offerCount = 0): 0 | 1 | 2 {
+export function orderUrgency(order: Urgent, now: Date, offerCount = 0, assignMinutes?: number): 0 | 1 | 2 {
   const warning = searchWarning(
     {
       courier_status: order.courier_status ?? null,
@@ -48,6 +48,7 @@ export function orderUrgency(order: Urgent, now: Date, offerCount = 0): 0 | 1 | 
     } as Parameters<typeof searchWarning>[0],
     now,
     offerCount,
+    assignMinutes,
   );
   if (warning) return 2;
 
@@ -75,7 +76,8 @@ export function compareByUrgency<T extends Urgent & { scheduled_for?: string | n
   b: T,
   now: Date,
   offerCount: (order: T) => number = () => 0,
+  assignMinutes?: number,
 ): number {
-  const diff = orderUrgency(b, now, offerCount(b)) - orderUrgency(a, now, offerCount(a));
+  const diff = orderUrgency(b, now, offerCount(b), assignMinutes) - orderUrgency(a, now, offerCount(a), assignMinutes);
   return diff || compareForBoard(a as never, b as never);
 }

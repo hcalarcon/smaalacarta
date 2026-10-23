@@ -31,6 +31,7 @@ export default function CourierSection({
   now,
   couriers,
   offers,
+  assignMinutes,
   busy,
   error,
   onAssign,
@@ -47,6 +48,8 @@ export default function CourierSection({
   couriers: OrderCourier[];
   // Las ofertas abiertas del pedido, con nombre y precio (ENVIO-117).
   offers?: OrderOffers;
+  // A los cuántos minutos sin ofertas se destaca "Nadie ofertó todavía" (ENVIO-241): el de la plataforma.
+  assignMinutes?: number;
   busy: boolean;
   error: string | null;
   onAssign: (courierId: string, note: string) => void;
@@ -61,7 +64,7 @@ export default function CourierSection({
   const actions = courierActions(order);
   const summary = feeSummary(order);
   const searching = order.courier_status === "searching" && !isFinal(order.status);
-  const warning = searchWarning(order, now, offers?.ofertas.length ?? 0);
+  const warning = searchWarning(order, now, offers?.ofertas.length ?? 0, assignMinutes);
   const candidates = couriersForOrder(couriers, order);
   // Se pide o se saca el auto mientras nadie tenga el pedido (ENVIO-176).
   const canToggleCar =

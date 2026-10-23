@@ -68,8 +68,9 @@ export type OrderCourier = {
   vehiculo?: string[];
 };
 
-// Pasados estos minutos sin ninguna oferta, el panel lo destaca (ENVIO-118).
-export const SEARCH_WARNING_MINUTES = 10;
+// Pasados estos minutos sin ninguna oferta, el panel lo destaca (ENVIO-118). Es el valor de fábrica de
+// `platform_settings.manual_assign_minutes` (ENVIO-241); la página de Pedidos pasa el que tiene la plataforma.
+export const SEARCH_WARNING_MINUTES = 5;
 
 // ¿El pedido tiene un repartidor asignado (lo tomó uno o lo asignó el local)?
 export function hasCourier(order: Pick<CourierOrder, "courier_id">) {
@@ -151,13 +152,14 @@ export function offersLabel(offers: OrderOffers | undefined, now: Date): string 
 // (ENVIO-154). Un pedido sin modo (de antes) se trata como de ofertas.
 export const acceptsOffers = (order: Pick<CourierOrder, "delivery_mode">) => order.delivery_mode !== "fixed";
 
-// Aviso "Nadie ofertó todavía" a los `SEARCH_WARNING_MINUTES` de abierta la búsqueda sin ninguna oferta
-// (ENVIO-118), o null. `offerCount` es cuántas ofertas abiertas hay. En precio fijo no hay ofertas: dice
+// Aviso "Nadie ofertó todavía" a los `warningMinutes` de abierta la búsqueda sin ninguna oferta
+// (ENVIO-118 y 241), o null. `offerCount` es cuántas ofertas abiertas hay. En precio fijo no hay ofertas: dice
 // "Nadie lo tomó todavía" (ENVIO-154).
 export function searchWarning(
   order: Pick<CourierOrder, "courier_status" | "offered_at" | "status" | "delivery_mode">,
   now: Date,
   offerCount = 0,
+  warningMinutes = SEARCH_WARNING_MINUTES,
 ): string | null {
   if (order.courier_status !== "searching" || !order.offered_at || isFinal(order.status)) return null;
   if (offerCount > 0) return null;
@@ -166,7 +168,7 @@ export function searchWarning(
   if (Number.isNaN(since)) return null;
 
   const minutes = Math.floor((now.getTime() - since) / 60_000);
-  if (minutes < SEARCH_WARNING_MINUTES) return null;
+  if (minutes < warningMinutes) return null;
 
   const what = order.delivery_mode === "fixed" ? "Nadie lo tomó todavía" : "Nadie ofertó todavía";
 

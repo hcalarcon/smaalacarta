@@ -5,6 +5,7 @@ import OrdersClient from "./components/OrdersClient";
 import { getBusinessAvailability } from "@/lib/db/availability";
 import { getDeliveryOptions } from "@/lib/db/delivery-zones";
 import { getManualOrderMenu, getSuggestedPrepMinutes, listOrderOffers, listOrders } from "@/lib/db/orders";
+import { getManualAssignMinutes } from "@/lib/db/platform-minutes";
 import { getPrepSettings } from "@/lib/db/settings";
 import { isVehicleEnabled } from "@/lib/db/vehicle";
 import { requireBusiness } from "@/lib/get-current-business";
@@ -31,7 +32,7 @@ export default async function OrdersPage() {
   // que se leen después ya la ven.
   const offers = business.courier_delivery ? await listOrderOffers() : [];
 
-  const [orders, menu, delivery, suggestedPrep, prepSettings, vehicleEnabled, availability] = await Promise.all([
+  const [orders, menu, delivery, suggestedPrep, prepSettings, vehicleEnabled, availability, assignMinutes] = await Promise.all([
     listOrders(business.id),
     // El menú con sus opciones, para cargar un pedido a mano con el precio de la base (ADMIN-PEDIDOS-47).
     getManualOrderMenu(business.id),
@@ -46,6 +47,8 @@ export default async function OrdersPage() {
     business.courier_delivery
       ? getBusinessAvailability(business.id)
       : Promise.resolve({ enabled: false, total: 0, emptyZoneIds: [] }),
+    // A los cuántos minutos sin ofertas se destaca "Nadie ofertó todavía" (ENVIO-241): un valor de toda la plataforma.
+    business.courier_delivery ? getManualAssignMinutes() : Promise.resolve(undefined),
   ]);
 
   return (
@@ -62,6 +65,7 @@ export default async function OrdersPage() {
       serverNow={new Date().toISOString()}
       couriers={delivery?.couriers ?? []}
       offers={offers}
+      assignMinutes={assignMinutes}
       suggestedPrepMinutes={suggestedPrep}
       defaultPrepMinutes={prepSettings.defaultPrepMinutes}
       vehicleEnabled={vehicleEnabled}

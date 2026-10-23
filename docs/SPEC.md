@@ -2033,7 +2033,7 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
 - **ENVIO-116** Suena un aviso cuando entra un pedido nuevo a Disponibles y otro, distinto, cuando lo eligen.
 - **ENVIO-117** En un pedido con envío buscando, el local ve "Esperando ofertas" o "N ofertas, el cliente está
   eligiendo (se elige sola en m:ss)", con nombres y precios. Asignar a mano y Lo llevo yo siguen disponibles.
-- **ENVIO-118** A los 10 minutos de abierta la búsqueda sin ninguna oferta, la tarjeta y el detalle destacan "Nadie
+- **ENVIO-118** A los X minutos (ENVIO-241) de abierta la búsqueda sin ninguna oferta, la tarjeta y el detalle destacan "Nadie
   ofertó todavía".
 - **ENVIO-119** Configuración → Envíos ya no pide minutos para el favorito; dice que su oferta le aparece primero al
   cliente, marcada "Recomendado por el local".
@@ -2419,6 +2419,22 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   apagó con la campana queda apagado.
 
 
+### Tiempo para asignar a mano (ENVIO-241 a 244)
+
+- **ENVIO-241** `platform_settings.manual_assign_minutes` (1 a 30, arranca en 5) es el tiempo, global para la plataforma, que
+  espera un pedido buscando repartidor sin ninguna oferta antes de destacar "Nadie ofertó todavía: asignalo a mano o llevalo
+  vos" y avisar al local. Lo lee y lo cambia solo el superadmin; el servidor lo pregunta con `manual_assign_minutes()`. Fuera
+  de rango el cambio se rechaza. Reemplaza el 10 fijo de ENVIO-118 y ADMIN-PWA-6. El local puede asignarlo a mano o llevarlo
+  él durante toda la búsqueda (ENVIO-81): este tiempo solo marca cuándo se le avisa. No toca los 5 minutos de la elección
+  automática de ofertas (`courier_offers_window()`).
+- **ENVIO-242** `no_offers_alert_window()` devuelve ese valor: `run_order_timers()` marca `no_offers_alerted_at` a los X
+  minutos de la primera búsqueda sin ofertas, con X = `manual_assign_minutes()`; con el valor por defecto, a los 5 y no antes.
+  Con otro valor, usa ese.
+- **ENVIO-243** El tablero (tarjeta y detalle) destaca "Nadie ofertó todavía (X min): asignalo a mano o llevalo vos" desde
+  el minuto X, con el mismo valor que lee la página de Pedidos; el orden por urgencia usa el mismo X.
+- **ENVIO-244** Superadmin → Zonas tiene el campo "Tiempo para asignar a mano" (minutos, 1 a 30); fuera de rango o sin número
+  entero, la acción lo rechaza sin tocar la base.
+
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
 
@@ -2655,8 +2671,8 @@ precios en 0; no existe "incluye N y el resto cuesta X".
 - **ADMIN-PWA-5** `run_order_timers()` resuelve la elección automática de todos los pedidos con ofertas
   vencidas, aunque nadie tenga el panel ni el seguimiento abierto.
 - **ADMIN-PWA-6** `run_order_timers()` marca en `orders.no_offers_alerted_at`, una sola vez, los pedidos con
-  envío que buscan repartidor hace más de 10 minutos sin ninguna oferta; no marca los que tienen ofertas, los
-  que llevan menos de 10 minutos ni los que esperan un pago de Mercado Pago.
+  envío que buscan repartidor hace más de X minutos (ENVIO-241, 5 por defecto) sin ninguna oferta; no marca los que tienen ofertas, los
+  que llevan menos de X minutos ni los que esperan un pago de Mercado Pago.
 - **ADMIN-PWA-7** Cuando un pedido vuelve a buscar repartidor (una devolución), `no_offers_alerted_at` se limpia
   y puede avisar de nuevo.
 - **ADMIN-PWA-8** `run_order_timers()` no la puede llamar `anon` ni `authenticated`, y si existe `pg_cron` queda
@@ -2742,6 +2758,12 @@ precios en 0; no existe "incluye N y el resto cuesta X".
   otra cuenta), el panel se suscribe de nuevo solo, sin preguntar, una vez por carga. Con el permiso sin pedir o bloqueado no
   hace nada.
 
+- **ADMIN-PWA-39** El panel del negocio no pide activar el sonido con un recuadro: el sonido está prendido salvo que se apague a
+  propósito, y el primer toque en cualquier lugar del panel lo habilita (audio y voz), en Pedidos y en el resto. Mientras no
+  hubo un toque se ve un aviso chico, "Tocá la pantalla para activar el sonido"; la barra roja de arriba sigue solo para quien
+  lo apagó o no tiene los avisos. Comparte con el panel del repartidor (ENVIO-240) el mismo desbloqueo.
+- **ADMIN-PWA-40** Con el permiso de avisos ya concedido y la suscripción guardada, el panel del negocio no vuelve a pedir
+  permiso (ADMIN-PWA-38 vale para el negocio y el repartidor).
 
 ### Panel en el celular (ADMIN-MOVIL)
 

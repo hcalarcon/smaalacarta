@@ -1397,6 +1397,7 @@ export type Database = {
           courier_terms_version: number
           delivery_mode: string
           id: boolean
+          manual_assign_minutes: number
           updated_at: string
           vehicle_enabled: boolean
         }
@@ -1406,6 +1407,7 @@ export type Database = {
           courier_terms_version?: number
           delivery_mode?: string
           id?: boolean
+          manual_assign_minutes?: number
           updated_at?: string
           vehicle_enabled?: boolean
         }
@@ -1415,6 +1417,7 @@ export type Database = {
           courier_terms_version?: number
           delivery_mode?: string
           id?: boolean
+          manual_assign_minutes?: number
           updated_at?: string
           vehicle_enabled?: boolean
         }
@@ -1974,6 +1977,7 @@ export type Database = {
       is_super_admin: { Args: never; Returns: boolean }
       is_valid_preorder_cutoffs: { Args: { p_cutoffs: Json }; Returns: boolean }
       is_valid_schedule: { Args: { p_schedule: Json }; Returns: boolean }
+      manual_assign_minutes: { Args: never; Returns: number }
       menu_preview: { Args: { p_business_id: string }; Returns: Json }
       my_courier_business_id: { Args: never; Returns: string }
       my_courier_id: { Args: never; Returns: string }

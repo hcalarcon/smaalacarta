@@ -53,6 +53,7 @@ export default function OrderCard({
   onConfirmSettlement,
   couriers = [],
   offers,
+  assignMinutes,
   onSetPrep,
   onAdjust,
   vehicleEnabled = false,
@@ -73,6 +74,8 @@ export default function OrderCard({
   couriers?: OrderCourier[];
   // Las ofertas abiertas del pedido si está buscando repartidor (ENVIO-117).
   offers?: OrderOffers;
+  // A los cuántos minutos sin ofertas se destaca "Nadie ofertó todavía" (ENVIO-241): el de la plataforma.
+  assignMinutes?: number;
   // Tiempo estimado (ADMIN-PEDIDOS-34, 35 y 52): cargarlo en un pedido aceptado sin tiempo, o subirlo o
   // bajarlo `delta` minutos con un motivo opcional (nulo = sin motivo).
   onSetPrep?: () => void;
@@ -100,12 +103,12 @@ export default function OrderCard({
   const blockReason = paymentBlocked ? PAYMENT_BLOCK_REASON : undefined;
   const fee = withDelivery ? feeSummary(order) : null;
   const searching = withDelivery && order.courier_status === "searching" && !isFinal(order.status);
-  const warning = withDelivery ? searchWarning(order, now, offers?.ofertas.length ?? 0) : null;
+  const warning = withDelivery ? searchWarning(order, now, offers?.ofertas.length ?? 0, assignMinutes) : null;
   // El tiempo solo cuenta en un pedido aceptado y en preparación, sin hora propia.
   const inKitchen =
     (order.status === "confirmed" || order.status === "preparing") && acceptsPrepTime(order);
   const prep = prepBadge(order, now);
-  const urgency = orderUrgency(order, now, offers?.ofertas.length ?? 0);
+  const urgency = orderUrgency(order, now, offers?.ofertas.length ?? 0, assignMinutes);
   const step = stepIndex(order.status);
   const adjustable = Boolean(inKitchen && onAdjust && order.prep_ready_at);
   const taker = order.courier_id ? couriers.find((courier) => courier.id === order.courier_id) : undefined;

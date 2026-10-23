@@ -27,6 +27,7 @@ export default function OrderDetailDialog({
   onChangeStatus,
   couriers = [],
   offers,
+  assignMinutes,
   now,
   error = null,
   onAssignCourier,
@@ -47,6 +48,8 @@ export default function OrderDetailDialog({
   couriers?: OrderCourier[];
   // Las ofertas abiertas del pedido, con nombre y precio (ENVIO-117).
   offers?: OrderOffers;
+  // A los cuántos minutos sin ofertas se destaca "Nadie ofertó todavía" (ENVIO-241): el de la plataforma.
+  assignMinutes?: number;
   now?: Date;
   error?: string | null;
   onAssignCourier?: (courierId: string, note: string) => void;
@@ -187,6 +190,7 @@ export default function OrderDetailDialog({
             now={now ?? new Date()}
             couriers={couriers}
             offers={offers}
+            assignMinutes={assignMinutes}
             busy={busy}
             error={error}
             onAssign={onAssignCourier}

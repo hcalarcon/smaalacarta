@@ -10,7 +10,12 @@ const { requireSuperAdmin, db, platform } = vi.hoisted(() => ({
     saveDeliveryZoneOrder: vi.fn(),
     updateDeliveryZone: vi.fn(),
   },
-  platform: { setDeliveryMode: vi.fn(), setCourierAvailabilitySwitch: vi.fn(), DELIVERY_MODES: ["fixed", "offers"] },
+  platform: {
+    setDeliveryMode: vi.fn(),
+    setCourierAvailabilitySwitch: vi.fn(),
+    setAssignMinutesSetting: vi.fn(),
+    DELIVERY_MODES: ["fixed", "offers"],
+  },
 }));
 
 vi.mock("@/lib/auth/superadmin", () => ({ requireSuperAdmin: () => requireSuperAdmin() }));
@@ -22,6 +27,7 @@ import {
   createZoneAction,
   deleteZoneAction,
   reorderZonesAction,
+  setAssignMinutesAction,
   setCourierAvailabilitySwitchAction,
   setDeliveryModeAction,
   setZoneActiveAction,
@@ -169,5 +175,39 @@ describe("setCourierAvailabilitySwitchAction — ENVIO-193", () => {
     platform.setCourierAvailabilitySwitch.mockResolvedValue({ error: { code: "42501" } });
 
     expect((await setCourierAvailabilitySwitchAction(false)).ok).toBe(false);
+  });
+});
+
+describe("setAssignMinutesAction — ENVIO-241 y 244", () => {
+  it("exige superadmin antes de tocar la base", async () => {
+    requireSuperAdmin.mockRejectedValue(new Error("redirect"));
+
+    await expect(setAssignMinutesAction("5")).rejects.toThrow();
+    expect(platform.setAssignMinutesSetting).not.toHaveBeenCalled();
+  });
+
+  it("rechaza lo que no es un entero de 1 a 30 sin llamar a la base", async () => {
+    requireSuperAdmin.mockResolvedValue(undefined);
+
+    for (const bad of ["0", "31", "2.5", "", "abc"]) {
+      const r = await setAssignMinutesAction(bad);
+      expect(r.ok).toBe(false);
+    }
+    expect(platform.setAssignMinutesSetting).not.toHaveBeenCalled();
+  });
+
+  it("guarda el valor", async () => {
+    requireSuperAdmin.mockResolvedValue(undefined);
+    platform.setAssignMinutesSetting.mockResolvedValue({ ok: true });
+
+    expect(await setAssignMinutesAction("3")).toEqual({ ok: true });
+    expect(platform.setAssignMinutesSetting).toHaveBeenCalledWith(3);
+  });
+
+  it("si la base niega el cambio, da error", async () => {
+    requireSuperAdmin.mockResolvedValue(undefined);
+    platform.setAssignMinutesSetting.mockResolvedValue({ error: { code: "42501" } });
+
+    expect((await setAssignMinutesAction("3")).ok).toBe(false);
   });
 });

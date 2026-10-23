@@ -12,12 +12,14 @@ import {
 } from "@/lib/db/delivery-zones";
 import {
   DELIVERY_MODES,
+  setAssignMinutesSetting,
   setCourierAvailabilitySwitch,
   setCourierTermsSwitch,
   setDeliveryMode,
   setVehicleSwitch,
   type DeliveryMode,
 } from "@/lib/db/platform-settings";
+import { ASSIGN_MINUTES_MAX, ASSIGN_MINUTES_MIN, parseAssignMinutes } from "@/lib/orders/assign-minutes";
 import { validateZone } from "@/lib/superadmin/zones";
 
 export type ZoneActionResult =
@@ -102,6 +104,23 @@ export async function setCourierAvailabilitySwitchAction(enabled: boolean): Prom
   revalidatePath("/superadmin/repartidores");
   revalidatePath("/dashboard/orders");
   revalidatePath("/repartidor", "layout");
+  return { ok: true };
+}
+
+// "Tiempo para asignar a mano" (ENVIO-241 y 244): minutos sin ofertas antes de destacar el pedido y avisar al local.
+export async function setAssignMinutesAction(value: string): Promise<ZoneActionResult> {
+  await requireSuperAdmin();
+
+  const minutes = parseAssignMinutes(value);
+  if (minutes === null) {
+    return { ok: false, error: `Poné un número entero de ${ASSIGN_MINUTES_MIN} a ${ASSIGN_MINUTES_MAX} minutos.` };
+  }
+
+  const result = await setAssignMinutesSetting(minutes);
+  if ("error" in result) return { ok: false, error: GENERIC };
+
+  revalidatePath("/superadmin/zonas");
+  revalidatePath("/dashboard/orders");
   return { ok: true };
 }
 
