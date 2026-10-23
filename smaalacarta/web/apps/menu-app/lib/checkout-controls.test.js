@@ -257,6 +257,15 @@ describe("Enter pasa al campo siguiente — PUBLICO-115", () => {
     expect(document.activeElement?.type).not.toBe("submit");
   });
 
+  it("un campo fuera de la lista no manda el foco al principio del formulario", () => {
+    const nombre = form.querySelector('input[name="nombre"]');
+    const oculto = form.querySelector('input[name="direccion"]');
+    form.querySelector("#envio-repartidor").hidden = true;
+    oculto.focus();
+    press(oculto);
+    expect(document.activeElement).not.toBe(nombre);
+  });
+
   it("en notas (textarea) Enter sigue siendo salto de línea", () => {
     expect(press(form.querySelector("textarea")).defaultPrevented).toBe(false);
   });

@@ -2039,7 +2039,7 @@ function initCheckoutControls() {
 // Lo que muestra el botón de barrio una vez elegido: nombre y precio.
 function describeZone(zoneId) {
   const zone = DZ?.findZone(COURIER_ZONES, zoneId);
-  return zone ? { name: zone.name, aside: `${PRICE.formatPrice(zone.price)}` } : null;
+  return zone ? { name: zone.name, aside: "$" + PRICE.formatPrice(zone.price) } : null;
 }
 
 // La lista de barrios del checkout (PUBLICO-113): la misma del selector de zona, con su buscador. Elegir un barrio la

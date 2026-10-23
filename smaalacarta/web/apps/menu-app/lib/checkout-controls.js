@@ -203,7 +203,8 @@ export function handleEnterKey(event, form) {
     return isTextField(node) || node.type === "time";
   });
 
-  const next = fields[fields.indexOf(target) + 1];
+  const at = fields.indexOf(target);
+  const next = at === -1 ? null : fields[at + 1];
   if (next) next.focus();
   else target.blur();
 }
