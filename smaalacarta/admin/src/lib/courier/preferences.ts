@@ -5,8 +5,10 @@
 // Lo que entrega `business_delivery_options()`.
 export type DeliveryOptions = {
   zones: { id: string; name: string; price: number; selected: boolean; covered: boolean }[];
-  couriers: { id: string; name: string; whatsapp: string | null; zone_ids: string[] }[];
+  couriers: { id: string; name: string; whatsapp: string | null; zone_ids: string[]; own_zone_ids?: string[] }[];
   favorite_id: string | null;
+  // Con precio del repartidor el favorito lo fija el superadmin: el local lo ve y no lo cambia (ENVIO-230).
+  favorite_locked?: boolean;
   // El repartidor que se recomienda si el local no elige uno (Repartos al Toque, si está activo): ENVIO-134.
   default_courier?: { id: string; name: string } | null;
   // Con qué vehículos trabaja el local (ENVIO-203) y si el interruptor del superadmin está prendido: solo
@@ -45,6 +47,11 @@ export function favoriteCandidates(options: DeliveryOptions, zoneIds: string[]):
 // Si el favorito ya no cubre ninguna zona marcada, la pantalla vuelve a "Sin elegir": no se deja
 // elegido a alguien que la base va a rechazar. Las zonas van en el orden de la lista.
 export function normalizeDeliveryInput(input: DeliveryInput, options: DeliveryOptions): DeliveryInput {
+  if (options.favorite_locked) {
+    const zoneIds = options.zones.filter((zone) => input.zoneIds.includes(zone.id)).map((zone) => zone.id);
+    return { zoneIds, favoriteId: options.favorite_id, ...(input.vehicles ? { vehicles: input.vehicles } : {}) };
+  }
+
   const marked = new Set(input.zoneIds);
   const zoneIds = options.zones.filter((zone) => marked.has(zone.id)).map((zone) => zone.id);
 
@@ -64,7 +71,8 @@ export function validateDeliveryInput(
 ): { ok: true; zoneIds: string[]; favoriteId: string | null; vehicles?: { moto: boolean; auto: boolean } } | { ok: false; errors: DeliveryErrors } {
   const errors: DeliveryErrors = {};
 
-  if (input.favoriteId !== null) {
+  // Bloqueado, el favorito es el guardado: no se valida ni se cambia.
+  if (input.favoriteId !== null && !options.favorite_locked) {
     const allowed = favoriteCandidates(options, input.zoneIds).some((courier) => courier.id === input.favoriteId);
     if (!allowed) {
       errors.favorite = "Elegí un repartidor que cubra alguna de las zonas a las que enviás.";
@@ -81,7 +89,7 @@ export function validateDeliveryInput(
   return {
     ok: true,
     zoneIds: input.zoneIds,
-    favoriteId: input.favoriteId,
+    favoriteId: options.favorite_locked ? options.favorite_id : input.favoriteId,
     vehicles: input.vehicles,
   };
 }

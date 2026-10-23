@@ -121,3 +121,22 @@ describe("vehículos del negocio — ENVIO-203", () => {
     expect(deliveryInputChanged(saved, { ...saved })).toBe(false);
   });
 });
+
+describe("favorito bloqueado con precio del repartidor — ENVIO-230", () => {
+  const locked: DeliveryOptions = {
+    ...options,
+    couriers: [...options.couriers, { id: "propio", name: "Propio", whatsapp: null, zone_ids: [], own_zone_ids: ["z1"] }],
+    favorite_id: "propio",
+    favorite_locked: true,
+  };
+
+  it("el favorito queda como está aunque no cubra ninguna zona marcada", () => {
+    expect(initialDeliveryInput(locked).favoriteId).toBe("propio");
+    expect(normalizeDeliveryInput({ zoneIds: ["centro"], favoriteId: null }, locked).favoriteId).toBe("propio");
+  });
+
+  it("no se valida ni se puede cambiar al guardar", () => {
+    const result = validateDeliveryInput({ zoneIds: ["centro"], favoriteId: "toque" }, locked);
+    expect(result).toMatchObject({ ok: true, favoriteId: "propio" });
+  });
+});

@@ -2,14 +2,18 @@ import { describe, expect, it } from "vitest";
 
 import {
   askZone,
+  ZONE_TOAST_MS,
+  choiceToast,
   clearChoice,
   deliveryBlocked,
   filterZones,
   nextFocusIndex,
   readChoice,
   saveChoice,
+  stepAfterChoice,
   validateChoice,
   zoneLabel,
+  zoneLabelKey,
 } from "./zone-choice.js";
 import { formatPrice } from "./price.js";
 
@@ -67,6 +71,14 @@ describe("filterZones — PUBLICO-74", () => {
 describe("zoneLabel — PUBLICO-75", () => {
   it("arma las variables del texto con el precio formateado", () => {
     expect(zoneLabel(ZONES.zones[0], formatPrice)).toEqual({ zona: "Centro", precio: formatPrice(4500) });
+  });
+});
+
+describe("zoneLabelKey — ENVIO-228", () => {
+  it("'Envío $X' con precio fijo; 'Envío aprox. $X' si puede cambiar o no se sabe", () => {
+    expect(zoneLabelKey({ ...ZONES.zones[0], fixed: true })).toBe("zone.availableFixed");
+    expect(zoneLabelKey({ ...ZONES.zones[0], fixed: false })).toBe("zone.available");
+    expect(zoneLabelKey(ZONES.zones[0])).toBe("zone.available");
   });
 });
 
@@ -142,5 +154,35 @@ describe("foco atrapado en el diálogo — PUBLICO-81", () => {
     expect(nextFocusIndex(-1, 3, false)).toBe(0);
     expect(nextFocusIndex(-1, 3, true)).toBe(2);
     expect(nextFocusIndex(-1, 0, false)).toBe(-1);
+  });
+});
+
+describe("elegir una zona cierra el diálogo y avisa — PUBLICO-75 y 111", () => {
+  it("una zona o el retiro cierran al instante; solo 'Mi barrio no está' sigue en un paso", () => {
+    expect(stepAfterChoice({ type: "zone", zoneId: "a" })).toBeNull();
+    expect(stepAfterChoice({ type: "pickup" })).toBeNull();
+    expect(stepAfterChoice({ type: "notListed" })).toBe("notListed");
+  });
+
+  it("el aviso de una zona lleva el texto fijo o aproximado y las variables", () => {
+    const fija = { ...ZONES, zones: [{ id: "a", name: "Centro", price: 4500, fixed: true }] };
+    expect(choiceToast({ type: "zone", zoneId: "a" }, fija, formatPrice)).toEqual({
+      key: "zone.availableFixed",
+      vars: { zona: "Centro", precio: formatPrice(4500) },
+    });
+    expect(choiceToast({ type: "zone", zoneId: "b" }, ZONES, formatPrice)).toEqual({
+      key: "zone.available",
+      vars: { zona: "Cañada Honda", precio: formatPrice(5000) },
+    });
+  });
+
+  it("el retiro, 'Mi barrio no está' y una zona que no existe no avisan", () => {
+    expect(choiceToast({ type: "pickup" }, ZONES, formatPrice)).toBeNull();
+    expect(choiceToast({ type: "notListed" }, ZONES, formatPrice)).toBeNull();
+    expect(choiceToast({ type: "zone", zoneId: "x" }, ZONES, formatPrice)).toBeNull();
+  });
+
+  it("el aviso se va solo a los 4 segundos", () => {
+    expect(ZONE_TOAST_MS).toBe(4000);
   });
 });

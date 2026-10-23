@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 
 import ResetPasswordForm from "../../(auth)/components/ResetPasswordForm";
 import BusinessProfileForm from "./components/BusinessProfileForm";
+import DeliveryPricingSection from "./components/DeliveryPricingSection";
 import DeliverySection from "./components/DeliverySection";
 import SettingsForm from "./components/SettingsForm";
 import SettingsLayout from "./components/SettingsLayout";
@@ -9,6 +10,7 @@ import SettingsSaveProvider from "./components/SettingsSaveProvider";
 import MercadoPagoSection from "./components/MercadoPagoSection";
 import ShareSection from "./components/ShareSection";
 import Section from "@/components/ui/Section";
+import { getBusinessDeliveryPricing } from "@/lib/db/delivery-pricing";
 import { getDeliveryOptions } from "@/lib/db/delivery-zones";
 import { getSettings } from "@/lib/db/settings";
 import { requireBusiness } from "@/lib/get-current-business";
@@ -28,6 +30,8 @@ export default async function SettingsPage({
   const settings = await getSettings(business.id, business.whatsapp);
   // "Envíos" solo con el envío con repartidor habilitado por el superadmin (ENVIO-58).
   const deliveryOptions = business.courier_delivery ? await getDeliveryOptions() : null;
+  // Precios del envío según el tipo que le puso el superadmin (ENVIO-227).
+  const deliveryPricing = business.courier_delivery ? await getBusinessDeliveryPricing(business.id) : null;
   // "Mercado Pago" solo con los dos interruptores prendidos: el global y el del negocio (MP-15).
   const mercadoPago = mpOauthAvailable(business);
   const mpStatus = mercadoPago ? await getMpConnectionStatus(business.id) : "none";
@@ -81,6 +85,8 @@ export default async function SettingsPage({
           />
 
           {deliveryOptions ? <DeliverySection options={deliveryOptions} /> : null}
+
+          {deliveryPricing ? <DeliveryPricingSection pricing={deliveryPricing} /> : null}
 
           {mercadoPago ? (
             <MercadoPagoSection

@@ -19,6 +19,7 @@ export type CourierOrder = {
   delivery_address: string | null;
   courier_id: string | null;
   delivery_zone_id: string | null;
+  courier_zone_id?: string | null;
   delivery_zone_name: string | null;
   delivery_fee_list: number | null;
   delivery_fee: number | null;
@@ -61,6 +62,8 @@ export type OrderCourier = {
   name: string;
   whatsapp: string | null;
   zone_ids: string[];
+  // Sus zonas propias activas (ENVIO-231): un pedido con zona propia solo lo asigna a su dueño.
+  own_zone_ids?: string[];
   // Moto y/o auto; falta con el interruptor apagado (ENVIO-178).
   vehiculo?: string[];
 };
@@ -235,8 +238,17 @@ export function returnedNotice(
 // Los repartidores activos que cubren la zona del pedido (los que se pueden asignar a mano), por nombre.
 export function couriersForOrder(
   couriers: OrderCourier[],
-  order: Pick<CourierOrder, "delivery_zone_id" | "needs_car">,
+  order: Pick<CourierOrder, "delivery_zone_id" | "needs_car"> & { courier_zone_id?: string | null },
 ): OrderCourier[] {
+  // Zona propia del repartidor (tipo de precio `courier`): los que la tienen activa, que hoy es su dueño.
+  if (order.courier_zone_id) {
+    const own = order.courier_zone_id;
+    return couriers
+      .filter((courier) => courier.own_zone_ids?.includes(own))
+      .filter((courier) => !order.needs_car || courier.vehiculo === undefined || courier.vehiculo.includes("auto"))
+      .sort((a, b) => a.name.localeCompare(b.name, "es"));
+  }
+
   if (!order.delivery_zone_id) return [];
 
   // Si el pedido necesita auto, solo los que lo tienen. `vehiculo` solo llega con el interruptor prendido: sin él

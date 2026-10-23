@@ -649,8 +649,11 @@ html[data-template] .checkout #form-pedido {
   overflow-y: auto;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
+  /* Con el pie fijo abajo, un campo enfocado no queda detrás de él (PUBLICO-116). */
+  scroll-padding-block: 16px 96px;
   padding: 16px 18px 0;
 }
+
 
 html[data-template] .checkout > #gracias-pedido {
   flex: 1 1 auto;
@@ -681,6 +684,15 @@ html[data-template] .checkout > #gracias-pedido {
   box-shadow: 0 -10px 16px -14px rgba(0, 0, 0, 0.4);
 }
 
+/* Escribiendo en un campo de texto en el celular, el pie con el total se oculta y deja lugar (PUBLICO-116). */
+html[data-template] .checkout.escribiendo .checkout-pie {
+  display: none;
+}
+
+html[data-template] .checkout.escribiendo #form-pedido {
+  padding-bottom: 16px;
+}
+
 .checkout-total {
   display: flex;
   flex-direction: column;
@@ -707,9 +719,10 @@ html[data-template] .checkout > #gracias-pedido {
 @media (max-width: 639px) {
   /* En el celular la hoja sube desde abajo y ocupa casi toda la pantalla. */
   html[data-template] .checkout {
-    top: calc(8px + env(safe-area-inset-top));
+    /* Sigue el área visible: con el teclado abierto la hoja se acorta por abajo (PUBLICO-116). */
+    top: calc(8px + env(safe-area-inset-top) + var(--vv-top, 0px));
     right: 0;
-    bottom: 0;
+    bottom: var(--kb, 0px);
     left: 0;
     width: 100%;
     max-height: none;

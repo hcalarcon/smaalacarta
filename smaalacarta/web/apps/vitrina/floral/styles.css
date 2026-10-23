@@ -1,0 +1,97 @@
+:root {
+  --crema: #f7f0e1; --crema-osc: #efe3c8; --tinta: #3d3a2e;
+  --salvia: #7d9a7e; --salvia-osc: #4f6a52; --rosa: #b76e79; --rosa-osc: #8e4553; --rosa-claro: #f3d9dc;
+  --dorado: #b8923f; --dorado-osc: #6b4f12;
+  --serif: "Cormorant Garamond", Georgia, "Times New Roman", serif; --firma: "Great Vibes", "Brush Script MT", cursive;
+}
+* { box-sizing: border-box; }
+html { scroll-padding-top: 70px; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+body {
+  margin: 0; color: var(--tinta); font: 500 1.2rem/1.35 var(--serif);
+  background:
+    radial-gradient(60% 40% at 8% 6%, rgba(243, 217, 220, .85), transparent 70%),
+    radial-gradient(55% 35% at 96% 38%, rgba(151, 176, 152, .35), transparent 70%),
+    radial-gradient(60% 40% at 4% 78%, rgba(227, 185, 79, .18), transparent 70%),
+    var(--crema);
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--rosa-osc); outline-offset: 2px; }
+.adorno { margin: 0; font: 400 1.9rem/1.1 var(--firma); color: var(--rosa-osc); }
+
+/* Barra superior */
+.barra-top { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 6px; padding: 0 8px 0 4px; background: rgba(247, 240, 225, .95); border-bottom: 1px solid #d8c9a6; backdrop-filter: blur(6px); }
+.cats { flex: 1; display: flex; overflow-x: auto; scrollbar-width: none; }
+.cats::-webkit-scrollbar { display: none; }
+.cats a { flex: none; display: inline-flex; align-items: center; min-height: 44px; padding: 0 12px; font: italic 600 1.15rem var(--serif); color: var(--salvia-osc); text-decoration: none; border-bottom: 2px solid transparent; }
+.cats a[aria-current="true"] { color: var(--rosa-osc); border-bottom-color: var(--rosa); }
+.idiomas { display: flex; gap: 2px; }
+.idiomas button { min-height: 44px; min-width: 44px; background: transparent; border: 1px solid transparent; border-radius: 22px; font: 600 .95rem var(--serif); color: var(--salvia-osc); }
+.idiomas button[aria-pressed="true"] { background: var(--salvia-osc); color: #fff; }
+
+/* El sello agrandado de la entrada no puede ensanchar la página. */
+main { max-width: 640px; margin: 0 auto; padding: 0 16px; overflow-x: clip; }
+
+/* Entrada: las ramas se dibujan solas */
+.hero { position: relative; max-width: 520px; margin: 8px auto 0; }
+.hero-svg { display: block; width: 100%; height: auto; overflow: visible; }
+.hero-texto { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0 12%; }
+h1 { margin: 2px 0 0; font: 600 clamp(1.9rem, 10.5vw, 3.6rem)/1 var(--serif); font-style: italic; color: var(--tinta); animation: aparece 1.4s ease 1.2s both; }
+.hero-texto .adorno { animation: aparece 1.4s ease 1.6s both; }
+.resto { margin: 4px 0 0; font: 600 .95rem var(--serif); letter-spacing: .5em; text-transform: uppercase; color: var(--dorado-osc); animation: aparece 1.4s ease 2s both; }
+@keyframes aparece { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+.traza { fill: none; stroke: #5f7a61; stroke-width: 2.2; stroke-linecap: round; stroke-dasharray: 1 1; animation: trazo 1.8s ease-out var(--d) both; }
+/* Invisible hasta que arranca: un trazo de largo cero con puntas redondas se vería como un punto. */
+@keyframes trazo { 0% { opacity: 0; stroke-dashoffset: 1; } 1% { opacity: 1; stroke-dashoffset: 1; } 100% { opacity: 1; stroke-dashoffset: 0; } }
+.brota { transform-box: fill-box; transform-origin: center; transform: scale(0); animation: brotar .8s cubic-bezier(.2, 1.4, .4, 1) var(--d) forwards; }
+@keyframes brotar { to { transform: scale(1); } }
+
+/* Pétalos que caen */
+.petalos { position: fixed; inset: 0; z-index: 20; overflow: hidden; pointer-events: none; }
+.petalo { position: absolute; top: -24px; left: var(--x); width: var(--s); height: calc(var(--s) * 1.25); background: var(--c); border-radius: 80% 0 80% 0; opacity: .75; animation: caer var(--t) linear var(--d) infinite; }
+@keyframes caer { from { transform: translate(0, -10vh) rotate(0); } to { transform: translate(var(--vaiven), 112vh) rotate(540deg); } }
+
+/* Separador floral por categoría */
+.categoria { padding-top: 22px; }
+.separador { display: flex; align-items: center; gap: 12px; margin: 10px 0 2px; }
+.linea { flex: 1; height: 1px; background: linear-gradient(90deg, transparent, var(--dorado), transparent); }
+.separador .flor { flex: none; transition: transform 1.2s cubic-bezier(.2, 1.3, .4, 1), opacity .8s; }
+.anima .separador:not(.abierta) .flor { transform: scale(.15) rotate(-70deg); opacity: 0; }
+h2 { margin: 6px 0 14px; text-align: center; font: 600 1.7rem/1.1 var(--serif); font-style: italic; color: var(--salvia-osc); }
+
+/* Platos: carta impresa */
+.platos { display: grid; gap: 18px; }
+.plato { display: flex; gap: 14px; align-items: flex-start; }
+.plato-texto { flex: 1; min-width: 0; }
+.plato h3 { display: flex; align-items: baseline; margin: 0; font: 600 1.3rem/1.15 var(--serif); }
+.nombre { min-width: 0; overflow-wrap: anywhere; }
+.puntos { flex: 1; min-width: 14px; margin: 0 6px; border-bottom: 2px dotted var(--dorado); transform: translateY(-4px); }
+.precio { flex: none; color: var(--dorado-osc); font-weight: 600; }
+.desc { margin: 4px 0 0; font-style: italic; color: #55513f; font-size: 1.12rem; }
+.opc { margin: 6px 0 0; padding: 0; list-style: none; font-size: 1rem; color: var(--salvia-osc); }
+.opc li::before { content: "❦ "; color: var(--rosa); }
+.agotado { opacity: .6; }
+.oval { flex: none; width: 76px; height: 96px; margin: 0; border-radius: 50%; overflow: hidden; background: var(--crema-osc); box-shadow: 0 0 0 3px var(--crema), 0 0 0 5px #d9b8b0, 0 8px 14px -6px rgba(142, 69, 83, .5); }
+.oval img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.oval.sin-foto { background: radial-gradient(circle at 35% 30%, var(--rosa-claro), #c9d8c5); }
+
+/* Sugerencia del chef */
+.chef { position: relative; margin: 34px 0 6px; padding: 30px 18px 22px; text-align: center; background: linear-gradient(160deg, #fbf3f1, #f6e7e8); border: 1px solid var(--dorado); outline: 3px double var(--dorado); outline-offset: -9px; border-radius: 6px; box-shadow: 0 14px 26px -16px rgba(142, 69, 83, .5); }
+.chef-etiqueta { font-size: 2.2rem; margin-bottom: 8px; }
+.oval-grande { width: 132px; height: 164px; margin: 6px auto 12px; }
+.chef h2 { margin: 6px 0 4px; font-size: 1.9rem; color: var(--tinta); }
+.chef .opc { text-align: left; }
+.precio-chef { margin: 10px 0 0; font-size: 1.6rem; }
+.sello { position: absolute; top: -26px; right: 12px; transform: rotate(12deg); filter: drop-shadow(0 3px 3px rgba(60, 20, 25, .35)); transition: transform .7s cubic-bezier(.2, 1.5, .4, 1), opacity .4s; }
+.anima .chef:not(.visto) .sello { transform: scale(2.2) rotate(-30deg); opacity: 0; }
+
+@media (min-width: 560px) { .oval { width: 92px; height: 116px; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .traza { stroke-dashoffset: 0; animation: none; }
+  .brota { transform: none; animation: none; }
+  h1, .hero-texto .adorno, .resto { animation: none; }
+  .petalos { display: none; }
+  .flor, .sello { transition: none; }
+}

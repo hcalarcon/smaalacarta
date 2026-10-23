@@ -297,7 +297,7 @@ describe("configuración — PUBLICO-4", () => {
       notasPorItem: true,
       // Animaciones del menú (PUBLICO-110): los negocios existentes quedan como se ven hoy.
       animacionMenu: "estandar",
-      animacionCarga: "hamburguesa",
+      animacionCarga: "logo",
     });
   });
 

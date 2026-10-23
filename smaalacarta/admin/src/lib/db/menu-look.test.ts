@@ -61,10 +61,10 @@ beforeAll(async () => {
 }, 60_000);
 
 describe("valores por defecto — PUBLICO-102", () => {
-  it("los negocios que ya existían quedan como hoy: estándar, hamburguesa y sin fondo", async () => {
+  it("un negocio que nunca eligió carga con su logo (PUBLICO-118): estándar, logo y sin fondo", async () => {
     expect(await row(NEG_ANA)).toEqual({
       menu_animation: "estandar",
-      loader_animation: "hamburguesa",
+      loader_animation: "logo",
       loader_custom_url: null,
       background_image_url: null,
     });
@@ -73,7 +73,7 @@ describe("valores por defecto — PUBLICO-102", () => {
   it("el menú público lo entrega en la configuración, sin fondo ni archivo propio", async () => {
     const c = await config("ana");
     expect(c.animacionMenu).toBe("estandar");
-    expect(c.animacionCarga).toBe("hamburguesa");
+    expect(c.animacionCarga).toBe("logo");
     expect(c).not.toHaveProperty("animacionCargaUrl");
     expect(c).not.toHaveProperty("fondo");
   });
@@ -128,6 +128,20 @@ describe("guardar y leer la elección — PUBLICO-103", () => {
     const cfg = r.ok && (r.rows[0].m as { config: Record<string, unknown> }).config;
     expect(cfg && cfg.animacionMenu).toBe("dinamica");
     expect(cfg && cfg.fondo).toBe(FONDO(NEG_ANA));
+  });
+});
+
+describe("empanada y logo — PUBLICO-118", () => {
+  it("se pueden elegir y se guardan sin archivo propio", async () => {
+    for (const loader of ["empanada", "logo", "hamburguesa"]) {
+      expect((await save(ANA, NEG_ANA, { loader })).ok).toBe(true);
+      expect(await row(NEG_ANA)).toMatchObject({ loader_animation: loader, loader_custom_url: null });
+    }
+  });
+
+  it("el menú público entrega la elección guardada (los que ya eligieron una no cambian)", async () => {
+    await save(ANA, NEG_ANA, { loader: "pizza" });
+    expect((await config("ana")).animacionCarga).toBe("pizza");
   });
 });
 

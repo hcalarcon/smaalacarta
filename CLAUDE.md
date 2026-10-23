@@ -64,6 +64,8 @@ dev-fede    espacio de Fede (usuario git `FedeAtadia`).
      suscripción es de la persona y la cuenta repartidor no tiene negocio.
      Mismo criterio, aprobado por Herni: `courier_preferences` filtra por `courier_id` (las preferencias
      son del repartidor, que no tiene negocio).
+     Mismo criterio, aprobado por Herni: `courier_own_zones` filtra por `courier_id` (las zonas propias son
+     del repartidor, que no tiene negocio).
    - Después de una migración: `npm run db:types` y commitear `src/types/database.ts`.
    - Avisá antes de crear una migración si otra tarea del plan también toca el esquema.
 
@@ -154,6 +156,12 @@ negocio nuevo funciona apenas existe y está publicado, sin tocar código.
   local; el subdominio `demo.*` (sin nombre de demo) muestra siempre el mismo PDF de
   ejemplo. El estático (`static-menu.js`) todavía no tiene ese respaldo para las
   demos: solo funciona con negocios reales, en Supabase.
+- **Vitrina de menús extraordinarios** (`apps/vitrina`, `WEB-VITRINA-*`): `/vitrina` es una galería de temas
+  llamativos pensados para redes (`arcade`, `floral`, …) y `/vitrina/<tema>` abre cada uno, en cualquier subdominio.
+  Es solo de lectura y **siempre muestra Santa Julia Resto** (`santa-julia-resto`), con el mismo camino de datos del
+  menú (`public_menu` y respaldo en el JSON). La lógica va en `lib/vitrina.js` con tests; cada tema es una carpeta con
+  su `index.html`, `styles.css` y `tema.js`, aparte de las plantillas del menú. Un tema nuevo se suma a `TEMAS` y a la
+  regla de `vercel.json`. Ver `apps/vitrina/LEEME.md`.
 - **Funciones en `web/api/`** (Vercel, sin build): `manifest.js` (PWA por negocio) y
   `static-menu.js`. No se prueban con un servidor estático: hace falta una preview de
   Vercel. La lógica va en `lib/*.js` con tests; el handler es solo el conector.
@@ -266,6 +274,12 @@ negocio nuevo funciona apenas existe y está publicado, sin tocar código.
   corre cada minuto con pg_cron para todos los pedidos vencidos (así el aviso llega aunque
   nadie mire); los 5 minutos viven solo en `courier_offers_window()`. El favorito del local (`favorite_courier_id`) solo ordena y
   desempata; ya no hay ventana exclusiva.
+- **Tipo de precio del envío** (`businesses.delivery_pricing`, solo superadmin): `common`, `business` (precio por zona en
+  `business_zone_prices`, editable por el local con `delivery_prices_editable`) o `courier` (zonas propias del favorito
+  efectivo en `courier_own_zones`, editables por el repartidor con `couriers.can_edit_zones`). Las zonas de un negocio las
+  resuelve **solo** `delivery_zones_for_business()`; con `courier` el pedido guarda `orders.courier_zone_id` y lo ve y oferta
+  solo el dueño de la zona. `delivery_offers_enabled` apagado: `courier_make_offer` rechaza otro precio (`P0028`) y el menú
+  dice "Envío $X" en vez de "Envío aprox. $X".
 - **Vehículo del repartidor** (`couriers.moto`/`auto`, `orders.needs_car`): detrás de `platform_settings.vehicle_enabled`
   (superadmin, apagado de fábrica), que el servidor lee con `vehicle_enabled()`. Apagado, `needs_car` se ignora y no
   se muestra nada. La regla de quién ve un pedido que necesita auto vive en `courier_sees_order()` (más el error

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 
 import { updateBusinessProfile } from "@/lib/db/business";
+import { getBusinessDeliveryPricing, saveBusinessZonePrices } from "@/lib/db/delivery-pricing";
 import { getDeliveryOptions, saveDeliveryPreferences } from "@/lib/db/delivery-zones";
 import { saveSettings } from "@/lib/db/settings";
 import { validateDeliveryInput, type DeliveryInput } from "@/lib/courier/preferences";
@@ -13,6 +14,7 @@ import {
   validateSettings,
   type SettingsInput,
 } from "@/lib/settings/validation";
+import { parsePrice } from "@/lib/superadmin/zones";
 import {
   normalizeWhatsapp,
   validateBusinessProfile,
@@ -153,6 +155,53 @@ export async function saveDeliveryAction(input: DeliveryInput): Promise<SaveDeli
       };
     }
 
+    return { ok: false, error: "No pudimos guardar los cambios. Probá de nuevo." };
+  }
+
+  revalidatePath("/dashboard/settings");
+  return { ok: true };
+}
+
+// Precio del envío por zona (ENVIO-220): con el tipo "Del negocio" y el permiso que da el superadmin. El negocio sale
+// de la sesión; un precio vacío vuelve la zona al precio común. La base vuelve a exigir tipo y permiso con el RLS.
+export async function saveZonePricesAction(
+  input: { zoneId: string; price: string }[],
+): Promise<SaveSettingsResult> {
+  const { business } = await requireBusiness();
+
+  const pricing = await getBusinessDeliveryPricing(business.id);
+  if (!pricing || pricing.pricing !== "business" || !pricing.editable) {
+    return { ok: false, error: "No tenés permiso para cargar los precios de envío." };
+  }
+
+  if (!Array.isArray(input)) return { ok: false, error: "No pudimos guardar los cambios. Probá de nuevo." };
+
+  const known = new Set(pricing.zones.map((zone) => zone.id));
+  const fieldErrors: Record<string, string> = {};
+  const prices: { zoneId: string; price: number | null }[] = [];
+
+  for (const row of input) {
+    if (typeof row?.zoneId !== "string" || !known.has(row.zoneId)) continue;
+
+    if (String(row.price ?? "").trim() === "") {
+      prices.push({ zoneId: row.zoneId, price: null });
+      continue;
+    }
+
+    const price = parsePrice(row.price);
+    if (price === null) {
+      fieldErrors[row.zoneId] = "Escribí un precio válido, de 0 en adelante.";
+    } else {
+      prices.push({ zoneId: row.zoneId, price });
+    }
+  }
+
+  if (Object.keys(fieldErrors).length > 0) {
+    return { ok: false, error: "Revisá los datos marcados.", fieldErrors };
+  }
+
+  const saved = await saveBusinessZonePrices(business.id, prices);
+  if ("error" in saved) {
     return { ok: false, error: "No pudimos guardar los cambios. Probá de nuevo." };
   }
 

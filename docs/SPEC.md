@@ -356,9 +356,10 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   locales (y en los menús de un JSON) no aparece nada nuevo.
 - **PUBLICO-74** "Retirar" cierra la tarjeta y deja el checkout en "Retiro en el local". "Envío" muestra las zonas del
   local con un buscador que ignora acentos y mayúsculas.
-- **PUBLICO-75** Elegir una zona muestra "Enviamos a {zona} · ${precio} aprox." (precio de referencia de
-  `public_delivery_zones`) y deja el checkout con entrega "delivery" y esa zona preseleccionada. El checkout valida la zona
-  como siempre: la tarjeta solo ayuda.
+- **PUBLICO-75** Elegir una zona cierra el diálogo al instante y deja el checkout con entrega "delivery" y esa zona
+  preseleccionada; un aviso chico abajo (`role="status"`) dice "Enviamos a {zona} · Envío ${precio}" (o "Envío aprox."
+  si el precio puede cambiar) y se va solo a los pocos segundos (PUBLICO-111). El checkout valida la zona como siempre: la
+  tarjeta solo ayuda.
 - **PUBLICO-76** "Mi barrio no está" muestra "No hay envío a tu barrio. Podés retirar en el local." (sin la segunda frase si
   el local no ofrece retiro) y ofrece retirar; además bloquea el envío (ver PUBLICO-80).
 - **PUBLICO-77** La elección se guarda en `localStorage` por negocio (slug), con `try/catch`; si falla, el menú anda igual.
@@ -465,6 +466,25 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   librerías: todo es CSS y una imagen.
 - **PUBLICO-110** `public_menu` (por `build_public_menu`) entrega `animacionMenu`, `animacionCarga`,
   `animacionCargaUrl` (solo con la propia) y `fondo` (solo si hay); `menu_preview` también.
+- **PUBLICO-111** El aviso de la zona elegida vive en un elemento `role="status"` fijo abajo (por encima de la barra de
+  abajo y del botón del carrito, sin recibir toques), con el texto de `zone.available` o `zone.availableFixed` en es, en
+  y pt, y se oculta solo a los 4 segundos. "Retiro en el local" y "Mi barrio no está" no lo muestran.
+- **PUBLICO-112** En el checkout, entrega, cuándo, hora y pago se eligen con botones grandes (`role="radiogroup"` con
+  `role="radio"`, 44 px o más, foco visible); cada botón escribe el valor en el `<select>` de siempre, que queda en el
+  formulario sin verse, y dispara `change`. Un grupo no se ve si su select está oculto (un solo tipo de entrega o de pago;
+  la hora sin "Programar").
+- **PUBLICO-113** El barrio es un botón que muestra el barrio elegido con su precio (o "Elegí tu barrio") y abre la misma
+  lista con buscador del selector de zona; elegir un barrio cierra la lista y escribe el valor en el select de barrio con
+  `change`. La lista sale siempre de `public_delivery_zones`, también cuando el precio es "Del repartidor".
+- **PUBLICO-114** Si falta elegir en un grupo obligatorio, el error se ve en el grupo ("Elegí una opción") y se va al elegir;
+  el formulario sigue validando con los select.
+- **PUBLICO-115** Enter en un campo del checkout pasa al campo siguiente y nunca manda el pedido; el teclado del celular
+  muestra "Siguiente" en nombre, teléfono y dirección y "Listo" en notas.
+- **PUBLICO-116** Con el teclado abierto en el celular, la hoja del checkout ocupa solo el área visible
+  (`window.visualViewport`: `--kb`, `--vv-top` y `--vv-h`), el campo con foco se centra en pantalla y el pie con el total
+  se oculta mientras se escribe en un campo de texto.
+- **PUBLICO-117** Los campos del checkout tienen `line-height` y alto suficientes para que no se corte ninguna letra con
+  cola (p, y, g, j, q) en las tres plantillas.
 
 ## BUSQUEDA — Buscador
 
@@ -478,6 +498,16 @@ _Sin requisitos todavía._
 
 _Sin requisitos todavía._
 
+- **PUBLICO-118** La animación de carga suma **Empanada** (un SVG con CSS liviano, sin archivos: la empanada salta y
+  largan vapor; dentro de `prefers-reduced-motion: no-preference`, quieta si el visitante pidió menos movimiento) y
+  **Usar imagen de logo**: el loader muestra el logo del negocio (`config.logo`, misma validación https que hoy y
+  siempre por `src`, nunca como HTML) con un pulso suave. Si no cargó logo, o el archivo no carga, se ve el logo de
+  SMA a la Carta en SVG, también con pulso. Se ven bien en las tres plantillas y a 360 px, en claro y oscuro.
+- **PUBLICO-119** El valor por defecto de la animación de carga es **logo**, solo para negocios que nunca eligieron
+  una: la columna `loader_animation` pasa a `DEFAULT 'logo'` (migración nueva, sin tocar filas existentes) y, en el
+  menú, una elección que falta se lee como logo. Un negocio que ya tenía una elegida (de comida o la propia) no
+  cambia. `save_menu_look()` y el CHECK aceptan `empanada` y `logo`; en Configuración → Animaciones las dos opciones
+  están en el selector y la vista previa las reproduce sin guardar.
 - **CARRITO-1** En las plantillas de cara de app, la pastilla del precio de cada producto en el carrito conserva el
   ancho necesario para contener el importe y su relleno, aunque el espacio del nombre esté reducido por los
   controles de cantidad.
@@ -1516,6 +1546,17 @@ contradiga: ahora entra a los envíos, lleva opciones y nace confirmado)
   local y en el panel del repartidor: los de "Llego en…", Rendido, Devolver, Rechazar, etc., no solo el que se tocó)
   siguen deshabilitados hasta que llegan datos nuevos del servidor (`useHoldUntilFresh`, que mira la hora del servidor que
   trae cada refresco) o pasan 10 segundos; si la acción falla se liberan enseguida. Los de otros pedidos no se tocan.
+- **ADMIN-PEDIDOS-61** Con Pedidos abierto, cuando un repartidor toma un pedido (`courier_status` pasa de `searching` a
+  `accepted` con `courier_id`: ofertas, precio fijo o "Del repartidor") o lo devuelve (de `accepted` a `searching`, sin
+  repartidor), arriba del tablero aparece un cartel (`role="status"`) que queda hasta que el local toca "Visto":
+  "Pedido #N: tomado por {nombre}" o "Pedido #N: {nombre} lo devolvió. Buscando otro repartidor", con el motivo de la
+  devolución en una línea chica si lo hay. Varios avisos se apilan, cada uno con su "Visto"; tocar el texto lleva a la
+  tarjeta del pedido. No avisa lo que el propio local hizo (asignación a mano, "Lo llevo yo"), ni lo que ya había pasado
+  al abrir la pantalla: solo compara el estado anterior con el nuevo de cada pedido (`src/lib/orders/courier-events.ts`).
+- **ADMIN-PEDIDOS-62** El aviso de ADMIN-PEDIDOS-61 suena una vez, corto y distinto del pedido nuevo y de la alarma (tomado:
+  tres tonos que suben; devuelto: tres que bajan), solo con el sonido del local activado y el audio habilitado; con el
+  sonido apagado el cartel se ve igual. Silenciar la alarma de pedidos nuevos no lo apaga. La tarjeta del pedido lleva un
+  borde verde (tomado) o naranja (devuelto) hasta el "Visto" o 2 minutos, lo que pase primero.
 
 
 ## MP — Cobro con Mercado Pago (Checkout Pro)
@@ -2308,6 +2349,75 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
 - **ENVIO-218** La burbuja nunca tapa el botón que señala ni se sale de la pantalla (390 px): si el elemento queda
   cerca de la barra de abajo, la burbuja va arriba. Con `prefers-reduced-motion` no hay animaciones.
 
+### Tipo de precio del envío (tarea 47)
+
+- **ENVIO-219** Cada negocio tiene un tipo de precio de envío (`businesses.delivery_pricing`): `common` (por defecto: las
+  zonas comunes con su precio de referencia), `business` (las mismas zonas comunes con el precio que carga el negocio) o
+  `courier` (las zonas y precios propios del favorito efectivo del negocio, `effective_favorite_courier`). Solo lo
+  cambia el superadmin, igual que `delivery_prices_editable` ("el negocio puede editar sus precios", por defecto no) y
+  `delivery_offers_enabled` ("ofertas con otro precio", por defecto sí).
+- **ENVIO-220** `business_zone_prices` guarda el precio del negocio por zona común. Si falta la fila de una zona tildada,
+  vale el precio común. El negocio lee los suyos y los escribe solo con `delivery_prices_editable`; nunca los de otro.
+- **ENVIO-221** `courier_own_zones` guarda las zonas propias de cada repartidor (nombre, precio, activa, orden).
+  `couriers.can_edit_zones` ("puede editar sus zonas y precios", por defecto no). El repartidor lee las suyas y las
+  escribe solo con ese permiso; nunca ve ni toca las de otro. El superadmin hace todo. El público no las lee: solo por
+  las funciones.
+- **ENVIO-222** `delivery_zones_for_business(negocio)` es el único lugar que resuelve las zonas de un negocio: devuelve
+  id, origen (`common` o `courier`), nombre, precio de lista y si el precio es fijo. Con `common` y `business` aplica
+  las reglas de siempre (zona activa, tildada por el local y cubierta por un repartidor activo). Con `courier` devuelve
+  las zonas activas del favorito efectivo si ese repartidor está activo; sin favorito activo, ninguna: el negocio no
+  ofrece envío.
+- **ENVIO-223** El precio es fijo si la plataforma está en modo `fixed` o el negocio tiene las ofertas con otro precio
+  apagadas; si no, es aproximado. `public_delivery_zones` entrega `id`, `nombre`, `precio` y `fijo` por zona.
+- **ENVIO-224** `create_public_order` y `create_manual_order` validan el barrio con `delivery_zones_for_business` y
+  guardan su precio de lista. Con `courier` el pedido guarda la zona del repartidor en `orders.courier_zone_id`
+  (`delivery_zone_id` queda vacío) más el nombre en `delivery_zone_name`.
+- **ENVIO-225** Un pedido con zona del repartidor lo ven, toman y ofertan solo el dueño de esa zona (no se necesita
+  cobertura de zonas comunes). La base deja al local asignarlo solo a ese repartidor (el tablero no lista otros).
+- **ENVIO-226** Con las ofertas con otro precio apagadas, `courier_make_offer` rechaza (`P0028`) un precio distinto al
+  de lista; el de lista sí se acepta.
+- **ENVIO-227** El superadmin ve y edita el tipo de precio, los dos permisos del negocio y las zonas propias de cada
+  repartidor con su permiso. El repartidor ve "Mis zonas y precios" (editable solo con permiso). En Configuración →
+  Envíos, con `business` y permiso el local edita el precio de cada zona tildada; con `courier` ve las zonas del
+  repartidor en solo lectura.
+- **ENVIO-228** El menú (tarjeta de zona y checkout) muestra "Envío $X" si el precio es fijo y "Envío aprox. $X" si no,
+  en es/en/pt.
+
+### Favorito y asignación a mano con zonas propias (tarea 48)
+
+- **ENVIO-229** Con el tipo de precio `courier`, el favorito del negocio lo fija el superadmin
+  (`superadmin_set_favorite_courier`): puede ser cualquier repartidor activo con al menos una zona propia activa, sin
+  cubrir ninguna zona común. El detalle del negocio lo elige con un select que lista solo a esos repartidores. La base
+  rechaza (`P0017`) a uno que no cumple.
+- **ENVIO-230** Con el tipo `courier` el local no cambia su favorito (`P0030`); Configuración → Envíos lo muestra en solo
+  lectura y guardar el resto de la pantalla lo deja intacto. Con los otros tipos, el select es el de siempre.
+- **ENVIO-231** `business_delivery_options` trae por repartidor sus `own_zone_ids` (zonas propias activas) y también al que
+  solo tiene zonas propias. El tablero lista, para un pedido con zona propia, a los repartidores dueños de esa zona; para
+  uno con zona común, a los que la cubren, como siempre.
+- **ENVIO-232** `business_assign_courier` asigna un pedido con zona propia a su dueño y rechaza (`22023`) a cualquier otro
+  repartidor.
+- **ENVIO-233** `superadmin_set_favorite_courier(negocio, repartidor)` fija el favorito; `(negocio, null, true)` ("Sin favorito") lo
+  saca, solo actualiza una fila de `business_settings` que ya existe (no crea una vacía) y solo ese campo; un `null` sin
+  `p_clear`, o un repartidor con `p_clear`, es un error (`22023`) y no cambia nada.
+
+### Avisos del panel del repartidor (ENVIO-234 a 240)
+
+- **ENVIO-234** Un pedido nuevo para el repartidor, con el panel abierto, suena con la alarma del tablero del local al volumen
+  máximo y se repite (`ALARM_LOOP_MS`) mientras quede un aviso sin ver. Se ve en un cartel con "Visto"; dejan de sonar al tocarlo,
+  al ofertar, tomar o rechazar el pedido, o cuando el pedido deja de estar disponible. Los que ya estaban al abrir no suenan.
+- **ENVIO-235** Después del sonido, una voz en español dice "Nuevo envío a zona {zona}" (sin zona, "Nuevo envío"; con varios,
+  "{n} envíos nuevos") y se repite cada 30 s mientras dure el aviso. Sin síntesis de voz en el navegador, solo suena la alarma.
+- **ENVIO-236** La tarjeta de un pedido disponible muestra la zona de entrega destacada, antes de ofertar o tomar.
+- **ENVIO-237** La dirección y los datos del cliente no llegan al repartidor hasta que es el elegido: `courier_available_orders`
+  trae solo la zona (ya cubierto por ENVIO-101) y el repartidor no lee `orders` directo.
+- **ENVIO-238** Cuando el local marca Listo un pedido que el repartidor ya tomó, con el panel abierto suena el aviso y una voz dice
+  "Pedido listo en {local}"; el aviso en pantalla nombra el local. Solo le llega al repartidor asignado.
+- **ENVIO-239** El push de pedido nuevo para ofertar dice "Nuevo envío a {zona}" y el de Listo, "Pedido #{n} listo para retirar en
+  {local}". Ambos van solo a quien corresponde (los repartidores que cubren la zona; el asignado).
+- **ENVIO-240** El panel no pide activar el sonido con un recuadro: el primer toque en cualquier lugar lo habilita (audio y voz) y
+  se recuerda en el aparato. Mientras no hubo un toque se ve un aviso chico, "Tocá la pantalla para activar el sonido". Quien lo
+  apagó con la campana queda apagado.
+
 
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
@@ -2628,6 +2738,9 @@ precios en 0; no existe "incluye N y el resto cuesta X".
   antes.
 - **ADMIN-PWA-37** El payload push lleva `kind` y `urgent` (y `number` y `total` en los urgentes); los
   urgentes salen con urgencia alta y TTL de 60 s, y los demás avisos conservan sus 10 minutos.
+- **ADMIN-PWA-38** Con el permiso de avisos ya concedido y el aparato sin suscripción guardada en la cuenta (se perdió o era de
+  otra cuenta), el panel se suscribe de nuevo solo, sin preguntar, una vez por carga. Con el permiso sin pedir o bloqueado no
+  hace nada.
 
 
 ### Panel en el celular (ADMIN-MOVIL)
@@ -2673,6 +2786,33 @@ precios en 0; no existe "incluye N y el resto cuesta X".
 - **WEB-ENTORNO-2** Sin las variables (o si falta una), usa los de producción, sin mezclar bases.
 - **WEB-ENTORNO-3** En el navegador, `supabase-config.js` pide `/api/supabase-config`; si falla o la
   respuesta no es válida, usa los de producción. Las funciones de `api/` leen `process.env` directo.
+
+---
+
+## WEB-VITRINA — Vitrina de menús extraordinarios
+
+*Aplicado por `web/apps/vitrina/` (`lib/vitrina.js` con la lógica, `lib/arranque.js` y `lib/datos.js` con el navegador) y las rutas de `web/vercel.json`. Cubierto por `lib/vitrina.test.js`. Es solo de lectura y no toca `admin/`, la base ni las plantillas del menú de siempre.*
+
+- **WEB-VITRINA-01** `/vitrina` abre la galería y `/vitrina/:tema` el tema, en cualquier subdominio; las dos rutas van antes del comodín del menú y no pisan `/pdf`, `/menu.html` ni `/pedido/:code`.
+- **WEB-VITRINA-02** La vitrina siempre muestra el menú de `santa-julia-resto`, venga del subdominio que venga: lo pide a `public_menu` y, si no responde, usa los JSON de `data/clientes/santa-julia-resto/`.
+- **WEB-VITRINA-03** Las secciones salen de las categorías con productos, cada una con un id para saltar, el precio con formato `26.900` y el producto marcado `destacado` aparte.
+- **WEB-VITRINA-04** Un producto con opciones las muestra como texto informativo (grupo, opciones con su extra y la regla de elección), sin carrito ni selección.
+- **WEB-VITRINA-05** El botón "Quiero uno así para mi local" abre WhatsApp al `5493644277105` con el texto `Hola Herni, vi el menú <tema> y quiero uno así para mi local. Mi local se llama: `, codificado.
+- **WEB-VITRINA-06** Todos los temas llevan una barra fija con "Hecho por SMA a la Carta" (link a `https://smaalacarta.com.ar`), "Ver otros estilos" (`/vitrina`) y el botón de WhatsApp.
+- **WEB-VITRINA-07** Cada tema ofrece los idiomas ES/EN/PT (nombres y descripciones traducidos, con el español de respaldo), guarda la elección y pone el `lang` del documento.
+- **WEB-VITRINA-08** Con `prefers-reduced-motion: reduce` cada tema se ve completo y quieto: sin animaciones, sin partículas ni desplazamiento suave.
+- **WEB-VITRINA-09** Todo texto del negocio que un tema arma como HTML pasa por `escapeHtml`, y las fotos solo se aceptan si son http(s).
+- **WEB-VITRINA-10** El sonido de un tema arranca apagado, con un botón para prenderlo; nunca suena solo.
+- **WEB-VITRINA-11** Cada tema lleva `title`, `description` y Open Graph propios ("Santa Julia · Menú <tema> · SMA a la Carta").
+- **WEB-VITRINA-12** La galería lista los 5 temas; los que no tienen carpeta salen como "Próximamente", sin link.
+- **WEB-VITRINA-13** Arcade: pantalla "INSERT COIN" que, al tocarla, muestra "PLAYER 1 READY" y carga la carta; categorías como mundos; el destacado es el ítem legendario y el puntaje HI-SCORE sube con el scroll.
+- **WEB-VITRINA-14** Floral: ramas y flores que se dibujan solas alrededor del nombre, pétalos que caen, un separador floral por categoría que se abre al llegar y el destacado como sugerencia del chef con sello de lacre.
+- **WEB-VITRINA-15** Futurista: una línea de luz escanea la pantalla y una terminal escribe sola al entrar (y se retira sola); las categorías son sectores, los productos fichas de datos con "composición" y "créditos" (precio real) que se inclinan en 3D, y el destacado es el objetivo prioritario.
+- **WEB-VITRINA-16** Natural: tres capas de montañas con parallax y un cielo que arranca en el momento real del día (amanecer, día, atardecer o noche) y pasa a la noche al bajar por la carta (con movimiento reducido queda quieto, en el momento real del día), con estrellas solo de noche; las categorías son senderos, los productos postales con el precio real en una etiqueta de madera y el destacado, el imperdible del lugar.
+- **WEB-VITRINA-17** Fantasía: un libro cerrado con el sello de Santa Julia se abre al tocarlo, con luz de vela que parpadea; las categorías son lugares de un mapa con nombre de fantasía (el nombre real siempre visible) a los que se viaja con un toque, y cada provisión muestra su precio en monedas de oro y en pesos reales, con la equivalencia a la vista.
+- **WEB-VITRINA-18** Solo para celulares: en una pantalla de más de 480 px de ancho la vitrina no muestra la carta ni la galería, solo el aviso «Usá tu celu para ver este menú» (en el idioma de la página: es, en o pt). Vale para todos los temas y se resuelve en CSS, así también corre mientras la carta carga.
+- **WEB-VITRINA-19** Natural, relieve generado: las montañas, la nieve de las cimas altas y los pinos se generan con ruido y semilla fija (`natural/relieve.js`), con niebla entre capas y nubes lentas, en lugar de un dibujo fijo. Los colores salen de variables CSS que cambia el cielo; con movimiento reducido no hay nubes ni niebla en movimiento.
+- **WEB-VITRINA-20** Menú de respaldo con aspecto real: si la base no tiene publicado a Santa Julia, la vitrina usa `apps/vitrina/data/santa-julia.json`, un menú completo con foto en cada producto, opciones, ES/EN/PT, un destacado y precios de un restaurante argentino de 2026. Si la base responde, manda la base. Ninguna pantalla dice que es un ejemplo o una demo.
 
 ---
 

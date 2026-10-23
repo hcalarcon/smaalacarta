@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Santa Julia · Menú Fantasía · SMA a la Carta</title>
+  <meta name="description" content="La carta de Santa Julia Resto como el libro de una taberna encantada: un mapa del reino, provisiones y monedas de oro.">
+  <meta property="og:title" content="Santa Julia · Menú Fantasía · SMA a la Carta">
+  <meta property="og:description" content="Abrí el libro, viajá por el mapa del reino y elegí tus provisiones.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://www.smaalacarta.com.ar/assets/logo.png">
+  <meta name="theme-color" content="#24130a">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700&family=EB+Garamond:wght@400;500&display=swap">
+  <link rel="stylesheet" href="/apps/vitrina/lib/barra.css">
+  <link rel="stylesheet" href="/apps/vitrina/fantasia/styles.css">
+</head>
+<body>
+  <div class="luz" aria-hidden="true"></div>
+
+  <header class="barra-top">
+    <a class="al-mapa" href="#mapa" id="al-mapa">🗺 Mapa</a>
+    <div data-idiomas-lugar></div>
+  </header>
+
+  <main data-menu id="menu">
+    <section class="portada" aria-labelledby="titulo">
+      <p class="sobre">Taberna encantada</p>
+      <h1 id="titulo">Santa Julia</h1>
+      <p class="sobre">Resto · Provisiones para viajeros</p>
+    </section>
+    <div id="contenido"></div>
+  </main>
+
+  <div class="puerta" id="puerta" role="dialog" aria-modal="true" aria-label="Santa Julia">
+    <div class="velas" aria-hidden="true"><i class="vela"></i><i class="vela vela-2"></i></div>
+    <button type="button" class="libro" id="abrir" aria-label="Abrir el libro">
+      <span class="paginas" aria-hidden="true"></span>
+      <span class="tapa">
+        <span class="lacre" aria-hidden="true">SJ</span>
+        <span class="tapa-titulo">Santa Julia</span>
+        <span class="tapa-sub" id="tapa-sub">Taberna · Carta</span>
+      </span>
+    </button>
+    <p class="toca" id="toca">Tocá el libro para abrirlo</p>
+  </div>
+
+  <script type="module" src="/apps/vitrina/fantasia/tema.js"></script>
+</body>
+</html>

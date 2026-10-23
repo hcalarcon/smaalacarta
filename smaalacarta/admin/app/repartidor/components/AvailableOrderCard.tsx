@@ -84,6 +84,8 @@ export default function AvailableOrderCard({
 
   const notice = resultNotice(order);
   const fixed = order.modo === "fixed";
+  // Con las ofertas con otro precio apagadas solo se ofrece el de lista (ENVIO-226).
+  const otherPrice = order.envio.otro_precio !== false;
   const collection = collectionInfo({ payment: order.pago, total: order.total, fee: listPrice });
   const when = order.anticipado ? preorderLabel(order.programado) : scheduledLabel(order.programado);
   const since = order.ofrecido_el ?? order.creado;
@@ -139,6 +141,13 @@ export default function AvailableOrderCard({
           {notice}
         </p>
       ) : null}
+
+      {notice ? null : (
+        <p className="mt-3 break-words rounded-xl bg-brand px-3 py-2 text-base font-bold text-white">
+          <span aria-hidden="true">📍 </span>
+          Zona {order.envio.zona ?? "-"}
+        </p>
+      )}
 
       {when ? (
         <p className="mt-3 rounded-xl bg-amber-100 px-3 py-2 text-base font-bold text-amber-900">
@@ -197,14 +206,16 @@ export default function AvailableOrderCard({
           </p>
           {mine.motivo ? <p className="text-xs text-stone-500">Motivo: {mine.motivo}</p> : null}
           <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setEditing(true)}
-              className="min-h-11 rounded-xl border border-line-strong bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-cream disabled:opacity-60"
-            >
-              Cambiar
-            </button>
+            {otherPrice ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setEditing(true)}
+                className="min-h-11 rounded-xl border border-line-strong bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-cream disabled:opacity-60"
+              >
+                Cambiar
+              </button>
+            ) : null}
             <MoreOptions>
               <PendingButton
                 busy={busy}
@@ -279,14 +290,16 @@ export default function AvailableOrderCard({
             Ofertar {formatMoney(listPrice)}
           </PendingButton>
           <MoreOptions>
-            <button
-              type="button"
-              disabled={busy}
-              onClick={() => setEditing(true)}
-              className="min-h-11 rounded-xl border border-line-strong bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-cream disabled:opacity-60"
-            >
-              Otro precio
-            </button>
+            {otherPrice ? (
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() => setEditing(true)}
+                className="min-h-11 rounded-xl border border-line-strong bg-white px-5 py-2 text-sm font-semibold text-brand transition hover:bg-cream disabled:opacity-60"
+              >
+                Otro precio
+              </button>
+            ) : null}
             <RejectButton busy={busy} onClick={() => setDeclining(true)} />
           </MoreOptions>
         </div>

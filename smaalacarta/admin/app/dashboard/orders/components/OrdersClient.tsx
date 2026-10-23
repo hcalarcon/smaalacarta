@@ -7,6 +7,7 @@ import { useSerialRefresh } from "@/lib/realtime/useSerialRefresh";
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import ManualOrderDialog from "./ManualOrderDialog";
+import CourierNotices, { type CourierNotice } from "./CourierNotices";
 import NewOrderAlert from "./NewOrderAlert";
 import OrderCard from "./OrderCard";
 import OrderDetailDialog from "./OrderDetailDialog";
@@ -29,7 +30,8 @@ import type { OrderCourier, OrderOffers } from "@/lib/orders/courier";
 import type { ManualOrderSetup } from "@/lib/orders/manual-context";
 import { newPendingIds, tabTitle } from "@/lib/orders/alerts";
 import { clearAppBadgeSafe, restoreFavicon, setAppBadgeSafe, updateFavicon } from "@/lib/orders/badge";
-import { ALARM_LOOP_MS, playAlarmSound, playNewOrderSound } from "@/lib/orders/sound";
+import { detectCourierEvents } from "@/lib/orders/courier-events";
+import { ALARM_LOOP_MS, playAlarmSound, playChosenSound, playNewOrderSound, playReturnedSound } from "@/lib/orders/sound";
 import {
   SOUND_CHANGE_EVENT,
   isAudioReady,
@@ -66,6 +68,8 @@ const COLUMNS: { key: BoardColumn; title: string; hint: string }[] = [
 const REFRESH_MS = 20_000;
 const BLINK_MS = 1_000;
 const CLOSED_SHOWN = 10;
+// Cuánto queda el borde de color en la tarjeta de un pedido tomado o devuelto (ADMIN-PEDIDOS-62).
+const HIGHLIGHT_MS = 120_000;
 
 // `prefers-reduced-motion`: sin parpadeo del título. En el servidor y sin `matchMedia`, no.
 const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
@@ -199,6 +203,81 @@ export default function OrdersClient({
       playAlarmSound(ctx, alarmVolume(oldestWaitingMs(orders, Date.now())));
     }
   }, [orders]);
+
+  // Avisos de "tomado" y "devuelto" (ADMIN-PEDIDOS-61 y 62): los pedidos de este render se comparan con los del
+  // anterior, así lo que ya estaba al abrir la pantalla no avisa.
+  const [notices, setNotices] = useState<CourierNotice[]>([]);
+  const [highlights, setHighlights] = useState<Record<string, "taken" | "returned">>({});
+  const previousOrders = useRef(orders);
+  const noticeCount = useRef(0);
+  const highlightTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const couriersRef = useRef(couriers);
+
+  useEffect(() => {
+    couriersRef.current = couriers;
+  }, [couriers]);
+
+  function clearHighlight(orderId: string) {
+    clearTimeout(highlightTimers.current.get(orderId));
+    highlightTimers.current.delete(orderId);
+    setHighlights((current) => {
+      if (!(orderId in current)) return current;
+      const rest = { ...current };
+      delete rest[orderId];
+      return rest;
+    });
+  }
+
+  useEffect(() => {
+    const events = detectCourierEvents(previousOrders.current, orders, (id) =>
+      id ? (couriersRef.current.find((courier) => courier.id === id)?.name ?? null) : null,
+    );
+    previousOrders.current = orders;
+    if (events.length === 0) return;
+
+    const fresh = events.map((event) => ({ ...event, id: `${event.orderId}-${noticeCount.current++}` }));
+    const ids = new Set(fresh.map((notice) => notice.orderId));
+    setNotices((current) => [...current.filter((notice) => !ids.has(notice.orderId)), ...fresh]);
+
+    for (const notice of fresh) {
+      setHighlights((current) => ({ ...current, [notice.orderId]: notice.kind }));
+      clearTimeout(highlightTimers.current.get(notice.orderId));
+      highlightTimers.current.set(
+        notice.orderId,
+        setTimeout(() => clearHighlight(notice.orderId), HIGHLIGHT_MS),
+      );
+    }
+
+    // Un solo sonido aunque lleguen varios avisos juntos, y solo con el sonido del local activado.
+    const ctx = sharedAudioContext();
+    if (soundOnRef.current && ctx?.state === "running") {
+      // Si llegan mezclados, gana el devuelto: es el que pide actuar.
+      (fresh.some((notice) => notice.kind === "returned") ? playReturnedSound : playChosenSound)(ctx);
+    }
+  }, [orders]);
+
+  useEffect(() => {
+    const timers = highlightTimers.current;
+    return () => timers.forEach((timer) => clearTimeout(timer));
+  }, []);
+
+  function noticeSeen(id: string) {
+    const notice = notices.find((item) => item.id === id);
+    setNotices((current) => current.filter((item) => item.id !== id));
+    if (notice) clearHighlight(notice.orderId);
+  }
+
+  // Tocar el cartel lleva a la tarjeta; en el celular primero se abre su pestaña.
+  function goToOrder(orderId: string) {
+    const target = orders.find((order) => order.id === orderId);
+    const column = target ? boardColumn(target.status) : null;
+    if (column && column !== "cerrados") setTab(column);
+    // Un momento para que la pestaña elegida se muestre antes de ir a la tarjeta.
+    setTimeout(
+      () => document.getElementById(`order-card-${orderId}`)?.scrollIntoView({ block: "center", behavior: "smooth" }),
+      50,
+    );
+  }
 
   useEffect(() => {
     alarmWasActive.current = alarmActive;
@@ -601,6 +680,17 @@ export default function OrdersClient({
         </div>
       ) : null}
 
+      <CourierNotices
+        notices={notices.filter((notice) => {
+          // Un aviso que ya no vale (pedido cerrado, o el envío cambió de mano otra vez) no queda colgado.
+          const current = orders.find((o) => o.id === notice.orderId);
+          if (!current || current.status === "delivered" || current.status === "cancelled") return false;
+          return current.courier_status === (notice.kind === "taken" ? "accepted" : "searching");
+        })}
+        onSeen={noticeSeen}
+        onGo={goToOrder}
+      />
+
       {orders.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-line-strong bg-white p-10 text-center text-stone-500">
           Todavía no hay pedidos. Cuando un cliente confirme uno desde tu menú, aparece acá.
@@ -671,8 +761,18 @@ export default function OrdersClient({
                       </p>
                     ) : (
                       list.map((order) => (
-                        <OrderCard
+                        <div
                           key={order.id}
+                          id={`order-card-${order.id}`}
+                          className={`rounded-xl ${
+                            highlights[order.id] === "taken"
+                              ? "ring-2 ring-[#047857] ring-offset-2"
+                              : highlights[order.id] === "returned"
+                                ? "ring-2 ring-[#d97706] ring-offset-2"
+                                : ""
+                          }`}
+                        >
+                        <OrderCard
                           order={order}
                           now={now}
                           busy={isBusy(order.id)}
@@ -691,6 +791,7 @@ export default function OrdersClient({
                           offers={offersByOrder.get(order.id)}
                           vehicleEnabled={vehicleEnabled}
                         />
+                        </div>
                       ))
                     )}
                   </div>

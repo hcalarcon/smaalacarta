@@ -72,14 +72,25 @@ describe("Animaciones — PUBLICO-103", () => {
     expect(screen.getByRole("radio", { name: /Estándar/ })).toBeChecked();
   });
 
-  it("ofrece los ocho cargadores de comida y 'La mía' (apagada hasta subir un archivo)", () => {
+  it("ofrece los nueve cargadores de comida (Empanada incluida), 'Usar imagen de logo' y 'La mía' (apagada hasta subir un archivo)", () => {
     render(<Harness />);
 
-    for (const name of ["Hamburguesa", "Pizza", "Café", "Helado", "Parrilla", "Sushi", "Pastas", "Panificados"]) {
+    for (const name of ["Hamburguesa", "Pizza", "Café", "Helado", "Parrilla", "Sushi", "Pastas", "Panificados", "Empanada"]) {
       expect(screen.getByRole("radio", { name })).toBeInTheDocument();
     }
     expect(screen.getByRole("radio", { name: /La mía/ })).toBeDisabled();
-    expect(screen.getByRole("radio", { name: "Hamburguesa" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: /Usar imagen de logo/ })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Hamburguesa" })).not.toBeChecked();
+  });
+
+  it("elegir 'Empanada' o 'Usar imagen de logo' cambia el borrador", () => {
+    render(<Harness />);
+
+    fireEvent.click(screen.getByRole("radio", { name: "Empanada" }));
+    expect(latest.loaderAnimation).toBe("empanada");
+
+    fireEvent.click(screen.getByRole("radio", { name: /Usar imagen de logo/ }));
+    expect(latest.loaderAnimation).toBe("logo");
   });
 
   it("elegir cambia el borrador que se guarda", () => {
@@ -120,7 +131,7 @@ describe("Animaciones — subir archivos, PUBLICO-104 y 105", () => {
     await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent(/GIF, WebP o PNG/));
 
     expect(upload).not.toHaveBeenCalled();
-    expect(latest.loaderAnimation).toBe("hamburguesa");
+    expect(latest.loaderAnimation).toBe("logo");
   });
 
   it("quitar la propia vuelve a la hamburguesa", () => {
@@ -173,7 +184,7 @@ describe("Animaciones — vista previa, PUBLICO-108", () => {
 
     await waitFor(() => expect(post).toHaveBeenCalled());
     const sent = post.mock.calls.at(-1)![0] as { config: Record<string, unknown> };
-    expect(sent.config).toMatchObject({ animacionMenu: "dinamica", animacionCarga: "hamburguesa", nombre: "Casa Resto" });
+    expect(sent.config).toMatchObject({ animacionMenu: "dinamica", animacionCarga: "logo", nombre: "Casa Resto" });
     expect(post.mock.calls.at(-1)![1]).toBe(MENU_ORIGIN);
   });
 

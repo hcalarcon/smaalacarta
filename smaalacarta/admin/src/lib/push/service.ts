@@ -14,7 +14,8 @@ export type PushSubscriptionRow = {
 export type PushDeps = {
   businessName(businessId: string): Promise<string>;
   // Repartidores activos que cubren la zona y no rechazaron ni devolvieron el pedido.
-  coveringCourierIds(orderId: string, zoneId: string): Promise<string[]>;
+  // Con zona común, los que la cubren; con `ownZoneId` (zona propia), su dueño.
+  coveringCourierIds(orderId: string, zoneId: string | null, ownZoneId?: string | null): Promise<string[]>;
   courierUserIds(courierIds: string[]): Promise<string[]>;
   // Repartidores con una oferta (abierta o cerrada) en el pedido.
   offererCourierIds(orderId: string): Promise<string[]>;
@@ -84,8 +85,10 @@ async function recipients(deps: PushDeps, event: PushEvent, once: Once): Promise
 
   switch (event.kind) {
     case "offer_new": {
-      if (!order.delivery_zone_id) return [];
-      const couriers = await deps.coveringCourierIds(order.id, order.delivery_zone_id);
+      if (!order.delivery_zone_id && !order.courier_zone_id) return [];
+      const couriers = order.delivery_zone_id
+        ? await deps.coveringCourierIds(order.id, order.delivery_zone_id)
+        : await deps.coveringCourierIds(order.id, null, order.courier_zone_id);
       return deps.courierUserIds(unique(couriers));
     }
     case "courier_chosen":

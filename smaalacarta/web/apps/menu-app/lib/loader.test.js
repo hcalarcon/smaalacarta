@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { DICTIONARY, LANGS } from "./i18n.js";
-import { applyLoaderAnimation, customLoaderUrl, rememberLoaderLook, savedLoaderLook } from "./loader.js";
+import { applyLoaderAnimation, customLoaderUrl, logoLoaderUrl, rememberLoaderLook, savedLoaderLook } from "./loader.js";
 
 const read = (relative) => readFileSync(fileURLToPath(new URL(relative, import.meta.url)), "utf8");
 
@@ -24,11 +24,12 @@ describe("loader en la página (PUBLICO-83)", () => {
     expect(html).toContain("loader-sushi");
     expect(html).toContain("loader-pastas");
     expect(html).toContain("loader-panificados");
+    expect(html).toContain("loader-empanada");
     expect(html).toContain('class="loader-marca"');
     expect(html).toContain("SMA a la carta");
     expect(html).toContain('data-i18n="loader.loading"');
     expect(html).not.toContain("loader-cloche");
-    expect([...html.matchAll(/class="loader-anim [^"]+"[^>]*aria-hidden="true"/g)]).toHaveLength(8);
+    expect([...html.matchAll(/class="loader-anim [^"]+"[^>]*aria-hidden="true"/g)]).toHaveLength(10);
   });
 
   it("aplica la opción configurada después de cargar los datos del negocio", () => {
@@ -44,9 +45,10 @@ describe("loader en la página (PUBLICO-83)", () => {
     expect(css).toMatch(/\.loader\[data-animacion="sushi"\]\s+\.loader-sushi/);
     expect(css).toMatch(/\.loader\[data-animacion="pastas"\]\s+\.loader-pastas/);
     expect(css).toMatch(/\.loader\[data-animacion="panificados"\]\s+\.loader-panificados/);
+    expect(css).toMatch(/\.loader\[data-animacion="empanada"\]\s+\.loader-empanada/);
   });
 
-  it.each(["hamburguesa", "pizza", "cafe", "helado", "parrilla", "sushi", "pastas", "panificados"])(
+  it.each(["hamburguesa", "pizza", "cafe", "helado", "parrilla", "sushi", "pastas", "panificados", "empanada"])(
     "selecciona la animación %s que configura el negocio",
     (animacion) => {
       const loader = { dataset: {}, setAttribute(name, value) { this.dataset[name] = value; } };
@@ -115,7 +117,7 @@ describe("loader en la página (PUBLICO-83)", () => {
     expect(html).toContain("m39 60 39-14");
   });
 
-  it.each([undefined, "", "cohete"])("usa la hamburguesa si la animación falta o no está permitida (%s)", (animacion) => {
+  it.each(["cohete", "HAMBURGUESA", 7])("usa la hamburguesa si la animación no está permitida (%s)", (animacion) => {
     const loader = { dataset: {}, setAttribute(name, value) { this.dataset[name] = value; } };
     const doc = { querySelector: () => loader };
 
@@ -145,6 +147,8 @@ describe("loader en la página (PUBLICO-83)", () => {
       ".loader-sushi-salmon",
       ".loader-pastas-fideos",
       ".loader-panificados-pan",
+      ".loader-empanada-cuerpo",
+      ".loader-logo",
     ]) {
       expect(animations).toContain(selector);
     }
@@ -181,6 +185,82 @@ describe("loader en la página (PUBLICO-83)", () => {
   });
 });
 
+describe("imagen de logo — PUBLICO-118 y 119", () => {
+  const html = read("../index.html");
+  const css = read("../base.css");
+  const logo = "https://x.supabase.co/storage/v1/object/public/business-images/n/logo.png";
+  const page = (calm = false) => {
+    const loader = { dataset: {} };
+    const image = { src: "" };
+    const doc = {
+      querySelector: (selector) => (selector === "#loader" ? loader : selector === "#loader-logo" ? image : null),
+      defaultView: { matchMedia: () => ({ matches: calm }) },
+    };
+    return { loader, image, doc };
+  };
+
+  it("sin elección (el negocio nunca eligió) o con 'logo', muestra el logo del negocio", () => {
+    for (const animacionCarga of [undefined, "", "logo"]) {
+      const { loader, image, doc } = page();
+
+      expect(applyLoaderAnimation({ animacionCarga, logo }, doc)).toBe("logo");
+      expect(loader.dataset.animacion).toBe("logo");
+      expect(image.src).toBe(logo);
+    }
+  });
+
+  it("sin logo, o con uno que no vale, muestra el logo de SMA a la Carta", () => {
+    for (const config of [{}, { logo: "" }, { logo: "http://x.com/l.png" }, { logo: "javascript:alert(1)" }, { logo: 'https://x.com/l.png"onerror="x' }]) {
+      const { loader, image, doc } = page();
+
+      expect(applyLoaderAnimation(config, doc)).toBe("marca");
+      expect(loader.dataset.animacion).toBe("marca");
+      expect(image.src).toBe("");
+      expect(logoLoaderUrl(config)).toBeNull();
+    }
+  });
+
+  it("si la imagen del logo no carga, queda el logo de SMA a la Carta", () => {
+    const { loader, image, doc } = page();
+
+    applyLoaderAnimation({ logo }, doc);
+    image.onerror();
+
+    expect(loader.dataset.animacion).toBe("marca");
+  });
+
+  it("si el logo ya falló, aplicar otra vez no lo vuelve a mostrar", () => {
+    const { loader, image, doc } = page();
+
+    applyLoaderAnimation({ logo }, doc);
+    image.onerror();
+
+    expect(applyLoaderAnimation({ logo }, doc)).toBe("marca");
+    expect(loader.dataset.animacion).toBe("marca");
+  });
+
+  it("una elección explícita no se pisa: con 'pizza' sigue la pizza aunque haya logo", () => {
+    const { loader, doc } = page();
+
+    expect(applyLoaderAnimation({ animacionCarga: "pizza", logo }, doc)).toBe("pizza");
+    expect(loader.dataset.animacion).toBe("pizza");
+  });
+
+  it("con menos movimiento pedido el logo se muestra igual (el pulso lo apaga el CSS)", () => {
+    const { doc } = page(true);
+
+    expect(applyLoaderAnimation({ animacionCarga: "logo", logo }, doc)).toBe("logo");
+  });
+
+  it("la página tiene la imagen y el SVG de la marca, y el CSS los muestra según data-animacion", () => {
+    expect(html).toMatch(/<img id="loader-logo" class="loader-logo" alt=""/);
+    expect(html).toContain("loader-marca-sma");
+    expect(css).toMatch(/\.loader\[data-animacion="logo"\]\s+\.loader-logo\s*\{[^}]*display:\s*block/);
+    expect(css).toMatch(/\.loader\[data-animacion="marca"\]\s+\.loader-marca-sma/);
+    expect(css).toMatch(/@media \(prefers-reduced-motion: no-preference\)\s*\{[^@]*loader-logo-pulso/);
+  });
+});
+
 describe("la última animación se recuerda para la próxima visita — PUBLICO-104", () => {
   const store = () => {
     const data = new Map();
@@ -200,6 +280,17 @@ describe("la última animación se recuerda para la próxima visita — PUBLICO-
     expect(savedLoaderLook(s, "k")).toEqual({ animacionCarga: "custom", animacionCargaUrl: url });
     s.setItem("sma-loader-animacion:k", JSON.stringify({ a: "custom", url: "javascript:alert(1)" }));
     expect(savedLoaderLook(s, "k")).toBeNull();
+  });
+
+  it("guarda y devuelve el logo (con su dirección https) o la marca de SMA", () => {
+    const s = store();
+    const logo = "https://x.supabase.co/storage/v1/object/public/business-images/n/logo.png";
+    rememberLoaderLook(s, "k", { logo });
+    expect(savedLoaderLook(s, "k")).toEqual({ animacionCarga: "logo", logo });
+    rememberLoaderLook(s, "k", {});
+    expect(savedLoaderLook(s, "k")).toEqual({ animacionCarga: "logo" });
+    s.setItem("sma-loader-animacion:k", JSON.stringify({ a: "logo", url: "javascript:alert(1)" }));
+    expect(savedLoaderLook(s, "k")).toEqual({ animacionCarga: "logo" });
   });
 
   it("sin nada guardado, o roto, o sin almacenamiento: null", () => {

@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 
 import { requireSuperAdmin } from "@/lib/auth/superadmin";
+import { parseDeliveryPricing } from "@/lib/delivery-pricing";
+import { setBusinessFavoriteCourier, updateDeliveryPricing } from "@/lib/db/delivery-pricing";
 import { removeMember, updateBusinessPlan, updateCourierDelivery } from "@/lib/db/superadmin";
 import {
   addMemberByEmail,
@@ -120,6 +122,63 @@ export async function updateCourierDeliveryAction(
       ? "Envío con repartidores habilitado."
       : "Envío con repartidores deshabilitado.",
   };
+}
+
+// Tipo de precio del envío del negocio y sus dos permisos (ENVIO-219). El trigger de la base también exige superadmin.
+export async function updateDeliveryPricingAction(
+  _prev: SuperAdminFormState,
+  formData: FormData,
+): Promise<SuperAdminFormState> {
+  await requireSuperAdmin();
+
+  const businessId = text(formData, "businessId");
+  const pricing = parseDeliveryPricing(text(formData, "pricing"));
+
+  if (!pricing) {
+    return { error: "Elegí un tipo de precio." };
+  }
+
+  const result = await updateDeliveryPricing(businessId, {
+    pricing,
+    pricesEditable: checkbox(formData, "pricesEditable"),
+    offersEnabled: checkbox(formData, "offersEnabled"),
+  });
+
+  if ("error" in result) {
+    return { error: "No pudimos guardar los cambios. Probá de nuevo." };
+  }
+
+  revalidatePath(`/superadmin/negocios/${businessId}`);
+  revalidatePath("/dashboard/settings");
+
+  return { message: "Precio del envío actualizado." };
+}
+
+// Favorito del negocio con precio del repartidor (ENVIO-229): lo fija el superadmin entre los que tienen zonas propias.
+export async function setFavoriteCourierAction(
+  _prev: SuperAdminFormState,
+  formData: FormData,
+): Promise<SuperAdminFormState> {
+  await requireSuperAdmin();
+
+  const businessId = text(formData, "businessId");
+  const courierId = text(formData, "courierId") || null;
+
+  const result = await setBusinessFavoriteCourier(businessId, courierId);
+
+  if ("error" in result) {
+    return {
+      error:
+        result.error.code === "P0017"
+          ? "Ese repartidor tiene que estar activo y tener al menos una zona propia activa."
+          : "No pudimos guardar el favorito. Probá de nuevo.",
+    };
+  }
+
+  revalidatePath(`/superadmin/negocios/${businessId}`);
+  revalidatePath("/dashboard/settings");
+
+  return { message: courierId ? "Favorito actualizado." : "Favorito sacado." };
 }
 
 export async function addMemberAction(

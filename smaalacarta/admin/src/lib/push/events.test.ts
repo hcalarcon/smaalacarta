@@ -5,6 +5,13 @@ import { insert, update } from "./fixtures";
 
 const kinds = (payload: Parameters<typeof detectEvents>[0]) => detectEvents(payload).map((e) => e.kind);
 
+describe("pedido nuevo con zona del repartidor — ENVIO-225", () => {
+  it("avisa aunque no tenga zona común: la zona es del repartidor", () => {
+    const own = { delivery_zone_id: null, courier_zone_id: "z-propia" };
+    expect(kinds(insert(own))).toContain("offer_new");
+  });
+});
+
 describe("pedido nuevo para ofertar — ADMIN-PWA-18", () => {
   it("un pedido con envío que nace buscando avisa a los repartidores", () => {
     expect(kinds(insert())).toContain("offer_new");

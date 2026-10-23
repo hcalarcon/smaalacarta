@@ -35,7 +35,13 @@ export function normalizeZones(data) {
     const price = typeof zona.precio === "number" ? zona.precio : Number(zona.precio);
     if (zona.precio === null || zona.precio === "" || !Number.isFinite(price) || price < 0) continue;
 
-    zones.push({ id: zona.id, name: zona.nombre, price });
+    // `fijo`: el precio no cambia (ENVIO-223). Si el servidor no lo manda, no se afirma nada: se muestra "aprox.".
+    zones.push({
+      id: zona.id,
+      name: zona.nombre,
+      price,
+      ...(typeof zona.fijo === "boolean" ? { fixed: zona.fijo } : {}),
+    });
   }
 
   if (zones.length === 0) return null;
@@ -80,7 +86,17 @@ export function findZone(zones, id) {
   return zones?.zones.find((zone) => zone.id === id) ?? null;
 }
 
-// Variables del aviso "Envío a {barrio}: ${precio}…" (el texto vive en i18n.js).
+// ¿El precio de esta zona es fijo? Solo si el servidor lo dice (ENVIO-223 y 228): si no, se muestra "aprox.".
+export function isFixedPrice(zone) {
+  return zone?.fixed === true;
+}
+
+// El texto del aviso del checkout: "Envío $X a {barrio}" con precio fijo; "Envío aprox. $X…" si puede cambiar.
+export function zoneNoticeKey(zone) {
+  return isFixedPrice(zone) ? "checkout.zoneNoticeFixed" : "checkout.zoneNotice";
+}
+
+// Variables del aviso "Envío ${precio} a {barrio}…" (el texto vive en i18n.js).
 export function zoneNoticeVars(zone, formatPrice) {
   return { barrio: zone.name, precio: formatPrice(zone.price) };
 }
@@ -114,7 +130,7 @@ export function courierOrderFields({ zones, delivery, zoneId, address }) {
 export function courierWhatsappLines(zone, { address }, formatPrice) {
   return [
     `📍 Barrio: ${zone.name}`,
-    `🛵 Envío: $${formatPrice(zone.price)}, se paga al repartidor`,
+    `🛵 Envío${isFixedPrice(zone) ? "" : " aprox."}: $${formatPrice(zone.price)}, se paga al repartidor`,
     `🏠 Dirección: ${address}`,
     "",
   ].join("\n");

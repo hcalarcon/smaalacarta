@@ -36,11 +36,15 @@ let AVAILABILITY = null;
 let checkZoneCouriers = null;
 let COURIER_ZONES = null;
 // Zona del cliente al entrar (PUBLICO-73 a 78): `ZONE_ON` es si el local la pregunta; `ZONE_STEP` es
-// qué muestra la tarjeta (ask, zones, notListed, confirmed o null si está cerrada).
+// qué muestra la tarjeta (ask, zones, notListed o null si está cerrada).
 let ZONE = null;
 let ZONE_ON = false;
 let ZONE_CHOICE = null;
 let ZONE_STEP = null;
+// Controles del checkout (PUBLICO-112 a 116): botones sobre los select, y el aviso chico de la zona elegida.
+let CONTROLS_LIB = null;
+let CONTROLS = null;
+let ZONE_TOAST_TIMER = null;
 let ZONE_PICKUP = true;
 let ZONE_QUERY = "";
 // Quién tenía el foco al abrirse el diálogo de la zona: vuelve ahí al cerrarlo (PUBLICO-81).
@@ -289,6 +293,7 @@ async function init() {
     // Idioma elegido y sugerencia según el celular (PUBLICO-88 a 90).
     LANGUAGE = await import("/apps/menu-app/lib/language.js");
     ZONE = await import("/apps/menu-app/lib/zone-choice.js");
+    CONTROLS_LIB = await import("/apps/menu-app/lib/checkout-controls.js");
     // Aviso de "puede que no haya repartidores" en el checkout (ENVIO-198).
     AVAILABILITY = await import("/apps/menu-app/lib/courier-availability.js");
     checkZoneCouriers = AVAILABILITY.createZoneChecker((zoneId) =>
@@ -388,6 +393,7 @@ async function init() {
       COURIER_ZONES = await DZ.fetchDeliveryZones({ ...SUPABASE_CFG, slug: MENU_SOURCE.slug });
     }
     applyCheckoutOptions(config);
+    initCheckoutControls();
     initCourierFields();
     initZoneChoice(config, slug);
     renderScheduleChoice();
@@ -559,6 +565,7 @@ function applyStaticTexts() {
   renderTransferInfo();
   renderCourierFields();
   renderZone();
+  CONTROLS?.refresh();
   syncBarraCarrito(CART_COUNT);
 }
 
@@ -1395,6 +1402,7 @@ $("#cerrar-carrito")?.addEventListener("click", closeAll);
 $("#overlay")?.addEventListener("click", closeAll);
 
 function closeAll() {
+  closeZonePicker();
   // Cerrar el panel "Pedido registrado" lo da por visto: no vuelve a aparecer al recargar.
   if (document.querySelector("#gracias-pedido")) ORDERS?.forgetLastOrder(window.localStorage);
   resetCheckout();
@@ -1966,6 +1974,7 @@ function renderCourierFields() {
   }
 
   renderZoneNotice();
+  CONTROLS?.refresh();
 }
 
 function renderZoneNotice() {
@@ -1975,7 +1984,7 @@ function renderZoneNotice() {
 
   const chosen = zone.disabled ? null : DZ.findZone(COURIER_ZONES, zone.value);
   notice.hidden = !chosen;
-  notice.textContent = chosen ? tr("checkout.zoneNotice", DZ.zoneNoticeVars(chosen, PRICE.formatPrice)) : "";
+  notice.textContent = chosen ? tr(DZ.zoneNoticeKey(chosen), DZ.zoneNoticeVars(chosen, PRICE.formatPrice)) : "";
 
   renderNoCouriersNotice(chosen);
 }
@@ -1998,6 +2007,129 @@ async function renderNoCouriersNotice(chosen) {
   const show = AVAILABILITY.showNoCouriersNotice(result);
   notice.hidden = !show;
   notice.textContent = show ? tr("checkout.noCouriers") : "";
+}
+
+// Entrega, barrio, cuándo, hora y pago se eligen con botones (PUBLICO-112 a 116); los select quedan como fuente del
+// valor. Enter pasa al campo siguiente, y la hoja sigue el área visible cuando sube el teclado del celular.
+function initCheckoutControls() {
+  const form = $("#form-pedido");
+  if (!form || !CONTROLS_LIB || CONTROLS) return;
+
+  CONTROLS = CONTROLS_LIB.mountChoiceControls(form, {
+    groups: [
+      { name: "entrega" },
+      {
+        name: "barrio",
+        kind: "picker",
+        placeholder: () => tr("checkout.pickZone"),
+        describe: describeZone,
+        onOpen: openZonePicker,
+      },
+      { name: "cuando", label: () => tr("checkout.when.label") },
+      { name: "hora" },
+      { name: "pago" },
+    ],
+    errorText: () => tr("checkout.chooseOne"),
+  });
+  form.addEventListener("keydown", (event) => CONTROLS_LIB.handleEnterKey(event, form));
+  CONTROLS_LIB.trackTyping(form, $("#checkout"));
+  CONTROLS_LIB.watchKeyboard();
+}
+
+// Lo que muestra el botón de barrio una vez elegido: nombre y precio.
+function describeZone(zoneId) {
+  const zone = DZ?.findZone(COURIER_ZONES, zoneId);
+  return zone ? { name: zone.name, aside: "$" + PRICE.formatPrice(zone.price) } : null;
+}
+
+// La lista de barrios del checkout (PUBLICO-113): la misma del selector de zona, con su buscador. Elegir un barrio la
+// cierra y escribe el valor en el select de barrio, como si lo hubiera elegido ahí.
+let ZONE_PICKER = null;
+
+function openZonePicker() {
+  const select = document.querySelector('#form-pedido select[name="barrio"]');
+  if (ZONE_PICKER || !select || !COURIER_ZONES) return;
+
+  const opener = document.activeElement;
+  const card = document.createElement("div");
+  card.className = "zona-card";
+  const panel = document.createElement("div");
+  panel.className = "zona-dialogo";
+  panel.tabIndex = -1;
+  panel.setAttribute("role", "dialog");
+  panel.setAttribute("aria-modal", "true");
+  panel.setAttribute("aria-labelledby", "barrio-titulo");
+
+  const title = document.createElement("h2");
+  title.id = "barrio-titulo";
+  title.className = "zona-titulo";
+  title.textContent = tr("checkout.pickZone");
+  const close = zoneButton("×", closeZonePicker, "zona-cerrar");
+  close.setAttribute("aria-label", tr("zone.close"));
+
+  const search = document.createElement("input");
+  search.type = "search";
+  search.className = "zona-buscar";
+  search.placeholder = tr("zone.search");
+  search.setAttribute("aria-label", tr("zone.search"));
+  search.setAttribute("enterkeyhint", "search");
+  search.autocomplete = "off";
+  const list = document.createElement("div");
+  list.className = "zona-lista";
+  const pick = (zone) => {
+    closeZonePicker();
+    if (select.value === zone.id) return;
+    select.value = zone.id;
+    select.dispatchEvent(new Event("change", { bubbles: true }));
+  };
+  renderZoneList(list, "", pick);
+  search.addEventListener("input", () => renderZoneList(list, search.value, pick));
+  search.addEventListener("keydown", (event) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      search.blur();
+    }
+  });
+
+  panel.append(close, title, search, list);
+  card.append(panel);
+
+  // Tocar el fondo oscurecido, Escape o la × la cierran; Tab da la vuelta dentro de la lista.
+  let pressedBackdrop = false;
+  card.addEventListener("pointerdown", (event) => {
+    pressedBackdrop = event.target === card;
+  });
+  card.addEventListener("click", (event) => {
+    if (pressedBackdrop && event.target === card) closeZonePicker();
+    pressedBackdrop = false;
+  });
+  card.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      closeZonePicker();
+      return;
+    }
+    if (event.key !== "Tab") return;
+    const focusables = [...card.querySelectorAll("button, input")].filter((el) => !el.disabled && !el.hidden);
+    if (focusables.length === 0) return;
+    event.preventDefault();
+    focusables[ZONE.nextFocusIndex(focusables.indexOf(document.activeElement), focusables.length, event.shiftKey)].focus();
+  });
+
+  $("#checkout")?.setAttribute("inert", "");
+  document.body.append(card);
+  ZONE_PICKER = { card, opener };
+  // Con pocos barrios no hace falta escribir: el teclado no tapa la lista. Con muchos, el buscador recibe el foco.
+  (COURIER_ZONES.zones.length > 8 ? search : panel).focus({ preventScroll: true });
+}
+
+function closeZonePicker() {
+  if (!ZONE_PICKER) return;
+  const { card, opener } = ZONE_PICKER;
+  ZONE_PICKER = null;
+  card.remove();
+  $("#checkout")?.removeAttribute("inert");
+  if (opener?.isConnected) opener.focus?.({ preventScroll: true });
 }
 
 function initCourierFields() {
@@ -2060,7 +2192,6 @@ function syncZoneFromCheckout(slug) {
 
   ZONE_CHOICE = next;
   ZONE.saveChoice(window.localStorage, slug, next);
-  if (ZONE_STEP === "confirmed") ZONE_STEP = null;
   renderZone();
 }
 
@@ -2080,6 +2211,7 @@ function applyZoneToCheckout(choice) {
     if (barrio) barrio.value = choice.zoneId;
     renderZoneNotice();
   }
+  CONTROLS?.refresh();
 }
 
 function chooseZone(choice) {
@@ -2087,8 +2219,26 @@ function chooseZone(choice) {
   // "Mi barrio no está" no se recuerda: al volver se pregunta de nuevo (PUBLICO-80).
   if (choice.type !== "notListed") ZONE.saveChoice(window.localStorage, MENU_SOURCE.slug, choice);
   applyZoneToCheckout(choice);
-  ZONE_STEP = choice.type === "zone" ? "confirmed" : choice.type === "notListed" ? "notListed" : null;
+  ZONE_STEP = ZONE.stepAfterChoice(choice);
   renderZone();
+  showZoneToast(ZONE.choiceToast(choice, COURIER_ZONES, PRICE.formatPrice));
+}
+
+// Aviso chico abajo con la zona elegida (PUBLICO-111): el elemento ya está en la página, así los lectores de pantalla
+// anuncian el cambio de texto. Se va solo.
+function showZoneToast(toast) {
+  const node = document.querySelector("#zona-aviso");
+  if (!node) return;
+
+  clearTimeout(ZONE_TOAST_TIMER);
+  node.textContent = toast ? tr(toast.key, toast.vars) : "";
+  node.classList.toggle("visible", Boolean(toast));
+  if (!toast) return;
+
+  ZONE_TOAST_TIMER = setTimeout(() => {
+    node.classList.remove("visible");
+    node.textContent = "";
+  }, ZONE.ZONE_TOAST_MS);
 }
 
 function zoneButton(text, onClick, className = "zona-opcion") {
@@ -2100,7 +2250,7 @@ function zoneButton(text, onClick, className = "zona-opcion") {
   return button;
 }
 
-function renderZoneList(list, query) {
+function renderZoneList(list, query, onPick = (zone) => chooseZone({ type: "zone", zoneId: zone.id })) {
   list.replaceChildren();
   const found = ZONE.filterZones(COURIER_ZONES.zones, query);
   if (found.length === 0) {
@@ -2111,7 +2261,7 @@ function renderZoneList(list, query) {
     return;
   }
   found.forEach((zone) => {
-    const button = zoneButton(zone.name, () => chooseZone({ type: "zone", zoneId: zone.id }));
+    const button = zoneButton(zone.name, () => onPick(zone));
     const price = document.createElement("span");
     price.className = "zona-precio";
     price.textContent = `$${PRICE.formatPrice(zone.price)}`;
@@ -2146,6 +2296,7 @@ function applyDeliveryBlock() {
     notice.hidden = !blocked;
     notice.textContent = blocked ? tr(ZONE_PICKUP ? "zone.noDelivery" : "zone.noDeliveryOnly") : "";
   }
+  CONTROLS?.refresh();
 }
 
 // El diálogo atrapa el foco y bloquea el scroll de atrás (PUBLICO-81). Al cerrarse, el foco vuelve a quien lo abrió.
@@ -2271,15 +2422,6 @@ function renderZone() {
     panel.append(close, title);
     if (ZONE_PICKUP) panel.append(zoneButton(tr("zone.pickupOffer"), () => chooseZone({ type: "pickup" })));
     panel.append(back());
-  } else if (ZONE_STEP === "confirmed") {
-    const zone = DZ.findZone(COURIER_ZONES, ZONE_CHOICE?.zoneId);
-    if (!zone) {
-      ZONE_STEP = null;
-      renderZone();
-      return;
-    }
-    title.textContent = tr("zone.available", ZONE.zoneLabel(zone, PRICE.formatPrice));
-    panel.append(close, title);
   }
 
   card.append(panel);
@@ -2304,7 +2446,10 @@ function renderScheduleChoice() {
     : CHECKOUT.scheduleChoice(window.CONFIG, Boolean(MENU_SOURCE));
   libre.hidden = choice.mode !== "free";
   programado.hidden = choice.mode !== "slots";
-  if (choice.mode !== "slots") return;
+  if (choice.mode !== "slots") {
+    CONTROLS?.refresh();
+    return;
+  }
 
   const previous = hour.value;
   hour.querySelectorAll("option:not([disabled])").forEach((option) => option.remove());
@@ -2330,6 +2475,7 @@ function syncScheduleSelects() {
   hour.hidden = !scheduling;
   hour.required = scheduling;
   if (!scheduling) hour.value = "";
+  CONTROLS?.refresh();
 }
 
 document

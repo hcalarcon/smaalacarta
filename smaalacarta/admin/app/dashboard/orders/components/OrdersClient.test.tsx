@@ -966,3 +966,106 @@ describe("tablero por urgencia y pestañas — ADMIN-PEDIDOS-54", () => {
     expect(columnOf("Nuevos").className).toMatch(/(^|\s)hidden(\s|$)/);
   });
 });
+
+describe("avisos de tomado y devuelto — ADMIN-PEDIDOS-61 y 62", () => {
+  const withCourier = (id: string, over: Record<string, unknown> = {}) =>
+    ({
+      id,
+      order_number: id,
+      status: "confirmed",
+      created_at: `2026-09-30T10:0${id}:00Z`,
+      courier_id: null,
+      courier_status: "searching",
+      delivery_events: [],
+      ...over,
+    }) as unknown as Order;
+  const takenBy = (id: string) => withCourier(id, { courier_id: "c1", courier_status: "accepted" });
+  const couriers = [{ id: "c1", name: "Ana Moto", whatsapp: null, zone_ids: [] }];
+
+  function boardWith(orders: Order[]) {
+    return (
+      <OrdersClient
+        slug="demo"
+        orders={orders}
+        manualSetup={manualSetup}
+        serverNow="2026-09-30T10:00:00Z"
+        couriers={couriers}
+      />
+    );
+  }
+
+  async function enableSound() {
+    await act(async () => fireEvent.click(soundButton()));
+    oscillatorsStarted = 0;
+  }
+
+  it("al abrir con un pedido ya tomado no avisa", () => {
+    render(boardWith([takenBy("1")]));
+
+    expect(screen.queryByText(/tomado por/)).toBeNull();
+  });
+
+  it("muestra el cartel de tomado, lo cierra con Visto y saca el borde", () => {
+    const { rerender } = render(boardWith([withCourier("1")]));
+    rerender(boardWith([takenBy("1")]));
+
+    expect(screen.getByRole("status").textContent).toContain("Pedido #1: tomado por Ana Moto");
+    expect(document.getElementById("order-card-1")?.className).toContain("ring-[#047857]");
+
+    fireEvent.click(screen.getByRole("button", { name: "Visto" }));
+
+    expect(screen.queryByText(/tomado por/)).toBeNull();
+    expect(document.getElementById("order-card-1")?.className).not.toContain("ring-");
+  });
+
+  it("el borde se va solo a los 2 minutos", () => {
+    vi.useFakeTimers();
+    const { rerender } = render(boardWith([withCourier("1")]));
+    rerender(boardWith([takenBy("1")]));
+
+    act(() => {
+      vi.advanceTimersByTime(120_000);
+    });
+
+    expect(document.getElementById("order-card-1")?.className).not.toContain("ring-");
+  });
+
+  it("el cartel de devuelto nombra al repartidor y lleva el motivo", () => {
+    const back = withCourier("1", { returned_reason_kind: "vehicle" });
+    const { rerender } = render(boardWith([takenBy("1")]));
+    rerender(boardWith([back]));
+
+    expect(screen.getByRole("status").textContent).toContain("Pedido #1: Ana Moto lo devolvió. Buscando otro repartidor");
+    expect(screen.getByRole("status").textContent).toContain("Problema con el vehículo");
+    expect(document.getElementById("order-card-1")?.className).toContain("ring-[#d97706]");
+  });
+
+  it("varios avisos se apilan y cada uno se cierra con su Visto", () => {
+    const { rerender } = render(boardWith([withCourier("1"), withCourier("2")]));
+    rerender(boardWith([takenBy("1"), takenBy("2")]));
+
+    expect(screen.getAllByRole("status")).toHaveLength(2);
+
+    fireEvent.click(screen.getAllByRole("button", { name: "Visto" })[0]);
+
+    expect(screen.getAllByRole("status")).toHaveLength(1);
+    expect(screen.getByRole("status").textContent).toContain("Pedido #2");
+  });
+
+  it("suena con el sonido activado", async () => {
+    const { rerender } = render(boardWith([withCourier("1")]));
+    await enableSound();
+    rerender(boardWith([takenBy("1")]));
+
+    expect(oscillatorsStarted).toBe(3);
+  });
+
+  it("con el sonido apagado el cartel se ve pero no suena", async () => {
+    const { rerender } = render(boardWith([withCourier("1")]));
+    await act(async () => {});
+    rerender(boardWith([takenBy("1")]));
+
+    expect(screen.getByRole("status")).toBeTruthy();
+    expect(oscillatorsStarted).toBe(0);
+  });
+});

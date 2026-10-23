@@ -35,12 +35,22 @@ function deps(extra: Partial<PushDeps> = {}): PushDeps & { sent: { endpoint: str
 const usersOf = (d: { sent: { endpoint: string }[] }) => d.sent.map((s) => s.endpoint.split("/")[3]).sort();
 
 describe("destinatarios — ADMIN-PWA-18 a 24", () => {
+  it("pedido con zona del repartidor: se busca por la zona propia, no por cobertura — ENVIO-225", async () => {
+    const d = deps({ coveringCourierIds: vi.fn(async () => ["c-dueno"]) });
+    await handlePushWebhook(d, insert({ delivery_zone_id: null, courier_zone_id: "z-propia" }));
+
+    expect(d.coveringCourierIds).toHaveBeenCalledWith(ORDER.id, null, "z-propia");
+    expect(d.sent.filter((s) => s.title === "Nuevo envío a Cantera").map((s) => s.endpoint.split("/")[3])).toEqual([
+      "u-c-dueno",
+    ]);
+  });
+
   it("pedido nuevo para ofertar: los repartidores que cubren la zona, y el local por el pedido nuevo", async () => {
     const d = deps();
     const result = await handlePushWebhook(d, insert());
 
     expect(d.coveringCourierIds).toHaveBeenCalledWith(ORDER.id, ORDER.delivery_zone_id);
-    expect(d.sent.filter((s) => s.title === "Pedido nuevo para ofertar").map((s) => s.endpoint.split("/")[3]).sort()).toEqual(
+    expect(d.sent.filter((s) => s.title === "Nuevo envío a Cantera").map((s) => s.endpoint.split("/")[3]).sort()).toEqual(
       ["u-c-moto", "u-c-toque"],
     );
     expect(d.sent.filter((s) => s.title === "Pedido nuevo #0042").map((s) => s.endpoint.split("/")[3]).sort()).toEqual([

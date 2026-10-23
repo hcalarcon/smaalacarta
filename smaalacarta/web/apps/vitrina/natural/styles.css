@@ -1,0 +1,97 @@
+:root {
+  --c1: #3f86d1; --c2: #bfe3f5; --lejos: #8fb3c9; --media: #4f8a6a; --cerca: #2f6045; --astro: #fff3b0; --estrellas: 0;
+  --madera: #7a5230; --papel: #fbf5e6; --tinta: #2c2a22; --crema: #fdf3dc; --musgo: #3f5a30; --oro: #ffd27a;
+  --serif: "Fraunces", Georgia, serif; --sans: "Source Sans 3", system-ui, sans-serif;
+  --p-lejos: 0px; --p-media: 0px; --p-cerca: 0px;
+}
+* { box-sizing: border-box; }
+html { scroll-padding-top: 70px; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+body { margin: 0; background: var(--c1); color: var(--tinta); font: 400 1.05rem/1.45 var(--sans); }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--oro); outline-offset: 2px; }
+
+/* Paisaje fijo detrás de todo: cielo, astro, estrellas y tres capas de montañas con parallax. */
+.paisaje { position: fixed; inset: 0; z-index: -1; overflow: hidden; background: linear-gradient(var(--c1), var(--c2)); }
+.estrellas { position: absolute; inset: 0 0 35% 0; opacity: var(--estrellas);
+  background:
+    radial-gradient(1.5px 1.5px at 20px 30px, #fff, transparent),
+    radial-gradient(1px 1px at 90px 80px, #fff, transparent),
+    radial-gradient(2px 2px at 150px 20px, #fff, transparent),
+    radial-gradient(1px 1px at 60px 130px, #fff, transparent),
+    radial-gradient(1.5px 1.5px at 190px 110px, #fff, transparent);
+  background-size: 210px 160px; }
+.astro { position: absolute; width: 56px; height: 56px; margin: -28px 0 0 -28px; border-radius: 50%; background: var(--astro); box-shadow: 0 0 40px 12px color-mix(in srgb, var(--astro) 55%, transparent); }
+.astro.luna { box-shadow: inset -10px -4px 0 0 rgba(20, 30, 60, .22), 0 0 34px 8px rgba(238, 242, 255, .5); }
+.capa { position: absolute; left: 0; width: 100%; height: auto; display: block; }
+.capa-lejos { aspect-ratio: 400 / 320; bottom: 16%; transform: translate3d(0, var(--p-lejos), 0); }
+.capa-media { aspect-ratio: 400 / 320; bottom: 3%; transform: translate3d(0, var(--p-media), 0); }
+.capa-cerca { aspect-ratio: 400 / 170; bottom: -1px; transform: translate3d(0, var(--p-cerca), 0); }
+/* Niebla entre capas y nubes lentas: dan profundidad y aire. */
+.niebla { position: absolute; left: -10%; width: 120%; height: 22%; pointer-events: none; opacity: calc(.75 - var(--estrellas) * .45);
+  background: linear-gradient(transparent, color-mix(in srgb, var(--c2) 70%, #fff) 55%, transparent); }
+.niebla-1 { bottom: 26%; }
+.niebla-2 { bottom: 9%; opacity: calc(.6 - var(--estrellas) * .4); }
+.nubes i { position: absolute; width: 150px; height: 38px; border-radius: 50%; filter: blur(12px); opacity: calc(.7 - var(--estrellas) * .55);
+  background: color-mix(in srgb, #fff 80%, var(--c2)); }
+.nubes i:nth-child(1) { top: 14%; left: -10%; }
+.nubes i:nth-child(2) { top: 27%; left: 55%; width: 190px; height: 44px; }
+.nubes i:nth-child(3) { top: 40%; left: 15%; width: 120px; }
+@media (prefers-reduced-motion: no-preference) {
+  .nubes i { animation: deriva 90s linear infinite alternate; }
+  .nubes i:nth-child(2) { animation-duration: 120s; }
+  .nubes i:nth-child(3) { animation-duration: 75s; }
+  .niebla { animation: respira 14s ease-in-out infinite alternate; }
+  @keyframes deriva { to { transform: translateX(120px); } }
+  @keyframes respira { to { transform: translateX(-24px); } }
+}
+
+.barra-top { position: sticky; top: 0; z-index: 40; display: flex; align-items: center; gap: 6px; padding: 0 8px 0 4px; background: rgba(20, 34, 26, .88); backdrop-filter: blur(6px); }
+.senderos { flex: 1; display: flex; overflow-x: auto; scrollbar-width: none; }
+.senderos::-webkit-scrollbar { display: none; }
+.senderos a { flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 12px; color: var(--crema); text-decoration: none; font: 600 .95rem var(--sans); border-bottom: 3px solid transparent; }
+.senderos a .n { color: var(--oro); font-family: var(--serif); }
+.senderos a[aria-current="true"] { border-bottom-color: var(--oro); }
+.idiomas { display: flex; gap: 2px; }
+.idiomas button { min-height: 44px; min-width: 44px; background: transparent; border: 0; border-radius: 22px; font: 600 .85rem var(--sans); color: var(--crema); }
+.idiomas button[aria-pressed="true"] { background: var(--oro); color: #2c2a22; }
+
+main { max-width: 700px; margin: 0 auto; padding: 0 14px; }
+.portada { padding: 36px 0 12px; }
+.portada-cartel { text-align: center; padding: 22px 18px; border-radius: 18px; background: rgba(18, 32, 26, .78); color: #fff; backdrop-filter: blur(4px); }
+.portada-cartel p { margin: 0; letter-spacing: .12em; text-transform: uppercase; font-size: .8rem; color: var(--oro); font-weight: 600; }
+h1 { margin: 6px 0; font: 700 clamp(2.4rem, 13vw, 3.8rem)/1 var(--serif); }
+
+/* Carteles de madera: senderos y etiquetas */
+.cartel { margin: 0 0 12px; display: inline-block; padding: 9px 30px 9px 16px; color: var(--crema); font: 700 1.1rem/1.2 var(--serif);
+  background: repeating-linear-gradient(90deg, rgba(0, 0, 0, .07) 0 3px, transparent 3px 9px), var(--madera);
+  clip-path: polygon(0 0, calc(100% - 16px) 0, 100% 50%, calc(100% - 16px) 100%, 0 100%); }
+.cartel-sendero { display: block; }
+.cartel .n { display: block; font: 600 .72rem var(--sans); letter-spacing: .14em; text-transform: uppercase; color: var(--oro); }
+.sendero { padding-top: 24px; }
+.sendero h2 { margin-bottom: 14px; }
+.postales { display: grid; gap: 16px; }
+@media (min-width: 620px) { .postales { grid-template-columns: 1fr 1fr; } }
+
+/* Postales */
+.postal, .imperdible { display: flex; flex-direction: column; background: var(--papel); border-radius: 6px; padding: 10px 10px 14px; box-shadow: 0 10px 20px -10px rgba(0, 0, 0, .55); }
+.foto { aspect-ratio: 4 / 3; border: 6px solid #fff; box-shadow: 0 3px 8px rgba(0, 0, 0, .25); overflow: hidden; background: #cfd9c6; transform: rotate(-1deg); }
+.postal:nth-child(even) .foto { transform: rotate(1deg); }
+.foto img { display: block; width: 100%; height: 100%; object-fit: cover; }
+.foto.sin-foto { background: linear-gradient(160deg, #cfe0c3, #9fbf9a); }
+.postal-texto { padding: 12px 4px 0; display: flex; flex-direction: column; gap: 6px; flex: 1; }
+.postal h3, .imperdible h2 { margin: 0; font: 700 1.2rem/1.2 var(--serif); }
+.desc { margin: 0; color: #46433a; }
+.opciones { margin: 0; padding: 0; list-style: none; color: var(--musgo); font-size: .95rem; }
+.opciones li::before { content: "▲ "; font-size: .7em; }
+.etiqueta-precio { position: relative; align-self: flex-start; margin: auto 0 0; padding: 4px 16px 4px 26px; border-radius: 4px 16px 16px 4px; background: var(--madera); color: var(--crema); font: 700 1.15rem var(--serif); }
+.agujero { position: absolute; left: 8px; top: 50%; width: 9px; height: 9px; margin-top: -4.5px; border-radius: 50%; background: var(--papel); box-shadow: inset 0 1px 2px rgba(0, 0, 0, .5); }
+.sin-stock { font: 600 .7rem var(--sans); color: #ffd0c4; text-transform: uppercase; }
+.agotado .foto, .agotado h3 { opacity: .55; }
+.imperdible { margin: 18px 0 4px; padding: 14px 12px 18px; border: 2px solid var(--oro); }
+.imperdible .cartel { align-self: flex-start; }
+.foto-grande { border-width: 8px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .foto, .postal:nth-child(even) .foto { transform: none; }
+}

@@ -2,19 +2,33 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { newPendingIds, pendingCount, shouldRemind, tabTitle } from "@/lib/orders/alerts";
-import { playChosenSound, playNewOrderSound } from "@/lib/orders/sound";
+import {
+  ALERT_VOICE_DELAY_MS,
+  ALERT_VOICE_REPEAT_MS,
+  alertPhrase,
+  alertsAfter,
+  COURIER_ALARM_VOLUME,
+  freshAlerts,
+  readyPhrase,
+  shouldPlayAlert,
+  soundHint,
+  soundPrefValue,
+  type CourierAlert,
+} from "@/lib/courier/alerts";
+import { pendingCount, tabTitle } from "@/lib/orders/alerts";
+import { sharedAudioContext, unlockSharedAudio } from "@/lib/orders/sound-pref";
+import { ALARM_LOOP_MS, playAlarmSound, playChosenSound } from "@/lib/orders/sound";
+import { cancelSpeech, primeSpeech, speakText } from "@/lib/orders/speech";
 
-const REMIND_MS = 30_000;
-// Cada cuánto se mira si toca repetir el aviso (el intervalo real es REMIND_MS).
-const REMIND_CHECK_MS = 5_000;
 const SOUND_PREF_KEY = "sma-courier-sound";
+// Lo que habilita el audio y la voz: el primer toque en cualquier lugar del panel.
+const UNLOCK_EVENTS = ["pointerup", "click", "keydown"] as const;
 
 function readPref(): boolean {
   try {
-    return localStorage.getItem(SOUND_PREF_KEY) === "1";
+    return soundPrefValue(localStorage.getItem(SOUND_PREF_KEY));
   } catch {
-    return false;
+    return true;
   }
 }
 
@@ -26,32 +40,29 @@ function savePref(on: boolean) {
   }
 }
 
-// Aviso con sonido de los pedidos que esperan respuesta (ENVIO-33): el mismo que usa el tablero del
-// local (`alerts.ts` y `sound.ts`), con el criterio de "pendiente" que le pasa el panel. Suena una
-// vez por cada pedido nuevo (los que ya estaban al abrir no suenan), se repite cada 30 segundos
-// mientras quede alguno sin atender y la pestaña muestra cuántos hay.
+// Aviso con sonido y voz de los pedidos que esperan respuesta (ENVIO-33 y 234 a 240). Cada pedido nuevo abre un
+// aviso que suena con la alarma del tablero del local, al máximo, y se repite hasta que el repartidor lo ve, lo
+// ofrece, lo toma o se cierra; después de cada sonido, la voz dice la zona. Los pedidos que ya estaban al abrir no
+// avisan. El sonido está prendido salvo que se apague con la campana: el navegador pide un toque por cada
+// apertura, así que el primero en cualquier lugar lo habilita sin cartel.
 export function useNewOrderAlert<T extends { id: string }>({
   orders,
   isPending,
+  zoneOf,
   label,
 }: {
   orders: T[];
   isPending: (order: T) => boolean;
+  zoneOf: (order: T) => string | null;
   label: string;
 }) {
-  const [soundOn, setSoundOn] = useState(false);
+  const [soundOn, setSoundOn] = useState(true);
   const [audioReady, setAudioReady] = useState(false);
-  const audioRef = useRef<AudioContext | null>(null);
-  const soundOnRef = useRef(false);
+  const [alerts, setAlerts] = useState<CourierAlert[]>([]);
+  const soundOnRef = useRef(true);
   const seenIds = useRef<Set<string>>(new Set(orders.map((o) => o.id)));
-  const lastBeepAt = useRef<number | null>(null);
 
   const pending = pendingCount(orders, isPending);
-
-  function beep(ctx: AudioContext) {
-    lastBeepAt.current = Date.now();
-    playNewOrderSound(ctx);
-  }
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- localStorage solo existe en el navegador
@@ -62,30 +73,84 @@ export function useNewOrderAlert<T extends { id: string }>({
     soundOnRef.current = soundOn;
   }, [soundOn]);
 
-  // Aviso por cada pedido nuevo.
+  // Pedidos nuevos abren su aviso; los que dejaron de esperar respuesta lo cierran.
   useEffect(() => {
-    const fresh = newPendingIds(seenIds.current, orders, isPending);
+    const fresh = freshAlerts(seenIds.current, orders, isPending, zoneOf);
     orders.forEach((o) => seenIds.current.add(o.id));
 
-    const ctx = audioRef.current;
-    if (fresh.length > 0 && soundOnRef.current && ctx?.state === "running") beep(ctx);
-    // `isPending` es estable (función de módulo): solo importa cuándo cambian los pedidos.
+    setAlerts((current) => {
+      const still = alertsAfter(current, orders, isPending);
+      return fresh.length === 0 && still.length === current.length ? current : [...still, ...fresh];
+    });
+    // `isPending` y `zoneOf` son estables (funciones de módulo): solo importa cuándo cambian los pedidos.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orders]);
 
-  // Repite el sonido mientras haya pedidos sin responder.
-  useEffect(() => {
-    if (!soundOn || !audioReady || pending === 0) return;
+  // El primer toque en cualquier lugar habilita el audio y la voz; el navegador no deja hacerlo antes.
+  // Un toque dispara varios eventos (pointerup, click): uno solo desbloquea a la vez.
+  const unlocking = useRef(false);
 
-    const id = setInterval(() => {
-      const ctx = audioRef.current;
-      if (ctx?.state === "running" && shouldRemind(lastBeepAt.current, Date.now(), pending, REMIND_MS)) {
-        beep(ctx);
+  async function unlockAudio() {
+    if (unlocking.current) return;
+    unlocking.current = true;
+
+    try {
+      const ctx = await unlockSharedAudio();
+      setAudioReady(ctx !== null);
+
+      if (ctx) {
+        primeSpeech();
+        // El sistema puede suspender el audio después (bloqueo de pantalla, una llamada): vuelve a pedir un toque.
+        ctx.onstatechange = () => setAudioReady(ctx.state === "running");
       }
-    }, REMIND_CHECK_MS);
+    } catch {
+      // Sin audio el panel funciona igual, solo que sin aviso sonoro.
+    } finally {
+      unlocking.current = false;
+    }
+  }
 
+  useEffect(() => {
+    if (!soundOn) return;
+
+    const unlock = () => {
+      if (sharedAudioContext()?.state !== "running") void unlockAudio();
+    };
+    UNLOCK_EVENTS.forEach((name) => document.addEventListener(name, unlock, { capture: true }));
+
+    return () => UNLOCK_EVENTS.forEach((name) => document.removeEventListener(name, unlock, { capture: true }));
+  }, [soundOn]);
+
+  const playing = shouldPlayAlert({ alerts: alerts.length, soundOn, audioReady });
+  const phrase = alertPhrase(alerts);
+
+  // La alarma, al máximo y en bucle mientras quede un aviso sin ver.
+  useEffect(() => {
+    if (!playing) return;
+
+    function play() {
+      const ctx = sharedAudioContext();
+      if (ctx?.state === "running") playAlarmSound(ctx, COURIER_ALARM_VOLUME);
+    }
+
+    play();
+    const id = setInterval(play, ALARM_LOOP_MS);
     return () => clearInterval(id);
-  }, [soundOn, audioReady, pending]);
+  }, [playing]);
+
+  // La voz, después del sonido y cada 30 s. Si el aviso cambia (otro pedido), la frase se actualiza.
+  useEffect(() => {
+    if (!playing || !phrase) return;
+
+    const first = setTimeout(() => speakText(phrase), ALERT_VOICE_DELAY_MS);
+    const again = setInterval(() => speakText(phrase), ALERT_VOICE_REPEAT_MS);
+
+    return () => {
+      clearTimeout(first);
+      clearInterval(again);
+      cancelSpeech();
+    };
+  }, [playing, phrase]);
 
   // Título de la pestaña: la cantidad de pedidos por responder.
   const originalTitle = useRef<string | null>(null);
@@ -101,39 +166,61 @@ export function useNewOrderAlert<T extends { id: string }>({
 
   // Otro aviso, distinto del de pedido nuevo: lo eligieron (ENVIO-116).
   function playChosen() {
-    const ctx = audioRef.current;
+    const ctx = sharedAudioContext();
     if (soundOnRef.current && ctx?.state === "running") playChosenSound(ctx);
   }
 
-  async function unlockAudio() {
-    try {
-      const Ctor =
-        window.AudioContext ??
-        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
-      if (!Ctor) return;
+  // El local marcó Listo (ENVIO-238): el aviso de siempre y, después, la voz con el nombre del local.
+  const readyVoice = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-      audioRef.current ??= new Ctor();
-      if (audioRef.current.state !== "running") await audioRef.current.resume();
+  useEffect(() => {
+    return () => {
+      if (readyVoice.current) clearTimeout(readyVoice.current);
+    };
+  }, []);
 
-      const ready = audioRef.current.state === "running";
-      setAudioReady(ready);
-      if (ready) beep(audioRef.current);
-    } catch {
-      // Sin audio el panel funciona igual, solo que sin aviso sonoro.
+  function announceReady(business: string) {
+    playChosen();
+
+    const ctx = sharedAudioContext();
+    if (soundOnRef.current && ctx?.state === "running") {
+      if (readyVoice.current) clearTimeout(readyVoice.current);
+      readyVoice.current = setTimeout(() => speakText(readyPhrase(business)), ALERT_VOICE_DELAY_MS / 2);
     }
   }
 
+  // "Visto": el aviso deja de sonar, pero el pedido sigue en la lista.
+  function dismissAlerts() {
+    setAlerts([]);
+  }
+
   async function toggleSound() {
-    if (soundOn && audioReady) {
+    if (soundOn) {
       setSoundOn(false);
       savePref(false);
+      if (readyVoice.current) clearTimeout(readyVoice.current);
+      cancelSpeech();
       return;
     }
 
     setSoundOn(true);
     savePref(true);
+    // Los avisos que pasaron con el sonido apagado no estallan de golpe al volver a prenderlo.
+    setAlerts([]);
     await unlockAudio();
   }
 
-  return { soundOn, audioReady, toggleSound, pending, soundOnRef, playChosen };
+  return {
+    soundOn,
+    audioReady,
+    toggleSound,
+    pending,
+    soundOnRef,
+    playChosen,
+    announceReady,
+    alerts,
+    alertText: phrase,
+    dismissAlerts,
+    hint: soundHint({ soundOn, audioReady }),
+  };
 }

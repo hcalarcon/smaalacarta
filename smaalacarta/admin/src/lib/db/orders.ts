@@ -34,6 +34,8 @@ export type OrderDelivery = {
   needs_car?: boolean;
   courier_id: string | null;
   delivery_zone_id: string | null;
+  // Zona propia del repartidor (tipo de precio `courier`).
+  courier_zone_id?: string | null;
   delivery_zone_name: string | null;
   delivery_fee_list: number | null;
   delivery_fee: number | null;
@@ -83,7 +85,7 @@ export type OrderPrep = {
 
 const SELECT =
   "id, order_number, status, total, notes, customer_name, delivery, payment, payment_status, source, scheduled_for, preorder, code, created_at, updated_at, " +
-  "courier_id, delivery_zone_id, delivery_zone_name, delivery_fee_list, delivery_fee, delivery_fee_reason, delivery_fee_changed_at, customer_phone, delivery_address, courier_status, courier_note, courier_responded_at, offered_at, delivery_mode, courier_eta_pickup_at, returned_reason_kind, returned_reason, needs_car, settled_at, settlement_received_at, prep_ready_at, prep_reason, prep_updated_at, " +
+  "courier_id, delivery_zone_id, courier_zone_id, delivery_zone_name, delivery_fee_list, delivery_fee, delivery_fee_reason, delivery_fee_changed_at, customer_phone, delivery_address, courier_status, courier_note, courier_responded_at, offered_at, delivery_mode, courier_eta_pickup_at, returned_reason_kind, returned_reason, needs_car, settled_at, settlement_received_at, prep_ready_at, prep_reason, prep_updated_at, " +
   "order_items(name, quantity, unit_price, sort_order, options, note), order_events(kind, status, created_at, note)";
 
 // Los pedidos más recientes del negocio, con su detalle y su línea de tiempo. El RLS

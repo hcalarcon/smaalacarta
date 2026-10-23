@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Menús que no parecen menús · SMA a la Carta</title>
+  <meta name="description" content="Menús digitales extraordinarios para locales gastronómicos: arcade, floral y más. Mirá cómo se ve el de Santa Julia Resto.">
+  <meta property="og:title" content="Menús que no parecen menús · SMA a la Carta">
+  <meta property="og:description" content="Cinco estilos de menú digital pensados para llamar la atención. Abrilos desde el celular.">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://www.smaalacarta.com.ar/assets/logo.png">
+  <meta name="theme-color" content="#12332c">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&family=Instrument+Sans:wght@400;600&display=swap">
+  <link rel="stylesheet" href="/apps/vitrina/lib/barra.css">
+  <link rel="stylesheet" href="/apps/vitrina/galeria.css">
+</head>
+<body>
+  <header class="portada">
+    <p class="sello">SMA a la Carta</p>
+    <h1>Menús que no parecen menús</h1>
+    <p class="bajada">Elegí un estilo, abrilo en tu celular y mirá cómo se ve una carta que se comparte sola. Todos muestran el menú real de Santa Julia Resto.</p>
+  </header>
+
+  <main>
+    <ul class="tarjetas" id="tarjetas"></ul>
+    <noscript><p class="aviso">Activá JavaScript para ver los estilos.</p></noscript>
+  </main>
+
+  <script type="module">
+    import { galeriaHtml, barraHtml } from "/apps/vitrina/lib/vitrina.js";
+
+    document.getElementById("tarjetas").innerHTML = galeriaHtml();
+    document.body.insertAdjacentHTML("beforeend", barraHtml({ nombre: "de la vitrina de SMA a la Carta" }, "es"));
+  </script>
+</body>
+</html>

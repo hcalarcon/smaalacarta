@@ -45,6 +45,17 @@ export function playChosenSound(ctx: AudioContext): void {
   playTones(ctx, CHOSEN_TONES);
 }
 
+// Aviso de "lo devolvieron" en Pedidos (ADMIN-PEDIDOS-62): tres tonos que bajan, el espejo del anterior.
+const RETURNED_TONES = [
+  { hz: 784, start: 0, length: 0.15 },
+  { hz: 659, start: 0.17, length: 0.15 },
+  { hz: 523, start: 0.34, length: 0.3 },
+];
+
+export function playReturnedSound(ctx: AudioContext): void {
+  playTones(ctx, RETURNED_TONES);
+}
+
 // Alarma de pedido sin atender (ADMIN-PEDIDOS-26): una sirena corta, más aguda y áspera que el aviso de
 // pedido nuevo, pensada para repetirse en bucle. El volumen lo decide quien la llama según la espera.
 const ALARM_TONES: Tone[] = [
