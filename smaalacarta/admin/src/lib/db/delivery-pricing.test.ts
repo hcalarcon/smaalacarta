@@ -133,8 +133,8 @@ describe("los tres tipos de precio — ENVIO-219 y 222", () => {
   });
 
   it("del repartidor: las zonas propias del favorito, no las comunes", async () => {
-    await business("delivery_pricing = 'courier'");
     await db.exec(`update business_settings set favorite_courier_id = '${PROPIO}' where business_id = '${NEG_ANA}'`);
+    await business("delivery_pricing = 'courier'");
     await own(PROPIO, "Barrio Norte", 1500);
     await own(PROPIO, "Barrio Sur", 2500, "");
     await own(OTRO, "Zona del otro", 999);
@@ -145,8 +145,8 @@ describe("los tres tipos de precio — ENVIO-219 y 222", () => {
   });
 
   it("del repartidor sin favorito activo: el negocio no ofrece envío", async () => {
-    await business("delivery_pricing = 'courier'");
     await db.exec(`update business_settings set favorite_courier_id = '${PROPIO}' where business_id = '${NEG_ANA}'`);
+    await business("delivery_pricing = 'courier'");
     await own(PROPIO, "Barrio Norte", 1500);
     await db.exec(`update couriers set active = false where id = '${PROPIO}'`);
 
@@ -154,8 +154,8 @@ describe("los tres tipos de precio — ENVIO-219 y 222", () => {
   });
 
   it("del repartidor sin zonas propias: no ofrece envío", async () => {
-    await business("delivery_pricing = 'courier'");
     await db.exec(`update business_settings set favorite_courier_id = '${PROPIO}' where business_id = '${NEG_ANA}'`);
+    await business("delivery_pricing = 'courier'");
     expect(await zones()).toBeNull();
   });
 });
@@ -194,8 +194,8 @@ describe("el pedido guarda la zona y el precio del tipo vigente — ENVIO-224 y 
   });
 
   it("del repartidor: guarda su zona y precio, y solo él lo ve", async () => {
-    await business("delivery_pricing = 'courier'");
     await db.exec(`update business_settings set favorite_courier_id = '${PROPIO}' where business_id = '${NEG_ANA}'`);
+    await business("delivery_pricing = 'courier'");
     await own(PROPIO, "Barrio Norte", 1500);
     const zone = (await zones())![0].id;
 
@@ -220,8 +220,8 @@ describe("el pedido guarda la zona y el precio del tipo vigente — ENVIO-224 y 
   });
 
   it("un barrio de otro tipo o de otro repartidor se rechaza", async () => {
-    await business("delivery_pricing = 'courier'");
     await db.exec(`update business_settings set favorite_courier_id = '${PROPIO}' where business_id = '${NEG_ANA}'`);
+    await business("delivery_pricing = 'courier'");
     await own(PROPIO, "Barrio Norte", 1500);
 
     const comun = await envio(cantera);
@@ -345,8 +345,8 @@ describe("permisos de edición — ENVIO-220 y 221", () => {
 
 describe("ajustes de la revisión — ENVIO-220 y 221", () => {
   it("una zona propia con pedido en curso no se borra; sin pedido, sí", async () => {
-    await business("delivery_pricing = 'courier'");
     await db.exec(`update business_settings set favorite_courier_id = '${PROPIO}' where business_id = '${NEG_ANA}'`);
+    await business("delivery_pricing = 'courier'");
     await db.exec(`update couriers set can_edit_zones = true where id = '${PROPIO}'`);
     await own(PROPIO, "Barrio Norte", 1500);
     await own(PROPIO, "Barrio Libre", 900);
@@ -371,8 +371,8 @@ describe("ajustes de la revisión — ENVIO-220 y 221", () => {
 
 describe("lo que ve el panel — ENVIO-227", () => {
   it("business_delivery_pricing: el local ve el favorito y sus zonas; otro negocio, no", async () => {
-    await business("delivery_pricing = 'courier'");
     await db.exec(`update business_settings set favorite_courier_id = '${PROPIO}' where business_id = '${NEG_ANA}'`);
+    await business("delivery_pricing = 'courier'");
     await own(PROPIO, "Barrio Norte", 1500);
 
     const r = await call(ANA, `select public.business_delivery_pricing('${NEG_ANA}') as p`);

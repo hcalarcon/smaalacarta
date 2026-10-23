@@ -80,3 +80,40 @@ export async function saveBusinessZonePrices(
 
   return { ok: true };
 }
+
+// Los repartidores que puede fijar el superadmin como favorito con el tipo `courier`: activos y con al menos una zona
+// propia activa (ENVIO-229). Lo lee con sus permisos de superadmin.
+export async function listCourierFavoriteCandidates(): Promise<{ id: string; name: string; zones: number }[]> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("couriers")
+    .select("id, name, courier_own_zones(active)")
+    .eq("active", true)
+    .order("name", { ascending: true });
+
+  if (error) return [];
+
+  return (data ?? [])
+    .map((courier) => ({
+      id: courier.id,
+      name: courier.name,
+      zones: (courier.courier_own_zones ?? []).filter((zone) => zone.active).length,
+    }))
+    .filter((courier) => courier.zones > 0);
+}
+
+// Solo el superadmin (la función de la base lo exige). `null` saca el favorito.
+export async function setBusinessFavoriteCourier(
+  businessId: string,
+  courierId: string | null,
+): Promise<{ ok: true } | DbFailure> {
+  const supabase = await createClient();
+
+  const { error } = await supabase.rpc("superadmin_set_favorite_courier", {
+    p_business_id: businessId,
+    p_courier_id: courierId as string,
+  });
+
+  return error ? { error: { code: error.code, message: error.message } } : { ok: true };
+}

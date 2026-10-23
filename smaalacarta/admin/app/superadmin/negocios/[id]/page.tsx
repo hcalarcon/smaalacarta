@@ -5,10 +5,11 @@ import { notFound } from "next/navigation";
 import AddMemberForm from "../../components/AddMemberForm";
 import CourierDeliveryForm from "../../components/CourierDeliveryForm";
 import DeliveryPricingForm from "../../components/DeliveryPricingForm";
+import FavoriteCourierForm from "../../components/FavoriteCourierForm";
 import PlanForm from "../../components/PlanForm";
 import RemoveMemberButton from "../../components/RemoveMemberButton";
 import ResetPasswordButton from "../../components/ResetPasswordButton";
-import { getBusinessDeliveryPricing } from "@/lib/db/delivery-pricing";
+import { getBusinessDeliveryPricing, listCourierFavoriteCandidates } from "@/lib/db/delivery-pricing";
 import { countBusinessDeliveryZones, getBusinessWithMembers } from "@/lib/db/superadmin";
 
 export const metadata: Metadata = { title: "Negocio" };
@@ -33,6 +34,7 @@ export default async function BusinessDetailPage({
 
   const zoneCount = business.courier_delivery ? await countBusinessDeliveryZones(business.id) : null;
   const pricing = business.courier_delivery ? await getBusinessDeliveryPricing(business.id) : null;
+  const favoriteCandidates = pricing?.pricing === "courier" ? await listCourierFavoriteCandidates() : [];
 
   return (
     <div className="mx-auto max-w-3xl space-y-8">
@@ -83,6 +85,15 @@ export default async function BusinessDetailPage({
           <div className="mt-4">
             <DeliveryPricingForm businessId={business.id} pricing={pricing} />
           </div>
+          {pricing.pricing === "courier" ? (
+            <div className="mt-6 border-t border-line pt-6">
+              <FavoriteCourierForm
+                businessId={business.id}
+                candidates={favoriteCandidates}
+                current={pricing.courier?.id ?? null}
+              />
+            </div>
+          ) : null}
         </section>
       ) : null}
 

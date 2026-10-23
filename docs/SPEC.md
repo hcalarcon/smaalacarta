@@ -2342,6 +2342,20 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
 - **ENVIO-228** El menú (tarjeta de zona y checkout) muestra "Envío $X" si el precio es fijo y "Envío aprox. $X" si no,
   en es/en/pt.
 
+### Favorito y asignación a mano con zonas propias (tarea 48)
+
+- **ENVIO-229** Con el tipo de precio `courier`, el favorito del negocio lo fija el superadmin
+  (`superadmin_set_favorite_courier`): puede ser cualquier repartidor activo con al menos una zona propia activa, sin
+  cubrir ninguna zona común. El detalle del negocio lo elige con un select que lista solo a esos repartidores. La base
+  rechaza (`P0017`) a uno que no cumple.
+- **ENVIO-230** Con el tipo `courier` el local no cambia su favorito (`P0030`); Configuración → Envíos lo muestra en solo
+  lectura y guardar el resto de la pantalla lo deja intacto. Con los otros tipos, el select es el de siempre.
+- **ENVIO-231** `business_delivery_options` trae por repartidor sus `own_zone_ids` (zonas propias activas) y también al que
+  solo tiene zonas propias. El tablero lista, para un pedido con zona propia, a los repartidores dueños de esa zona; para
+  uno con zona común, a los que la cubren, como siempre.
+- **ENVIO-232** `business_assign_courier` asigna un pedido con zona propia a su dueño y rechaza (`22023`) a cualquier otro
+  repartidor.
+
 
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel

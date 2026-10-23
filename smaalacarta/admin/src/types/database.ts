@@ -2202,6 +2202,10 @@ export type Database = {
         Args: { p_business_id: string }
         Returns: number
       }
+      superadmin_set_favorite_courier: {
+        Args: { p_business_id: string; p_courier_id: string }
+        Returns: undefined
+      }
       vehicle_enabled: { Args: never; Returns: boolean }
       zone_available_couriers: {
         Args: { p_business_id?: string; p_zone_id: string }
