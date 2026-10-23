@@ -40,6 +40,14 @@ export function pushControl(device: DeviceState): PushControl {
   return "enable";
 }
 
+// Con el permiso ya concedido y la suscripción perdida (o de otra cuenta) se vuelve a suscribir solo: no hay
+// nada que preguntar (ADMIN-PWA-38). Sin permiso concedido pedirlo tiene que ser de un toque.
+export function shouldResubscribe(device: DeviceState): boolean {
+  if (device.isIOS && !device.standalone) return false;
+  if (!device.hasServiceWorker || !device.hasPushManager) return false;
+  return device.permission === "granted" && !device.subscribed;
+}
+
 export const COURIER_BANNER_TEXT = "Activá los avisos para enterarte de los pedidos nuevos";
 
 // El recuadro del repartidor se ve mientras haya algo que hacer para recibir avisos.

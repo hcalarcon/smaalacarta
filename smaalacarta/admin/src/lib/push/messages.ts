@@ -120,7 +120,7 @@ function compose(kind: PushEventKind, order: OrderRecord, ctx: MessageContext): 
   switch (kind) {
     case "offer_new":
       return {
-        title: "Pedido nuevo para ofertar",
+        title: zone ? `Nuevo envío a ${zone}` : "Nuevo envío",
         body: join(ctx.businessName, zone, formatPesos(order.delivery_fee_list)),
         url: courierPanel,
         tag,
@@ -157,8 +157,8 @@ function compose(kind: PushEventKind, order: OrderRecord, ctx: MessageContext): 
       };
     case "courier_order_ready":
       return {
-        title: `Listo para retirar en ${ctx.businessName}`,
-        body: number,
+        title: `Pedido ${number} listo para retirar en ${ctx.businessName}`,
+        body: "",
         url: courierPanel,
         tag,
       };

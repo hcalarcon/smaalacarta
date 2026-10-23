@@ -70,6 +70,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  localStorage.clear();
   resetForTests();
 });
 
@@ -106,15 +107,52 @@ describe("Activar avisos — ADMIN-PWA-13 y 14", () => {
     expect(await screen.findByRole("button", { name: /Activar avisos/ })).toBeInTheDocument();
   });
 
-  it("si el navegador sigue suscripto de otra cuenta, ofrece activar de nuevo (ADMIN-PWA-28)", async () => {
+  it("si el navegador sigue suscripto de otra cuenta, no cuenta como activado hasta guardarlo en esta (ADMIN-PWA-28)", async () => {
+    setEnv({ permission: "granted" });
+    browser.getSubscription.mockResolvedValue({ endpoint: SUBSCRIPTION.endpoint });
+    actions.hasPushSubscriptionAction.mockResolvedValue(false);
+    actions.savePushSubscriptionAction.mockResolvedValue({ ok: false, error: "x" });
+
+    mount(<PushToggle />);
+
+    expect(await screen.findByRole("button", { name: /Activar avisos/ })).toBeInTheDocument();
+    expect(screen.queryByText("Avisos activados")).not.toBeInTheDocument();
+  });
+
+  it("con el permiso concedido y la suscripción perdida, se suscribe solo y sin volver a pedir permiso (ADMIN-PWA-38)", async () => {
     setEnv({ permission: "granted" });
     browser.getSubscription.mockResolvedValue({ endpoint: SUBSCRIPTION.endpoint });
     actions.hasPushSubscriptionAction.mockResolvedValue(false);
 
     mount(<PushToggle />);
 
-    expect(await screen.findByRole("button", { name: /Activar avisos/ })).toBeInTheDocument();
-    expect(screen.queryByText("Avisos activados")).not.toBeInTheDocument();
+    await waitFor(() => expect(actions.savePushSubscriptionAction).toHaveBeenCalledWith(SUBSCRIPTION));
+    expect(await screen.findByText("Avisos activados")).toBeInTheDocument();
+    expect(browser.subscribeDevice).toHaveBeenCalledTimes(1);
+  });
+
+  it("sin permiso concedido no se suscribe solo: pedirlo es de un toque (ADMIN-PWA-38)", async () => {
+    mount(<PushToggle />);
+    await settle();
+
+    expect(browser.subscribeDevice).not.toHaveBeenCalled();
+  });
+
+  it("quien desactivó los avisos a propósito no se suscribe solo de nuevo (ADMIN-PWA-38)", async () => {
+    setEnv({ permission: "granted" });
+    browser.getSubscription.mockResolvedValue({ endpoint: SUBSCRIPTION.endpoint });
+
+    mount(<PushToggle />);
+    fireEvent.click(await screen.findByRole("button", { name: "Desactivar avisos" }));
+    await waitFor(() => expect(browser.unsubscribeDevice).toHaveBeenCalled());
+
+    // Vuelve a la pestaña: se mide de nuevo, ya sin suscripción.
+    browser.getSubscription.mockResolvedValue(null);
+    actions.hasPushSubscriptionAction.mockResolvedValue(false);
+    document.dispatchEvent(new Event("visibilitychange"));
+    await settle();
+
+    expect(browser.subscribeDevice).not.toHaveBeenCalled();
   });
 
   it("con el permiso bloqueado lo dice", async () => {

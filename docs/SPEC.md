@@ -2390,6 +2390,24 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   saca, solo actualiza una fila de `business_settings` que ya existe (no crea una vacía) y solo ese campo; un `null` sin
   `p_clear`, o un repartidor con `p_clear`, es un error (`22023`) y no cambia nada.
 
+### Avisos del panel del repartidor (ENVIO-234 a 240)
+
+- **ENVIO-234** Un pedido nuevo para el repartidor, con el panel abierto, suena con la alarma del tablero del local al volumen
+  máximo y se repite (`ALARM_LOOP_MS`) mientras quede un aviso sin ver. Se ve en un cartel con "Visto"; dejan de sonar al tocarlo,
+  al ofertar, tomar o rechazar el pedido, o cuando el pedido deja de estar disponible. Los que ya estaban al abrir no suenan.
+- **ENVIO-235** Después del sonido, una voz en español dice "Nuevo envío a zona {zona}" (sin zona, "Nuevo envío"; con varios,
+  "{n} envíos nuevos") y se repite cada 30 s mientras dure el aviso. Sin síntesis de voz en el navegador, solo suena la alarma.
+- **ENVIO-236** La tarjeta de un pedido disponible muestra la zona de entrega destacada, antes de ofertar o tomar.
+- **ENVIO-237** La dirección y los datos del cliente no llegan al repartidor hasta que es el elegido: `courier_available_orders`
+  trae solo la zona (ya cubierto por ENVIO-101) y el repartidor no lee `orders` directo.
+- **ENVIO-238** Cuando el local marca Listo un pedido que el repartidor ya tomó, con el panel abierto suena el aviso y una voz dice
+  "Pedido listo en {local}"; el aviso en pantalla nombra el local. Solo le llega al repartidor asignado.
+- **ENVIO-239** El push de pedido nuevo para ofertar dice "Nuevo envío a {zona}" y el de Listo, "Pedido #{n} listo para retirar en
+  {local}". Ambos van solo a quien corresponde (los repartidores que cubren la zona; el asignado).
+- **ENVIO-240** El panel no pide activar el sonido con un recuadro: el primer toque en cualquier lugar lo habilita (audio y voz) y
+  se recuerda en el aparato. Mientras no hubo un toque se ve un aviso chico, "Tocá la pantalla para activar el sonido". Quien lo
+  apagó con la campana queda apagado.
+
 
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
@@ -2710,6 +2728,9 @@ precios en 0; no existe "incluye N y el resto cuesta X".
   antes.
 - **ADMIN-PWA-37** El payload push lleva `kind` y `urgent` (y `number` y `total` en los urgentes); los
   urgentes salen con urgencia alta y TTL de 60 s, y los demás avisos conservan sus 10 minutos.
+- **ADMIN-PWA-38** Con el permiso de avisos ya concedido y el aparato sin suscripción guardada en la cuenta (se perdió o era de
+  otra cuenta), el panel se suscribe de nuevo solo, sin preguntar, una vez por carga. Con el permiso sin pedir o bloqueado no
+  hace nada.
 
 
 ### Panel en el celular (ADMIN-MOVIL)

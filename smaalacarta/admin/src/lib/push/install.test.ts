@@ -5,6 +5,7 @@ import {
   detectIOS,
   installControl,
   pushControl,
+  shouldResubscribe,
   showCourierBanner,
   type DeviceState,
 } from "./install";
@@ -94,5 +95,26 @@ describe("detectIOS", () => {
   it("una Mac común y Android no son iOS", () => {
     expect(detectIOS("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)", "MacIntel", 0)).toBe(false);
     expect(detectIOS("Mozilla/5.0 (Linux; Android 14; Pixel 8)", "Linux armv8l", 5)).toBe(false);
+  });
+});
+
+describe("volver a suscribir sin preguntar — ADMIN-PWA-38", () => {
+  it("con el permiso concedido y sin suscripción guardada, se suscribe solo", () => {
+    expect(shouldResubscribe(device({ permission: "granted", subscribed: false }))).toBe(true);
+  });
+
+  it("si ya está suscripto, no hace nada", () => {
+    expect(shouldResubscribe(device({ permission: "granted", subscribed: true }))).toBe(false);
+  });
+
+  it("sin permiso concedido (sin pedir o bloqueado) no suscribe: pedirlo es de un toque", () => {
+    expect(shouldResubscribe(device({ permission: "default" }))).toBe(false);
+    expect(shouldResubscribe(device({ permission: "denied" }))).toBe(false);
+  });
+
+  it("sin service worker o sin push, o en iPhone sin instalar, no puede", () => {
+    expect(shouldResubscribe(device({ permission: "granted", hasPushManager: false }))).toBe(false);
+    expect(shouldResubscribe(device({ permission: "granted", hasServiceWorker: false }))).toBe(false);
+    expect(shouldResubscribe(device({ permission: "granted", isIOS: true, standalone: false }))).toBe(false);
   });
 });

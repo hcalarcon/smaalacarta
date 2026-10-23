@@ -14,7 +14,7 @@ import {
   unsubscribeDevice,
   type BrowserEnvironment,
 } from "./browser";
-import { installControl, pushControl, type DeviceState } from "@/lib/push/install";
+import { installControl, pushControl, shouldResubscribe, type DeviceState } from "@/lib/push/install";
 
 // El estado de la app instalada y de los avisos de este aparato, compartido por todos los botones del
 // panel (el del header y el recuadro del repartidor). Un solo lugar para que activar en uno se vea en el
@@ -50,6 +50,27 @@ type InstallPromptEvent = Event & {
 let snapshot: PwaSnapshot = INITIAL;
 let deferredPrompt: InstallPromptEvent | null = null;
 let started = false;
+// Un solo intento de volver a suscribir solo por carga (ADMIN-PWA-38): si falla, la próxima vez que abra se reintenta.
+let resubscribeTried = false;
+const OPT_OUT_KEY = "sma-push-off";
+
+// Quien desactivó los avisos a propósito no se vuelve a suscribir solo.
+function optedOut(): boolean {
+  try {
+    return localStorage.getItem(OPT_OUT_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function saveOptOut(off: boolean) {
+  try {
+    if (off) localStorage.setItem(OPT_OUT_KEY, "1");
+    else localStorage.removeItem(OPT_OUT_KEY);
+  } catch {
+    // Modo privado: sin la marca, la próxima carga puede volver a suscribir.
+  }
+}
 const listeners = new Set<() => void>();
 
 function set(patch: Partial<PwaSnapshot>) {
@@ -82,8 +103,32 @@ export async function refresh() {
     const subscription = await getSubscription();
     const mine = subscription ? await hasPushSubscriptionAction(subscription.endpoint) : false;
     set({ subscribed: mine, endpoint: mine && subscription ? subscription.endpoint : null });
+
+    const device: DeviceState = {
+      ...env,
+      installed: snapshot.installed,
+      canPromptInstall: snapshot.canPromptInstall,
+      subscribed: mine,
+    };
+
+    if (!resubscribeTried && !optedOut() && shouldResubscribe(device)) {
+      resubscribeTried = true;
+      await resubscribeSilently();
+    }
   } catch {
     set({ subscribed: false, endpoint: null });
+  }
+}
+
+// El permiso ya está concedido: suscribe y guarda en la cuenta sin preguntar nada. Si algo falla, queda como estaba
+// y el botón "Activar avisos" sigue ahí.
+async function resubscribeSilently() {
+  try {
+    const subscription = await subscribeDevice();
+    const saved = await savePushSubscriptionAction(subscription);
+    if (saved.ok) set({ subscribed: true, endpoint: subscription.endpoint ?? null });
+  } catch {
+    // Sin avisos por ahora; no se le muestra nada al usuario.
   }
 }
 
@@ -136,6 +181,7 @@ const ERRORS = {
 // Pide el permiso, suscribe y guarda en la cuenta. Siempre desde un toque (ADMIN-PWA-13).
 export async function enablePush() {
   set({ busy: true, error: null });
+  saveOptOut(false);
 
   try {
     const subscription = await subscribeDevice();
@@ -159,6 +205,7 @@ export async function enablePush() {
 
 export async function disablePush() {
   set({ busy: true, error: null });
+  saveOptOut(true);
 
   try {
     const endpoint = await unsubscribeDevice();
@@ -194,5 +241,6 @@ export function resetForTests() {
   snapshot = INITIAL;
   deferredPrompt = null;
   started = false;
+  resubscribeTried = false;
   listeners.clear();
 }

@@ -6,15 +6,19 @@ import { buildMessage, formatPesos, isUrgent, pushPayload, ttlSeconds } from "./
 const ctx = { businessName: "Ana Resto", courierName: "Moto Express", assignedByLocal: false };
 
 describe("textos de los avisos — ADMIN-PWA-18 a 24", () => {
-  it("pedido nuevo para ofertar lleva local, barrio y precio de lista", () => {
+  it("pedido nuevo para ofertar dice la zona y lleva local y precio de lista — ENVIO-239", () => {
     expect(buildMessage("offer_new", ORDER, ctx)).toEqual({
-      title: "Pedido nuevo para ofertar",
+      title: "Nuevo envío a Cantera",
       body: "Ana Resto · Cantera · $5.000",
       url: "/admin/repartidor",
       tag: `order-${ORDER.id}-offer_new`,
       kind: "offer_new",
       urgent: false,
     });
+  });
+
+  it("pedido nuevo para ofertar sin zona no inventa una", () => {
+    expect(buildMessage("offer_new", { ...ORDER, delivery_zone_name: null }, ctx).title).toBe("Nuevo envío");
   });
 
   it("te eligieron, y te asignó el local", () => {
@@ -157,10 +161,10 @@ describe("circuito de tiempos — ENVIO-158 a 160", () => {
     expect(buildMessage("courier_pickup_soon", { ...timed, prep_ready_at: null }, ctx).body).toBe("Ana Resto");
   });
 
-  it("Listo: el nombre del local", () => {
+  it("Listo: el número y el nombre del local — ENVIO-239", () => {
     expect(buildMessage("courier_order_ready", timed, ctx)).toMatchObject({
-      title: "Listo para retirar en Ana Resto",
-      body: "#0042",
+      title: "Pedido #0042 listo para retirar en Ana Resto",
+      body: "",
       url: "/admin/repartidor",
     });
   });
