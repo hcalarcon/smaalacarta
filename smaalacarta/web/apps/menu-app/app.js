@@ -1573,6 +1573,7 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
         zones: COURIER_ZONES,
         delivery: f.get("entrega"),
         zoneId: f.get("barrio"),
+        zoneText: f.get("barrioTexto"),
         blocked: Boolean(ZONE_ON && ZONE?.deliveryBlocked(ZONE_CHOICE)),
       })
     : null;
@@ -1583,7 +1584,9 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
           ? ZONE_PICKUP
             ? "zone.noDelivery"
             : "zone.noDeliveryOnly"
-          : "error.invalidZone",
+          : deliveryProblem === "invalid_zone_text"
+            ? "error.invalidZoneText"
+            : "error.invalidZone",
       ),
     );
     return;
@@ -1596,6 +1599,7 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
         zones: COURIER_ZONES,
         delivery: f.get("entrega"),
         zoneId: f.get("barrio"),
+        zoneText: f.get("barrioTexto"),
         address: f.get("direccion"),
       })
     : {};
@@ -1619,6 +1623,13 @@ $("#form-pedido")?.addEventListener("submit", async (e) => {
   // El precio del envío es de referencia y se paga al repartidor: no entra en el total (ENVIO-22).
   if (courierZone) {
     msg += DZ.courierWhatsappLines(courierZone, { address: courier.deliveryAddress }, PRICE.formatPrice);
+  } else if (courier.deliveryZoneText) {
+    // Sin barrio con precio: el cliente escribió el barrio y el costo se coordina con el local (ENVIO-263).
+    msg += DZ.courierWhatsappLines(
+      null,
+      { address: courier.deliveryAddress, zoneText: courier.deliveryZoneText },
+      PRICE.formatPrice,
+    );
   }
 
   const ahora = f.get("ahora");
@@ -1950,15 +1961,19 @@ function renderCourierFields() {
   const delivery = document.querySelector('#form-pedido select[name="entrega"]');
   const zone = box.querySelector('select[name="barrio"]');
   const address = box.querySelector('input[name="direccion"]');
+  const zoneText = box.querySelector('input[name="barrioTexto"]');
   if (!zone || !address) return;
 
   const show = DZ.needsCourier(COURIER_ZONES, delivery?.value);
   box.hidden = !show;
 
-  [zone, address].forEach((field) => {
-    field.disabled = !show;
-    field.required = show;
-  });
+  // Sin ningún barrio con precio (ENVIO-252) no hay lista que elegir: el barrio se escribe.
+  const textOnly = show && DZ.coordinateOnly(COURIER_ZONES);
+  zone.hidden = !show || textOnly;
+  zone.disabled = !show || textOnly;
+  zone.required = show && !textOnly;
+  address.disabled = !show;
+  address.required = show;
 
   if (show) {
     const previous = zone.value;
@@ -1969,12 +1984,38 @@ function renderCourierFields() {
       option.textContent = item.name;
       zone.append(option);
     });
+    // "Otro barrio": el cliente lo escribe y el costo se coordina con el local (ENVIO-263).
+    if (COURIER_ZONES.coordinate && COURIER_ZONES.zones.length > 0) {
+      const other = document.createElement("option");
+      other.value = DZ.OTHER_ZONE;
+      other.textContent = tr("checkout.zoneOther");
+      zone.append(other);
+    }
     // Si el barrio que había elegido ya no está, vuelve a elegir.
-    zone.value = COURIER_ZONES.zones.some((item) => item.id === previous) ? previous : "";
+    const stillThere =
+      COURIER_ZONES.zones.some((item) => item.id === previous) ||
+      (previous === DZ.OTHER_ZONE && COURIER_ZONES.coordinate && COURIER_ZONES.zones.length > 0);
+    zone.value = stillThere ? previous : "";
   }
 
   renderZoneNotice();
   CONTROLS?.refresh();
+}
+
+// El campo de texto del barrio se ve (y se exige) solo cuando el costo se coordina con el local.
+function syncZoneTextField() {
+  const zone = document.querySelector('#form-pedido select[name="barrio"]');
+  const text = document.querySelector('#form-pedido input[name="barrioTexto"]');
+  if (!zone || !text || !DZ) return;
+
+  const delivery = document.querySelector('#form-pedido select[name="entrega"]')?.value;
+  const coordinated =
+    DZ.needsCourier(COURIER_ZONES, delivery) && DZ.isCoordinated({ zones: COURIER_ZONES, zoneId: zone.value });
+
+  text.hidden = !coordinated;
+  text.disabled = !coordinated;
+  text.required = coordinated;
+  if (!coordinated) text.value = "";
 }
 
 function renderZoneNotice() {
@@ -1982,9 +2023,20 @@ function renderZoneNotice() {
   const zone = document.querySelector('#form-pedido select[name="barrio"]');
   if (!notice || !zone || !DZ) return;
 
+  syncZoneTextField();
+
+  const delivery = document.querySelector('#form-pedido select[name="entrega"]')?.value;
+  const coordinated =
+    DZ.needsCourier(COURIER_ZONES, delivery) && DZ.isCoordinated({ zones: COURIER_ZONES, zoneId: zone.value });
   const chosen = zone.disabled ? null : DZ.findZone(COURIER_ZONES, zone.value);
-  notice.hidden = !chosen;
-  notice.textContent = chosen ? tr(DZ.zoneNoticeKey(chosen), DZ.zoneNoticeVars(chosen, PRICE.formatPrice)) : "";
+
+  // Con el costo a coordinar el aviso lo dice; con un barrio con precio, "Envío $X a {barrio}".
+  notice.hidden = !chosen && !coordinated;
+  notice.textContent = coordinated
+    ? tr(DZ.COORDINATE_NOTICE_KEY)
+    : chosen
+      ? tr(DZ.zoneNoticeKey(chosen), DZ.zoneNoticeVars(chosen, PRICE.formatPrice))
+      : "";
 
   renderNoCouriersNotice(chosen);
 }
@@ -2038,6 +2090,7 @@ function initCheckoutControls() {
 
 // Lo que muestra el botón de barrio una vez elegido: nombre y precio.
 function describeZone(zoneId) {
+  if (zoneId === DZ?.OTHER_ZONE) return { name: tr("checkout.zoneOther"), aside: "" };
   const zone = DZ?.findZone(COURIER_ZONES, zoneId);
   return zone ? { name: zone.name, aside: "$" + PRICE.formatPrice(zone.price) } : null;
 }
@@ -2082,8 +2135,8 @@ function openZonePicker() {
     select.value = zone.id;
     select.dispatchEvent(new Event("change", { bubbles: true }));
   };
-  renderZoneList(list, "", pick);
-  search.addEventListener("input", () => renderZoneList(list, search.value, pick));
+  renderZoneList(list, "", pick, true);
+  search.addEventListener("input", () => renderZoneList(list, search.value, pick, true));
   search.addEventListener("keydown", (event) => {
     if (event.key === "Enter") {
       event.preventDefault();
@@ -2183,6 +2236,8 @@ function syncZoneFromCheckout(slug) {
   const barrio = document.querySelector('#form-pedido select[name="barrio"]')?.value;
   // Con el envío bloqueado el checkout no cambia la elección: se sale con el chip (PUBLICO-80).
   if (ZONE.deliveryBlocked(ZONE_CHOICE)) return;
+  // "Otro barrio" (el costo se coordina) es de este pedido: no cambia ni se recuerda como zona (ENVIO-263).
+  if (entrega === "delivery" && barrio === DZ.OTHER_ZONE) return;
   let next = null;
   if (entrega === "retiro") next = { type: "pickup" };
   else if (entrega === "delivery" && barrio && DZ.findZone(COURIER_ZONES, barrio)) {
@@ -2200,15 +2255,17 @@ function applyZoneToCheckout(choice) {
   const entrega = document.querySelector('#form-pedido select[name="entrega"]');
   if (!entrega) return;
 
-  const value = choice.type === "zone" ? "delivery" : "retiro";
+  const value = choice.type === "zone" || choice.type === "coordinate" ? "delivery" : "retiro";
   if (![...entrega.options].some((option) => option.value === value)) return;
 
   entrega.value = value;
   renderCourierFields();
 
-  if (choice.type === "zone") {
+  if (choice.type === "zone" || choice.type === "coordinate") {
     const barrio = document.querySelector('#form-pedido select[name="barrio"]');
-    if (barrio) barrio.value = choice.zoneId;
+    if (barrio && choice.type === "zone") barrio.value = choice.zoneId;
+    // "Mi barrio no está" en un negocio que coordina: el checkout queda en "Otro barrio" (ENVIO-263).
+    if (barrio && choice.type === "coordinate" && !barrio.hidden) barrio.value = DZ.OTHER_ZONE;
     renderZoneNotice();
   }
   CONTROLS?.refresh();
@@ -2216,8 +2273,10 @@ function applyZoneToCheckout(choice) {
 
 function chooseZone(choice) {
   ZONE_CHOICE = choice;
-  // "Mi barrio no está" no se recuerda: al volver se pregunta de nuevo (PUBLICO-80).
-  if (choice.type !== "notListed") ZONE.saveChoice(window.localStorage, MENU_SOURCE.slug, choice);
+  // "Mi barrio no está" y el envío a coordinar no se recuerdan: al volver se pregunta de nuevo (PUBLICO-80).
+  if (choice.type !== "notListed" && !ZONE.isCoordinateChoice(choice)) {
+    ZONE.saveChoice(window.localStorage, MENU_SOURCE.slug, choice);
+  }
   applyZoneToCheckout(choice);
   ZONE_STEP = ZONE.stepAfterChoice(choice);
   renderZone();
@@ -2250,14 +2309,17 @@ function zoneButton(text, onClick, className = "zona-opcion") {
   return button;
 }
 
-function renderZoneList(list, query, onPick = (zone) => chooseZone({ type: "zone", zoneId: zone.id })) {
+function renderZoneList(list, query, onPick = (zone) => chooseZone({ type: "zone", zoneId: zone.id }), withOther = false) {
   list.replaceChildren();
   const found = ZONE.filterZones(COURIER_ZONES.zones, query);
+  // "Otro barrio (costo a coordinar)": solo en la lista del checkout, de un negocio que coordina (ENVIO-263).
+  const other = withOther && COURIER_ZONES.coordinate ? zoneButton(tr("checkout.zoneOther"), () => onPick({ id: DZ.OTHER_ZONE })) : null;
   if (found.length === 0) {
     const empty = document.createElement("p");
     empty.className = "zona-vacia";
     empty.textContent = tr("zone.empty");
     list.append(empty);
+    if (other) list.append(other);
     return;
   }
   found.forEach((zone) => {
@@ -2268,6 +2330,7 @@ function renderZoneList(list, query, onPick = (zone) => chooseZone({ type: "zone
     button.append(price);
     list.append(button);
   });
+  if (other) list.append(other);
 }
 
 // Cierra el diálogo de la zona sin cambiar la elección (×, Escape o tocar el fondo).
@@ -2340,7 +2403,9 @@ function renderZone() {
         ? `${prefix}${tr("zone.chipPickup")}`
         : ZONE_CHOICE?.type === "notListed"
           ? `${prefix}${tr("zone.chipNoDelivery")}`
-          : `${prefix}${tr("zone.change")}`;
+          : ZONE_CHOICE?.type === "coordinate"
+            ? `${prefix}${tr("zone.chipCoordinate")}`
+            : `${prefix}${tr("zone.change")}`;
     chip.setAttribute("aria-label", tr("zone.change"));
     if (
       document.documentElement.dataset.template === "moderno" &&
@@ -2391,6 +2456,11 @@ function renderZone() {
     row.className = "zona-acciones";
     row.append(
       zoneButton(tr("zone.delivery"), () => {
+        // Sin barrios con precio no hay lista: el envío queda con el costo a coordinar (ENVIO-263).
+        if (ZONE.deliveryStep(COURIER_ZONES) === "coordinate") {
+          chooseZone({ type: "coordinate" });
+          return;
+        }
         ZONE_QUERY = "";
         ZONE_STEP = "zones";
         renderZone();
@@ -2414,8 +2484,13 @@ function renderZone() {
       ZONE_QUERY = search.value;
       renderZoneList(list, ZONE_QUERY);
     });
-    // "Mi barrio no está" bloquea el envío al instante (PUBLICO-80).
-    const notListed = zoneButton(tr("zone.notListed"), () => chooseZone({ type: "notListed" }), "zona-no-esta");
+    // "Mi barrio no está" bloquea el envío al instante (PUBLICO-80); en un negocio que coordina el costo, lleva a
+    // escribir el barrio y coordinar con el local (ENVIO-263).
+    const notListed = zoneButton(
+      tr("zone.notListed"),
+      () => chooseZone({ type: COURIER_ZONES.coordinate ? "coordinate" : "notListed" }),
+      "zona-no-esta",
+    );
     panel.append(close, title, search, list, notListed, back());
   } else if (ZONE_STEP === "notListed") {
     title.textContent = tr(ZONE_PICKUP ? "zone.noDelivery" : "zone.noDeliveryOnly");

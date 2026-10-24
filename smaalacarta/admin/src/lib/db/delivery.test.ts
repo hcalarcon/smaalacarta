@@ -693,7 +693,7 @@ describe("lo que ve el cliente — ENVIO-16 y 17", () => {
     const z = (r.ok ? r.rows[0].z : null) as Record<string, unknown> & {
       zonas: { nombre: string; precio: number }[];
     };
-    expect(Object.keys(z)).toEqual(["zonas"]);
+    expect(Object.keys(z).sort()).toEqual(["coordinar", "propio", "zonas"]);
     expect(z.zonas).toHaveLength(39);
     expect(z.zonas[0]).toMatchObject({ nombre: "Centro (hasta Av. Koessler)", precio: 4500 });
     // `fijo` se suma en ENVIO-223: sigue sin repartidor ni WhatsApp.

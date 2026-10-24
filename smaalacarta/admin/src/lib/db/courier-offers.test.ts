@@ -497,7 +497,7 @@ describe("la elección automática — ENVIO-105 y 106", () => {
     expect(ev.rows).toHaveLength(1);
   });
 
-  it("a igual precio gana el favorito del local; sin favorito elegido, Repartos al Toque; si ninguno es el favorito, la más vieja", async () => {
+  it("a igual precio gana el favorito del local; sin favorito elegido, la más vieja; si ninguno es el favorito, la más vieja", async () => {
     await setFavorite(MOTO);
     const conFavorito = await envio();
     await offer(db, TOQUE_USER, conFavorito.id);
@@ -506,7 +506,7 @@ describe("la elección automática — ENVIO-105 y 106", () => {
     await delivery(conFavorito.code);
     expect((await row(conFavorito.id)).courier_id).toBe(MOTO);
 
-    // Sin favorito elegido vale el de por defecto (ENVIO-130), aunque la otra oferta sea más vieja.
+    // Sin favorito elegido no hay preferido (ENVIO-254): gana la oferta más vieja.
     await setFavorite(null);
     const porDefecto = await envio();
     await offer(db, MOTO_USER, porDefecto.id);
@@ -516,7 +516,7 @@ describe("la elección automática — ENVIO-105 y 106", () => {
     await offer(db, TOQUE_USER, porDefecto.id);
     await age(porDefecto.id, 6);
     await delivery(porDefecto.code);
-    expect((await row(porDefecto.id)).courier_id).toBe(TOQUE);
+    expect((await row(porDefecto.id)).courier_id).toBe(MOTO);
 
     // El favorito elegido (Moto) no ofertó: entre Lejos y Toque, la más vieja.
     await setFavorite(MOTO);
@@ -720,14 +720,14 @@ describe("lo que ve el cliente — ENVIO-110", () => {
     expect(elegido).not.toHaveProperty("ofertas");
   });
 
-  it("las ordena con el favorito primero (por defecto, Repartos al Toque) y después por precio y antigüedad; el cierre es 5 minutos después de la primera", async () => {
+  it("las ordena con el favorito primero (si lo hay) y después por precio y antigüedad; el cierre es 5 minutos después de la primera", async () => {
     const o = await envio();
     await offer(db, MOTO_USER, o.id);
     await age(o.id, 1);
     await offer(db, TOQUE_USER, o.id);
 
     const d = await delivery(o.code);
-    expect(d.ofertas!.map((x) => x.repartidor)).toEqual(["Repartos al Toque", "Moto Express"]);
+    expect(d.ofertas!.map((x) => x.repartidor)).toEqual(["Moto Express", "Repartos al Toque"]);
 
     const first = (await db.query<{ t: Date }>("select min(created_at) t from courier_offers where order_id = $1", [o.id]))
       .rows[0].t;

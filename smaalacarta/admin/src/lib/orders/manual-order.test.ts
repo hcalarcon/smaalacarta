@@ -145,6 +145,17 @@ describe("envío con repartidor — ENVIO-137", () => {
     expect(errorsOf({ ...envio, courierMode: "rapido" }, true).courierMode).toBeTruthy();
   });
 
+  it("acepta el modo del repartidor propio — ENVIO-250", () => {
+    expect(errorsOf({ ...envio, courierMode: "own" }, true).courierMode).toBeUndefined();
+  });
+
+  it("sin zona con precio alcanza con escribir el barrio; sin ninguno de los dos se pide — ENVIO-252", () => {
+    expect(errorsOf({ ...envio, zoneId: "", zoneText: "Villa Rural" }, true).zoneId).toBeUndefined();
+    expect(errorsOf({ ...envio, zoneId: "", zoneText: "   " }, true).zoneId).toBeTruthy();
+    expect(errorsOf({ ...envio, zoneId: "", zoneText: "x".repeat(81) }, true).zoneId).toBeTruthy();
+    expect(errorsOf({ ...envio, zoneId: "", zoneText: "x".repeat(80) }, true).zoneId).toBeUndefined();
+  });
+
   it("la dirección va de 5 a 200 caracteres", () => {
     expect(errorsOf({ ...envio, address: "Mitr" }, true).address).toBeTruthy();
     expect(errorsOf({ ...envio, address: "a".repeat(201) }, true).address).toBeTruthy();

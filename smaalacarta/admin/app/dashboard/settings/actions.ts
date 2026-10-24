@@ -3,10 +3,17 @@
 import { revalidatePath } from "next/cache";
 
 import { updateBusinessProfile } from "@/lib/db/business";
-import { getBusinessDeliveryPricing, saveBusinessZonePrices } from "@/lib/db/delivery-pricing";
 import { getDeliveryOptions, saveDeliveryPreferences } from "@/lib/db/delivery-zones";
 import { saveSettings } from "@/lib/db/settings";
 import { validateDeliveryInput, type DeliveryInput } from "@/lib/courier/preferences";
+import {
+  createZoneFor,
+  deleteZoneFor,
+  reorderZonesFor,
+  setZoneActiveFor,
+  updateZoneFor,
+  type ZoneResult,
+} from "@/lib/delivery/business-zones";
 import { requireBusiness } from "@/lib/get-current-business";
 import { prepareSettings } from "@/lib/settings/save-flow";
 import { settingsErrorMessage } from "@/lib/settings/messages";
@@ -14,7 +21,6 @@ import {
   validateSettings,
   type SettingsInput,
 } from "@/lib/settings/validation";
-import { parsePrice } from "@/lib/superadmin/zones";
 import {
   normalizeWhatsapp,
   validateBusinessProfile,
@@ -162,49 +168,40 @@ export async function saveDeliveryAction(input: DeliveryInput): Promise<SaveDeli
   return { ok: true };
 }
 
-// Precio del envío por zona (ENVIO-220): con el tipo "Del negocio" y el permiso que da el superadmin. El negocio sale
-// de la sesión; un precio vacío vuelve la zona al precio común. La base vuelve a exigir tipo y permiso con el RLS.
-export async function saveZonePricesAction(
-  input: { zoneId: string; price: string }[],
-): Promise<SaveSettingsResult> {
+// Zonas y precios propios del negocio (ENVIO-247 y 260). El negocio sale de la sesión, nunca del navegador, y la base
+// vuelve a exigir con el RLS que quien llama sea miembro. Solo con envío propio: con envío libre no hay zonas propias.
+async function ownZonesBusiness(): Promise<string | null> {
   const { business } = await requireBusiness();
+  return business.courier_delivery && business.delivery_type === "own" ? business.id : null;
+}
 
-  const pricing = await getBusinessDeliveryPricing(business.id);
-  if (!pricing || pricing.pricing !== "business" || !pricing.editable) {
-    return { ok: false, error: "No tenés permiso para cargar los precios de envío." };
-  }
+const NOT_OWN: ZoneResult = { ok: false, error: "Tu negocio no tiene el envío propio habilitado." };
 
-  if (!Array.isArray(input)) return { ok: false, error: "No pudimos guardar los cambios. Probá de nuevo." };
+async function zoneAction(run: (businessId: string) => Promise<ZoneResult>): Promise<ZoneResult> {
+  const businessId = await ownZonesBusiness();
+  if (!businessId) return NOT_OWN;
 
-  const known = new Set(pricing.zones.map((zone) => zone.id));
-  const fieldErrors: Record<string, string> = {};
-  const prices: { zoneId: string; price: number | null }[] = [];
+  const result = await run(businessId);
+  if (result.ok) revalidatePath("/dashboard/settings");
+  return result;
+}
 
-  for (const row of input) {
-    if (typeof row?.zoneId !== "string" || !known.has(row.zoneId)) continue;
+export async function createZoneAction(input: { name: string; price: string }): Promise<ZoneResult> {
+  return zoneAction((businessId) => createZoneFor(businessId, input));
+}
 
-    if (String(row.price ?? "").trim() === "") {
-      prices.push({ zoneId: row.zoneId, price: null });
-      continue;
-    }
+export async function updateZoneAction(zoneId: string, input: { name: string; price: string }): Promise<ZoneResult> {
+  return zoneAction((businessId) => updateZoneFor(businessId, zoneId, input));
+}
 
-    const price = parsePrice(row.price);
-    if (price === null) {
-      fieldErrors[row.zoneId] = "Escribí un precio válido, de 0 en adelante.";
-    } else {
-      prices.push({ zoneId: row.zoneId, price });
-    }
-  }
+export async function setZoneActiveAction(zoneId: string, active: boolean): Promise<ZoneResult> {
+  return zoneAction((businessId) => setZoneActiveFor(businessId, zoneId, active));
+}
 
-  if (Object.keys(fieldErrors).length > 0) {
-    return { ok: false, error: "Revisá los datos marcados.", fieldErrors };
-  }
+export async function deleteZoneAction(zoneId: string): Promise<ZoneResult> {
+  return zoneAction((businessId) => deleteZoneFor(businessId, zoneId));
+}
 
-  const saved = await saveBusinessZonePrices(business.id, prices);
-  if ("error" in saved) {
-    return { ok: false, error: "No pudimos guardar los cambios. Probá de nuevo." };
-  }
-
-  revalidatePath("/dashboard/settings");
-  return { ok: true };
+export async function reorderZonesAction(orderedIds: string[]): Promise<ZoneResult> {
+  return zoneAction((businessId) => reorderZonesFor(businessId, orderedIds));
 }

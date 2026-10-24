@@ -2,6 +2,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   askZone,
+  deliveryStep,
+  isCoordinateChoice,
   ZONE_TOAST_MS,
   choiceToast,
   clearChoice,
@@ -184,5 +186,29 @@ describe("elegir una zona cierra el diálogo y avisa — PUBLICO-75 y 111", () =
 
   it("el aviso se va solo a los 4 segundos", () => {
     expect(ZONE_TOAST_MS).toBe(4000);
+  });
+});
+
+describe("envío a coordinar — ENVIO-263", () => {
+  const SIN_BARRIOS = { zones: [], coordinate: true };
+  const CON_BARRIOS = { ...ZONES, coordinate: true };
+
+  it("se pregunta aunque no haya barrios, si el envío se ofrece a coordinar", () => {
+    expect(askZone({ zones: SIN_BARRIOS, deliveryOptions: ["delivery", "retiro"] })).toBe(true);
+    expect(askZone({ zones: { zones: [] }, deliveryOptions: ["delivery"] })).toBe(false);
+    // Sin 'delivery' entre las entregas del local, no hay nada que preguntar.
+    expect(askZone({ zones: SIN_BARRIOS, deliveryOptions: ["retiro"] })).toBe(false);
+  });
+
+  it("'Envío' va a la lista de barrios, o directo a coordinar si no hay barrios con precio", () => {
+    expect(deliveryStep(CON_BARRIOS)).toBe("zones");
+    expect(deliveryStep(SIN_BARRIOS)).toBe("coordinate");
+  });
+
+  it("el aviso dice que el costo se coordina con el local, y no se recuerda como zona", () => {
+    expect(choiceToast({ type: "coordinate" }, SIN_BARRIOS, formatPrice)).toEqual({ key: "zone.coordinate", vars: {} });
+    expect(isCoordinateChoice({ type: "coordinate" })).toBe(true);
+    expect(isCoordinateChoice({ type: "zone", zoneId: "z" })).toBe(false);
+    expect(validateChoice({ type: "coordinate" }, SIN_BARRIOS)).toBeNull();
   });
 });

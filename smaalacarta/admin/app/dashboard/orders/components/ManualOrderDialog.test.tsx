@@ -357,3 +357,92 @@ describe("pedido manual — guardar y mandar el seguimiento (ADMIN-PEDIDOS-48)",
     expect(screen.queryByText(/cargado y confirmado/)).toBeNull();
   });
 });
+
+describe("pedido manual con envío propio y a coordinar — ENVIO-250 y 252", () => {
+  const OWN = "e1e1e1e1-0000-0000-0000-0000000000aa";
+  const own = (extra: Partial<ManualOrderSetup["delivery"]> = {}): Partial<ManualOrderSetup> => ({
+    delivery: {
+      zones: [{ id: OWN, name: "Barrio Norte", price: 1500, favoriteCovers: false }],
+      favorite: null,
+      kind: "own",
+      coordinate: true,
+      ownCourier: { id: "rita", name: "Rita" },
+      ...extra,
+    },
+  });
+
+  function toZone(props: Partial<ManualOrderSetup>) {
+    open(props);
+    addCafe();
+    next();
+    fireEvent.click(screen.getByLabelText(/Envío con repartidor/));
+  }
+
+  it("ofrece su repartidor propio y 'Lo llevo yo', sin ofertas ni favorito", () => {
+    toZone(own());
+    fireEvent.change(screen.getByLabelText("Barrio"), { target: { value: OWN } });
+
+    expect(screen.getByLabelText(/Asignar a Rita/)).toBeTruthy();
+    expect(screen.getByLabelText(/Lo llevo yo/)).toBeTruthy();
+    expect(screen.queryByLabelText(/Buscar repartidor/)).toBeNull();
+    // Es su precio, no uno de referencia que el repartidor pueda cambiar.
+    expect(screen.queryByText(/Precio de referencia/)).toBeNull();
+    expect(screen.getByText(/Envío: \$\s?1\.500/)).toBeTruthy();
+  });
+
+  it("sin repartidor propio el envío queda a cargo del local", () => {
+    toZone(own({ ownCourier: null }));
+    fireEvent.change(screen.getByLabelText("Barrio"), { target: { value: OWN } });
+
+    expect(screen.getByText(/Todavía no tenés repartidor asignado/)).toBeTruthy();
+    expect(screen.queryByLabelText(/Asignar a/)).toBeNull();
+  });
+
+  it("'Otro barrio' pide el barrio escrito y avisa que el costo se coordina", () => {
+    toZone(own());
+    fireEvent.change(screen.getByLabelText("Barrio", { selector: "select" }), { target: { value: "__otro" } });
+
+    expect(screen.getByPlaceholderText("Escribí el barrio")).toBeTruthy();
+    expect(screen.getByText(/El costo del envío se coordina con el cliente/)).toBeTruthy();
+  });
+
+  it("sin zonas con precio no hay lista: se escribe el barrio y el envío lo lleva el local", () => {
+    toZone({ delivery: { zones: [], favorite: null, kind: "free", coordinate: true, ownCourier: null } });
+
+    expect(screen.queryByRole("combobox", { name: "Barrio" })).toBeNull();
+    expect(screen.getByPlaceholderText("Escribí el barrio")).toBeTruthy();
+    expect(screen.getByText(/El envío queda a tu cargo, sin repartidor/)).toBeTruthy();
+    expect(screen.queryByText(/No hay barrios disponibles/)).toBeNull();
+  });
+
+  it("manda el barrio escrito, sin id de zona, y el modo del repartidor propio", async () => {
+    createManualOrderAction.mockResolvedValue({ ok: true, code: "0123456789abcdef0123", number: 5, total: 1000 });
+    toZone(own());
+
+    fireEvent.change(screen.getByLabelText("Barrio", { selector: "select" }), { target: { value: "__otro" } });
+    fireEvent.change(screen.getByPlaceholderText("Escribí el barrio"), { target: { value: "Villa Rural" } });
+    fireEvent.click(screen.getByLabelText(/Asignar a Rita/));
+    next();
+
+    fireEvent.change(screen.getByLabelText("Cliente"), { target: { value: "Lucía" } });
+    fireEvent.change(screen.getByLabelText(/Teléfono/), { target: { value: "351 555-1234" } });
+    fireEvent.change(screen.getByLabelText("Dirección"), { target: { value: "Calle 1 nro 2" } });
+    next();
+    fireEvent.click(screen.getByLabelText(/QR \/ billetera virtual/));
+    click("Crear pedido");
+
+    await waitFor(() => expect(screen.getByText(/cargado y confirmado/)).toBeTruthy());
+    expect(createManualOrderAction).toHaveBeenCalledWith(
+      expect.objectContaining({ zoneId: "", zoneText: "Villa Rural", courierMode: "own" }),
+    );
+  });
+
+  it("'Otro barrio' sin escribir nada no deja avanzar", () => {
+    toZone(own());
+    fireEvent.change(screen.getByLabelText("Barrio", { selector: "select" }), { target: { value: "__otro" } });
+    fireEvent.click(screen.getByLabelText(/Asignar a Rita/));
+    next();
+
+    expect(screen.getByText("Elegí el barrio del envío.")).toBeTruthy();
+  });
+});

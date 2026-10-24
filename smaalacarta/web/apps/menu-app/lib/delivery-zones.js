@@ -20,8 +20,15 @@ function normalizeWhatsapp(value) {
   return typeof value === "string" && WHATSAPP.test(value) ? value : null;
 }
 
+// El valor del select de barrios para "otro barrio": se escribe a mano y el costo del envío se coordina con el local
+// (ENVIO-252 y 263).
+export const OTHER_ZONE = "__otro";
+export const ZONE_TEXT_MAX = 80;
+
 // Valida la forma de la respuesta y la pasa a nombres propios. Un barrio mal formado se descarta;
-// sin ningún barrio válido no hay envío (null). El repartidor y su WhatsApp son opcionales.
+// sin ningún barrio válido y sin poder coordinar el costo no hay envío (null). El repartidor y su WhatsApp son
+// opcionales. `coordinate`: el envío se ofrece "a coordinar" (envío propio, o libre sin zonas tildadas); `own`:
+// el negocio tiene envío propio.
 export function normalizeZones(data) {
   if (!data || typeof data !== "object") return null;
   if (!Array.isArray(data.zonas)) return null;
@@ -44,11 +51,13 @@ export function normalizeZones(data) {
     });
   }
 
-  if (zones.length === 0) return null;
+  const coordinate = data.coordinar === true;
+
+  if (zones.length === 0 && !coordinate) return null;
 
   const courier = typeof data.repartidor === "string" && data.repartidor.trim() ? data.repartidor : null;
 
-  return { courier, whatsapp: normalizeWhatsapp(data.whatsapp), zones };
+  return { courier, whatsapp: normalizeWhatsapp(data.whatsapp), zones, coordinate, own: data.propio === true };
 }
 
 export async function fetchDeliveryZones({ url, key, slug, fetchImpl = globalThis.fetch }) {
@@ -79,7 +88,18 @@ export async function fetchDeliveryZones({ url, key, slug, fetchImpl = globalThi
 // ¿El checkout pide barrio y dirección? Solo con entrega "delivery" y barrios disponibles. El teléfono
 // se pide siempre.
 export function needsCourier(zones, delivery) {
-  return Boolean(zones && zones.zones.length > 0 && delivery === "delivery");
+  return Boolean(zones && (zones.zones.length > 0 || zones.coordinate) && delivery === "delivery");
+}
+
+// ¿No hay ningún barrio con precio y el envío se ofrece a coordinar? Entonces el barrio se escribe directamente.
+export function coordinateOnly(zones) {
+  return Boolean(zones && zones.zones.length === 0 && zones.coordinate);
+}
+
+// ¿Este pedido va con el costo a coordinar? Sin barrios con precio, o con "otro barrio" elegido (ENVIO-252).
+export function isCoordinated({ zones, zoneId }) {
+  if (!zones || !zones.coordinate) return false;
+  return zones.zones.length === 0 || zoneId === OTHER_ZONE;
 }
 
 export function findZone(zones, id) {
@@ -96,27 +116,46 @@ export function zoneNoticeKey(zone) {
   return isFixedPrice(zone) ? "checkout.zoneNoticeFixed" : "checkout.zoneNotice";
 }
 
+export const COORDINATE_NOTICE_KEY = "checkout.zoneNoticeCoordinate";
+
 // Variables del aviso "Envío ${precio} a {barrio}…" (el texto vive en i18n.js).
 export function zoneNoticeVars(zone, formatPrice) {
   return { barrio: zone.name, precio: formatPrice(zone.price) };
 }
 
 // ¿Se puede confirmar con esta entrega y esta zona? (PUBLICO-82). `null` si sí; si no, el motivo: `no_delivery`
-// ("Mi barrio no está": el envío está bloqueado) o `invalid_zone` (sin zona, o una que ya no está en la lista).
-// Sin barrios cargados no se exige zona. El servidor la valida igual (`create_public_order`).
-export function deliveryProblem({ zones, delivery, zoneId, blocked = false }) {
+// ("Mi barrio no está": el envío está bloqueado), `invalid_zone` (sin zona, o una que ya no está en la lista) o
+// `invalid_zone_text` (el costo se coordina y falta el barrio escrito, o es demasiado largo).
+// Sin barrios cargados ni envío a coordinar no se exige zona. El servidor la valida igual (`create_public_order`).
+export function deliveryProblem({ zones, delivery, zoneId, zoneText = "", blocked = false }) {
   // Bloqueado y sin retiro elegido (p. ej. un local solo con envío, donde el select está oculto y vacío): no hay
   // forma de confirmar.
   if (blocked && delivery !== "retiro") return "no_delivery";
   if (delivery !== "delivery") return null;
   if (!needsCourier(zones, delivery)) return null;
+
+  if (isCoordinated({ zones, zoneId })) {
+    const text = String(zoneText ?? "").trim();
+    return text !== "" && text.length <= ZONE_TEXT_MAX ? null : "invalid_zone_text";
+  }
+
   return findZone(zones, zoneId) ? null : "invalid_zone";
 }
 
 // Lo que se suma a `createOrder` por el envío; vacío si el pedido no lleva envío con repartidor. El
-// teléfono no está acá: va en todos los pedidos (ENVIO-87).
-export function courierOrderFields({ zones, delivery, zoneId, address }) {
-  if (!needsCourier(zones, delivery) || !findZone(zones, zoneId)) return {};
+// teléfono no está acá: va en todos los pedidos (ENVIO-87). Con el costo a coordinar no va el id de un barrio
+// sino el barrio escrito, y la base deja el precio pendiente (ENVIO-252).
+export function courierOrderFields({ zones, delivery, zoneId, zoneText = "", address }) {
+  if (!needsCourier(zones, delivery)) return {};
+
+  if (isCoordinated({ zones, zoneId })) {
+    return {
+      deliveryZoneText: String(zoneText ?? "").trim(),
+      deliveryAddress: String(address ?? "").trim(),
+    };
+  }
+
+  if (!findZone(zones, zoneId)) return {};
 
   return {
     deliveryZone: zoneId,
@@ -127,7 +166,17 @@ export function courierOrderFields({ zones, delivery, zoneId, address }) {
 // Las líneas del mensaje de WhatsApp al local. Siempre en español (IDIOMA-5). El precio es de
 // referencia y se le paga al repartidor: no entra en el total del pedido. No nombra al repartidor
 // (todavía no hay uno) y el teléfono del cliente va aparte, en todos los pedidos (ENVIO-88).
-export function courierWhatsappLines(zone, { address }, formatPrice) {
+// Sin zona con precio (`zone` nulo) el barrio es el que escribió el cliente y el costo se coordina (ENVIO-263).
+export function courierWhatsappLines(zone, { address, zoneText = "" }, formatPrice) {
+  if (!zone) {
+    return [
+      `📍 Barrio: ${String(zoneText ?? "").trim()}`,
+      "🛵 Envío: el costo se coordina con el local",
+      `🏠 Dirección: ${address}`,
+      "",
+    ].join("\n");
+  }
+
   return [
     `📍 Barrio: ${zone.name}`,
     `🛵 Envío${isFixedPrice(zone) ? "" : " aprox."}: $${formatPrice(zone.price)}, se paga al repartidor`,

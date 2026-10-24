@@ -30,7 +30,7 @@ export type ManualOrderItem = ManualMenuLine | ManualFreeLine;
 // tiene habilitados: la base lo vuelve a comprobar.
 export const MANUAL_DELIVERIES = ["retiro", "delivery", "local"] as const;
 export const MANUAL_PAYMENTS = ["efectivo", "transferencia", "tarjeta", "qr"] as const;
-export const COURIER_MODES = ["favorite", "offers", "self"] as const;
+export const COURIER_MODES = ["favorite", "offers", "self", "own"] as const;
 
 export type ManualDelivery = (typeof MANUAL_DELIVERIES)[number];
 export type ManualCourierMode = (typeof COURIER_MODES)[number];
@@ -46,6 +46,8 @@ export type ManualOrderInput = {
   phone?: string;
   // Con envío con repartidor (ENVIO-137): barrio, dirección y qué hacer con el envío.
   zoneId?: string;
+  // Sin zona con precio (ENVIO-252): el barrio escrito a mano; el costo se coordina con el cliente.
+  zoneText?: string;
   address?: string;
   courierMode?: string;
 };
@@ -64,6 +66,7 @@ type Field =
 
 // Los mismos límites que `create_manual_order` en la base de datos.
 export const LIMITS = {
+  zoneText: 80,
   customerName: 80,
   notes: 500,
   itemName: 100,
@@ -127,8 +130,13 @@ export function validateManualOrder(
 
   const address = (input.address ?? "").trim();
   if (delivery === "delivery" && context.courier) {
+    const zoneText = (input.zoneText ?? "").trim();
     if (!(input.zoneId ?? "").trim()) {
-      errors.zoneId = "Elegí el barrio del envío.";
+      if (zoneText === "") {
+        errors.zoneId = "Elegí el barrio del envío.";
+      } else if (zoneText.length > LIMITS.zoneText) {
+        errors.zoneId = `El barrio admite hasta ${LIMITS.zoneText} caracteres.`;
+      }
     }
 
     if (address.length < LIMITS.addressMin || address.length > LIMITS.addressMax) {

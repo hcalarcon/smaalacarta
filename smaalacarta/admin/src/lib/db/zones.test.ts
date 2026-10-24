@@ -386,7 +386,7 @@ describe("public_delivery_zones — ENVIO-51", () => {
     expect(z?.zonas.map((x) => x.nombre)).toEqual(["Centro (hasta Av. Koessler)", "Cantera"]);
     expect(z?.zonas[1]).toMatchObject({ nombre: "Cantera", precio: 5000 });
     // Al pedir todavía no hay repartidor: no se nombra a ninguno.
-    expect(Object.keys(z ?? {})).toEqual(["zonas"]);
+    expect(Object.keys(z ?? {}).sort()).toEqual(["coordinar", "propio", "zonas"]);
   });
 
   it("una zona marcada que nadie cubre, o dada de baja, no aparece", async () => {
@@ -614,7 +614,7 @@ describe("create_public_order con las zonas del local — ENVIO-54", () => {
     // El menú ya no nombra a ningún repartidor: todavía no lo hay.
     const menu = await call(null, "select public.public_delivery_zones('ana') as z");
     const z = (menu.ok ? menu.rows[0].z : null) as Record<string, unknown>;
-    expect(Object.keys(z)).toEqual(["zonas"]);
+    expect(Object.keys(z).sort()).toEqual(["coordinar", "propio", "zonas"]);
 
     await resetAna();
   });

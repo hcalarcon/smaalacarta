@@ -27,10 +27,12 @@ export default function OrderDetailDialog({
   onChangeStatus,
   couriers = [],
   offers,
+  assignMinutes,
   now,
   error = null,
   onAssignCourier,
   onSelfDelivery,
+  onSetFee,
   onConfirmSettlement,
   vehicleEnabled = false,
   onNeedsCar,
@@ -47,10 +49,13 @@ export default function OrderDetailDialog({
   couriers?: OrderCourier[];
   // Las ofertas abiertas del pedido, con nombre y precio (ENVIO-117).
   offers?: OrderOffers;
+  // A los cuántos minutos sin ofertas se destaca "Nadie ofertó todavía" (ENVIO-241): el de la plataforma.
+  assignMinutes?: number;
   now?: Date;
   error?: string | null;
   onAssignCourier?: (courierId: string, note: string) => void;
   onSelfDelivery?: () => void;
+  onSetFee?: (fee: string) => Promise<string | void>;
   // Rendición del efectivo (ENVIO-43): pide confirmar que se recibió.
   onConfirmSettlement?: () => void;
 }) {
@@ -187,10 +192,12 @@ export default function OrderDetailDialog({
             now={now ?? new Date()}
             couriers={couriers}
             offers={offers}
+            assignMinutes={assignMinutes}
             busy={busy}
             error={error}
             onAssign={onAssignCourier}
             onSelf={onSelfDelivery}
+            onSetFee={onSetFee}
             vehicleEnabled={vehicleEnabled}
             onNeedsCar={onNeedsCar}
           />

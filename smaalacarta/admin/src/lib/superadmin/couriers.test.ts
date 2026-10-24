@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import {
   createCourierWithAccount,
+  parseCourierType,
   resetCourierPassword,
   validateCourierProfile,
   validateNewCourier,
@@ -195,5 +196,34 @@ describe("resetCourierPassword — ENVIO-55", () => {
     const sup = makeDeps({ isSuperAdminUser: vi.fn(async () => true) });
     expect(await resetCourierPassword(sup, { courierId: "r" })).toMatchObject({ ok: false });
     expect(sup.setTemporaryPassword).not.toHaveBeenCalled();
+  });
+});
+
+describe("parseCourierType — ENVIO-246 y 258", () => {
+  const NEG = "11111111-1111-1111-1111-111111111111";
+
+  it("libre por defecto, sin negocio", () => {
+    expect(parseCourierType({ courierType: "", ownBusinessId: "" })).toEqual({
+      ok: true,
+      value: { courierType: "free", ownBusinessId: null },
+    });
+    // Un libre que trae un negocio de un formulario viejo lo ignora.
+    expect(parseCourierType({ courierType: "free", ownBusinessId: NEG })).toEqual({
+      ok: true,
+      value: { courierType: "free", ownBusinessId: null },
+    });
+  });
+
+  it("propio exige un negocio válido", () => {
+    expect(parseCourierType({ courierType: "own", ownBusinessId: NEG })).toEqual({
+      ok: true,
+      value: { courierType: "own", ownBusinessId: NEG },
+    });
+    expect(parseCourierType({ courierType: "own", ownBusinessId: "" }).ok).toBe(false);
+    expect(parseCourierType({ courierType: "own", ownBusinessId: "no-es-un-uuid" }).ok).toBe(false);
+  });
+
+  it("otro tipo se rechaza", () => {
+    expect(parseCourierType({ courierType: "vip", ownBusinessId: NEG }).ok).toBe(false);
   });
 });

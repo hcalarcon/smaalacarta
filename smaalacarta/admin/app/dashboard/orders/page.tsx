@@ -3,8 +3,11 @@ import { redirect } from "next/navigation";
 
 import OrdersClient from "./components/OrdersClient";
 import { getBusinessAvailability } from "@/lib/db/availability";
+import { listBusinessZones } from "@/lib/db/business-zones";
 import { getDeliveryOptions } from "@/lib/db/delivery-zones";
 import { getManualOrderMenu, getSuggestedPrepMinutes, listOrderOffers, listOrders } from "@/lib/db/orders";
+import { getOwnDelivery } from "@/lib/db/own-delivery";
+import { getManualAssignMinutes } from "@/lib/db/platform-minutes";
 import { getPrepSettings } from "@/lib/db/settings";
 import { isVehicleEnabled } from "@/lib/db/vehicle";
 import { requireBusiness } from "@/lib/get-current-business";
@@ -31,12 +34,18 @@ export default async function OrdersPage() {
   // que se leen después ya la ven.
   const offers = business.courier_delivery ? await listOrderOffers() : [];
 
-  const [orders, menu, delivery, suggestedPrep, prepSettings, vehicleEnabled, availability] = await Promise.all([
+  // Con envío propio (ENVIO-250 y 260): sus zonas y su repartidor propio, en vez de las zonas comunes.
+  const ownDelivery = business.courier_delivery && business.delivery_type === "own";
+  const own = ownDelivery
+    ? { delivery: await getOwnDelivery(business.id), zones: await listBusinessZones(business.id) }
+    : null;
+
+  const [orders, menu, delivery, suggestedPrep, prepSettings, vehicleEnabled, availability, assignMinutes] = await Promise.all([
     listOrders(business.id),
     // El menú con sus opciones, para cargar un pedido a mano con el precio de la base (ADMIN-PEDIDOS-47).
     getManualOrderMenu(business.id),
     // Solo los negocios con envío con repartidor habilitado (ENVIO-2): a quién se puede asignar un pedido.
-    business.courier_delivery ? getDeliveryOptions() : Promise.resolve(null),
+    business.courier_delivery && !ownDelivery ? getDeliveryOptions() : Promise.resolve(null),
     // Para el selector del tiempo al aceptar (ADMIN-PEDIDOS-32): la sugerencia y el tiempo por defecto.
     getSuggestedPrepMinutes(business.id),
     getPrepSettings(business.id),
@@ -46,6 +55,8 @@ export default async function OrdersPage() {
     business.courier_delivery
       ? getBusinessAvailability(business.id)
       : Promise.resolve({ enabled: false, total: 0, emptyZoneIds: [] }),
+    // A los cuántos minutos sin ofertas se destaca "Nadie ofertó todavía" (ENVIO-241): un valor de toda la plataforma.
+    business.courier_delivery ? getManualAssignMinutes() : Promise.resolve(undefined),
   ]);
 
   return (
@@ -57,11 +68,16 @@ export default async function OrdersPage() {
         slug: business.slug,
         courier: business.courier_delivery === true,
         menu,
-        delivery: manualDeliveryContext(delivery),
+        delivery: manualDeliveryContext(delivery, own),
       }}
       serverNow={new Date().toISOString()}
-      couriers={delivery?.couriers ?? []}
+      couriers={
+        own?.delivery.courier?.active
+          ? [{ id: own.delivery.courier.id, name: own.delivery.courier.name, whatsapp: null, zone_ids: [], own: true }]
+          : (delivery?.couriers ?? [])
+      }
       offers={offers}
+      assignMinutes={assignMinutes}
       suggestedPrepMinutes={suggestedPrep}
       defaultPrepMinutes={prepSettings.defaultPrepMinutes}
       vehicleEnabled={vehicleEnabled}

@@ -2033,7 +2033,7 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
 - **ENVIO-116** Suena un aviso cuando entra un pedido nuevo a Disponibles y otro, distinto, cuando lo eligen.
 - **ENVIO-117** En un pedido con envío buscando, el local ve "Esperando ofertas" o "N ofertas, el cliente está
   eligiendo (se elige sola en m:ss)", con nombres y precios. Asignar a mano y Lo llevo yo siguen disponibles.
-- **ENVIO-118** A los 10 minutos de abierta la búsqueda sin ninguna oferta, la tarjeta y el detalle destacan "Nadie
+- **ENVIO-118** A los X minutos (ENVIO-241) de abierta la búsqueda sin ninguna oferta, la tarjeta y el detalle destacan "Nadie
   ofertó todavía".
 - **ENVIO-119** Configuración → Envíos ya no pide minutos para el favorito; dice que su oferta le aparece primero al
   cliente, marcada "Recomendado por el local".
@@ -2349,56 +2349,13 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
 - **ENVIO-218** La burbuja nunca tapa el botón que señala ni se sale de la pantalla (390 px): si el elemento queda
   cerca de la barra de abajo, la burbuja va arriba. Con `prefers-reduced-motion` no hay animaciones.
 
-### Tipo de precio del envío (tarea 47)
+### Tipo de precio y favorito fijado (tareas 47 y 48) — reemplazado por la tarea 54
 
-- **ENVIO-219** Cada negocio tiene un tipo de precio de envío (`businesses.delivery_pricing`): `common` (por defecto: las
-  zonas comunes con su precio de referencia), `business` (las mismas zonas comunes con el precio que carga el negocio) o
-  `courier` (las zonas y precios propios del favorito efectivo del negocio, `effective_favorite_courier`). Solo lo
-  cambia el superadmin, igual que `delivery_prices_editable` ("el negocio puede editar sus precios", por defecto no) y
-  `delivery_offers_enabled` ("ofertas con otro precio", por defecto sí).
-- **ENVIO-220** `business_zone_prices` guarda el precio del negocio por zona común. Si falta la fila de una zona tildada,
-  vale el precio común. El negocio lee los suyos y los escribe solo con `delivery_prices_editable`; nunca los de otro.
-- **ENVIO-221** `courier_own_zones` guarda las zonas propias de cada repartidor (nombre, precio, activa, orden).
-  `couriers.can_edit_zones` ("puede editar sus zonas y precios", por defecto no). El repartidor lee las suyas y las
-  escribe solo con ese permiso; nunca ve ni toca las de otro. El superadmin hace todo. El público no las lee: solo por
-  las funciones.
-- **ENVIO-222** `delivery_zones_for_business(negocio)` es el único lugar que resuelve las zonas de un negocio: devuelve
-  id, origen (`common` o `courier`), nombre, precio de lista y si el precio es fijo. Con `common` y `business` aplica
-  las reglas de siempre (zona activa, tildada por el local y cubierta por un repartidor activo). Con `courier` devuelve
-  las zonas activas del favorito efectivo si ese repartidor está activo; sin favorito activo, ninguna: el negocio no
-  ofrece envío.
-- **ENVIO-223** El precio es fijo si la plataforma está en modo `fixed` o el negocio tiene las ofertas con otro precio
-  apagadas; si no, es aproximado. `public_delivery_zones` entrega `id`, `nombre`, `precio` y `fijo` por zona.
-- **ENVIO-224** `create_public_order` y `create_manual_order` validan el barrio con `delivery_zones_for_business` y
-  guardan su precio de lista. Con `courier` el pedido guarda la zona del repartidor en `orders.courier_zone_id`
-  (`delivery_zone_id` queda vacío) más el nombre en `delivery_zone_name`.
-- **ENVIO-225** Un pedido con zona del repartidor lo ven, toman y ofertan solo el dueño de esa zona (no se necesita
-  cobertura de zonas comunes). La base deja al local asignarlo solo a ese repartidor (el tablero no lista otros).
-- **ENVIO-226** Con las ofertas con otro precio apagadas, `courier_make_offer` rechaza (`P0028`) un precio distinto al
-  de lista; el de lista sí se acepta.
-- **ENVIO-227** El superadmin ve y edita el tipo de precio, los dos permisos del negocio y las zonas propias de cada
-  repartidor con su permiso. El repartidor ve "Mis zonas y precios" (editable solo con permiso). En Configuración →
-  Envíos, con `business` y permiso el local edita el precio de cada zona tildada; con `courier` ve las zonas del
-  repartidor en solo lectura.
-- **ENVIO-228** El menú (tarjeta de zona y checkout) muestra "Envío $X" si el precio es fijo y "Envío aprox. $X" si no,
-  en es/en/pt.
-
-### Favorito y asignación a mano con zonas propias (tarea 48)
-
-- **ENVIO-229** Con el tipo de precio `courier`, el favorito del negocio lo fija el superadmin
-  (`superadmin_set_favorite_courier`): puede ser cualquier repartidor activo con al menos una zona propia activa, sin
-  cubrir ninguna zona común. El detalle del negocio lo elige con un select que lista solo a esos repartidores. La base
-  rechaza (`P0017`) a uno que no cumple.
-- **ENVIO-230** Con el tipo `courier` el local no cambia su favorito (`P0030`); Configuración → Envíos lo muestra en solo
-  lectura y guardar el resto de la pantalla lo deja intacto. Con los otros tipos, el select es el de siempre.
-- **ENVIO-231** `business_delivery_options` trae por repartidor sus `own_zone_ids` (zonas propias activas) y también al que
-  solo tiene zonas propias. El tablero lista, para un pedido con zona propia, a los repartidores dueños de esa zona; para
-  uno con zona común, a los que la cubren, como siempre.
-- **ENVIO-232** `business_assign_courier` asigna un pedido con zona propia a su dueño y rechaza (`22023`) a cualquier otro
-  repartidor.
-- **ENVIO-233** `superadmin_set_favorite_courier(negocio, repartidor)` fija el favorito; `(negocio, null, true)` ("Sin favorito") lo
-  saca, solo actualiza una fila de `business_settings` que ya existe (no crea una vacía) y solo ese campo; un `null` sin
-  `p_clear`, o un repartidor con `p_clear`, es un error (`22023`) y no cambia nada.
+ENVIO-219 a 233 (tipos de precio `common`/`business`/`courier`, `business_zone_prices`, `courier_own_zones`,
+`couriers.can_edit_zones`, `delivery_offers_enabled`, favorito fijado por el superadmin y `P0030`) quedan **sin efecto**: la
+migración `20261203000000_envio_propio_del_negocio.sql` los elimina y el envío propio de ENVIO-245 a 264 ocupa su lugar. Lo que
+se conserva: la coma en los decimales de los precios, el error `P0029` (una zona con un pedido en curso no se borra, ahora
+en `business_own_zones`), el texto "Envío $X" (precio fijo) frente a "Envío aprox. $X" y el armado del WhatsApp.
 
 ### Avisos del panel del repartidor (ENVIO-234 a 240)
 
@@ -2418,6 +2375,91 @@ recibe ofertas), `P0021` (falta el motivo del precio) y `P0022` (la oferta cambi
   se recuerda en el aparato. Mientras no hubo un toque se ve un aviso chico, "Tocá la pantalla para activar el sonido". Quien lo
   apagó con la campana queda apagado.
 
+
+### Tiempo para asignar a mano (ENVIO-241 a 244)
+
+- **ENVIO-241** `platform_settings.manual_assign_minutes` (1 a 30, arranca en 5) es el tiempo, global para la plataforma, que
+  espera un pedido buscando repartidor sin ninguna oferta antes de destacar "Nadie ofertó todavía: asignalo a mano o llevalo
+  vos" y avisar al local. Lo lee y lo cambia solo el superadmin; el servidor lo pregunta con `manual_assign_minutes()`. Fuera
+  de rango el cambio se rechaza. Reemplaza el 10 fijo de ENVIO-118 y ADMIN-PWA-6. El local puede asignarlo a mano o llevarlo
+  él durante toda la búsqueda (ENVIO-81): este tiempo solo marca cuándo se le avisa. No toca los 5 minutos de la elección
+  automática de ofertas (`courier_offers_window()`).
+- **ENVIO-242** `no_offers_alert_window()` devuelve ese valor: `run_order_timers()` marca `no_offers_alerted_at` a los X
+  minutos de la primera búsqueda sin ofertas, con X = `manual_assign_minutes()`; con el valor por defecto, a los 5 y no antes.
+  Con otro valor, usa ese.
+- **ENVIO-243** El tablero (tarjeta y detalle) destaca "Nadie ofertó todavía (X min): asignalo a mano o llevalo vos" desde
+  el minuto X, con el mismo valor que lee la página de Pedidos; el orden por urgencia usa el mismo X.
+- **ENVIO-244** Superadmin → Zonas tiene el campo "Tiempo para asignar a mano" (minutos, 1 a 30); fuera de rango o sin número
+  entero, la acción lo rechaza sin tocar la base.
+
+### Envío propio del negocio (tarea 54)
+
+Un local que no está en el centro tiene su delivery, sus zonas, sus precios y su repartidor, fuera de la red común.
+
+- **ENVIO-245** `businesses.delivery_type` (`free` por defecto, `own`). Solo lo cambia el superadmin (`guard_business_admin_columns`).
+  `free` es el envío de siempre: zonas comunes, repartidores libres y ofertas. `own`: zonas y precios del propio negocio y su
+  repartidor propio. Hace falta además `courier_delivery` prendido, como siempre.
+- **ENVIO-246** `couriers.courier_type` (`free` por defecto, `own`) y `couriers.own_business_id`. Un repartidor `own` tiene
+  negocio (`CHECK`) y un `free` no. Un negocio tiene a lo sumo un repartidor `own` activo (índice único parcial). Los cambia solo
+  el superadmin. Un repartidor `own` solo ve y recibe los pedidos de su negocio y nunca entra en la puja de otro.
+- **ENVIO-247** `business_own_zones` (id, business_id, nombre, precio, activa, orden). RLS por `business_id`: leen y escriben los
+  miembros del negocio y el superadmin; lee además (solo lectura) el repartidor propio de ese negocio; el público no las lee, solo
+  a través de las funciones. GRANT explícitos a `authenticated`, nada a `anon`. Arrancan vacías (no se copian las comunes). El
+  precio puede faltar: una zona sin precio no se ofrece. Una zona con un pedido en curso no se borra (`P0029`): se desactiva.
+- **ENVIO-248** `delivery_zones_for_business(negocio)` es el único lugar que resuelve las zonas de un negocio según su
+  `delivery_type`: `free` devuelve las zonas comunes tildadas por el local, activas y cubiertas por un repartidor libre activo;
+  `own` devuelve las suyas, activas y con precio. Devuelve id, origen (`common` u `own`), nombre, precio y si es fijo (en `own`
+  siempre). La usan `public_delivery_zones`, `create_public_order`, `create_manual_order` y los paneles.
+- **ENVIO-249** `public_delivery_zones(slug)` entrega `zonas` y `coordinar`. Es nula si el local no ofrece envío (sin
+  `courier_delivery`, o sin "Envío" en Tipos de entrega). `coordinar` es verdadero con envío propio (sin zonas, o con "Mi barrio no
+  está") y con envío libre sin ninguna zona tildada; en los demás casos el envío libre se comporta como siempre.
+- **ENVIO-250** Un pedido con envío de un negocio `own` va directo a su repartidor propio, sin ofertas: nace asignado
+  (`courier_status = 'accepted'`) con el precio de la zona ("Envío $X"). Como todo pedido con envío, espera (`waiting`) a que el
+  local lo confirme y recién entonces se asigna (también si se paga con Mercado Pago, cuando se acredita). Sin repartidor propio activo, queda "Lo llevo yo" (`self`). Lo mismo vale para el pedido
+  manual (`create_manual_order`), que además acepta "Lo llevo yo".
+- **ENVIO-251** Aislamiento: ningún repartidor libre ve, ofrece, toma ni recibe por asignación un pedido de un negocio `own`; uno
+  `own` no ve los de otro negocio ni los de la red libre. Vale en `courier_sees_order`, `courier_blocked_by_car`,
+  `business_assign_courier`, el pulso (`order_pulse_audience`), la disponibilidad (`zone_available_couriers`,
+  `business_courier_availability`) y los avisos push de pedido nuevo. Un pedido de un negocio `own` que el repartidor devuelve
+  vuelve a buscar y solo lo asigna el local (su propio repartidor otra vez, o "Lo llevo yo").
+- **ENVIO-252** Sin zonas con precio el envío se ofrece "a coordinar": `create_public_order` y `create_manual_order` reciben el
+  barrio en texto (`p_delivery_zone_text`, de 1 a 80 caracteres) y la dirección, y el pedido queda con
+  `orders.delivery_fee_coordinated = true` y sin precio (pendiente mientras `delivery_fee` esté vacío). En el envío libre sin zonas tildadas, y en "Mi barrio no está" del propio, el
+  pedido queda "Lo llevo yo" o con el repartidor propio, según el negocio.
+- **ENVIO-253** `set_delivery_fee(pedido, precio)` carga el precio de un envío a coordinar: solo miembros del negocio, solo en
+  pedidos sin precio de lista que no terminaron, de 0 a menos de 100.000.000. Guarda el precio también como precio de lista (si el repartidor lo devuelve no se pierde), deja un evento en la
+  línea de tiempo y se puede volver a editar mientras el pedido siga abierto.
+- **ENVIO-254** `effective_favorite_courier(negocio)` devuelve solo el favorito que eligió el negocio; sin elegido, no hay
+  favorito. Repartos al Toque deja de ser el favorito por defecto y `default_courier_id()` desaparece. El repartidor favorito de un
+  negocio libre tiene que ser libre. Configuración → Envíos dice "Sin favorito".
+- **ENVIO-255** El trigger que carga todas las zonas comunes al habilitar el envío (ENVIO-128) solo corre con `delivery_type =
+  'free'`, también al volver a `free`.
+- **ENVIO-256** La migración pasa los negocios con tipo `courier` de la tarea 47 a `own`, con su favorito como repartidor propio
+  (uno por negocio, y cada repartidor de un solo negocio), copia sus zonas a `business_own_zones` con los mismos id y reapunta
+  los pedidos (`orders.own_zone_id`). Después elimina los tipos de precio, `business_zone_prices`, `courier_own_zones`,
+  `can_edit_zones`, `delivery_offers_enabled` y `superadmin_set_favorite_courier`.
+- **ENVIO-257** `business_own_delivery(negocio)` (miembro o superadmin) entrega el tipo, el repartidor propio (nombre y estado) y
+  la cantidad de zonas con precio; `courier_own_business()` (repartidor propio) entrega su negocio y sus zonas para leerlas.
+
+#### Pantallas
+
+- **ENVIO-258** Superadmin → alta y edición de repartidor: "Libre" (por defecto) o "Propio" y, con propio, el selector de
+  negocio (obligatorio; los que ya tienen otro repartidor propio activo aparecen marcados y la base los rechaza).
+- **ENVIO-259** Superadmin → detalle del negocio: "Envío libre / propio". Con propio muestra su repartidor propio y cuántas zonas
+  con precio cargó.
+- **ENVIO-260** Configuración → Envíos con envío propio: ABM de zonas (nombre, precio con coma o punto, activa, orden), el
+  repartidor propio en solo lectura, los avisos "Cargá tus zonas y precios para que tus clientes vean el costo del envío" (sin zonas
+  con precio) y "Todavía no tenés repartidor asignado: los envíos los llevás vos" (sin repartidor propio), y el interruptor
+  "Ofrecer envío" (el mismo "Envío" de Tipos de entrega). Con envío libre queda como hoy.
+- **ENVIO-261** Panel del repartidor propio: sus pedidos y "Zonas y precios de {negocio}" en solo lectura. Ninguna oferta ni
+  pedido de otro negocio.
+- **ENVIO-262** Tablero y tarjeta del pedido: un envío con precio pendiente muestra "Costo de envío a confirmar" bien visible, con
+  el campo para cargarlo; cargado, se puede corregir.
+- **ENVIO-263** Menú (`web/`): la tarjeta de zona, el checkout y el WhatsApp dicen "Envío: el costo se coordina con el local"
+  cuando corresponde; el cliente carga barrio (texto libre) y dirección. "Mi barrio no está" lleva a ese mismo caso en un negocio
+  con envío propio. Textos en es/en/pt, siempre con `textContent` o `escapeHtml`.
+- **ENVIO-264** Seguimiento: `public_order_delivery` suma `a_coordinar` (el costo se acuerda con el local) y `precio_pendiente` (todavía
+  no se cargó). Mientras está pendiente dice "Costo de envío a confirmar"; cargado, muestra "Costo del envío: $X".
 
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel
@@ -2655,8 +2697,8 @@ precios en 0; no existe "incluye N y el resto cuesta X".
 - **ADMIN-PWA-5** `run_order_timers()` resuelve la elección automática de todos los pedidos con ofertas
   vencidas, aunque nadie tenga el panel ni el seguimiento abierto.
 - **ADMIN-PWA-6** `run_order_timers()` marca en `orders.no_offers_alerted_at`, una sola vez, los pedidos con
-  envío que buscan repartidor hace más de 10 minutos sin ninguna oferta; no marca los que tienen ofertas, los
-  que llevan menos de 10 minutos ni los que esperan un pago de Mercado Pago.
+  envío que buscan repartidor hace más de X minutos (ENVIO-241, 5 por defecto) sin ninguna oferta; no marca los que tienen ofertas, los
+  que llevan menos de X minutos ni los que esperan un pago de Mercado Pago.
 - **ADMIN-PWA-7** Cuando un pedido vuelve a buscar repartidor (una devolución), `no_offers_alerted_at` se limpia
   y puede avisar de nuevo.
 - **ADMIN-PWA-8** `run_order_timers()` no la puede llamar `anon` ni `authenticated`, y si existe `pg_cron` queda
@@ -2742,6 +2784,12 @@ precios en 0; no existe "incluye N y el resto cuesta X".
   otra cuenta), el panel se suscribe de nuevo solo, sin preguntar, una vez por carga. Con el permiso sin pedir o bloqueado no
   hace nada.
 
+- **ADMIN-PWA-39** El panel del negocio no pide activar el sonido con un recuadro: el sonido está prendido salvo que se apague a
+  propósito, y el primer toque en cualquier lugar del panel lo habilita (audio y voz), en Pedidos y en el resto. Mientras no
+  hubo un toque se ve un aviso chico, "Tocá la pantalla para activar el sonido"; la barra roja de arriba sigue solo para quien
+  lo apagó o no tiene los avisos. Comparte con el panel del repartidor (ENVIO-240) el mismo desbloqueo.
+- **ADMIN-PWA-40** Con el permiso de avisos ya concedido y la suscripción guardada, el panel del negocio no vuelve a pedir
+  permiso (ADMIN-PWA-38 vale para el negocio y el repartidor).
 
 ### Panel en el celular (ADMIN-MOVIL)
 

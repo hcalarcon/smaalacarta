@@ -71,23 +71,18 @@ describe("Configuración → Envíos — ENVIO-58", () => {
     renderSection();
 
     const names = within(select()).getAllByRole("option").map((option) => option.textContent);
-    expect(names).toEqual(["Sin elegir", "Repartos al Toque"]);
+    expect(names).toEqual(["Sin favorito", "Repartos al Toque"]);
 
     fireEvent.click(zone("Cantera"));
 
     const after = within(select()).getAllByRole("option").map((option) => option.textContent);
-    expect(after).toEqual(["Sin elegir", "Repartos al Toque", "Moto Express"]);
+    expect(after).toEqual(["Sin favorito", "Repartos al Toque", "Moto Express"]);
   });
 
-  it("sin favorito elegido dice a quién se recomienda; el nombre sale del dato — ENVIO-134", () => {
-    renderSection({ ...options, default_courier: { id: "toque", name: "Repartos al Toque" } });
-    expect(within(select()).getAllByRole("option")[0].textContent).toBe(
-      "Sin elegir: se recomienda Repartos al Toque",
-    );
-
-    cleanup();
-    renderSection({ ...options, default_courier: { id: "moto", name: "Moto Express" } });
-    expect(within(select()).getAllByRole("option")[0].textContent).toBe("Sin elegir: se recomienda Moto Express");
+  it("sin favorito elegido dice 'Sin favorito', sin recomendar a nadie por defecto — ENVIO-254", () => {
+    renderSection();
+    expect(within(select()).getAllByRole("option")[0].textContent).toBe("Sin favorito");
+    expect(screen.queryByText(/se recomienda/)).toBeNull();
   });
 
   it("avisa si el local no tiene ninguna zona tildada y deja de avisar al tildar una — ENVIO-135", () => {

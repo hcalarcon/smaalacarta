@@ -28,6 +28,11 @@ type SettingsSave = {
   deliveryErrors: DeliveryErrors;
   // SettingsForm avisa cómo está su formulario en cada cambio.
   reportSettings: (input: SettingsInput) => void;
+  // Si "Delivery" está tildado en Tipos de entrega (nulo hasta que SettingsForm informa) y cómo se cambia desde la
+  // sección Envíos del envío propio (ENVIO-260): es el mismo dato, se guarda con "Guardar cambios".
+  deliveryEnabled: boolean | null;
+  deliveryToggle: { enabled: boolean; seq: number } | null;
+  setDeliveryEnabled: (enabled: boolean) => void;
   // La sección Envíos avisa lo que edita y qué reglas incumple (ENVIO-58). Se guarda junto al resto,
   // con "Guardar cambios".
   reportDelivery: (report: { input: DeliveryInput; errors: DeliveryErrors }) => void;
@@ -93,6 +98,13 @@ export default function SettingsSaveProvider({
     const next = JSON.stringify(report.input);
     setDeliverySerialized((prev) => (prev === next ? prev : next));
     setDeliveryBaseline((prev) => prev ?? next);
+  }
+
+  const [deliveryToggle, setDeliveryToggle] = useState<{ enabled: boolean; seq: number } | null>(null);
+  const deliveryEnabled = serialized ? (JSON.parse(serialized) as SettingsInput).deliveryOptions.includes("delivery") : null;
+
+  function setDeliveryEnabled(enabled: boolean) {
+    setDeliveryToggle((prev) => ({ enabled, seq: (prev?.seq ?? 0) + 1 }));
   }
 
   const settingsDirty = serialized !== null && serialized !== baseline;
@@ -223,6 +235,9 @@ export default function SettingsSaveProvider({
     profileErrors,
     settingsErrors,
     deliveryErrors,
+    deliveryEnabled,
+    deliveryToggle,
+    setDeliveryEnabled,
     reportSettings,
     reportDelivery,
     save,

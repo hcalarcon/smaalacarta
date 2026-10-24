@@ -150,6 +150,8 @@ beforeEach(() => {
   rampVolumes = [];
   contextState = "suspended";
   localStorage.clear();
+  // Sin nada guardado el sonido está prendido (ADMIN-PWA-39): estos tests parten de apagado a propósito.
+  localStorage.setItem(PREF_KEY, "0");
   vi.stubGlobal("AudioContext", FakeAudioContext);
 });
 
@@ -227,6 +229,14 @@ describe("aviso de pedidos nuevos — ADMIN-PEDIDOS-8 y 9", () => {
 
     await act(async () => fireEvent.click(soundButton()));
     expect(soundButton().textContent).toBe("🔔 Sonido activado");
+  });
+
+  it("sin nada guardado el sonido está prendido y espera el primer toque (ADMIN-PWA-39)", async () => {
+    localStorage.removeItem(PREF_KEY);
+    render(board([]));
+    await act(async () => {});
+
+    expect(soundButton().textContent).toBe("🔕 Tocá para activar el sonido");
   });
 
   it("el botón mide al menos 44 px de alto", () => {

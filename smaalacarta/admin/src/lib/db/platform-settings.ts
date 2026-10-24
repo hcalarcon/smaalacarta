@@ -1,3 +1,4 @@
+import { ASSIGN_MINUTES_DEFAULT } from "@/lib/orders/assign-minutes";
 import { createClient } from "@/lib/supabase-server";
 
 // Configuración de la plataforma (ENVIO-145). Solo la lee y la cambia el superadmin: lo exige el RLS de
@@ -137,6 +138,37 @@ export async function setCourierAvailabilitySwitch(enabled: boolean): Promise<{ 
     .update({ courier_availability_enabled: enabled, updated_at: new Date().toISOString() })
     .eq("id", true)
     .select("courier_availability_enabled");
+
+  if (error) return { error: { code: error.code, message: error.message } };
+  if (!data || data.length === 0) return { error: { code: "42501", message: "Sin permiso" } };
+
+  return { ok: true };
+}
+
+// El "Tiempo para asignar a mano" (ENVIO-241): minutos sin ofertas antes de destacar el pedido y avisar al local.
+// Arranca en 5. Lo lee y lo cambia solo el superadmin con la tabla; el resto del servidor lo pregunta con
+// `manual_assign_minutes()` (ver `db/platform-minutes.ts`).
+export async function getAssignMinutesSetting(): Promise<number> {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase.from("platform_settings").select("manual_assign_minutes").maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data?.manual_assign_minutes ?? ASSIGN_MINUTES_DEFAULT;
+}
+
+export async function setAssignMinutesSetting(minutes: number): Promise<{ ok: true } | DbFailure> {
+  const supabase = await createClient();
+
+  // El RLS deja actualizar solo al superadmin; sin filas devueltas, no se cambió nada. La base exige de 1 a 30.
+  const { data, error } = await supabase
+    .from("platform_settings")
+    .update({ manual_assign_minutes: minutes, updated_at: new Date().toISOString() })
+    .eq("id", true)
+    .select("manual_assign_minutes");
 
   if (error) return { error: { code: error.code, message: error.message } };
   if (!data || data.length === 0) return { error: { code: "42501", message: "Sin permiso" } };

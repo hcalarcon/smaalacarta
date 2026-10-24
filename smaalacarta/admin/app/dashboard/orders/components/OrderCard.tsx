@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Order } from "@/lib/db/orders";
 import { timeAgo } from "@/lib/orders/format";
 import CustomerPhone from "./CustomerPhone";
+import DeliveryFeeEditor from "./DeliveryFeeEditor";
 import PaymentBadge from "./PaymentBadge";
 import SettlementStatus from "./SettlementStatus";
 import { itemOptionLines } from "@/lib/orders/item-options";
@@ -12,6 +13,7 @@ import {
   courierStatusLabel,
   deliveryContext,
   feeSummary,
+  isFeePending,
   hasDelivery,
   acceptsOffers,
   offersLabel,
@@ -53,8 +55,10 @@ export default function OrderCard({
   onConfirmSettlement,
   couriers = [],
   offers,
+  assignMinutes,
   onSetPrep,
   onAdjust,
+  onSetFee,
   vehicleEnabled = false,
   noCouriers = false,
 }: {
@@ -73,10 +77,14 @@ export default function OrderCard({
   couriers?: OrderCourier[];
   // Las ofertas abiertas del pedido si está buscando repartidor (ENVIO-117).
   offers?: OrderOffers;
+  // A los cuántos minutos sin ofertas se destaca "Nadie ofertó todavía" (ENVIO-241): el de la plataforma.
+  assignMinutes?: number;
   // Tiempo estimado (ADMIN-PEDIDOS-34, 35 y 52): cargarlo en un pedido aceptado sin tiempo, o subirlo o
   // bajarlo `delta` minutos con un motivo opcional (nulo = sin motivo).
   onSetPrep?: () => void;
   onAdjust?: (delta: number, reason: string | null) => void | Promise<void>;
+  // Cargar el costo de un envío a coordinar con el cliente (ENVIO-262). Devuelve un mensaje si falló.
+  onSetFee?: (fee: string) => Promise<string | void>;
 }) {
   const [adjusting, setAdjusting] = useState(false);
   const [reason, setReason] = useState<PrepReason | null>(null);
@@ -100,12 +108,12 @@ export default function OrderCard({
   const blockReason = paymentBlocked ? PAYMENT_BLOCK_REASON : undefined;
   const fee = withDelivery ? feeSummary(order) : null;
   const searching = withDelivery && order.courier_status === "searching" && !isFinal(order.status);
-  const warning = withDelivery ? searchWarning(order, now, offers?.ofertas.length ?? 0) : null;
+  const warning = withDelivery ? searchWarning(order, now, offers?.ofertas.length ?? 0, assignMinutes) : null;
   // El tiempo solo cuenta en un pedido aceptado y en preparación, sin hora propia.
   const inKitchen =
     (order.status === "confirmed" || order.status === "preparing") && acceptsPrepTime(order);
   const prep = prepBadge(order, now);
-  const urgency = orderUrgency(order, now, offers?.ofertas.length ?? 0);
+  const urgency = orderUrgency(order, now, offers?.ofertas.length ?? 0, assignMinutes);
   const step = stepIndex(order.status);
   const adjustable = Boolean(inKitchen && onAdjust && order.prep_ready_at);
   const taker = order.courier_id ? couriers.find((courier) => courier.id === order.courier_id) : undefined;
@@ -291,7 +299,7 @@ export default function OrderCard({
       {withDelivery && fee ? (
         <div className="mt-2 rounded-lg bg-sky-50 px-2 py-1.5 text-[11px] text-sky-900">
           <p className="font-semibold">
-            🛵 {order.delivery_zone_name ?? "Envío"} · {fee.price}
+            🛵 {order.delivery_zone_name ?? "Envío"} · {fee.pending ? "costo a confirmar" : fee.price}
           </p>
           <p>
             {courierStatusLabel(order, courierName)}
@@ -338,6 +346,15 @@ export default function OrderCard({
             <p role="alert" className="mt-1 font-semibold text-red-700">
               {warning}
             </p>
+          ) : null}
+          {order.delivery_fee_coordinated && onSetFee && !isFinal(order.status) ? (
+            <DeliveryFeeEditor
+              compact
+              pending={isFeePending(order)}
+              current={fee.price}
+              busy={busy}
+              onSave={onSetFee}
+            />
           ) : null}
         </div>
       ) : null}

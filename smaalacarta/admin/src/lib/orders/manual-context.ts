@@ -1,11 +1,14 @@
 import type { DeliveryOptions } from "@/lib/courier/preferences";
+import type { BusinessZone } from "@/lib/db/business-zones";
+import type { OwnDelivery } from "@/lib/db/own-delivery";
 
 import type { ManualMenu } from "./manual-menu";
 
 // Lo que el diálogo del pedido manual necesita saber del envío con repartidor (ENVIO-137 a 139): los barrios
 // a los que el local envía y que algún repartidor cubre, con su precio de referencia, y si su favorito
-// efectivo (el elegido o, sin elegir, Repartos al Toque) cubre cada uno. Sin favorito que cubra el barrio, la
-// opción "Asignar a mi favorito" no aparece.
+// (el que eligió el local; sin elegir no hay) cubre cada uno. Sin favorito que cubra el barrio, la opción
+// "Asignar a mi favorito" no aparece. Con envío propio (ENVIO-250 y 260) los barrios son los suyos, el envío va a su
+// repartidor propio o lo lleva el local, y sin zonas con precio el barrio se escribe a mano y el costo se coordina.
 
 export type ManualZone = {
   id: string;
@@ -16,14 +19,36 @@ export type ManualZone = {
 
 export type ManualDeliveryContext = {
   zones: ManualZone[];
-  // El favorito efectivo, aunque no cubra todos los barrios; nulo si no hay o ya no está activo.
+  // El favorito, aunque no cubra todos los barrios; nulo si no hay o ya no está activo.
   favorite: { id: string; name: string } | null;
+  kind?: "free" | "own";
+  // ¿Se puede cargar un envío con el barrio escrito y el costo a coordinar? (ENVIO-252)
+  coordinate?: boolean;
+  // El repartidor propio activo del negocio con envío propio; nulo si no tiene.
+  ownCourier?: { id: string; name: string } | null;
 };
 
-export function manualDeliveryContext(options: DeliveryOptions | null): ManualDeliveryContext {
-  if (!options) return { zones: [], favorite: null };
+export type OwnManualInfo = { delivery: OwnDelivery; zones: BusinessZone[] };
 
-  const favoriteId = options.favorite_id ?? options.default_courier?.id ?? null;
+export function manualDeliveryContext(
+  options: DeliveryOptions | null,
+  own: OwnManualInfo | null = null,
+): ManualDeliveryContext {
+  if (own) {
+    return {
+      zones: own.zones
+        .filter((zone) => zone.active && zone.price !== null)
+        .map((zone) => ({ id: zone.id, name: zone.name, price: Number(zone.price), favoriteCovers: false })),
+      favorite: null,
+      kind: "own",
+      coordinate: true,
+      ownCourier: own.delivery.courier?.active ? { id: own.delivery.courier.id, name: own.delivery.courier.name } : null,
+    };
+  }
+
+  if (!options) return { zones: [], favorite: null, kind: "free", coordinate: false, ownCourier: null };
+
+  const favoriteId = options.favorite_id ?? null;
   // Un favorito que no figura entre los repartidores activos con cobertura no se puede asignar.
   const courier = favoriteId ? options.couriers.find((c) => c.id === favoriteId) : undefined;
   const covered = new Set(courier?.zone_ids ?? []);
@@ -38,6 +63,10 @@ export function manualDeliveryContext(options: DeliveryOptions | null): ManualDe
         favoriteCovers: covered.has(zone.id),
       })),
     favorite: courier ? { id: courier.id, name: courier.name } : null,
+    kind: "free",
+    // Sin ninguna zona tildada no hay a qué barrio ofrecerlo: se escribe a mano (ENVIO-252).
+    coordinate: !options.zones.some((zone) => zone.selected),
+    ownCourier: null,
   };
 }
 

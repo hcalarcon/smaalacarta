@@ -69,6 +69,44 @@ export type Database = {
           },
         ]
       }
+      business_own_zones: {
+        Row: {
+          active: boolean
+          business_id: string
+          created_at: string
+          id: string
+          name: string
+          price: number | null
+          sort_order: number
+        }
+        Insert: {
+          active?: boolean
+          business_id: string
+          created_at?: string
+          id?: string
+          name: string
+          price?: number | null
+          sort_order?: number
+        }
+        Update: {
+          active?: boolean
+          business_id?: string
+          created_at?: string
+          id?: string
+          name?: string
+          price?: number | null
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_own_zones_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       business_settings: {
         Row: {
           address: string | null
@@ -252,50 +290,12 @@ export type Database = {
           },
         ]
       }
-      business_zone_prices: {
-        Row: {
-          business_id: string
-          price: number
-          updated_at: string
-          zone_id: string
-        }
-        Insert: {
-          business_id: string
-          price: number
-          updated_at?: string
-          zone_id: string
-        }
-        Update: {
-          business_id?: string
-          price?: number
-          updated_at?: string
-          zone_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "business_zone_prices_business_id_fkey"
-            columns: ["business_id"]
-            isOneToOne: false
-            referencedRelation: "businesses"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "business_zone_prices_zone_id_fkey"
-            columns: ["zone_id"]
-            isOneToOne: false
-            referencedRelation: "delivery_zones"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       businesses: {
         Row: {
           active: boolean
           courier_delivery: boolean
           created_at: string | null
-          delivery_offers_enabled: boolean
-          delivery_prices_editable: boolean
-          delivery_pricing: string
+          delivery_type: string
           id: string
           logo_url: string | null
           mp_oauth_enabled: boolean
@@ -310,9 +310,7 @@ export type Database = {
           active?: boolean
           courier_delivery?: boolean
           created_at?: string | null
-          delivery_offers_enabled?: boolean
-          delivery_prices_editable?: boolean
-          delivery_pricing?: string
+          delivery_type?: string
           id?: string
           logo_url?: string | null
           mp_oauth_enabled?: boolean
@@ -327,9 +325,7 @@ export type Database = {
           active?: boolean
           courier_delivery?: boolean
           created_at?: string | null
-          delivery_offers_enabled?: boolean
-          delivery_prices_editable?: boolean
-          delivery_pricing?: string
+          delivery_type?: string
           id?: string
           logo_url?: string | null
           mp_oauth_enabled?: boolean
@@ -590,44 +586,6 @@ export type Database = {
           },
         ]
       }
-      courier_own_zones: {
-        Row: {
-          active: boolean
-          courier_id: string
-          created_at: string
-          id: string
-          name: string
-          price: number
-          sort_order: number
-        }
-        Insert: {
-          active?: boolean
-          courier_id: string
-          created_at?: string
-          id?: string
-          name: string
-          price: number
-          sort_order?: number
-        }
-        Update: {
-          active?: boolean
-          courier_id?: string
-          created_at?: string
-          id?: string
-          name?: string
-          price?: number
-          sort_order?: number
-        }
-        Relationships: [
-          {
-            foreignKeyName: "courier_own_zones_courier_id_fkey"
-            columns: ["courier_id"]
-            isOneToOne: false
-            referencedRelation: "couriers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       courier_preferences: {
         Row: {
           courier_id: string
@@ -749,37 +707,48 @@ export type Database = {
         Row: {
           active: boolean
           auto: boolean
-          can_edit_zones: boolean
+          courier_type: string
           created_at: string
           id: string
           moto: boolean
           name: string
+          own_business_id: string | null
           tutorial_seen_at: string | null
           whatsapp: string | null
         }
         Insert: {
           active?: boolean
           auto?: boolean
-          can_edit_zones?: boolean
+          courier_type?: string
           created_at?: string
           id?: string
           moto?: boolean
           name: string
+          own_business_id?: string | null
           tutorial_seen_at?: string | null
           whatsapp?: string | null
         }
         Update: {
           active?: boolean
           auto?: boolean
-          can_edit_zones?: boolean
+          courier_type?: string
           created_at?: string
           id?: string
           moto?: boolean
           name?: string
+          own_business_id?: string | null
           tutorial_seen_at?: string | null
           whatsapp?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "couriers_own_business_id_fkey"
+            columns: ["own_business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       default_images: {
         Row: {
@@ -1123,7 +1092,6 @@ export type Database = {
           courier_requested_at: string | null
           courier_responded_at: string | null
           courier_status: string | null
-          courier_zone_id: string | null
           created_at: string
           customer_name: string | null
           customer_phone: string | null
@@ -1132,6 +1100,7 @@ export type Database = {
           delivery_fee: number | null
           delivery_fee_changed_at: string | null
           delivery_fee_changed_by: string | null
+          delivery_fee_coordinated: boolean
           delivery_fee_list: number | null
           delivery_fee_reason: string | null
           delivery_mode: string | null
@@ -1146,6 +1115,7 @@ export type Database = {
           notes: string | null
           offered_at: string | null
           order_number: string
+          own_zone_id: string | null
           payment: string | null
           payment_status: string
           pickup_reminder_sent_at: string | null
@@ -1177,7 +1147,6 @@ export type Database = {
           courier_requested_at?: string | null
           courier_responded_at?: string | null
           courier_status?: string | null
-          courier_zone_id?: string | null
           created_at?: string
           customer_name?: string | null
           customer_phone?: string | null
@@ -1186,6 +1155,7 @@ export type Database = {
           delivery_fee?: number | null
           delivery_fee_changed_at?: string | null
           delivery_fee_changed_by?: string | null
+          delivery_fee_coordinated?: boolean
           delivery_fee_list?: number | null
           delivery_fee_reason?: string | null
           delivery_mode?: string | null
@@ -1200,6 +1170,7 @@ export type Database = {
           notes?: string | null
           offered_at?: string | null
           order_number: string
+          own_zone_id?: string | null
           payment?: string | null
           payment_status?: string
           pickup_reminder_sent_at?: string | null
@@ -1231,7 +1202,6 @@ export type Database = {
           courier_requested_at?: string | null
           courier_responded_at?: string | null
           courier_status?: string | null
-          courier_zone_id?: string | null
           created_at?: string
           customer_name?: string | null
           customer_phone?: string | null
@@ -1240,6 +1210,7 @@ export type Database = {
           delivery_fee?: number | null
           delivery_fee_changed_at?: string | null
           delivery_fee_changed_by?: string | null
+          delivery_fee_coordinated?: boolean
           delivery_fee_list?: number | null
           delivery_fee_reason?: string | null
           delivery_mode?: string | null
@@ -1254,6 +1225,7 @@ export type Database = {
           notes?: string | null
           offered_at?: string | null
           order_number?: string
+          own_zone_id?: string | null
           payment?: string | null
           payment_status?: string
           pickup_reminder_sent_at?: string | null
@@ -1290,17 +1262,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "orders_courier_zone_id_fkey"
-            columns: ["courier_zone_id"]
-            isOneToOne: false
-            referencedRelation: "courier_own_zones"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "orders_delivery_zone_id_fkey"
             columns: ["delivery_zone_id"]
             isOneToOne: false
             referencedRelation: "delivery_zones"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_own_zone_id_fkey"
+            columns: ["own_zone_id"]
+            isOneToOne: false
+            referencedRelation: "business_own_zones"
             referencedColumns: ["id"]
           },
         ]
@@ -1397,6 +1369,7 @@ export type Database = {
           courier_terms_version: number
           delivery_mode: string
           id: boolean
+          manual_assign_minutes: number
           updated_at: string
           vehicle_enabled: boolean
         }
@@ -1406,6 +1379,7 @@ export type Database = {
           courier_terms_version?: number
           delivery_mode?: string
           id?: boolean
+          manual_assign_minutes?: number
           updated_at?: string
           vehicle_enabled?: boolean
         }
@@ -1415,6 +1389,7 @@ export type Database = {
           courier_terms_version?: number
           delivery_mode?: string
           id?: boolean
+          manual_assign_minutes?: number
           updated_at?: string
           vehicle_enabled?: boolean
         }
@@ -1730,10 +1705,18 @@ export type Database = {
         Args: { p_business_id: string; p_courier_id: string }
         Returns: undefined
       }
+      assign_direct_delivery: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
       build_public_menu: { Args: { p_business_id: string }; Returns: Json }
       business_assign_courier: {
         Args: { p_courier_id: string; p_note?: string; p_order_id: string }
         Returns: undefined
+      }
+      business_can_coordinate_delivery: {
+        Args: { p_business_id: string }
+        Returns: boolean
       }
       business_confirm_settlement: {
         Args: { p_order_id: string }
@@ -1744,19 +1727,12 @@ export type Database = {
         Returns: Json
       }
       business_delivery_options: { Args: never; Returns: Json }
-      business_delivery_pricing: {
-        Args: { p_business_id: string }
-        Returns: Json
-      }
       business_has_mp: { Args: { p_business_id: string }; Returns: boolean }
       business_order_offers: { Args: never; Returns: Json }
+      business_own_delivery: { Args: { p_business_id: string }; Returns: Json }
       business_self_delivery: {
         Args: { p_order_id: string }
         Returns: undefined
-      }
-      can_edit_business_prices: {
-        Args: { p_business_id: string }
-        Returns: boolean
       }
       clean_item_note: { Args: { p_note: string }; Returns: string }
       confirm_order_payment: {
@@ -1782,10 +1758,6 @@ export type Database = {
         Args: { p_courier_id: string; p_order_id: string }
         Returns: boolean
       }
-      courier_can_edit_own_zones: {
-        Args: { p_courier_id: string }
-        Returns: boolean
-      }
       courier_covers_my_zones: {
         Args: { p_courier_id: string }
         Returns: boolean
@@ -1804,6 +1776,7 @@ export type Database = {
       courier_offers_notice_window: { Args: never; Returns: string }
       courier_offers_window: { Args: never; Returns: string }
       courier_orders: { Args: { p_since?: string }; Returns: Json }
+      courier_own_business: { Args: never; Returns: Json }
       courier_push_eligible: {
         Args: { p_courier_ids: string[] }
         Returns: string[]
@@ -1888,6 +1861,7 @@ export type Database = {
           p_delivery: string
           p_delivery_address?: string
           p_delivery_zone?: string
+          p_delivery_zone_text?: string
           p_items: Json
           p_notes: string
           p_payment: string
@@ -1902,6 +1876,7 @@ export type Database = {
           p_delivery: string
           p_delivery_address?: string
           p_delivery_zone?: string
+          p_delivery_zone_text?: string
           p_items: Json
           p_notes: string
           p_payment: string
@@ -1924,7 +1899,6 @@ export type Database = {
         }
         Returns: Json
       }
-      default_courier_id: { Args: never; Returns: string }
       default_images_unmatched: {
         Args: never
         Returns: {
@@ -1962,6 +1936,7 @@ export type Database = {
         Args: { p_at: string; p_schedule: Json }
         Returns: boolean
       }
+      is_own_courier_of: { Args: { p_business_id: string }; Returns: boolean }
       is_schedulable_at: {
         Args: {
           p_at: string
@@ -1974,6 +1949,7 @@ export type Database = {
       is_super_admin: { Args: never; Returns: boolean }
       is_valid_preorder_cutoffs: { Args: { p_cutoffs: Json }; Returns: boolean }
       is_valid_schedule: { Args: { p_schedule: Json }; Returns: boolean }
+      manual_assign_minutes: { Args: never; Returns: number }
       menu_preview: { Args: { p_business_id: string }; Returns: Json }
       my_courier_business_id: { Args: never; Returns: string }
       my_courier_id: { Args: never; Returns: string }
@@ -1992,6 +1968,7 @@ export type Database = {
         Args: { o: Database["public"]["Tables"]["orders"]["Row"] }
         Returns: string
       }
+      own_courier_id: { Args: { p_business_id: string }; Returns: string }
       pickup_reminder_lead: { Args: never; Returns: string }
       platform_searching_orders: { Args: never; Returns: number }
       preorder_window: {
@@ -2154,6 +2131,10 @@ export type Database = {
         Args: { p_favorite: string }
         Returns: undefined
       }
+      set_delivery_fee: {
+        Args: { p_fee: number; p_order_id: string }
+        Returns: undefined
+      }
       set_order_needs_car: {
         Args: { p_needs_car: boolean; p_order_id: string }
         Returns: undefined
@@ -2201,10 +2182,6 @@ export type Database = {
       suggested_prep_minutes: {
         Args: { p_business_id: string }
         Returns: number
-      }
-      superadmin_set_favorite_courier: {
-        Args: { p_business_id: string; p_clear?: boolean; p_courier_id: string }
-        Returns: undefined
       }
       vehicle_enabled: { Args: never; Returns: boolean }
       zone_available_couriers: {

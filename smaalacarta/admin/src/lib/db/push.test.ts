@@ -105,6 +105,7 @@ beforeEach(async () => {
     "update orders set created_at = created_at - interval '5 minutes' where created_at > now() - interval '4 minutes'",
   );
   await db.exec("delete from push_subscriptions");
+  await db.exec("update platform_settings set manual_assign_minutes = 5");
 });
 
 afterAll(async () => {
@@ -214,17 +215,17 @@ describe("tareas por tiempo — ADMIN-PWA-5 a 8", () => {
     expect(row.courier_id).toBe("7a0c0e00-0000-4000-8000-000000000002");
   });
 
-  it("marca una sola vez el pedido sin ofertas con más de 10 minutos (ADMIN-PWA-6)", async () => {
+  it("marca una sola vez el pedido sin ofertas con más de 5 minutos (ADMIN-PWA-6, ENVIO-242)", async () => {
     const sinOfertas = await envio();
     const conOfertas = await envio();
     const reciente = await envio();
     const sinPagar = await envio();
     await offer(db, BETO, conOfertas.id);
 
-    await age(sinOfertas.id, 11);
-    await age(conOfertas.id, 11);
-    await age(reciente.id, 9);
-    await age(sinPagar.id, 11);
+    await age(sinOfertas.id, 6);
+    await age(conOfertas.id, 6);
+    await age(reciente.id, 4);
+    await age(sinPagar.id, 6);
     await db.exec(`update orders set payment_status = 'awaiting' where id = '${sinPagar.id}'`);
 
     await runTimers();
@@ -240,6 +241,50 @@ describe("tareas por tiempo — ADMIN-PWA-5 a 8", () => {
     expect((await orderRow(sinOfertas.id)).no_offers_alerted_at).toEqual(first);
   });
 
+  it("con el valor por defecto asigna a los 5 minutos y no antes (ENVIO-241 y 242)", async () => {
+    expect((await db.query("select public.manual_assign_minutes() as m")).rows[0]).toEqual({ m: 5 });
+
+    const justo = await envio();
+    const antes = await envio();
+    await age(justo.id, 5);
+    await age(antes.id, 4);
+    await runTimers();
+
+    expect((await orderRow(justo.id)).no_offers_alerted_at).not.toBeNull();
+    expect((await orderRow(antes.id)).no_offers_alerted_at).toBeNull();
+  });
+
+  it("con otro valor usa ese, y los 5 minutos de la elección automática no cambian (ENVIO-241)", async () => {
+    await db.exec("update platform_settings set manual_assign_minutes = 3");
+    const tres = await envio();
+    const dos = await envio();
+    await age(tres.id, 3);
+    await age(dos.id, 2);
+    await runTimers();
+
+    expect((await orderRow(tres.id)).no_offers_alerted_at).not.toBeNull();
+    expect((await orderRow(dos.id)).no_offers_alerted_at).toBeNull();
+
+    await db.exec("update platform_settings set manual_assign_minutes = 30");
+    const largo = await envio();
+    await age(largo.id, 29);
+    await runTimers();
+    expect((await orderRow(largo.id)).no_offers_alerted_at).toBeNull();
+
+    expect((await db.query("select public.courier_offers_window()::text as w")).rows[0]).toEqual({ w: "00:05:00" });
+  });
+
+  it("solo acepta de 1 a 30 minutos y lo lee cualquier sesión (ENVIO-241)", async () => {
+    for (const bad of [0, 31, -1]) {
+      await expect(db.exec(`update platform_settings set manual_assign_minutes = ${bad}`)).rejects.toThrow();
+    }
+
+    const read = await call(ANA, "select public.manual_assign_minutes() as m");
+    expect(read.ok).toBe(true);
+    expect(read.ok && read.rows[0]).toEqual({ m: 5 });
+    expect((await call(null, "select public.manual_assign_minutes() as m")).ok).toBe(false);
+  });
+
   it("no marca un pedido cancelado ni uno que no es de envío (ADMIN-PWA-6)", async () => {
     const cancelado = await envio();
     await age(cancelado.id, 11);
@@ -252,7 +297,7 @@ describe("tareas por tiempo — ADMIN-PWA-5 a 8", () => {
          p_customer_phone => '351 555-1234') as result`,
     );
     if (!retiro.ok) throw new Error(retiro.error);
-    await db.exec("update orders set created_at = created_at - interval '11 minutes', offered_at = created_at");
+    await db.exec("update orders set created_at = created_at - interval '6 minutes', offered_at = created_at");
 
     await runTimers();
 

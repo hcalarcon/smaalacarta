@@ -19,7 +19,9 @@ export type CourierOrder = {
   delivery_address: string | null;
   courier_id: string | null;
   delivery_zone_id: string | null;
-  courier_zone_id?: string | null;
+  own_zone_id?: string | null;
+  // El costo del envío se coordina con el cliente (ENVIO-252): mientras `delivery_fee` esté vacío, está pendiente.
+  delivery_fee_coordinated?: boolean;
   delivery_zone_name: string | null;
   delivery_fee_list: number | null;
   delivery_fee: number | null;
@@ -62,14 +64,16 @@ export type OrderCourier = {
   name: string;
   whatsapp: string | null;
   zone_ids: string[];
-  // Sus zonas propias activas (ENVIO-231): un pedido con zona propia solo lo asigna a su dueño.
-  own_zone_ids?: string[];
+  // El repartidor propio del negocio con envío propio (ENVIO-246): es el único que se le puede asignar a un pedido
+  // sin zona común.
+  own?: boolean;
   // Moto y/o auto; falta con el interruptor apagado (ENVIO-178).
   vehiculo?: string[];
 };
 
-// Pasados estos minutos sin ninguna oferta, el panel lo destaca (ENVIO-118).
-export const SEARCH_WARNING_MINUTES = 10;
+// Pasados estos minutos sin ninguna oferta, el panel lo destaca (ENVIO-118). Es el valor de fábrica de
+// `platform_settings.manual_assign_minutes` (ENVIO-241); la página de Pedidos pasa el que tiene la plataforma.
+export const SEARCH_WARNING_MINUTES = 5;
 
 // ¿El pedido tiene un repartidor asignado (lo tomó uno o lo asignó el local)?
 export function hasCourier(order: Pick<CourierOrder, "courier_id">) {
@@ -151,13 +155,14 @@ export function offersLabel(offers: OrderOffers | undefined, now: Date): string 
 // (ENVIO-154). Un pedido sin modo (de antes) se trata como de ofertas.
 export const acceptsOffers = (order: Pick<CourierOrder, "delivery_mode">) => order.delivery_mode !== "fixed";
 
-// Aviso "Nadie ofertó todavía" a los `SEARCH_WARNING_MINUTES` de abierta la búsqueda sin ninguna oferta
-// (ENVIO-118), o null. `offerCount` es cuántas ofertas abiertas hay. En precio fijo no hay ofertas: dice
+// Aviso "Nadie ofertó todavía" a los `warningMinutes` de abierta la búsqueda sin ninguna oferta
+// (ENVIO-118 y 241), o null. `offerCount` es cuántas ofertas abiertas hay. En precio fijo no hay ofertas: dice
 // "Nadie lo tomó todavía" (ENVIO-154).
 export function searchWarning(
   order: Pick<CourierOrder, "courier_status" | "offered_at" | "status" | "delivery_mode">,
   now: Date,
   offerCount = 0,
+  warningMinutes = SEARCH_WARNING_MINUTES,
 ): string | null {
   if (order.courier_status !== "searching" || !order.offered_at || isFinal(order.status)) return null;
   if (offerCount > 0) return null;
@@ -166,7 +171,7 @@ export function searchWarning(
   if (Number.isNaN(since)) return null;
 
   const minutes = Math.floor((now.getTime() - since) / 60_000);
-  if (minutes < SEARCH_WARNING_MINUTES) return null;
+  if (minutes < warningMinutes) return null;
 
   const what = order.delivery_mode === "fixed" ? "Nadie lo tomó todavía" : "Nadie ofertó todavía";
 
@@ -238,18 +243,11 @@ export function returnedNotice(
 // Los repartidores activos que cubren la zona del pedido (los que se pueden asignar a mano), por nombre.
 export function couriersForOrder(
   couriers: OrderCourier[],
-  order: Pick<CourierOrder, "delivery_zone_id" | "needs_car"> & { courier_zone_id?: string | null },
+  order: Pick<CourierOrder, "delivery_zone_id" | "needs_car">,
 ): OrderCourier[] {
-  // Zona propia del repartidor (tipo de precio `courier`): los que la tienen activa, que hoy es su dueño.
-  if (order.courier_zone_id) {
-    const own = order.courier_zone_id;
-    return couriers
-      .filter((courier) => courier.own_zone_ids?.includes(own))
-      .filter((courier) => !order.needs_car || courier.vehiculo === undefined || courier.vehiculo.includes("auto"))
-      .sort((a, b) => a.name.localeCompare(b.name, "es"));
-  }
-
-  if (!order.delivery_zone_id) return [];
+  // Un pedido de envío propio o a coordinar no tiene zona común: solo se le asigna el repartidor propio del negocio;
+  // la red libre no lo ve (ENVIO-251).
+  if (!order.delivery_zone_id) return couriers.filter((courier) => courier.own);
 
   // Si el pedido necesita auto, solo los que lo tienen. `vehiculo` solo llega con el interruptor prendido: sin él
   // no hay con qué filtrar, y el servidor tampoco filtra (ENVIO-177).
@@ -259,10 +257,17 @@ export function couriersForOrder(
     .sort((a, b) => a.name.localeCompare(b.name, "es"));
 }
 
-// El precio final del envío y, si cambió, el de lista y el motivo.
+// ¿El costo del envío se coordina con el cliente y todavía no está cargado? (ENVIO-252)
+export function isFeePending(order: Pick<CourierOrder, "delivery_fee" | "delivery_fee_coordinated">): boolean {
+  return order.delivery_fee_coordinated === true && order.delivery_fee === null;
+}
+
+// El precio final del envío y, si cambió, el de lista y el motivo. Un envío a coordinar sin precio dice "A confirmar".
 export function feeSummary(
-  order: Pick<CourierOrder, "delivery_fee" | "delivery_fee_list" | "delivery_fee_reason">,
-): { price: string; list?: string; reason?: string } {
+  order: Pick<CourierOrder, "delivery_fee" | "delivery_fee_list" | "delivery_fee_reason" | "delivery_fee_coordinated">,
+): { price: string; list?: string; reason?: string; pending?: boolean } {
+  if (isFeePending(order)) return { price: "A confirmar", pending: true };
+
   const price = formatMoney(Number(order.delivery_fee ?? 0));
 
   const changed =

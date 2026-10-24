@@ -21,6 +21,7 @@ import {
   confirmSettlementAction,
   adjustPrepAction,
   selfDeliveryAction,
+  setDeliveryFeeAction,
   setNeedsCarAction,
   setOrderStatusAction,
   setPrepAction,
@@ -94,6 +95,7 @@ export default function OrdersClient({
   serverNow,
   couriers = [],
   offers = [],
+  assignMinutes,
   suggestedPrepMinutes = null,
   defaultPrepMinutes = 20,
   vehicleEnabled = false,
@@ -110,6 +112,8 @@ export default function OrdersClient({
   couriers?: OrderCourier[];
   // Las ofertas abiertas de los pedidos que buscan repartidor (ENVIO-111).
   offers?: OrderOffers[];
+  // A los cuántos minutos sin ofertas se destaca "Nadie ofertó todavía" (ENVIO-241): el de la plataforma.
+  assignMinutes?: number;
   // El tiempo estimado (ADMIN-PEDIDOS-32): la sugerencia de la base según los últimos pedidos y el tiempo por
   // defecto del negocio, para preseleccionar el selector.
   suggestedPrepMinutes?: number | null;
@@ -572,6 +576,18 @@ export default function OrdersClient({
     }
   }
 
+  // Cargar el costo de un envío a coordinar con el cliente (ENVIO-262). Devuelve el error para mostrarlo en el campo.
+  async function saveDeliveryFee(orderId: string, fee: string): Promise<string | void> {
+    try {
+      const result = await setDeliveryFeeAction(orderId, fee);
+      if (!result.ok) return result.error;
+      held.hold(orderId);
+      refresh();
+    } catch {
+      return "No pudimos guardar el cambio. Probá de nuevo.";
+    }
+  }
+
   async function confirmReceived() {
     if (!receivingId) return;
 
@@ -606,7 +622,7 @@ export default function OrdersClient({
     return key === "cerrados"
       ? list.slice(0, CLOSED_SHOWN)
       : [...list].sort((a, b) =>
-          compareByUrgency(a, b, now, (order) => offersByOrder.get(order.id)?.ofertas.length ?? 0),
+          compareByUrgency(a, b, now, (order) => offersByOrder.get(order.id)?.ofertas.length ?? 0, assignMinutes),
         );
   };
 
@@ -731,7 +747,7 @@ export default function OrdersClient({
               const list = byColumn(column.key);
               const total = orders.filter((o) => boardColumn(o.status) === column.key).length;
               const urgent = list.filter(
-                (o) => orderUrgency(o, now, offersByOrder.get(o.id)?.ofertas.length ?? 0) > 0,
+                (o) => orderUrgency(o, now, offersByOrder.get(o.id)?.ofertas.length ?? 0, assignMinutes) > 0,
               ).length;
 
               return (
@@ -789,7 +805,9 @@ export default function OrdersClient({
                           onConfirmSettlement={() => setReceivingId(order.id)}
                           couriers={couriers}
                           offers={offersByOrder.get(order.id)}
+                          assignMinutes={assignMinutes}
                           vehicleEnabled={vehicleEnabled}
+                          onSetFee={(fee) => saveDeliveryFee(order.id, fee)}
                         />
                         </div>
                       ))
@@ -818,12 +836,14 @@ export default function OrdersClient({
         onChangeStatus={(status, note) => selected && requestStatus(selected, status, note)}
         couriers={couriers}
         offers={selected ? offersByOrder.get(selected.id) : undefined}
+        assignMinutes={assignMinutes}
         now={now}
         error={error}
         onAssignCourier={(courierId, note) =>
           selected && resolveDelivery(selected.id, () => assignCourierAction(selected.id, courierId, note))
         }
         onSelfDelivery={() => selected && resolveDelivery(selected.id, () => selfDeliveryAction(selected.id))}
+        onSetFee={selected ? (fee) => saveDeliveryFee(selected.id, fee) : undefined}
         vehicleEnabled={vehicleEnabled}
         onNeedsCar={
           canAskForCar

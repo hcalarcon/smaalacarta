@@ -4,7 +4,12 @@ import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 
 import {
+  COORDINATE_NOTICE_KEY,
+  OTHER_ZONE,
+  ZONE_TEXT_MAX,
+  coordinateOnly,
   courierOrderFields,
+  isCoordinated,
   courierWhatsappLines,
   deliveryProblem,
   fetchDeliveryZones,
@@ -37,6 +42,8 @@ describe("normalizeZones — ENVIO-20", () => {
     expect(normalizeZones(RESPUESTA)).toEqual({
       courier: null,
       whatsapp: null,
+      coordinate: false,
+      own: false,
       zones: [
         { id: ID_A, name: "Centro (hasta Av. Koessler)", price: 4500 },
         { id: ID_B, name: "Cantera", price: 5000 },
@@ -303,5 +310,80 @@ describe("zonas de un negocio con precio 'Del repartidor' — PUBLICO-113", () =
       expect(value).toMatch(/^(null|await DZ\.fetchDeliveryZones\()/);
     }
     expect(APP_JS).not.toMatch(/delivery_zones|business_zone_prices|courier_own_zones/);
+  });
+});
+
+describe("envío a coordinar con el local — ENVIO-252 y 263", () => {
+  const SIN_ZONAS = { zonas: [], coordinar: true, propio: true };
+  const CON_ZONAS = { ...RESPUESTA, coordinar: true, propio: true };
+  const sinZonas = normalizeZones(SIN_ZONAS);
+  const conZonas = normalizeZones(CON_ZONAS);
+  const comun = normalizeZones(RESPUESTA);
+
+  it("sin barrios con precio pero con envío a coordinar hay envío; sin ninguno de los dos, no", () => {
+    expect(sinZonas).toEqual({ courier: null, whatsapp: null, zones: [], coordinate: true, own: true });
+    expect(normalizeZones({ zonas: [], coordinar: false })).toBeNull();
+    expect(normalizeZones({ zonas: [] })).toBeNull();
+  });
+
+  it("el envío se pide con envío a coordinar aunque no haya barrios", () => {
+    expect(needsCourier(sinZonas, "delivery")).toBe(true);
+    expect(needsCourier(sinZonas, "retiro")).toBe(false);
+    expect(coordinateOnly(sinZonas)).toBe(true);
+    expect(coordinateOnly(conZonas)).toBe(false);
+    expect(coordinateOnly(comun)).toBe(false);
+  });
+
+  it("va a coordinar sin barrios, o con 'otro barrio' elegido; con un barrio de la lista, no", () => {
+    expect(isCoordinated({ zones: sinZonas, zoneId: "" })).toBe(true);
+    expect(isCoordinated({ zones: conZonas, zoneId: OTHER_ZONE })).toBe(true);
+    expect(isCoordinated({ zones: conZonas, zoneId: ID_A })).toBe(false);
+    // Un negocio que no coordina no acepta 'otro barrio'.
+    expect(isCoordinated({ zones: comun, zoneId: OTHER_ZONE })).toBe(false);
+  });
+
+  it("pide el barrio escrito (hasta 80 caracteres) y no el id de uno", () => {
+    const ask = (zoneText, zones = sinZonas, zoneId = "") =>
+      deliveryProblem({ zones, delivery: "delivery", zoneId, zoneText });
+
+    expect(ask("Villa Rural")).toBeNull();
+    expect(ask("")).toBe("invalid_zone_text");
+    expect(ask("   ")).toBe("invalid_zone_text");
+    expect(ask("x".repeat(ZONE_TEXT_MAX))).toBeNull();
+    expect(ask("x".repeat(ZONE_TEXT_MAX + 1))).toBe("invalid_zone_text");
+    expect(ask("Villa Rural", conZonas, OTHER_ZONE)).toBeNull();
+    expect(ask("", conZonas, OTHER_ZONE)).toBe("invalid_zone_text");
+    // Con un barrio de la lista no hace falta el texto; con 'otro barrio' en un negocio común, no vale.
+    expect(ask("", conZonas, ID_A)).toBeNull();
+    expect(ask("Villa Rural", comun, OTHER_ZONE)).toBe("invalid_zone");
+    // Con retiro no se exige nada.
+    expect(deliveryProblem({ zones: sinZonas, delivery: "retiro", zoneId: "", zoneText: "" })).toBeNull();
+  });
+
+  it("al pedir manda el barrio escrito y la dirección, sin id de barrio", () => {
+    expect(
+      courierOrderFields({ zones: sinZonas, delivery: "delivery", zoneId: "", zoneText: "  Villa Rural ", address: " Calle 1 " }),
+    ).toEqual({ deliveryZoneText: "Villa Rural", deliveryAddress: "Calle 1" });
+    expect(
+      courierOrderFields({ zones: conZonas, delivery: "delivery", zoneId: OTHER_ZONE, zoneText: "Otro", address: "Calle 1" }),
+    ).toEqual({ deliveryZoneText: "Otro", deliveryAddress: "Calle 1" });
+    // Con un barrio de la lista sigue yendo el id.
+    expect(
+      courierOrderFields({ zones: conZonas, delivery: "delivery", zoneId: ID_A, zoneText: "ignorado", address: "Calle 1" }),
+    ).toEqual({ deliveryZone: ID_A, deliveryAddress: "Calle 1" });
+    expect(courierOrderFields({ zones: sinZonas, delivery: "retiro", zoneId: "", zoneText: "x", address: "y" })).toEqual({});
+  });
+
+  it("el WhatsApp dice que el costo se coordina con el local, en español", () => {
+    const text = courierWhatsappLines(null, { address: "Calle 1", zoneText: " Villa Rural " }, formatPrice);
+
+    expect(text).toContain("📍 Barrio: Villa Rural");
+    expect(text).toContain("🛵 Envío: el costo se coordina con el local");
+    expect(text).toContain("🏠 Dirección: Calle 1");
+    expect(text).not.toContain("$");
+  });
+
+  it("el aviso del checkout tiene su propio texto", () => {
+    expect(COORDINATE_NOTICE_KEY).toBe("checkout.zoneNoticeCoordinate");
   });
 });

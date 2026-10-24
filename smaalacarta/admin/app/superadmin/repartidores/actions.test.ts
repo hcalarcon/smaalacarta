@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const { requireSuperAdmin, couriers, rules } = vi.hoisted(() => ({
   requireSuperAdmin: vi.fn(),
-  couriers: { updateCourier: vi.fn() },
+  couriers: { updateCourier: vi.fn(), listBusinessChoices: vi.fn(), setCourierType: vi.fn() },
   rules: { createCourierWithAccount: vi.fn(), resetCourierPassword: vi.fn() },
 }));
 
@@ -30,6 +30,8 @@ beforeEach(() => {
   vi.clearAllMocks();
   requireSuperAdmin.mockResolvedValue({ id: "super" });
   couriers.updateCourier.mockResolvedValue({ ok: true });
+  couriers.listBusinessChoices.mockResolvedValue([]);
+  couriers.setCourierType.mockResolvedValue({ ok: true });
 });
 
 describe("repartidores en el superadmin — ENVIO-55", () => {
@@ -85,11 +87,112 @@ describe("repartidores en el superadmin — ENVIO-55", () => {
       name: "Moto",
       whatsapp: "5493515551234",
       active: true,
+      courierType: "free",
+      ownBusinessId: null,
     });
     expect(state.message).toMatch(/actualizado/i);
 
     await updateCourierAction({}, form({ courierId: ID, name: "Moto", whatsapp: "3515551234" }));
     expect(couriers.updateCourier).toHaveBeenLastCalledWith(ID, expect.objectContaining({ active: false }));
+  });
+
+  const NEG = "22222222-2222-2222-2222-222222222222";
+  const choice = (ownCourier: { id: string; name: string } | null) => [
+    { id: NEG, name: "Resto", slug: "resto", deliveryType: "own", ownCourier },
+  ];
+
+  it("editar: un repartidor propio guarda su negocio — ENVIO-258", async () => {
+    couriers.listBusinessChoices.mockResolvedValue(choice(null));
+
+    const state = await updateCourierAction(
+      {},
+      form({ courierId: ID, name: "Moto", whatsapp: "3515551234", active: "on", courierType: "own", ownBusinessId: NEG }),
+    );
+
+    expect(couriers.updateCourier).toHaveBeenCalledWith(
+      ID,
+      expect.objectContaining({ courierType: "own", ownBusinessId: NEG }),
+    );
+    expect(state.message).toMatch(/actualizado/i);
+  });
+
+  it("editar: propio sin negocio no llega a la base", async () => {
+    const state = await updateCourierAction(
+      {},
+      form({ courierId: ID, name: "Moto", whatsapp: "3515551234", active: "on", courierType: "own", ownBusinessId: "" }),
+    );
+
+    expect(state).toMatchObject({ fieldErrors: { ownBusinessId: expect.any(String) } });
+    expect(couriers.updateCourier).not.toHaveBeenCalled();
+  });
+
+  it("editar: un negocio con otro repartidor propio activo se rechaza; el mismo repartidor puede quedarse", async () => {
+    couriers.listBusinessChoices.mockResolvedValue(choice({ id: "otro", name: "Otro" }));
+    const taken = await updateCourierAction(
+      {},
+      form({ courierId: ID, name: "Moto", whatsapp: "3515551234", active: "on", courierType: "own", ownBusinessId: NEG }),
+    );
+    expect(taken).toMatchObject({ fieldErrors: { ownBusinessId: expect.stringMatching(/ya tiene/) } });
+    expect(couriers.updateCourier).not.toHaveBeenCalled();
+
+    couriers.listBusinessChoices.mockResolvedValue(choice({ id: ID, name: "Moto" }));
+    const same = await updateCourierAction(
+      {},
+      form({ courierId: ID, name: "Moto", whatsapp: "3515551234", active: "on", courierType: "own", ownBusinessId: NEG }),
+    );
+    expect(same.message).toMatch(/actualizado/i);
+  });
+
+  it("editar: si la base dice que el negocio ya tiene propio, devuelve el aviso", async () => {
+    couriers.listBusinessChoices.mockResolvedValue(choice(null));
+    couriers.updateCourier.mockResolvedValue({ ok: false, error: "x", conflict: true });
+
+    const state = await updateCourierAction(
+      {},
+      form({ courierId: ID, name: "Moto", whatsapp: "3515551234", active: "on", courierType: "own", ownBusinessId: NEG }),
+    );
+    expect(state.error).toMatch(/ya tiene un repartidor propio/);
+  });
+
+  it("alta: un repartidor propio queda con su negocio; si no se puede, se avisa y el repartidor existe", async () => {
+    rules.createCourierWithAccount.mockResolvedValue({
+      ok: true,
+      courierId: ID,
+      credentials: { email: "a@x.com", password: "Clave-1" },
+    });
+    couriers.listBusinessChoices.mockResolvedValue(choice(null));
+
+    const ok = await createCourierAction(
+      {},
+      form({ name: "Moto", whatsapp: "3515551234", email: "a@x.com", courierType: "own", ownBusinessId: NEG }),
+    );
+    expect(couriers.setCourierType).toHaveBeenCalledWith(ID, { courierType: "own", ownBusinessId: NEG });
+    expect(ok.courierId).toBe(ID);
+    expect(ok.message).toBeUndefined();
+
+    couriers.setCourierType.mockResolvedValue({ ok: false, conflict: true });
+    const partial = await createCourierAction(
+      {},
+      form({ name: "Moto", whatsapp: "3515551234", email: "a@x.com", courierType: "own", ownBusinessId: NEG }),
+    );
+    expect(partial.courierId).toBe(ID);
+    expect(partial.message).toMatch(/no pudimos dejarlo como propio/);
+  });
+
+  it("alta: propio sin negocio, o con un negocio ocupado, no crea nada — ENVIO-258", async () => {
+    const sin = await createCourierAction(
+      {},
+      form({ name: "Moto", whatsapp: "3515551234", email: "a@x.com", courierType: "own", ownBusinessId: "" }),
+    );
+    expect(sin).toMatchObject({ fieldErrors: { ownBusinessId: expect.any(String) } });
+
+    couriers.listBusinessChoices.mockResolvedValue(choice({ id: "otro", name: "Otro" }));
+    const ocupado = await createCourierAction(
+      {},
+      form({ name: "Moto", whatsapp: "3515551234", email: "a@x.com", courierType: "own", ownBusinessId: NEG }),
+    );
+    expect(ocupado).toMatchObject({ fieldErrors: { ownBusinessId: expect.stringMatching(/ya tiene/) } });
+    expect(rules.createCourierWithAccount).not.toHaveBeenCalled();
   });
 
   it("editar: datos inválidos no llegan a la base", async () => {

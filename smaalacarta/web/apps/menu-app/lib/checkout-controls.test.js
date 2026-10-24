@@ -374,8 +374,8 @@ describe("app.js — aviso de la zona y botón de barrio (PUBLICO-75, 111 y 113)
   });
 
   it("el barrio del checkout reutiliza la lista del selector de zona", () => {
-    expect(APP_JS).toMatch(/function openZonePicker\(\)[\s\S]*renderZoneList\(list, "", pick\)/);
-    expect(APP_JS).toContain("renderZoneList(list, search.value, pick)");
+    expect(APP_JS).toMatch(/function openZonePicker\(\)[\s\S]*renderZoneList\(list, "", pick, true\)/);
+    expect(APP_JS).toContain("renderZoneList(list, search.value, pick, true)");
     expect(APP_JS).toContain("ZONE.filterZones(COURIER_ZONES.zones, query)");
   });
 });

@@ -16,7 +16,6 @@ const options: DeliveryOptions = {
     { id: "moto", name: "Moto Express", whatsapp: null, zone_ids: ["z1"] },
   ],
   favorite_id: null,
-  default_courier: { id: "toque", name: "Repartos al Toque" },
 };
 
 describe("contexto del envío para el pedido manual — ENVIO-137 y 139", () => {
@@ -29,11 +28,11 @@ describe("contexto del envío para el pedido manual — ENVIO-137 y 139", () => 
     ]);
   });
 
-  it("sin favorito elegido, el favorito es Repartos al Toque y cubre lo que cubre", () => {
+  it("sin favorito elegido no hay favorito: no se ofrece asignar a nadie — ENVIO-254", () => {
     const context = manualDeliveryContext(options);
 
-    expect(context.favorite).toEqual({ id: "toque", name: "Repartos al Toque" });
-    expect(context.zones.map((zone) => zone.favoriteCovers)).toEqual([true, true]);
+    expect(context.favorite).toBeNull();
+    expect(context.zones.every((zone) => !zone.favoriteCovers)).toBe(true);
   });
 
   it("con otro favorito elegido, vale ese y solo cubre sus barrios", () => {
@@ -46,13 +45,6 @@ describe("contexto del envío para el pedido manual — ENVIO-137 y 139", () => 
     ]);
   });
 
-  it("sin favorito y con Repartos al Toque inactivo no hay favorito", () => {
-    const context = manualDeliveryContext({ ...options, default_courier: null });
-
-    expect(context.favorite).toBeNull();
-    expect(context.zones.every((zone) => !zone.favoriteCovers)).toBe(true);
-  });
-
   it("un favorito que ya no está entre los repartidores activos no se ofrece", () => {
     const context = manualDeliveryContext({ ...options, favorite_id: "fantasma" });
 
@@ -61,6 +53,46 @@ describe("contexto del envío para el pedido manual — ENVIO-137 y 139", () => 
   });
 
   it("sin datos de envío no ofrece nada", () => {
-    expect(manualDeliveryContext(null)).toEqual({ zones: [], favorite: null });
+    expect(manualDeliveryContext(null)).toEqual({
+      zones: [],
+      favorite: null,
+      kind: "free",
+      coordinate: false,
+      ownCourier: null,
+    });
+  });
+});
+
+describe("envío propio y a coordinar — ENVIO-250 a 252", () => {
+  const own = (courier: { id: string; name: string; active: boolean } | null) => ({
+    delivery: { delivery_type: "own" as const, courier, zones_with_price: 1, zones_total: 3 },
+    zones: [
+      { id: "a", name: "Norte", price: 1500, active: true, sort_order: 1 },
+      { id: "b", name: "Apagada", price: 900, active: false, sort_order: 2 },
+      { id: "c", name: "Sin precio", price: null, active: true, sort_order: 3 },
+    ],
+  });
+
+  it("con envío propio ofrece sus zonas activas y con precio, su repartidor propio y el envío a coordinar", () => {
+    const context = manualDeliveryContext(null, own({ id: "r", name: "Rita", active: true }));
+
+    expect(context.kind).toBe("own");
+    expect(context.zones.map((zone) => [zone.name, zone.price])).toEqual([["Norte", 1500]]);
+    expect(context.ownCourier).toEqual({ id: "r", name: "Rita" });
+    expect(context.coordinate).toBe(true);
+    expect(context.favorite).toBeNull();
+  });
+
+  it("sin repartidor propio activo no hay a quién asignar", () => {
+    expect(manualDeliveryContext(null, own(null)).ownCourier).toBeNull();
+    expect(manualDeliveryContext(null, own({ id: "r", name: "Rita", active: false })).ownCourier).toBeNull();
+  });
+
+  it("con envío libre se puede coordinar solo si no tildó ninguna zona", () => {
+    expect(manualDeliveryContext(options).coordinate).toBe(false);
+
+    const sinZonas = { ...options, zones: options.zones.map((zone) => ({ ...zone, selected: false })) };
+    expect(manualDeliveryContext(sinZonas).coordinate).toBe(true);
+    expect(manualDeliveryContext(sinZonas).kind).toBe("free");
   });
 });

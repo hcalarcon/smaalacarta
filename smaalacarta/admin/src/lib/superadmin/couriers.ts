@@ -50,6 +50,26 @@ export function validateCourierProfile(input: {
   return Object.keys(errors).length ? { ok: false, errors } : { ok: true };
 }
 
+// Libre (por defecto) o propio de un negocio (ENVIO-246 y 258). Un repartidor propio necesita su negocio; uno libre
+// no lo tiene. Lo demás lo exige la base (un solo propio activo por negocio).
+export type CourierTypeValue = { courierType: "free" | "own"; ownBusinessId: string | null };
+
+export function parseCourierType(input: {
+  courierType: string;
+  ownBusinessId: string;
+}): { ok: true; value: CourierTypeValue } | { ok: false; error: string } {
+  const type = input.courierType.trim() || "free";
+
+  if (type === "free") return { ok: true, value: { courierType: "free", ownBusinessId: null } };
+
+  if (type !== "own") return { ok: false, error: "Elegí si el repartidor es libre o propio de un negocio." };
+
+  const business = input.ownBusinessId.trim();
+  if (!/^[0-9a-f-]{36}$/i.test(business)) return { ok: false, error: "Elegí el negocio del repartidor propio." };
+
+  return { ok: true, value: { courierType: "own", ownBusinessId: business } };
+}
+
 export function validateNewCourier(input: {
   name: string;
   whatsapp: string;

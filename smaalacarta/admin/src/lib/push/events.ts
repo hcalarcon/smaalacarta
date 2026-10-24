@@ -17,7 +17,6 @@ export type OrderRecord = {
   customer_name: string | null;
   delivery_zone_id: string | null;
   // Zona propia del repartidor (tipo de precio `courier`): reemplaza a la zona común.
-  courier_zone_id: string | null;
   delivery_zone_name: string | null;
   delivery_fee_list: number | null;
   delivery_fee: number | null;
@@ -100,7 +99,7 @@ function isOfferable(order: OrderRecord | null): boolean {
     !!order &&
     order.courier_status === "searching" &&
     order.courier_id === null &&
-    (order.delivery_zone_id !== null || order.courier_zone_id !== null) &&
+    order.delivery_zone_id !== null &&
     order.status !== "delivered" &&
     order.status !== "cancelled" &&
     order.payment_status !== "awaiting" &&
@@ -140,6 +139,17 @@ export function detectEvents(payload: WebhookPayload): PushEvent[] {
       // "Lo llevo yo" del local: nadie fue elegido, todos los que ofertaron pierden.
       add("courier_not_chosen");
     }
+  }
+
+  // Envío propio (ENVIO-250): al confirmar el local, el pedido pasa de esperando a asignado a su repartidor propio, sin
+  // búsqueda ni ofertas: solo se le avisa a él.
+  if (
+    before.courier_status === "waiting" &&
+    order.courier_status === "accepted" &&
+    order.courier_id &&
+    before.courier_id === null
+  ) {
+    add("courier_chosen");
   }
 
   if (order.status === "cancelled" && before.status !== "cancelled") add("order_cancelled");

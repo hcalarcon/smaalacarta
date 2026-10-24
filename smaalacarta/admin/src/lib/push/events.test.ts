@@ -5,10 +5,18 @@ import { insert, update } from "./fixtures";
 
 const kinds = (payload: Parameters<typeof detectEvents>[0]) => detectEvents(payload).map((e) => e.kind);
 
-describe("pedido nuevo con zona del repartidor — ENVIO-225", () => {
-  it("avisa aunque no tenga zona común: la zona es del repartidor", () => {
-    const own = { delivery_zone_id: null, courier_zone_id: "z-propia" };
-    expect(kinds(insert(own))).toContain("offer_new");
+describe("pedido nuevo de un negocio propio — ENVIO-251", () => {
+  it("al confirmarlo el local, avisa a su repartidor propio (pasa de esperando a asignado)", () => {
+    const assigned = update(
+      { courier_status: "waiting", courier_id: null, delivery_zone_id: null },
+      { courier_status: "accepted", courier_id: "c-propio", delivery_zone_id: null },
+    );
+    expect(kinds(assigned)).toEqual(["courier_chosen"]);
+  });
+
+  it("un pedido sin zona común (envío propio o a coordinar) no se ofrece a nadie", () => {
+    expect(kinds(insert({ delivery_zone_id: null, courier_status: "waiting" }))).not.toContain("offer_new");
+    expect(kinds(insert({ delivery_zone_id: null }))).not.toContain("offer_new");
   });
 });
 

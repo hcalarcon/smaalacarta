@@ -3,11 +3,20 @@
 
 const PREFIX = "sma-zona:";
 
-// ¿Se pregunta? Solo si el local ofrece "delivery" y tiene al menos un barrio cargado.
+// ¿Se pregunta? Solo si el local ofrece "delivery" y tiene al menos un barrio cargado, o envía con el costo a
+// coordinar (ENVIO-263).
 export function askZone({ zones, deliveryOptions }) {
   return Boolean(
-    zones && zones.zones.length > 0 && Array.isArray(deliveryOptions) && deliveryOptions.includes("delivery"),
+    zones &&
+      (zones.zones.length > 0 || zones.coordinate === true) &&
+      Array.isArray(deliveryOptions) &&
+      deliveryOptions.includes("delivery"),
   );
+}
+
+// ¿"Envío" lleva a la lista de barrios o, sin barrios con precio, directo a "el costo se coordina"?
+export function deliveryStep(zones) {
+  return zones && zones.zones.length > 0 ? "zones" : "coordinate";
 }
 
 const fold = (text) =>
@@ -72,6 +81,12 @@ export function validateChoice(choice, zones, { pickup = true } = {}) {
   return null;
 }
 
+// Un envío con el costo a coordinar tampoco se guarda: el barrio se escribe en cada pedido. En un negocio que
+// ofrece coordinar, "Mi barrio no está" lleva a este caso en vez de bloquear el envío (ENVIO-263).
+export function isCoordinateChoice(choice) {
+  return choice?.type === "coordinate";
+}
+
 // "Mi barrio no está" (PUBLICO-80): no es una elección que se guarde (al volver se pregunta de nuevo), pero
 // mientras vale el checkout queda solo en retiro y el envío, deshabilitado.
 export function deliveryBlocked(choice) {
@@ -96,7 +111,9 @@ export function stepAfterChoice(choice) {
 export const ZONE_TOAST_MS = 4000;
 
 // Texto del aviso chico: la clave de i18n y sus variables, o null si no hay nada que avisar (solo una zona avisa).
+// Con el costo a coordinar (ENVIO-263) avisa que se acuerda con el local.
 export function choiceToast(choice, zones, formatPrice) {
+  if (choice?.type === "coordinate") return { key: "zone.coordinate", vars: {} };
   if (choice?.type !== "zone") return null;
   const zone = zones?.zones.find((item) => item.id === choice.zoneId);
   if (!zone) return null;
