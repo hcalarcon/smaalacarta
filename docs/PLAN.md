@@ -765,6 +765,15 @@ ADMIN-CONFIG-49 y 50, SEGUIMIENTO-37 a 42). Migración `20261031000000_tiempo_de
       favorito fijado por el superadmin) y Repartos al Toque deja de ser el favorito por defecto. Migraciones
       `20261203000000_envio_propio_del_negocio.sql` y `20261204000000_envio_a_coordinar_en_el_seguimiento.sql`
 
+## Promociones con cantidad y con opciones (tarea 55)
+
+- [x] [herni] Promociones con cantidad por producto (1 a 20) y con productos que tienen opciones, también obligatorias
+      (ADMIN-PROMOS-1, 4 y 7 a 9, PUBLICO-3, 120 y 121, SEGUIMIENTO-54): el cliente elige lo de cada unidad ("3
+      empanadas + 1 gaseosa"), el combo o el porcentaje se calculan sobre precio × cantidad y los extras con recargo se
+      cobran enteros. El pedido manual las pide igual. Migración `20261207000000_promociones_con_cantidad_y_opciones.sql`
+      (antes de pasar a prod: backup con `pg_dump` y `db push` a la base de prod; sin eso el menú público da 500 en los
+      negocios que guarden promos nuevas)
+
 ## Promociones con imagen y vigencia
 
 - [ ] [herni] Imagen propia o de un producto, "válida hasta" y unidades disponibles en las promociones: migración,
