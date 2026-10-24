@@ -70,6 +70,7 @@ export async function createOrder({
   scheduledFor,
   preorder,
   deliveryZone,
+  deliveryZoneText,
   customerPhone,
   deliveryAddress,
   fetchImpl = globalThis.fetch,
@@ -100,6 +101,8 @@ export async function createOrder({
         ...(preorder ? { p_preorder: true } : {}),
         // Envío con repartidor (ENVIO-21): solo el id del barrio; el precio lo pone la base.
         ...(deliveryZone ? { p_delivery_zone: deliveryZone } : {}),
+        // Sin zona con precio (ENVIO-252): el barrio que escribió el cliente; el costo lo coordina el local.
+        ...(!deliveryZone && deliveryZoneText ? { p_delivery_zone_text: deliveryZoneText } : {}),
         // El teléfono va en todos los pedidos (ENVIO-70 y 87).
         ...(customerPhone ? { p_customer_phone: customerPhone } : {}),
         ...(deliveryAddress ? { p_delivery_address: deliveryAddress } : {}),

@@ -301,6 +301,9 @@ function normalizeDelivery(data) {
     zone: typeof data.zona === "string" ? data.zona : "",
     listPrice: Number.isFinite(list) ? list : null,
     price: Number.isFinite(price) ? price : null,
+    // El costo del envío se coordina con el local (ENVIO-264): `feePending` mientras no lo cargó.
+    coordinated: data.a_coordinar === true,
+    feePending: data.precio_pendiente === true,
     reason: typeof data.motivo_cambio === "string" && data.motivo_cambio ? data.motivo_cambio : null,
     state: data.estado,
     // Lo que el repartidor asignado dejó dicho (SEGUIMIENTO-47): nulo si no marcó ni escribió nada.
@@ -409,6 +412,16 @@ export function arrivalLine(delivery, lang, now = new Date()) {
   return arrival.hint ? `${arrival.text} · ${arrival.hint}` : arrival.text;
 }
 
+// El costo de un envío a coordinar con el local (ENVIO-264): "Costo de envío a confirmar" hasta que lo carga, y
+// "Costo del envío: $X" una vez acordado. Un envío con precio de zona no suma nada.
+function feeLines(delivery, lang, money) {
+  if (delivery.feePending) return [t("tracker.delivery.feePending", lang)];
+  if (delivery.coordinated && delivery.price !== null) {
+    return [t("tracker.delivery.feeCoordinated", lang, { precio: money.format(delivery.price) })];
+  }
+  return [];
+}
+
 export function deliveryCard(delivery, lang, money, now = new Date()) {
   if (!delivery) return null;
 
@@ -419,7 +432,7 @@ export function deliveryCard(delivery, lang, money, now = new Date()) {
         kind: "waiting",
         icon: "received",
         title: t("tracker.delivery.waiting", lang),
-        lines: [t("tracker.delivery.waitingText", lang)],
+        lines: [t("tracker.delivery.waitingText", lang), ...feeLines(delivery, lang, money)],
       };
     case "searching":
       return delivery.offers.length > 0
@@ -432,6 +445,7 @@ export function deliveryCard(delivery, lang, money, now = new Date()) {
               t(delivery.mode === "fixed" ? "tracker.delivery.searchingFixedText" : "tracker.delivery.searchingText", lang),
               // La zona sigue sin repartidores disponibles (ENVIO-199): se va sola cuando aparece uno.
               ...(delivery.noCouriers === true ? [t("tracker.delivery.noCouriers", lang)] : []),
+              ...feeLines(delivery, lang, money),
             ],
           };
     case "self":
@@ -439,7 +453,7 @@ export function deliveryCard(delivery, lang, money, now = new Date()) {
         kind: "self",
         icon: "self",
         title: t("tracker.delivery.self", lang),
-        lines: [t("tracker.delivery.selfText", lang)],
+        lines: [t("tracker.delivery.selfText", lang), ...feeLines(delivery, lang, money)],
       };
     case "accepted":
       break;
@@ -455,6 +469,8 @@ export function deliveryCard(delivery, lang, money, now = new Date()) {
   if (arrival) lines.push(arrival);
   if (delivery.price !== null) {
     lines.push(t("tracker.delivery.pay", lang, { precio: money.format(delivery.price) }));
+  } else if (delivery.feePending) {
+    lines.push(t("tracker.delivery.feePending", lang));
   }
 
   if (delivery.price !== null && delivery.listPrice !== null && delivery.price !== delivery.listPrice) {

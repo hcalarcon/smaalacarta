@@ -2458,7 +2458,8 @@ Un local que no está en el centro tiene su delivery, sus zonas, sus precios y s
 - **ENVIO-263** Menú (`web/`): la tarjeta de zona, el checkout y el WhatsApp dicen "Envío: el costo se coordina con el local"
   cuando corresponde; el cliente carga barrio (texto libre) y dirección. "Mi barrio no está" lleva a ese mismo caso en un negocio
   con envío propio. Textos en es/en/pt, siempre con `textContent` o `escapeHtml`.
-- **ENVIO-264** Seguimiento: mientras el precio está pendiente dice "Costo de envío a confirmar"; cargado, muestra el precio.
+- **ENVIO-264** Seguimiento: `public_order_delivery` suma `a_coordinar` (el costo se acuerda con el local) y `precio_pendiente` (todavía
+  no se cargó). Mientras está pendiente dice "Costo de envío a confirmar"; cargado, muestra "Costo del envío: $X".
 
 
 ## ADMIN-RESUMEN — Pantalla de inicio del panel

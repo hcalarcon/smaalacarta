@@ -68,6 +68,8 @@ export type CourierPanelOrder = {
     zona: string | null;
     precio_lista: number | null;
     precio: number | null;
+    // El costo del envío se coordina con el local y todavía no está cargado (ENVIO-262).
+    precio_pendiente?: boolean;
     motivo_cambio: string | null;
     cambiado_el: string | null;
     estado: string | null;

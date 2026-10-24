@@ -382,6 +382,8 @@
           <select name="barrio" disabled>
             <option value="" disabled selected data-i18n="checkout.zone">-- Barrio --</option>
           </select>
+          <!-- Sin barrio con precio (o con "Otro barrio"): el cliente escribe el barrio y el costo se coordina (ENVIO-263). -->
+          <input name="barrioTexto" enterkeyhint="next" placeholder="Escribí tu barrio" data-i18n-placeholder="checkout.zoneText" maxlength="80" autocomplete="off" hidden disabled />
           <input name="direccion" enterkeyhint="next" placeholder="Dirección (calle y número)" data-i18n-placeholder="checkout.address" minlength="5" maxlength="200" autocomplete="street-address" disabled />
           <p id="aviso-barrio" class="aviso-entrega" hidden></p>
           <p id="aviso-sin-repartidores" class="aviso-entrega aviso-sin-repartidores" role="status" hidden></p>

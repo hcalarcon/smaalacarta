@@ -95,6 +95,29 @@ const base = {
   items: [{ id: ID_CAFE, kind: "product", quantity: 2 }],
 };
 
+describe("createOrder — envío a coordinar (ENVIO-252)", () => {
+  const ZONE = "11111111-1111-4111-8111-111111111111";
+
+  it("manda el barrio escrito cuando no hay barrio con precio", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ code: "a".repeat(20) }) });
+    await createOrder({ ...base, deliveryZoneText: "Villa Rural", deliveryAddress: "Calle 1", fetchImpl });
+
+    const body = JSON.parse(fetchImpl.mock.calls[0][1].body);
+    expect(body.p_delivery_zone_text).toBe("Villa Rural");
+    expect(body.p_delivery_zone).toBeUndefined();
+    expect(body.p_delivery_address).toBe("Calle 1");
+  });
+
+  it("con un barrio de la lista manda solo su id", async () => {
+    const fetchImpl = vi.fn().mockResolvedValue({ ok: true, json: async () => ({ code: "a".repeat(20) }) });
+    await createOrder({ ...base, deliveryZone: ZONE, deliveryZoneText: "ignorado", fetchImpl });
+
+    const body = JSON.parse(fetchImpl.mock.calls[0][1].body);
+    expect(body.p_delivery_zone).toBe(ZONE);
+    expect(body.p_delivery_zone_text).toBeUndefined();
+  });
+});
+
 describe("createOrder — SEGUIMIENTO-1 y 7", () => {
   it("llama a create_public_order con los datos del pedido", async () => {
     const fetchImpl = fakeFetch({ code: "0123456789abcdef0123", number: 7, total: 2000 });

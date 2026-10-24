@@ -751,6 +751,16 @@ ADMIN-CONFIG-49 y 50, SEGUIMIENTO-37 a 42). Migración `20261031000000_tiempo_de
       los triggers de `orders`), en la publicación de Realtime; el panel `/repartidor` la escucha y su respaldo baja a
       5 s (ENVIO-208 y 209). Migración `20261122000000_pulso_de_pedidos_del_repartidor.sql`
 
+## Envío propio del negocio (tarea 54)
+
+- [x] [herni] Un local fuera del centro con su propio delivery (ENVIO-245 a 264): repartidor libre o propio (superadmin),
+      negocio con envío libre o propio, zonas y precios que carga el local en Configuración → Envíos (arrancan vacías),
+      pedido directo a su repartidor propio sin ofertas, y envío "a coordinar" con precio pendiente que el local carga
+      desde la tarjeta cuando no hay zonas con precio. Reemplaza los tipos de precio de las tareas 47 y 48 (se eliminan
+      `delivery_pricing`, `business_zone_prices`, `courier_own_zones`, `can_edit_zones`, `delivery_offers_enabled` y el
+      favorito fijado por el superadmin) y Repartos al Toque deja de ser el favorito por defecto. Migraciones
+      `20261203000000_envio_propio_del_negocio.sql` y `20261204000000_envio_a_coordinar_en_el_seguimiento.sql`
+
 ## Promociones con imagen y vigencia
 
 - [ ] [herni] Imagen propia o de un producto, "válida hasta" y unidades disponibles en las promociones: migración,

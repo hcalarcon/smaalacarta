@@ -441,7 +441,7 @@ function Form({
                           </div>
                         ) : zone ? (
                           <p className="mt-1 text-xs text-stone-500">
-                            {ownKind || setup.delivery.kind === undefined
+                            {ownKind
                               ? `Envío: ${formatMoney(zone.price)}.`
                               : `Precio de referencia del envío: ${formatMoney(zone.price)}. El repartidor puede cambiarlo al ofertar.`}
                           </p>

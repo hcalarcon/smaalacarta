@@ -398,6 +398,8 @@ describe("fetchDelivery — ENVIO-29", () => {
         reason: "Fuera de zona",
         state: "accepted",
         extras: null,
+        coordinated: false,
+        feePending: false,
         arrivesAt: null,
         mode: "offers",
         note: "Juan, 21:30",
@@ -895,5 +897,59 @@ describe("aviso de que puede que no haya repartidores — ENVIO-199", () => {
       const accepted = deliveryCard(searching({ state: "accepted", courier: "Juan", noCouriers: true }), "es", money);
       expect(accepted.lines.join(" ")).not.toContain("tarde en aparecer");
     });
+  });
+});
+
+describe("costo de envío a coordinar — ENVIO-264", () => {
+  const money = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
+  const base = {
+    courier: "",
+    whatsapp: null,
+    zone: "Villa Rural",
+    listPrice: null,
+    price: null,
+    reason: null,
+    state: "self",
+    note: null,
+    offers: [],
+    closesAt: null,
+    coordinated: true,
+    feePending: true,
+  };
+
+  const lines = (delivery, lang = "es") => deliveryCard({ ...base, ...delivery }, lang, money)?.lines ?? [];
+
+  it("lo lee de la respuesta del servidor", async () => {
+    const r = await fetchDelivery({
+      ...cfg,
+      code: CODE,
+      fetchImpl: fakeFetch({ estado: "self", zona: "Villa Rural", a_coordinar: true, precio_pendiente: true }),
+    });
+    expect(r.data).toMatchObject({ coordinated: true, feePending: true, price: null });
+
+    const normal = await fetchDelivery({ ...cfg, code: CODE, fetchImpl: fakeFetch({ estado: "self", precio: 3000 }) });
+    expect(normal.data).toMatchObject({ coordinated: false, feePending: false });
+  });
+
+  it("mientras no está cargado dice 'Costo de envío a confirmar' (en es, en y pt)", () => {
+    expect(lines({})).toContain("Costo de envío a confirmar");
+    expect(lines({}, "en")).toContain("Delivery cost to be confirmed");
+    expect(lines({}, "pt")).toContain("Custo da entrega a confirmar");
+    expect(lines({ state: "waiting" })).toContain("Costo de envío a confirmar");
+    expect(lines({ state: "accepted", courier: "Rita" })).toContain("Costo de envío a confirmar");
+  });
+
+  it("cargado, muestra el costo acordado", () => {
+    const loaded = { feePending: false, price: 1800, listPrice: 1800 };
+
+    expect(lines(loaded).join(" ")).toMatch(/Costo del envío: \$\s?1\.800/);
+    expect(lines(loaded)).not.toContain("Costo de envío a confirmar");
+    expect(lines(loaded, "en").join(" ")).toContain("Delivery cost:");
+  });
+
+  it("un envío con precio de zona no suma ninguna línea de costo", () => {
+    const zone = { coordinated: false, feePending: false, price: 5000, listPrice: 5000 };
+
+    expect(lines(zone).join(" ")).not.toMatch(/Costo del envío|a confirmar/);
   });
 });

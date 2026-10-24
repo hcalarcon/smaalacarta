@@ -76,6 +76,8 @@ export default function CourierOrderCard({
   const currentFee = Number(order.envio.precio ?? 0);
   const listFee = order.envio.precio_lista;
   const changed = listFee !== null && order.envio.precio !== null && Number(listFee) !== currentFee;
+  // Un envío a coordinar con el local: hasta que lo cargue, el precio está por confirmarse.
+  const feePending = order.envio.precio_pendiente === true;
 
   const when = order.anticipado ? preorderLabel(order.programado) : scheduledLabel(order.programado);
   const localChat = chatLink(order.negocio.whatsapp);
@@ -197,7 +199,9 @@ export default function CourierOrderCard({
       {/* Plata en una línea: lo que cobra por el envío y, si hay que cobrarle algo al cliente, el chip. */}
       {order.estado !== "cancelled" ? (
         <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-stone-600">
-          <span>Envío {formatMoney(currentFee)}</span>
+          <span className={feePending ? "font-semibold text-amber-800" : undefined}>
+            {feePending ? "Costo de envío a confirmar" : `Envío ${formatMoney(currentFee)}`}
+          </span>
           {collection.toCollect > 0 ? (
             <span
               className={`rounded-full px-2 py-0.5 text-xs font-bold ${
@@ -351,7 +355,9 @@ export default function CourierOrderCard({
         </div>
         <div className="flex gap-2">
           <dt className="text-stone-500">Precio del envío:</dt>
-          <dd className="font-medium">{formatMoney(currentFee)}</dd>
+          <dd className={feePending ? "font-semibold text-amber-800" : "font-medium"}>
+            {feePending ? "Costo de envío a confirmar" : formatMoney(currentFee)}
+          </dd>
         </div>
         {changed && listFee !== null ? (
           <div className="flex gap-2">

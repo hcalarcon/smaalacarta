@@ -64,8 +64,6 @@ dev-fede    espacio de Fede (usuario git `FedeAtadia`).
      suscripción es de la persona y la cuenta repartidor no tiene negocio.
      Mismo criterio, aprobado por Herni: `courier_preferences` filtra por `courier_id` (las preferencias
      son del repartidor, que no tiene negocio).
-     Mismo criterio, aprobado por Herni: `courier_own_zones` filtra por `courier_id` (las zonas propias son
-     del repartidor, que no tiene negocio).
    - Después de una migración: `npm run db:types` y commitear `src/types/database.ts`.
    - Avisá antes de crear una migración si otra tarea del plan también toca el esquema.
 
@@ -274,12 +272,17 @@ negocio nuevo funciona apenas existe y está publicado, sin tocar código.
   corre cada minuto con pg_cron para todos los pedidos vencidos (así el aviso llega aunque
   nadie mire); los 5 minutos viven solo en `courier_offers_window()`. El favorito del local (`favorite_courier_id`) solo ordena y
   desempata; ya no hay ventana exclusiva.
-- **Tipo de precio del envío** (`businesses.delivery_pricing`, solo superadmin): `common`, `business` (precio por zona en
-  `business_zone_prices`, editable por el local con `delivery_prices_editable`) o `courier` (zonas propias del favorito
-  efectivo en `courier_own_zones`, editables por el repartidor con `couriers.can_edit_zones`). Las zonas de un negocio las
-  resuelve **solo** `delivery_zones_for_business()`; con `courier` el pedido guarda `orders.courier_zone_id` y lo ve y oferta
-  solo el dueño de la zona. `delivery_offers_enabled` apagado: `courier_make_offer` rechaza otro precio (`P0028`) y el menú
-  dice "Envío $X" en vez de "Envío aprox. $X".
+- **Envío propio del negocio** (`businesses.delivery_type`, solo superadmin): `free` es la red de siempre (zonas
+  comunes, repartidores libres, ofertas); `own` usa las zonas y precios del propio negocio (`business_own_zones`, RLS
+  por `business_id`, las carga el local en Configuración → Envíos) y **su repartidor propio** (`couriers.courier_type =
+  'own'` + `own_business_id`, a lo sumo uno activo por negocio, elegido por el superadmin al dar de alta o editar al
+  repartidor). Las zonas de un negocio las resuelve **solo** `delivery_zones_for_business()`. Un pedido de un negocio
+  propio no pasa por ofertas: al confirmarlo el local, `assign_direct_delivery()` lo asigna a su repartidor propio, o lo
+  deja "Lo llevo yo" si no tiene; ningún repartidor libre lo ve y el propio no ve los de otro negocio
+  (`courier_sees_order`, disponibilidad, pulso y push). Sin zonas con precio el envío se ofrece "a coordinar":
+  `orders.delivery_fee_coordinated` y el local carga el precio con `set_delivery_fee()` (el seguimiento dice "Costo de
+  envío a confirmar" mientras tanto). `effective_favorite_courier` devuelve solo el favorito que eligió el local: no hay
+  repartidor por defecto. Reemplazó los tipos de precio de las tareas 47 y 48 (ENVIO-219 a 233).
 - **Vehículo del repartidor** (`couriers.moto`/`auto`, `orders.needs_car`): detrás de `platform_settings.vehicle_enabled`
   (superadmin, apagado de fábrica), que el servidor lee con `vehicle_enabled()`. Apagado, `needs_car` se ignora y no
   se muestra nada. La regla de quién ve un pedido que necesita auto vive en `courier_sees_order()` (más el error

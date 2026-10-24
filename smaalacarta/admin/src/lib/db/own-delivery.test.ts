@@ -288,6 +288,7 @@ describe("pedido directo al repartidor propio — ENVIO-250 y 251", () => {
 
     const d = await delivery(o.code);
     expect(d).toMatchObject({ estado: "accepted", repartidor: "Repartidor Propio", precio: 1500 });
+    expect(d).not.toHaveProperty("a_coordinar");
   });
 
   it("sin repartidor propio activo, queda 'Lo llevo yo'", async () => {
@@ -452,14 +453,14 @@ describe("envío a coordinar — ENVIO-252 y 253", () => {
     expect(await mine(REPA_L_USER)).toEqual([]);
 
     // El seguimiento dice que el costo está por confirmarse.
-    expect(await delivery(o.code)).toMatchObject({ zona: "Villa Rural", precio_pendiente: true });
+    expect(await delivery(o.code)).toMatchObject({ zona: "Villa Rural", precio_pendiente: true, a_coordinar: true });
     expect(await delivery(o.code)).not.toHaveProperty("precio");
 
     // El local lo carga; el cliente lo ve.
     expect((await call(PRO, `select public.set_delivery_fee('${o.id}', 1800.5)`)).ok).toBe(true);
     expect(await row(o.id)).toMatchObject({ delivery_fee: "1800.50", delivery_fee_list: "1800.50" });
     const d = await delivery(o.code);
-    expect(d).toMatchObject({ precio: 1800.5 });
+    expect(d).toMatchObject({ precio: 1800.5, a_coordinar: true });
     expect(d).not.toHaveProperty("precio_pendiente");
     expect((await mine(REPA_P_USER))[0].envio).toMatchObject({ precio: 1800.5, precio_pendiente: false });
 
