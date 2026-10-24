@@ -196,7 +196,7 @@ function isValidItem(item: ManualOrderItem) {
       (component) =>
         typeof component.productId === "string" &&
         component.productId.trim() !== "" &&
-        component.options.every(isValidOption),
+        (component.options ?? []).every(isValidOption),
     )
   );
 }

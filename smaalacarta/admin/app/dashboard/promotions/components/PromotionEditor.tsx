@@ -539,9 +539,11 @@ export default function PromotionEditor({
                             [product.id]: Math.min(PROMOTION_QUANTITY.max, Math.max(PROMOTION_QUANTITY.min, quantity)),
                           }))
                         }
-                        onRemove={() =>
-                          setSelectedIds((prev) => prev.filter((id) => id !== product.id))
-                        }
+                        onRemove={() => {
+                          setSelectedIds((prev) => prev.filter((id) => id !== product.id));
+                          // Si se vuelve a agregar, arranca en 1 y no con la cantidad de antes.
+                          setQuantities((prev) => Object.fromEntries(Object.entries(prev).filter(([id]) => id !== product.id)));
+                        }}
                       />
                     ))}
                   </ul>

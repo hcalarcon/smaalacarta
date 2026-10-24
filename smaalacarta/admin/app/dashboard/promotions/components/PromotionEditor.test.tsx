@@ -201,6 +201,16 @@ describe("editor de promoción — cantidad por producto (ADMIN-PROMOS-1)", () =
     expect(screen.getByLabelText("Menos Café")).toBeEnabled();
   });
 
+  it("al quitar un producto y volver a agregarlo arranca en 1", async () => {
+    open({ items: [{ productId: "p1", quantity: 5 }] });
+    fireEvent.click(screen.getByLabelText("Quitar Café"));
+    fireEvent.click(screen.getByLabelText("Agregar Café"));
+    save();
+
+    await waitFor(() => expect(savePromotionAction).toHaveBeenCalled());
+    expect(lastCall().items).toEqual([{ productId: "p1", quantity: 1 }]);
+  });
+
   it("muestra el subtotal del producto con su cantidad", () => {
     open({ items: [{ productId: "p1", quantity: 3 }, { productId: "p2", quantity: 1 }] });
 
