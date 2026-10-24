@@ -6,7 +6,7 @@ import { isSupabaseConfigured } from "./public-menu.js";
 import { PAYMENT } from "./checkout-options.js";
 import { LANGS } from "./i18n.js";
 import { cleanNote } from "./item-notes.js";
-import { toOrderOptions } from "./options.js";
+import { toOrderComponents, toOrderOptions } from "./options.js";
 import { whatsappDigits } from "./phone.js";
 
 // Del carrito a lo que pide la base: `id`, tipo y cantidad. Nunca precios. Devuelve
@@ -28,6 +28,10 @@ export function buildOrderItems(cart) {
       // Opciones elegidas: solo ids y cantidades, nunca precios (PUBLICO-48).
       ...(Array.isArray(item.elegidas) && item.elegidas.length > 0
         ? { options: toOrderOptions(item.elegidas) }
+        : {}),
+      // Una promoción con opciones: lo elegido en cada unidad, también solo ids y cantidades (PUBLICO-3).
+      ...(item.esPromo && Array.isArray(item.componentes) && item.componentes.length > 0
+        ? { components: toOrderComponents(item.componentes) }
         : {}),
       // La nota del cliente para este producto, ya limpia; la base la vuelve a limpiar y la ignora si
       // el negocio desactivó las notas (PUBLICO-66).

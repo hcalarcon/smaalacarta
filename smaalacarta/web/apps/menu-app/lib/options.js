@@ -95,15 +95,24 @@ export function sheetTotal(basePrice, chosen, quantity) {
   return unitPrice(basePrice, chosen) * clampQuantity(quantity);
 }
 
-// Identifica una línea del carrito: el mismo producto con la misma elección da la misma firma, sin
-// importar el orden en que se eligió; otra elección, otra firma (PUBLICO-46).
-export function lineSignature(id, chosen) {
-  const parts = [...(chosen ?? [])]
+const chosenParts = (chosen) =>
+  [...(chosen ?? [])]
     .filter((c) => c.cantidad > 0)
     .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
-    .map((c) => `${c.id}x${c.cantidad}`);
+    .map((c) => `${c.id}x${c.cantidad}`)
+    .join(",");
 
-  return `${id}|${parts.join(",")}`;
+// Identifica una línea del carrito: el mismo producto con la misma elección da la misma firma, sin
+// importar el orden en que se eligió; otra elección, otra firma (PUBLICO-46). En una promoción con
+// componentes (`[{ id, nombre, elegidas }]`, uno por unidad) también cuenta lo elegido en cada unidad,
+// sin importar el orden de las unidades (PUBLICO-3).
+export function lineSignature(id, chosen, components) {
+  const units = (components ?? [])
+    .map((component) => `${component.id}=${chosenParts(component.elegidas)}`)
+    .sort()
+    .join(";");
+
+  return `${id}|${chosenParts(chosen)}${units ? `#${units}` : ""}`;
 }
 
 // Lo único que viaja al servidor: ids y cantidades, nunca precios (PUBLICO-48).
@@ -114,4 +123,100 @@ export function toOrderOptions(chosen) {
 // Texto corto de lo elegido, para el carrito: "Queso, Frutilla ×2".
 export function describeChosen(chosen) {
   return (chosen ?? []).map((c) => (c.cantidad > 1 ? `${c.nombre} ×${c.cantidad}` : c.nombre)).join(", ");
+}
+
+// ---------------------------------------------------------------------------------------------------
+// Promociones con productos que tienen opciones (PUBLICO-3). El menú trae en cada promoción
+// `componentes: [{ id, nombre, cantidad, opciones }]`: qué productos lleva, cuántas unidades de cada uno
+// y los grupos de cada producto. El cliente elige las opciones de cada unidad.
+// ---------------------------------------------------------------------------------------------------
+
+// ¿La promoción tiene algo que elegir? Si ningún producto tiene grupos se agrega directo, como siempre.
+export const promoHasChoices = (item) =>
+  item?.esPromo === true &&
+  Array.isArray(item.componentes) &&
+  item.componentes.some((component) => hasOptions(component));
+
+// Lo que abre la hoja al tocar un producto o una promoción.
+export const needsSheet = (item) => hasOptions(item) || promoHasChoices(item);
+
+// Una unidad por cada unidad de cada producto, en el orden de la promoción: `{ id, nombre, indice, de, opciones }`
+// (`indice` y `de` son "1 de 3"; `de` vale 1 si el producto va una sola vez).
+export function promoUnits(item) {
+  if (!Array.isArray(item?.componentes)) return [];
+
+  return item.componentes.flatMap((component) => {
+    const total = Math.max(1, Math.floor(Number(component.cantidad)) || 1);
+
+    return Array.from({ length: total }, (_, index) => ({
+      id: component.id,
+      nombre: component.nombre,
+      indice: index + 1,
+      de: total,
+      opciones: Array.isArray(component.opciones) ? component.opciones : [],
+    }));
+  });
+}
+
+// Lo elegido en cada unidad (`selections[i]` es la elección `{ id: cantidad }` de la unidad i) como lista de
+// componentes: la foto que se guarda en el carrito (`{ id, nombre, elegidas }`).
+export function chosenComponents(units, selections) {
+  return units.map((unit, index) => ({
+    id: unit.id,
+    nombre: unit.nombre,
+    elegidas: chosenOptions(unit.opciones, selections?.[index] ?? {}),
+  }));
+}
+
+// ¿Cada unidad cumple las reglas de sus grupos?
+export function validateUnits(units, selections) {
+  return units.every((unit, index) => validateSelection(unit.opciones, selections?.[index] ?? {}).ok);
+}
+
+// Los extras de todas las unidades.
+export function componentsExtras(components) {
+  return (components ?? []).reduce((sum, component) => sum + extrasTotal(component.elegidas), 0);
+}
+
+// Precio de una unidad de la promoción: el de la promoción más los extras de todos sus componentes.
+export function promoPrice(basePrice, components) {
+  return (Number(basePrice) || 0) + componentsExtras(components);
+}
+
+// Lo único que viaja al servidor: ids y cantidades, nunca precios.
+export function toOrderComponents(components) {
+  return (components ?? []).map((component) => ({
+    product_id: component.id,
+    options: toOrderOptions(component.elegidas),
+  }));
+}
+
+// Una línea de texto por grupo de unidades iguales: "2× Empanada clásica: Carne", "Gaseosas: Coca".
+export function describeComponents(components) {
+  const counts = new Map();
+
+  for (const component of components ?? []) {
+    const chosen = describeChosen(component.elegidas);
+    const text = chosen ? `${component.nombre}: ${chosen}` : component.nombre;
+    counts.set(text, (counts.get(text) ?? 0) + 1);
+  }
+
+  return [...counts].map(([text, count]) => (count > 1 ? `${count}× ${text}` : text));
+}
+
+// De los componentes del carrito a las selecciones de la hoja, unidad por unidad: sirve para reabrir la hoja y
+// editar una línea. Un producto que cambió de cantidad conserva lo que se pueda, en orden.
+export function selectionsFromComponents(units, components) {
+  const byProduct = new Map();
+  for (const component of components ?? []) {
+    byProduct.set(component.id, [...(byProduct.get(component.id) ?? []), component.elegidas]);
+  }
+
+  const seen = new Map();
+
+  return units.map((unit) => {
+    const position = seen.get(unit.id) ?? 0;
+    seen.set(unit.id, position + 1);
+    return selectionFromChosen(byProduct.get(unit.id)?.[position]);
+  });
 }

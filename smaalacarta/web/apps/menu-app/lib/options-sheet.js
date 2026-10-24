@@ -5,11 +5,15 @@
 import { NOTE_MAX, cleanNote, noteCounter } from "./item-notes.js";
 import {
   MAX_QUANTITY,
+  chosenComponents,
   chosenOptions,
   clampQuantity,
   groupCount,
+  promoHasChoices,
+  promoPrice,
+  promoUnits,
   selectionFromChosen,
-  sheetTotal,
+  selectionsFromComponents,
   unitPrice,
   validateSelection,
 } from "./options.js";
@@ -42,6 +46,10 @@ const FOCUSABLE = 'button, input, textarea, select, [href], [tabindex]:not([tabi
  * `onAdd(chosen, note, quantity)` se llama con la lista de `chosenOptions`, la nota ya limpia (o "") y la
  * cantidad cuando el cliente toca el botón con una elección válida.
  *
+ * Una promoción con opciones (PUBLICO-3) abre la hoja con un bloque por unidad ("Empanada clásica 1 de 3"…): el
+ * cliente elige lo de cada una. En ese caso `onAdd` recibe `[]` como opciones y, de cuarto argumento, la lista de
+ * componentes elegidos (`chosenComponents`); `initial.components` la precarga al editar la línea.
+ *
  * Con `notesEnabled` (config.notasPorItem) es la hoja de producto completa (PUBLICO-65): foto, cantidad,
  * campo de nota y el botón con el total en vivo. Sin él, es la hoja de opciones de siempre (PUBLICO-45).
  * `image` es `{ src, kind }` (la foto o ilustración del producto). `initial` (`{ chosen, quantity, note }`)
@@ -62,15 +70,25 @@ export function openOptionsSheet({
   confirmKey = "options.add",
   returnFocus = null,
 }) {
-  const groups = item.opciones ?? [];
-  const selection = {};
+  const perUnit = promoHasChoices(item);
+  // Un producto suelto es una sola "unidad"; una promoción con opciones tiene una por cada unidad de cada producto.
+  const units = perUnit
+    ? promoUnits(item)
+    : [{ id: item.id, nombre: item.nombre, indice: 1, de: 1, opciones: item.opciones ?? [] }];
+  const selections = units.map(() => ({}));
   const opener = returnFocus ?? doc.activeElement;
 
   // Lo precargado se limita a opciones que el producto todavía tiene (puede haber cambiado el menú).
-  const known = new Set(groups.flatMap((group) => (group.opciones ?? []).map((option) => option.id)));
-  for (const [id, count] of Object.entries(selectionFromChosen(initial?.chosen))) {
-    if (known.has(id)) selection[id] = count;
-  }
+  const preloaded = perUnit
+    ? selectionsFromComponents(units, initial?.components)
+    : [selectionFromChosen(initial?.chosen)];
+
+  units.forEach((unit, index) => {
+    const known = new Set(unit.opciones.flatMap((group) => (group.opciones ?? []).map((option) => option.id)));
+    for (const [id, count] of Object.entries(preloaded[index] ?? {})) {
+      if (known.has(id)) selections[index][id] = count;
+    }
+  });
 
   let quantity = clampQuantity(initial?.quantity);
 
@@ -138,116 +156,145 @@ export function openOptionsSheet({
 
   const refreshers = [];
 
+  // Lo elegido y el precio de una unidad (el del producto o la promoción más los extras de todo lo elegido).
+  function current() {
+    if (perUnit) {
+      const components = chosenComponents(units, selections);
+      return { chosen: [], components, price: promoPrice(item.precio, components) };
+    }
+
+    const chosen = chosenOptions(units[0].opciones, selections[0]);
+    return { chosen, components: [], price: unitPrice(item.precio, chosen) };
+  }
+
   function refresh() {
-    const chosen = chosenOptions(groups, selection);
-    const { ok } = validateSelection(groups, selection);
+    const { price } = current();
+    const ok = units.every((unit, index) => validateSelection(unit.opciones, selections[index]).ok);
 
     if (notesEnabled) {
-      addBtn.textContent = `${t(confirmKey)} $${formatPrice(sheetTotal(item.precio, chosen, quantity))}`;
+      addBtn.textContent = `${t(confirmKey)} $${formatPrice(price * clampQuantity(quantity))}`;
       qtyValue.textContent = String(quantity);
       qtyLess.disabled = quantity <= 1;
       qtyMore.disabled = quantity >= MAX_QUANTITY;
     } else {
-      totalEl.textContent = `${t("options.total")} $${formatPrice(unitPrice(item.precio, chosen))}`;
+      totalEl.textContent = `${t("options.total")} $${formatPrice(price)}`;
     }
 
     addBtn.disabled = !ok;
     refreshers.forEach((fn) => fn());
   }
 
-  groups.forEach((group, groupIndex) => {
-    const kind = controlKind(group);
-    const fieldset = el(doc, "fieldset", "opciones-grupo");
-    fieldset.dataset.grupo = group.id;
+  units.forEach((unit, unitIndex) => {
+    const groups = unit.opciones;
+    const selection = selections[unitIndex];
 
-    const legend = el(doc, "legend", "opciones-grupo-cabecera");
-    legend.append(
-      el(doc, "span", "opciones-grupo-titulo", group.nombre),
-      el(doc, "span", `opciones-regla${group.min >= 1 ? " obligatoria" : ""}`, ruleText(group, t)),
-    );
-    fieldset.appendChild(legend);
+    // En una promoción cada unidad va en su bloque, con su título; un producto suelto, directo en el cuerpo.
+    let container = body;
+    if (perUnit) {
+      if (groups.length === 0) return;
 
-    for (const option of group.opciones ?? []) {
-      const soldOut = option.agotado === true;
-      const row = el(doc, "label", `opciones-opcion${soldOut ? " agotada" : ""}`);
-      row.dataset.opcion = option.id;
-
-      const name = el(doc, "span", "opcion-nombre", option.nombre);
-      const price = el(doc, "span", "opcion-precio", option.precio > 0 ? `+$${formatPrice(option.precio)}` : "");
-
-      if (kind === "counter") {
-        const controls = el(doc, "span", "opcion-contador");
-        const less = el(doc, "button", "opcion-menos", "−");
-        const count = el(doc, "span", "opcion-cantidad", "0");
-        const more = el(doc, "button", "opcion-mas", "+");
-        less.type = more.type = "button";
-        less.setAttribute("aria-label", t("options.less", { name: option.nombre }));
-        more.setAttribute("aria-label", t("options.more", { name: option.nombre }));
-
-        less.addEventListener("click", (event) => {
-          event.preventDefault();
-          if (selection[option.id] > 0) selection[option.id] -= 1;
-          if (selection[option.id] === 0) delete selection[option.id];
-          refresh();
-        });
-        more.addEventListener("click", (event) => {
-          event.preventDefault();
-          if (soldOut || groupCount(group, selection) >= group.max) return;
-          selection[option.id] = (selection[option.id] || 0) + 1;
-          refresh();
-        });
-
-        refreshers.push(() => {
-          const qty = selection[option.id] || 0;
-          count.textContent = String(qty);
-          less.disabled = qty === 0;
-          more.disabled = soldOut || groupCount(group, selection) >= group.max;
-        });
-
-        controls.append(less, count, more);
-        row.append(name, price, controls);
-      } else {
-        const input = doc.createElement("input");
-        input.type = kind;
-        input.name = `grupo-${groupIndex}`;
-        input.disabled = soldOut;
-        input.value = option.id;
-
-        input.addEventListener("click", () => {
-          if (kind === "radio") {
-            // Un grupo opcional de un solo lugar se puede dejar vacío tocando de nuevo la elegida.
-            if (selection[option.id] && group.min < 1) {
-              delete selection[option.id];
-              input.checked = false;
-            } else {
-              for (const other of group.opciones) delete selection[other.id];
-              selection[option.id] = 1;
-            }
-          } else if (input.checked) {
-            selection[option.id] = 1;
-          } else {
-            delete selection[option.id];
-          }
-          refresh();
-        });
-
-        refreshers.push(() => {
-          input.checked = (selection[option.id] || 0) > 0;
-          // En casillas, con el grupo lleno las que faltan se apagan (no se puede pasar del máximo).
-          if (kind === "checkbox") {
-            input.disabled = soldOut || (!input.checked && groupCount(group, selection) >= group.max);
-          }
-        });
-
-        row.append(input, name, price);
-      }
-
-      if (soldOut) row.appendChild(el(doc, "span", "opcion-agotada", t("item.soldOut")));
-
-      fieldset.appendChild(row);
+      container = el(doc, "section", "opciones-unidad");
+      container.dataset.unidad = String(unitIndex);
+      container.appendChild(
+        el(doc, "h4", "opciones-unidad-titulo", unit.de > 1 ? t("options.unit", { name: unit.nombre, n: unit.indice, total: unit.de }) : unit.nombre),
+      );
+      body.appendChild(container);
     }
 
-    body.appendChild(fieldset);
+    groups.forEach((group, groupIndex) => {
+      const kind = controlKind(group);
+      const fieldset = el(doc, "fieldset", "opciones-grupo");
+      fieldset.dataset.grupo = group.id;
+
+      const legend = el(doc, "legend", "opciones-grupo-cabecera");
+      legend.append(
+        el(doc, "span", "opciones-grupo-titulo", group.nombre),
+        el(doc, "span", `opciones-regla${group.min >= 1 ? " obligatoria" : ""}`, ruleText(group, t)),
+      );
+      fieldset.appendChild(legend);
+
+      for (const option of group.opciones ?? []) {
+        const soldOut = option.agotado === true;
+        const row = el(doc, "label", `opciones-opcion${soldOut ? " agotada" : ""}`);
+        row.dataset.opcion = option.id;
+
+        const name = el(doc, "span", "opcion-nombre", option.nombre);
+        const price = el(doc, "span", "opcion-precio", option.precio > 0 ? `+$${formatPrice(option.precio)}` : "");
+
+        if (kind === "counter") {
+          const controls = el(doc, "span", "opcion-contador");
+          const less = el(doc, "button", "opcion-menos", "−");
+          const count = el(doc, "span", "opcion-cantidad", "0");
+          const more = el(doc, "button", "opcion-mas", "+");
+          less.type = more.type = "button";
+          less.setAttribute("aria-label", t("options.less", { name: option.nombre }));
+          more.setAttribute("aria-label", t("options.more", { name: option.nombre }));
+
+          less.addEventListener("click", (event) => {
+            event.preventDefault();
+            if (selection[option.id] > 0) selection[option.id] -= 1;
+            if (selection[option.id] === 0) delete selection[option.id];
+            refresh();
+          });
+          more.addEventListener("click", (event) => {
+            event.preventDefault();
+            if (soldOut || groupCount(group, selection) >= group.max) return;
+            selection[option.id] = (selection[option.id] || 0) + 1;
+            refresh();
+          });
+
+          refreshers.push(() => {
+            const qty = selection[option.id] || 0;
+            count.textContent = String(qty);
+            less.disabled = qty === 0;
+            more.disabled = soldOut || groupCount(group, selection) >= group.max;
+          });
+
+          controls.append(less, count, more);
+          row.append(name, price, controls);
+        } else {
+          const input = doc.createElement("input");
+          input.type = kind;
+          input.name = `grupo-${unitIndex}-${groupIndex}`;
+          input.disabled = soldOut;
+          input.value = option.id;
+
+          input.addEventListener("click", () => {
+            if (kind === "radio") {
+              // Un grupo opcional de un solo lugar se puede dejar vacío tocando de nuevo la elegida.
+              if (selection[option.id] && group.min < 1) {
+                delete selection[option.id];
+                input.checked = false;
+              } else {
+                for (const other of group.opciones) delete selection[other.id];
+                selection[option.id] = 1;
+              }
+            } else if (input.checked) {
+              selection[option.id] = 1;
+            } else {
+              delete selection[option.id];
+            }
+            refresh();
+          });
+
+          refreshers.push(() => {
+            input.checked = (selection[option.id] || 0) > 0;
+            // En casillas, con el grupo lleno las que faltan se apagan (no se puede pasar del máximo).
+            if (kind === "checkbox") {
+              input.disabled = soldOut || (!input.checked && groupCount(group, selection) >= group.max);
+            }
+          });
+
+          row.append(input, name, price);
+        }
+
+        if (soldOut) row.appendChild(el(doc, "span", "opcion-agotada", t("item.soldOut")));
+
+        fieldset.appendChild(row);
+      }
+
+      container.appendChild(fieldset);
+    });
   });
 
   // La nota del cliente para este producto: texto libre de hasta 140 (el salto de línea no se escribe: la
@@ -329,11 +376,12 @@ export function openOptionsSheet({
   });
   addBtn.addEventListener("click", () => {
     if (addBtn.disabled) return;
-    const chosen = chosenOptions(groups, selection);
+    const { chosen, components } = current();
     const note = noteInput ? cleanNote(noteInput.value) : "";
-    const units = notesEnabled ? quantity : 1;
+    const count = notesEnabled ? quantity : 1;
     close();
-    onAdd(chosen, note, units);
+    if (perUnit) onAdd(chosen, note, count, components);
+    else onAdd(chosen, note, count);
   });
   doc.addEventListener("keydown", onKey);
 

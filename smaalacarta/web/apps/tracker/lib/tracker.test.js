@@ -953,3 +953,41 @@ describe("costo de envío a coordinar — ENVIO-264", () => {
     expect(lines(zone).join(" ")).not.toMatch(/Costo del envío|a confirmar/);
   });
 });
+
+describe("itemRow con una promoción con opciones — SEGUIMIENTO-54", () => {
+  const money = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS" });
+  const unidad = (gusto) => ({
+    producto: "Empanada clásica",
+    opciones: [{ grupo: "Gusto", nombre: gusto, cantidad: 1, precio: 0 }],
+  });
+
+  it("lista cada unidad con lo elegido, juntando las iguales", () => {
+    const li = itemRow(
+      document,
+      { nombre: "3 empanadas + gaseosa", cantidad: 1, precio: 3000, opciones: [unidad("Carne"), unidad("Carne"), unidad("Pollo"), { producto: "Gaseosas" }] },
+      money,
+    );
+
+    expect([...li.querySelectorAll(".item-opciones li")].map((n) => n.textContent)).toEqual([
+      "2× Empanada clásica: Carne",
+      "Empanada clásica: Pollo",
+      "Gaseosas",
+    ]);
+  });
+
+  it("los nombres se escriben como texto, nunca como HTML, y lo mal formado se descarta", () => {
+    const li = itemRow(
+      document,
+      {
+        nombre: "Combo",
+        cantidad: 1,
+        precio: 1,
+        opciones: [{ producto: "<b>x</b>", opciones: [{ nombre: "<i>y</i>", cantidad: 2 }, null, { nombre: "" }] }, null, { producto: "" }],
+      },
+      money,
+    );
+
+    expect(li.querySelector("b")).toBeNull();
+    expect([...li.querySelectorAll(".item-opciones li")].map((n) => n.textContent)).toEqual(["<b>x</b>: <i>y</i> ×2"]);
+  });
+});

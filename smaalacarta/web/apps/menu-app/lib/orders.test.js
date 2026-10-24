@@ -481,3 +481,35 @@ describe("buildOrderItems con nota — PUBLICO-66", () => {
     expect(Object.keys(item).sort().join()).toBe("id,kind,note,quantity");
   });
 });
+
+describe("buildOrderItems con promociones con opciones — PUBLICO-3", () => {
+  const componentes = [
+    { id: "d1000000-0000-0000-0000-0000000000a1", nombre: "Empanada clásica", elegidas: [{ id: "0a01", grupo: "Gusto", nombre: "Carne", cantidad: 1, precio: 0 }] },
+    { id: "d1000000-0000-0000-0000-0000000000a1", nombre: "Empanada clásica", elegidas: [{ id: "0a02", grupo: "Gusto", nombre: "Jamón y queso", cantidad: 1, precio: 200 }] },
+    { id: "d1000000-0000-0000-0000-0000000000a2", nombre: "Gaseosas", elegidas: [] },
+  ];
+
+  it("manda un componente por unidad con ids y cantidades, nunca precios", () => {
+    const [item] = buildOrderItems([
+      { id: ID_COMBO, esPromo: true, nombre: "Combo", precio: 3200, cantidad: 2, componentes },
+    ]);
+
+    expect(item).toEqual({
+      id: ID_COMBO,
+      kind: "promo",
+      quantity: 2,
+      components: [
+        { product_id: "d1000000-0000-0000-0000-0000000000a1", options: [{ id: "0a01", quantity: 1 }] },
+        { product_id: "d1000000-0000-0000-0000-0000000000a1", options: [{ id: "0a02", quantity: 1 }] },
+        { product_id: "d1000000-0000-0000-0000-0000000000a2", options: [] },
+      ],
+    });
+    expect(JSON.stringify(item)).not.toContain("precio");
+    expect(JSON.stringify(item)).not.toContain("200");
+  });
+
+  it("una promoción sin componentes se manda como siempre", () => {
+    const [item] = buildOrderItems([{ id: ID_COMBO, esPromo: true, nombre: "Combo", precio: 1500, cantidad: 1 }]);
+    expect(item).toEqual({ id: ID_COMBO, kind: "promo", quantity: 1 });
+  });
+});

@@ -1,17 +1,27 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  chosenComponents,
+  componentsExtras,
   chosenOptions,
   describeChosen,
+  describeComponents,
   extrasTotal,
   groupCount,
   hasOptions,
   lineSignature,
+  needsSheet,
+  promoHasChoices,
+  promoPrice,
+  promoUnits,
   requiresOptions,
   selectionFromChosen,
+  selectionsFromComponents,
+  toOrderComponents,
   toOrderOptions,
   unitPrice,
   validateSelection,
+  validateUnits,
 } from "./options.js";
 
 const punto = {
@@ -189,5 +199,96 @@ describe("chosenOptions, precio y firma — PUBLICO-44 y 46", () => {
     const chosen = chosenOptions([sabores, extras], { "o-frutilla": 2, "o-queso": 1 });
     expect(describeChosen(chosen)).toBe("Frutilla ×2, Queso");
     expect(describeChosen([])).toBe("");
+  });
+});
+
+describe("promociones con componentes — PUBLICO-3", () => {
+  const gusto = {
+    id: "g-gusto",
+    nombre: "Gusto",
+    min: 1,
+    max: 1,
+    repetir: false,
+    opciones: [
+      { id: "o-carne", nombre: "Carne", precio: 0 },
+      { id: "o-pollo", nombre: "Pollo", precio: 0 },
+      { id: "o-jyq", nombre: "Jamón y queso", precio: 200 },
+    ],
+  };
+  const combo = {
+    id: "promo-1",
+    esPromo: true,
+    nombre: "3 empanadas + gaseosa",
+    precio: 3000,
+    componentes: [
+      { id: "p-emp", nombre: "Empanada clásica", cantidad: 3, opciones: [gusto] },
+      { id: "p-gas", nombre: "Gaseosas", cantidad: 1 },
+    ],
+  };
+  const vieja = { id: "promo-2", esPromo: true, nombre: "Vieja", precio: 900, componentes: [{ id: "p", nombre: "Papas", cantidad: 1 }] };
+  const units = promoUnits(combo);
+
+  it("pide elegir solo si algún producto tiene grupos; abre la hoja también con opciones propias", () => {
+    expect(promoHasChoices(combo)).toBe(true);
+    expect(promoHasChoices(vieja)).toBe(false);
+    expect(promoHasChoices({ esPromo: true, nombre: "sin componentes" })).toBe(false);
+    expect(promoHasChoices({ nombre: "producto", componentes: combo.componentes })).toBe(false);
+    expect(needsSheet(combo)).toBe(true);
+    expect(needsSheet(vieja)).toBe(false);
+    expect(needsSheet({ nombre: "Hamburguesa", opciones: hamburguesa })).toBe(true);
+  });
+
+  it("una unidad por cada unidad de cada producto, con su 'n de total'", () => {
+    expect(units.map((u) => [u.nombre, u.indice, u.de])).toEqual([
+      ["Empanada clásica", 1, 3],
+      ["Empanada clásica", 2, 3],
+      ["Empanada clásica", 3, 3],
+      ["Gaseosas", 1, 1],
+    ]);
+    expect(units[3].opciones).toEqual([]);
+  });
+
+  it("valida cada unidad con las reglas de sus grupos", () => {
+    expect(validateUnits(units, [{ "o-carne": 1 }, { "o-carne": 1 }, { "o-pollo": 1 }, {}])).toBe(true);
+    expect(validateUnits(units, [{ "o-carne": 1 }, {}, { "o-pollo": 1 }, {}])).toBe(false);
+    expect(validateUnits(units, [{ "o-carne": 1, "o-pollo": 1 }, { "o-carne": 1 }, { "o-pollo": 1 }, {}])).toBe(false);
+  });
+
+  const selections = [{ "o-carne": 1 }, { "o-jyq": 1 }, { "o-carne": 1 }, {}];
+  const components = chosenComponents(units, selections);
+
+  it("arma los componentes elegidos y suma los extras al precio", () => {
+    expect(components.map((c) => [c.nombre, c.elegidas.map((o) => o.nombre)])).toEqual([
+      ["Empanada clásica", ["Carne"]],
+      ["Empanada clásica", ["Jamón y queso"]],
+      ["Empanada clásica", ["Carne"]],
+      ["Gaseosas", []],
+    ]);
+    expect(componentsExtras(components)).toBe(200);
+    expect(promoPrice(3000, components)).toBe(3200);
+  });
+
+  it("al servidor van solo ids y cantidades, nunca precios", () => {
+    expect(toOrderComponents(components)[1]).toEqual({ product_id: "p-emp", options: [{ id: "o-jyq", quantity: 1 }] });
+    expect(JSON.stringify(toOrderComponents(components))).not.toContain("precio");
+  });
+
+  it("describe las unidades juntando las iguales", () => {
+    expect(describeComponents(components)).toEqual(["2× Empanada clásica: Carne", "Empanada clásica: Jamón y queso", "Gaseosas"]);
+  });
+
+  it("la firma no depende del orden de las unidades, pero sí de lo elegido", () => {
+    const a = lineSignature("promo-1", [], components);
+    const b = lineSignature("promo-1", [], [components[2], components[0], components[1], components[3]]);
+    const c = lineSignature("promo-1", [], chosenComponents(units, [{ "o-carne": 1 }, { "o-carne": 1 }, { "o-carne": 1 }, {}]));
+
+    expect(a).toBe(b);
+    expect(a).not.toBe(c);
+    expect(lineSignature("p-1", [])).toBe("p-1|");
+  });
+
+  it("reabre la hoja de una línea con lo que eligió en cada unidad", () => {
+    expect(selectionsFromComponents(units, components)).toEqual(selections);
+    expect(selectionsFromComponents(units, [])).toEqual([{}, {}, {}, {}]);
   });
 });

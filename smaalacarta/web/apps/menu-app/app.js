@@ -964,8 +964,8 @@ function renderMenu(menu) {
         openProductSheet(p, {
           imagen,
           returnFocus,
-          onAdd: (chosen, note, quantity) => {
-            addToCart(p, chosen, note, quantity);
+          onAdd: (chosen, note, quantity, components) => {
+            addToCart(p, chosen, note, quantity, components);
             confirmAdded();
           },
         });
@@ -973,7 +973,8 @@ function renderMenu(menu) {
       if (btn) btn.onclick = () => {
         // Un producto con grupos de opciones abre la hoja para elegir (PUBLICO-45); uno sin grupos
         // se agrega directo, de un toque y sin nota, como siempre.
-        if (OPTIONS.hasOptions(p)) {
+        // Una promoción con productos que tienen opciones también abre la hoja (PUBLICO-3).
+        if (OPTIONS.needsSheet(p)) {
           openSheet(btn);
           return;
         }
@@ -1109,9 +1110,9 @@ function editCartLine(idx, opener) {
     imagen: INFO.productImage(product, window.CONFIG),
     returnFocus: opener,
     confirmKey: "options.save",
-    initial: { chosen: line.elegidas, quantity: line.cantidad, note: line.nota },
-    onAdd: (chosen, note, quantity) => {
-      cart = CART_LINES.replaceLine(cart, idx, product, chosen, note, quantity);
+    initial: { chosen: line.elegidas, components: line.componentes, quantity: line.cantidad, note: line.nota },
+    onAdd: (chosen, note, quantity, components) => {
+      cart = CART_LINES.replaceLine(cart, idx, product, chosen, note, quantity, components);
       saveCart();
       updateCart();
     },
@@ -1121,10 +1122,10 @@ function editCartLine(idx, opener) {
 // CARRITO
 // `chosen` son las opciones elegidas (PUBLICO-46): la misma elección suma cantidad y otra elección
 // es otra línea; sin opciones se agrupa como siempre (por id, o por nombre en los menús de JSON).
-function addToCart(p, chosen = [], note = "", quantity = 1) {
+function addToCart(p, chosen = [], note = "", quantity = 1, components = []) {
   if (!p) return;
 
-  cart = CART_LINES.addLine(cart, p, chosen, note, quantity);
+  cart = CART_LINES.addLine(cart, p, chosen, note, quantity, components);
 
   saveCart();
   updateCart();
@@ -1162,7 +1163,8 @@ function updateCart() {
     d.className = "carrito-item";
 
     // Una línea con opciones muestra lo elegido y su subtotal con los extras (PUBLICO-46).
-    const conOpciones = Array.isArray(i.elegidas) && i.elegidas.length > 0;
+    const componentes = Array.isArray(i.componentes) ? i.componentes : [];
+    const conOpciones = (Array.isArray(i.elegidas) && i.elegidas.length > 0) || componentes.length > 0;
     const precioLinea = conOpciones ? CART_LINES.lineSubtotal(i) : i.precio;
 
     d.innerHTML = `
@@ -1193,9 +1195,16 @@ function updateCart() {
 
     if (conOpciones) {
       const lista = d.querySelector(".item-opciones");
-      for (const option of i.elegidas) {
+      for (const option of i.elegidas ?? []) {
         const li = document.createElement("li");
         li.textContent = option.cantidad > 1 ? `${option.nombre} ×${option.cantidad}` : option.nombre;
+        lista.appendChild(li);
+      }
+
+      // Una promoción con opciones: lo elegido en cada unidad (PUBLICO-3).
+      for (const text of OPTIONS.describeComponents(componentes)) {
+        const li = document.createElement("li");
+        li.textContent = text;
         lista.appendChild(li);
       }
     }

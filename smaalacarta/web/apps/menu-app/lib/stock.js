@@ -1,4 +1,16 @@
-import { chosenOptions, hasOptions, selectionFromChosen, unitPrice, validateSelection } from "./options.js";
+import {
+  chosenOptions,
+  hasOptions,
+  promoHasChoices,
+  promoPrice,
+  promoUnits,
+  selectionFromChosen,
+  selectionsFromComponents,
+  chosenComponents,
+  unitPrice,
+  validateSelection,
+  validateUnits,
+} from "./options.js";
 import { isExpired } from "./promo-info.js";
 
 // Productos sin stock (PUBLICO-26): el menú los muestra con `agotado: true` pero no se pueden
@@ -49,6 +61,32 @@ export function reconcileCart(cart, menu, now = new Date()) {
         }
       } else if (chosen.length > 0) {
         // El producto ya no tiene opciones: la elección guardada no vale.
+        gone = true;
+      }
+    }
+
+    // Una promoción con opciones (PUBLICO-3): lo elegido en cada unidad tiene que seguir valiendo con el menú
+    // actual (productos, cantidades y grupos), y se vuelve a precificar. El sin stock ya se calcula por
+    // producto: si alguno de la promoción se agotó, el menú deja de entregarla y arriba queda quitada.
+    if (!gone && current && line.esPromo) {
+      const components = Array.isArray(line.componentes) ? line.componentes : [];
+
+      if (promoHasChoices(current)) {
+        const units = promoUnits(current);
+        const selections = selectionsFromComponents(units, components);
+        const sameShape =
+          components.length === units.length &&
+          units.every((unit, i) => components.filter((c) => c.id === unit.id).length === units.filter((u) => u.id === unit.id).length) &&
+          validateUnits(units, selections);
+
+        if (sameShape) {
+          const fresh = chosenComponents(units, selections);
+          next = { ...line, precio: promoPrice(current.precio, fresh), precioBase: current.precio, componentes: fresh };
+        } else {
+          gone = true;
+        }
+      } else if (components.some((c) => (c.elegidas ?? []).length > 0)) {
+        // La promoción ya no tiene nada que elegir: la elección guardada no vale.
         gone = true;
       }
     }

@@ -512,6 +512,15 @@ _Sin requisitos todavía._
   menú, una elección que falta se lee como logo. Un negocio que ya tenía una elegida (de comida o la propia) no
   cambia. `save_menu_look()` y el CHECK aceptan `empanada` y `logo`; en Configuración → Animaciones las dos opciones
   están en el selector y la vista previa las reproduce sin guardar.
+- **PUBLICO-120** Al tocar una promoción con productos que tienen grupos (`componentes[].opciones`), la hoja de opciones abre
+  un bloque por unidad con su título (`Empanada clásica 1 de 3`, `Empanada clásica 2 de 3`, `Gaseosas`); el cliente elige lo
+  de cada una (puede repetir) y "Agregar" se habilita al cumplir las reglas de todas. Si ningún producto tiene grupos, se
+  agrega directo. `onAdd` entrega los componentes elegidos; el precio en vivo suma los extras de todas las unidades.
+- **PUBLICO-121** La línea del carrito de una promoción con opciones guarda `componentes: [{id, nombre, elegidas}]` (sin la
+  definición de los grupos) y su precio incluye los extras. La misma elección, en cualquier orden de las unidades, suma
+  cantidad; otra elección es otra línea. Al cargar el menú, una línea cuya promoción cambió de productos, de cantidades o de
+  opciones deja de valer y se quita; si sigue valiendo se vuelve a precificar. El detalle de WhatsApp lista cada unidad
+  (`  - Empanada clásica: Carne`). El pedido manda `components` con ids y cantidades, nunca precios.
 - **CARRITO-1** En las plantillas de cara de app, la pastilla del precio de cada producto en el carrito conserva el
   ancho necesario para contener el importe y su relleno, aunque el espacio del nombre esté reducido por los
   controles de cantidad.
@@ -711,6 +720,8 @@ llegando al negocio por WhatsApp.
   `prefers-reduced-motion`. Textos en es/en/pt.
 - **SEGUIMIENTO-53** Los íconos de moto y auto son `motorbike` y `car` de Tabler Icons (licencia MIT), pegados como SVG
   (no la librería), los mismos en el seguimiento, las ofertas, la tarjeta del local y el panel del repartidor.
+- **SEGUIMIENTO-54** Una promoción con opciones muestra bajo su ítem una línea por unidad con lo elegido, juntando las
+  iguales (`2× Empanada clásica: Carne`, `Gaseosas`), con `textContent` (ADMIN-PROMOS-9).
 - **ADMIN-REPARTIDOR-8** La tarjeta del pedido del repartidor, en orden: #número · local · estado, **destino** (ícono
   de ubicación, barrio y dirección de entrega en grande), retiro en {local} más chico, hora de listo, la plata en una sola
   línea chica (lo que cobra por el envío y un chip "Cobrar $X" si tiene que cobrar al cliente) y la acción principal.

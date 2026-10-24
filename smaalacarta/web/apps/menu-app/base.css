@@ -1094,6 +1094,24 @@ body.no-scroll-opciones {
   padding: 0.25rem 1.1rem 0.5rem;
 }
 
+/* Una promoción con opciones lleva un bloque por unidad: "Empanada clásica 1 de 3" (PUBLICO-3). */
+.opciones-unidad {
+  margin: 0.85rem 0 0;
+  padding: 0.1rem 0.85rem 0.4rem;
+  border: 1px solid var(--border, #eee);
+  border-radius: 12px;
+}
+
+.opciones-unidad-titulo {
+  margin: 0.75rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.opciones-unidad .opciones-grupo {
+  padding-top: 0.5rem;
+}
+
 .opciones-grupo {
   border: none;
   margin: 0;

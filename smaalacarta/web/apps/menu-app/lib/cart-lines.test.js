@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { addLine, cartTotal, lineSubtotal, replaceLine, stripNotes, whatsappDetail } from "./cart-lines.js";
-import { MAX_QUANTITY, chosenOptions, clampQuantity, sheetTotal } from "./options.js";
+import { MAX_QUANTITY, chosenComponents, chosenOptions, clampQuantity, promoUnits, sheetTotal } from "./options.js";
 import { formatPrice } from "./price.js";
 
 const grupos = [
@@ -235,5 +235,80 @@ describe("replaceLine (editar desde el carrito) — PUBLICO-65", () => {
     const next = replaceLine(cart, 0, m, [], "", 2);
 
     expect(next).toEqual([{ nombre: "Milanesa", precio: 5000, cantidad: 3 }]);
+  });
+});
+const NL = "\n";
+describe("promociones con opciones en el carrito — PUBLICO-3", () => {
+  const gusto = {
+    id: "g-gusto", nombre: "Gusto", min: 1, max: 1, repetir: false,
+    opciones: [
+      { id: "o-carne", nombre: "Carne", precio: 0 },
+      { id: "o-pollo", nombre: "Pollo", precio: 0 },
+      { id: "o-jyq", nombre: "Jamón y queso", precio: 200 },
+    ],
+  };
+  const combo = {
+    id: "promo-1", esPromo: true, nombre: "3 empanadas + gaseosa", precio: 3000,
+    componentes: [
+      { id: "p-emp", nombre: "Empanada clásica", cantidad: 3, opciones: [gusto] },
+      { id: "p-gas", nombre: "Gaseosas", cantidad: 1 },
+    ],
+  };
+  const units = promoUnits(combo);
+  const elegidas = (...ids) => chosenComponents(units, [...ids.map((id) => ({ [id]: 1 })), {}]);
+
+  it("la línea guarda lo elegido en cada unidad, sin la definición de los grupos, y suma los extras", () => {
+    const [line] = addLine([], combo, [], "", 1, elegidas("o-carne", "o-carne", "o-jyq"));
+
+    expect(line.precio).toBe(3200);
+    expect(line.precioBase).toBe(3000);
+    expect(line.componentes).toHaveLength(4);
+    expect(line.componentes[2].elegidas[0].nombre).toBe("Jamón y queso");
+    expect(line).not.toHaveProperty("elegidas");
+    expect(JSON.stringify(line)).not.toContain("g-gusto");
+  });
+
+  it("la misma elección (aunque en otro orden) suma cantidad; otra elección es otra línea", () => {
+    let cart = addLine([], combo, [], "", 1, elegidas("o-carne", "o-carne", "o-pollo"));
+    cart = addLine(cart, combo, [], "", 2, elegidas("o-pollo", "o-carne", "o-carne"));
+    expect(cart).toHaveLength(1);
+    expect(cart[0].cantidad).toBe(3);
+
+    cart = addLine(cart, combo, [], "", 1, elegidas("o-pollo", "o-pollo", "o-pollo"));
+    expect(cart).toHaveLength(2);
+    expect(cartTotal(cart)).toBe(3 * 3000 + 3000);
+  });
+
+  it("editar la línea cambia lo elegido y el precio", () => {
+    const cart = addLine([], combo, [], "", 2, elegidas("o-carne", "o-carne", "o-carne"));
+    const edited = replaceLine(cart, 0, combo, [], "", 2, elegidas("o-jyq", "o-jyq", "o-jyq"));
+
+    expect(edited[0].precio).toBe(3600);
+    expect(lineSubtotal(edited[0])).toBe(7200);
+  });
+
+  it("el detalle de WhatsApp muestra cada unidad con lo elegido", () => {
+    const cart = addLine([], combo, [], "", 1, elegidas("o-carne", "o-carne", "o-jyq"));
+    const { text, total } = whatsappDetail(cart, formatPrice);
+
+    expect(text).toBe(
+      "• 3 empanadas + gaseosa x1" + NL +
+        "  - Empanada clásica: Carne" + NL +
+        "  - Empanada clásica: Carne" + NL +
+        "  - Empanada clásica: Jamón y queso" + NL +
+        "  - Gaseosas" + NL +
+        "  $3.200 c/u → $3.200" + NL + NL,
+    );
+    expect(total).toBe(3200);
+  });
+
+  it("sin nota, stripNotes junta las que quedan iguales sin perder los componentes", () => {
+    let cart = addLine([], combo, [], "sin sal", 1, elegidas("o-carne", "o-carne", "o-carne"));
+    cart = addLine(cart, combo, [], "", 1, elegidas("o-carne", "o-carne", "o-carne"));
+
+    const stripped = stripNotes(cart);
+    expect(stripped).toHaveLength(1);
+    expect(stripped[0].cantidad).toBe(2);
+    expect(stripped[0].componentes).toHaveLength(4);
   });
 });

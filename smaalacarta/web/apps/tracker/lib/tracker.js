@@ -187,6 +187,33 @@ export function preorderNotice(programado, lang) {
   return t("tracker.preorderFor", lang, { day });
 }
 
+const optionLabel = (option) =>
+  `${option.nombre}${Number(option.cantidad) > 1 ? ` ×${option.cantidad}` : ""}`;
+
+const isOption = (o) => o && typeof o === "object" && typeof o.nombre === "string" && o.nombre !== "";
+const isComponent = (c) => c && typeof c === "object" && typeof c.producto === "string" && c.producto !== "";
+
+// Las líneas bajo un ítem. Un producto con opciones: `+ Frutilla ×2`. Una promoción con opciones guarda una
+// entrada por unidad (`{ producto, opciones }`): "Empanada clásica: Carne", juntando las iguales ("2× ...")
+// (SEGUIMIENTO-54). Lo mal formado se descarta sin romper la página.
+function optionLines(raw) {
+  if (!Array.isArray(raw)) return [];
+
+  if (raw.some(isComponent)) {
+    const counts = new Map();
+
+    for (const component of raw.filter(isComponent)) {
+      const chosen = Array.isArray(component.opciones) ? component.opciones.filter(isOption).map(optionLabel) : [];
+      const text = chosen.length > 0 ? `${component.producto}: ${chosen.join(", ")}` : component.producto;
+      counts.set(text, (counts.get(text) ?? 0) + 1);
+    }
+
+    return [...counts].map(([text, count]) => (count > 1 ? `${count}× ${text}` : text));
+  }
+
+  return raw.filter(isOption).map((option) => `+ ${optionLabel(option)}`);
+}
+
 // Una línea del detalle del pedido (SEGUIMIENTO-23): "2 × Helado", el total de la línea y, debajo,
 // las opciones que se eligieron (`+ Frutilla ×2`). Todo con textContent: ni el nombre del producto
 // ni el de las opciones se interpretan nunca como HTML.
@@ -201,17 +228,15 @@ export function itemRow(doc, item, money) {
 
   li.append(name, price);
 
-  const options = Array.isArray(item.opciones)
-    ? item.opciones.filter((o) => o && typeof o === "object" && typeof o.nombre === "string" && o.nombre !== "")
-    : [];
+  const lines = optionLines(item.opciones);
 
-  if (options.length > 0) {
+  if (lines.length > 0) {
     const list = doc.createElement("ul");
     list.className = "item-opciones";
 
-    for (const option of options) {
+    for (const line of lines) {
       const row = doc.createElement("li");
-      row.textContent = `+ ${option.nombre}${Number(option.cantidad) > 1 ? ` ×${option.cantidad}` : ""}`;
+      row.textContent = line;
       list.appendChild(row);
     }
 

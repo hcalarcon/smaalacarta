@@ -192,3 +192,85 @@ describe("textos de sin stock — PUBLICO-27", () => {
     }
   });
 });
+
+describe("reconcileCart con promociones con opciones — PUBLICO-3 y 47", () => {
+  const gusto = {
+    id: "g-gusto", nombre: "Gusto", min: 1, max: 1, repetir: false,
+    opciones: [
+      { id: "o-carne", nombre: "Carne", precio: 0, agotado: false },
+      { id: "o-jyq", nombre: "Jamón y queso", precio: 200, agotado: false },
+    ],
+  };
+  const promo = (extra = {}) => ({
+    id: "promo-1", esPromo: true, nombre: "Combo", precio: 3000,
+    componentes: [
+      { id: "p-emp", nombre: "Empanada clásica", cantidad: 2, opciones: [gusto] },
+      { id: "p-gas", nombre: "Gaseosas", cantidad: 1 },
+    ],
+    ...extra,
+  });
+  const menuWith = (item) => ({ categorias: [{ nombre: "Ofertas", tipo: "ofertas", items: [item] }] });
+  const comp = (id, nombre, ...chosen) => ({
+    id, nombre,
+    elegidas: chosen.map((c) => ({ id: c, grupo: "Gusto", nombre: c, cantidad: 1, precio: c === "o-jyq" ? 200 : 0 })),
+  });
+  const saved = (cantidad = 1) => ({
+    id: "promo-1", esPromo: true, nombre: "Combo", precio: 3000, cantidad,
+    componentes: [comp("p-emp", "Empanada clásica", "o-carne"), comp("p-emp", "Empanada clásica", "o-jyq"), comp("p-gas", "Gaseosas")],
+  });
+
+  it("deja la línea que sigue valiendo y la vuelve a precificar con el menú actual", () => {
+    const { cart, removed } = reconcileCart([saved(2)], menuWith(promo({ precio: 3500 })));
+
+    expect(removed).toEqual([]);
+    expect(cart[0].precio).toBe(3700);
+    expect(cart[0].cantidad).toBe(2);
+  });
+
+  it("quita la línea si cambió la cantidad de algún producto de la promoción", () => {
+    const changed = promo({
+      componentes: [
+        { id: "p-emp", nombre: "Empanada clásica", cantidad: 3, opciones: [gusto] },
+        { id: "p-gas", nombre: "Gaseosas", cantidad: 1 },
+      ],
+    });
+
+    expect(reconcileCart([saved()], menuWith(changed))).toEqual({ cart: [], removed: ["Combo"] });
+  });
+
+  it("quita la línea si una opción se agotó o dejó de existir", () => {
+    const agotada = promo({
+      componentes: [
+        { id: "p-emp", nombre: "Empanada clásica", cantidad: 2, opciones: [{ ...gusto, opciones: [gusto.opciones[0], { ...gusto.opciones[1], agotado: true }] }] },
+        { id: "p-gas", nombre: "Gaseosas", cantidad: 1 },
+      ],
+    });
+
+    expect(reconcileCart([saved()], menuWith(agotada)).removed).toEqual(["Combo"]);
+  });
+
+  it("quita la línea si la promoción ya no tiene nada que elegir", () => {
+    const sinGrupos = promo({
+      componentes: [
+        { id: "p-emp", nombre: "Empanada clásica", cantidad: 2 },
+        { id: "p-gas", nombre: "Gaseosas", cantidad: 1 },
+      ],
+    });
+
+    expect(reconcileCart([saved()], menuWith(sinGrupos)).removed).toEqual(["Combo"]);
+  });
+
+  it("una promo de siempre, sin componentes, sigue como estaba", () => {
+    const vieja = { id: "promo-9", esPromo: true, nombre: "Vieja", precio: 900 };
+    const { cart } = reconcileCart([{ id: "promo-9", esPromo: true, nombre: "Vieja", precio: 900, cantidad: 3 }], menuWith(vieja));
+
+    expect(cart).toEqual([{ id: "promo-9", esPromo: true, nombre: "Vieja", precio: 900, cantidad: 3 }]);
+  });
+
+  it("si la promoción dejó de ofrecerse (un producto sin stock), se quita aunque lleve cantidades", () => {
+    const { cart, removed } = reconcileCart([saved(5)], { categorias: [] });
+
+    expect(cart).toEqual([]);
+    expect(removed).toEqual(["Combo"]);
+  });
+});

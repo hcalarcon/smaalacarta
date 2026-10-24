@@ -351,3 +351,120 @@ describe("nota para este producto — PUBLICO-65", () => {
     expect(onAdd.mock.calls[0][1]).toBe("");
   });
 });
+
+describe("promoción con opciones: un bloque por unidad — PUBLICO-3", () => {
+  const gusto = {
+    id: "g-gusto", nombre: "Gusto", min: 1, max: 1, repetir: false,
+    opciones: [
+      { id: "o-carne", nombre: "Carne", precio: 0, agotado: false },
+      { id: "o-pollo", nombre: "Pollo", precio: 0, agotado: false },
+      { id: "o-jyq", nombre: "Jamón y queso", precio: 200, agotado: false },
+    ],
+  };
+  const sabor = {
+    id: "g-sabor", nombre: "Sabor", min: 1, max: 1, repetir: false,
+    opciones: [{ id: "o-coca", nombre: "Coca", precio: 0, agotado: false }],
+  };
+  const combo = {
+    id: "promo-1", esPromo: true, nombre: "3 empanadas + gaseosa", precio: 3000,
+    componentes: [
+      { id: "p-emp", nombre: "Empanada clásica", cantidad: 3, opciones: [gusto] },
+      { id: "p-gas", nombre: "Gaseosas", cantidad: 1, opciones: [sabor] },
+    ],
+  };
+  const unidad = (i) => q(`[data-unidad="${i}"]`);
+  const pick = (i, optionId) => click(unidad(i).querySelector(`[data-opcion="${optionId}"] input`));
+
+  it("abre un bloque por unidad con su título, y elige cada una por separado", () => {
+    open(combo);
+
+    expect(qa(".opciones-unidad-titulo").map((n) => n.textContent)).toEqual([
+      "Empanada clásica 1 de 3",
+      "Empanada clásica 2 de 3",
+      "Empanada clásica 3 de 3",
+      "Gaseosas",
+    ]);
+
+    pick(0, "o-carne");
+    pick(1, "o-carne");
+    expect(unidad(0).querySelector("input:checked").value).toBe("o-carne");
+    expect(unidad(2).querySelector("input:checked")).toBeNull();
+  });
+
+  it("no deja agregar hasta completar todas las unidades, y suma los extras en vivo", () => {
+    open(combo);
+    expect(total()).toBe("Total $3.000");
+
+    pick(0, "o-carne");
+    pick(1, "o-jyq");
+    pick(2, "o-pollo");
+    expect(add().disabled).toBe(true);
+    expect(total()).toBe("Total $3.200");
+
+    pick(3, "o-coca");
+    expect(add().disabled).toBe(false);
+  });
+
+  it("entrega lo elegido en cada unidad como componentes, y las opciones sueltas vacías", () => {
+    const { onAdd } = open(combo);
+    pick(0, "o-carne");
+    pick(1, "o-carne");
+    pick(2, "o-pollo");
+    pick(3, "o-coca");
+    click(add());
+
+    const [chosen, note, count, components] = onAdd.mock.calls[0];
+    expect(chosen).toEqual([]);
+    expect(note).toBe("");
+    expect(count).toBe(1);
+    expect(components.map((c) => [c.id, c.elegidas.map((o) => o.nombre)])).toEqual([
+      ["p-emp", ["Carne"]],
+      ["p-emp", ["Carne"]],
+      ["p-emp", ["Pollo"]],
+      ["p-gas", ["Coca"]],
+    ]);
+  });
+
+  it("al editar una línea precarga lo que eligió en cada unidad", () => {
+    const components = [
+      { id: "p-emp", nombre: "Empanada clásica", elegidas: [{ id: "o-carne", grupo: "Gusto", nombre: "Carne", cantidad: 1, precio: 0 }] },
+      { id: "p-emp", nombre: "Empanada clásica", elegidas: [{ id: "o-pollo", grupo: "Gusto", nombre: "Pollo", cantidad: 1, precio: 0 }] },
+      { id: "p-emp", nombre: "Empanada clásica", elegidas: [{ id: "o-jyq", grupo: "Gusto", nombre: "Jamón y queso", cantidad: 1, precio: 200 }] },
+      { id: "p-gas", nombre: "Gaseosas", elegidas: [{ id: "o-coca", grupo: "Sabor", nombre: "Coca", cantidad: 1, precio: 0 }] },
+    ];
+    open(combo, { initial: { components, quantity: 1, note: "" } });
+
+    expect(unidad(1).querySelector("input:checked").value).toBe("o-pollo");
+    expect(unidad(2).querySelector("input:checked").value).toBe("o-jyq");
+    expect(add().disabled).toBe(false);
+    expect(total()).toBe("Total $3.200");
+  });
+
+  it("con las notas activas, el botón lleva el total y la cantidad multiplica el precio con extras", () => {
+    open(combo, { notesEnabled: true });
+    pick(0, "o-jyq");
+    pick(1, "o-carne");
+    pick(2, "o-carne");
+    pick(3, "o-coca");
+    click(q(".opciones-unidades-mas"));
+
+    expect(add().textContent).toContain("$6.400");
+  });
+
+  it("una promoción sin nada que elegir no abre bloques (la hoja de siempre)", () => {
+    open({ id: "promo-2", esPromo: true, nombre: "Vieja", precio: 900, componentes: [{ id: "p", nombre: "Papas", cantidad: 1 }] });
+
+    expect(qa(".opciones-unidad")).toEqual([]);
+    expect(add().disabled).toBe(false);
+  });
+
+  it("los nombres se escriben como texto, nunca como HTML", () => {
+    open({
+      ...combo,
+      componentes: [{ id: "p", nombre: "<img src=x onerror=alert(1)>", cantidad: 2, opciones: [gusto] }],
+    });
+
+    expect(q(".opciones-unidad img")).toBeNull();
+    expect(qa(".opciones-unidad-titulo")[0].textContent).toBe("<img src=x onerror=alert(1)> 1 de 2");
+  });
+});
