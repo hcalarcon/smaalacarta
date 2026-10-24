@@ -8,6 +8,7 @@ import {
   createManualOrder,
   getOrderPrepState,
   selfDelivery,
+  setDeliveryFee,
   setOrderNeedsCar,
   setOrderPrep,
   setOrderStatus,
@@ -18,6 +19,7 @@ import { validateManualOrder, type ManualOrderInput } from "@/lib/orders/manual-
 import { manualOrderErrorMessage, orderErrorMessage, settlementErrorMessage } from "@/lib/orders/messages";
 import { acceptsPrepTime, adjustMinutes, isAdjustStep, isPrepReason, validatePrepMinutes } from "@/lib/orders/prep";
 import { STATUSES } from "@/lib/orders/status";
+import { parsePrice } from "@/lib/superadmin/zones";
 
 export type OrderActionResult =
   | { ok: true }
@@ -243,6 +245,27 @@ export async function selfDeliveryAction(orderId: string): Promise<OrderActionRe
   await requireBusiness();
 
   const result = await selfDelivery(orderId);
+  if ("error" in result) {
+    return { ok: false, error: orderErrorMessage(result.error) };
+  }
+
+  revalidatePath("/dashboard/orders");
+  return { ok: true };
+}
+
+// El local carga el costo de un envío a coordinar con el cliente (ENVIO-252, 253 y 262). Acepta coma o punto
+// decimal; la base vuelve a comprobar que el pedido es del negocio y que lleva un costo a coordinar.
+export async function setDeliveryFeeAction(orderId: string, price: string): Promise<OrderActionResult> {
+  await requireBusiness();
+
+  if (typeof orderId !== "string" || !ID.test(orderId)) return { ok: false, error: "El pedido no existe." };
+
+  const fee = parsePrice(typeof price === "string" ? price : "");
+  if (fee === null) {
+    return { ok: false, error: "Escribí un precio válido, de 0 en adelante.", fieldErrors: { fee: "Precio inválido." } };
+  }
+
+  const result = await setDeliveryFee(orderId, fee);
   if ("error" in result) {
     return { ok: false, error: orderErrorMessage(result.error) };
   }

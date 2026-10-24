@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
 
 import NewCourierForm from "../components/NewCourierForm";
+import { listBusinessChoices } from "@/lib/db/couriers";
 
 export const metadata: Metadata = { title: "Nuevo repartidor" };
 
-export default function NewCourierPage() {
+export default async function NewCourierPage() {
+  const businesses = await listBusinessChoices();
+
   return (
     <div className="mx-auto max-w-2xl space-y-8">
       <section>
@@ -16,7 +19,7 @@ export default function NewCourierPage() {
       </section>
 
       <div className="rounded-3xl border border-line bg-white p-6 shadow-sm sm:p-8">
-        <NewCourierForm />
+        <NewCourierForm businesses={businesses} />
       </div>
     </div>
   );

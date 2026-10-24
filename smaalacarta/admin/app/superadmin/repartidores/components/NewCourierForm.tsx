@@ -4,15 +4,17 @@ import Link from "next/link";
 import { useActionState } from "react";
 
 import { createCourierAction } from "../actions";
+import CourierTypeFields from "./CourierTypeFields";
 import CredentialsCard from "../../components/CredentialsCard";
 import type { SuperAdminFormState } from "../../actions";
 import Field from "@/components/ui/Field";
 import FormAlert from "@/components/ui/FormAlert";
 import SubmitButton from "@/components/ui/SubmitButton";
+import type { BusinessChoice } from "@/lib/db/couriers";
 
 const initialState: SuperAdminFormState = {};
 
-export default function NewCourierForm() {
+export default function NewCourierForm({ businesses }: { businesses: BusinessChoice[] }) {
   const [state, formAction] = useActionState(createCourierAction, initialState);
 
   // Repartidor creado: se muestran los datos de acceso, que no se vuelven a ver.
@@ -20,6 +22,7 @@ export default function NewCourierForm() {
     return (
       <div className="space-y-5">
         <FormAlert tone="success">Repartidor creado.</FormAlert>
+        {state.message ? <FormAlert tone="error">{state.message}</FormAlert> : null}
 
         <p className="text-sm text-stone-600">Creamos su cuenta. Pasale estos datos:</p>
         <CredentialsCard credentials={state.credentials} />
@@ -77,6 +80,13 @@ export default function NewCourierForm() {
         hint="Es su usuario para entrar. No se le envía ningún mail."
         placeholder="repartidor@correo.com"
         required
+      />
+
+      <CourierTypeFields
+        businesses={businesses}
+        defaultType={state.values?.courierType === "own" ? "own" : "free"}
+        defaultBusinessId={state.values?.ownBusinessId || null}
+        error={state.fieldErrors?.ownBusinessId}
       />
 
       <SubmitButton pendingLabel="Creando repartidor…">Crear repartidor</SubmitButton>

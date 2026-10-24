@@ -192,7 +192,26 @@ export default function SettingsForm({
   );
 
   // El nombre es el del formulario de Datos del negocio, sin guardar, para la vista previa.
-  const { name: businessName, reportSettings, settingsErrors: fieldErrors, save } = useSettingsSave();
+  const {
+    name: businessName,
+    reportSettings,
+    settingsErrors: fieldErrors,
+    save,
+    deliveryToggle,
+  } = useSettingsSave();
+
+  // El interruptor "Ofrecer envío" de la sección Envíos (envío propio) cambia el mismo "Delivery" de Tipos de entrega.
+  const [seenToggle, setSeenToggle] = useState(0);
+  if (deliveryToggle && deliveryToggle.seq !== seenToggle) {
+    setSeenToggle(deliveryToggle.seq);
+    setDeliveryOptions((prev) =>
+      deliveryToggle.enabled
+        ? prev.includes("delivery")
+          ? prev
+          : [...prev, "delivery"]
+        : prev.filter((option) => option !== "delivery"),
+    );
+  }
 
   function updateDay(key: DayKey, change: (day: DayState) => DayState) {
     setDays((prev) => ({ ...prev, [key]: change(prev[key]) }));

@@ -2,16 +2,17 @@ import type { Metadata } from "next";
 
 import ResetPasswordForm from "../../(auth)/components/ResetPasswordForm";
 import BusinessProfileForm from "./components/BusinessProfileForm";
-import DeliveryPricingSection from "./components/DeliveryPricingSection";
 import DeliverySection from "./components/DeliverySection";
+import OwnDeliverySection from "./components/OwnDeliverySection";
 import SettingsForm from "./components/SettingsForm";
 import SettingsLayout from "./components/SettingsLayout";
 import SettingsSaveProvider from "./components/SettingsSaveProvider";
 import MercadoPagoSection from "./components/MercadoPagoSection";
 import ShareSection from "./components/ShareSection";
 import Section from "@/components/ui/Section";
-import { getBusinessDeliveryPricing } from "@/lib/db/delivery-pricing";
+import { listBusinessZones } from "@/lib/db/business-zones";
 import { getDeliveryOptions } from "@/lib/db/delivery-zones";
+import { getOwnDelivery } from "@/lib/db/own-delivery";
 import { getSettings } from "@/lib/db/settings";
 import { requireBusiness } from "@/lib/get-current-business";
 import { getMpConnectionStatus, hasMercadoPago, mpOauthAvailable } from "@/lib/mp/oauth-status";
@@ -29,9 +30,12 @@ export default async function SettingsPage({
   const { mp } = await searchParams;
   const settings = await getSettings(business.id, business.whatsapp);
   // "Envíos" solo con el envío con repartidor habilitado por el superadmin (ENVIO-58).
-  const deliveryOptions = business.courier_delivery ? await getDeliveryOptions() : null;
-  // Precios del envío según el tipo que le puso el superadmin (ENVIO-227).
-  const deliveryPricing = business.courier_delivery ? await getBusinessDeliveryPricing(business.id) : null;
+  // Con envío propio (ENVIO-260), sus zonas y su repartidor; con envío libre, las zonas comunes de siempre.
+  const ownDelivery = business.courier_delivery && business.delivery_type === "own";
+  const deliveryOptions = business.courier_delivery && !ownDelivery ? await getDeliveryOptions() : null;
+  const [own, ownZones] = ownDelivery
+    ? await Promise.all([getOwnDelivery(business.id), listBusinessZones(business.id)])
+    : [null, []];
   // "Mercado Pago" solo con los dos interruptores prendidos: el global y el del negocio (MP-15).
   const mercadoPago = mpOauthAvailable(business);
   const mpStatus = mercadoPago ? await getMpConnectionStatus(business.id) : "none";
@@ -63,7 +67,7 @@ export default async function SettingsPage({
         <SettingsLayout sections={settingsSections({
             digitalMenu,
             pdfService,
-            courierDelivery: deliveryOptions !== null,
+            courierDelivery: business.courier_delivery,
             mercadoPago,
           })}>
           <BusinessProfileForm />
@@ -86,7 +90,7 @@ export default async function SettingsPage({
 
           {deliveryOptions ? <DeliverySection options={deliveryOptions} /> : null}
 
-          {deliveryPricing ? <DeliveryPricingSection pricing={deliveryPricing} /> : null}
+          {own ? <OwnDeliverySection delivery={own} zones={ownZones} /> : null}
 
           {mercadoPago ? (
             <MercadoPagoSection

@@ -46,19 +46,23 @@ export function buildPushDeps(): PushDeps {
       return (data?.name as string | undefined) ?? "";
     },
 
-    async coveringCourierIds(orderId, zoneId, ownZoneId) {
-      const covering = ownZoneId
-        ? ids(await rows(supabase.from("courier_own_zones").select("courier_id").eq("id", ownZoneId)), "courier_id")
-        : zoneId
-          ? ids(
-              await rows(supabase.from("courier_zone_coverage").select("courier_id").eq("zone_id", zoneId)),
-              "courier_id",
-            )
-          : [];
+    async coveringCourierIds(orderId, zoneId) {
+      const covering = ids(
+        await rows(supabase.from("courier_zone_coverage").select("courier_id").eq("zone_id", zoneId)),
+        "courier_id",
+      );
       if (covering.length === 0) return [];
 
       const [active, declined, order, platform] = await Promise.all([
-        rows(supabase.from("couriers").select("id, auto, moto").in("id", covering).eq("active", true)),
+        // Solo repartidores libres: uno propio de un negocio no entra en la red (ENVIO-251).
+        rows(
+          supabase
+            .from("couriers")
+            .select("id, auto, moto")
+            .in("id", covering)
+            .eq("active", true)
+            .eq("courier_type", "free"),
+        ),
         // Los que lo rechazaron o lo devolvieron (`kind`) no vuelven a verlo.
         rows(supabase.from("courier_order_declines").select("courier_id").eq("order_id", orderId)),
         // Si el pedido pide auto y el vehículo está prendido, solo avisa a quien lo tiene (ENVIO-177).

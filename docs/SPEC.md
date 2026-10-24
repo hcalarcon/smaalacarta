@@ -2414,8 +2414,8 @@ Un local que no está en el centro tiene su delivery, sus zonas, sus precios y s
   `courier_delivery`, o sin "Envío" en Tipos de entrega). `coordinar` es verdadero con envío propio (sin zonas, o con "Mi barrio no
   está") y con envío libre sin ninguna zona tildada; en los demás casos el envío libre se comporta como siempre.
 - **ENVIO-250** Un pedido con envío de un negocio `own` va directo a su repartidor propio, sin ofertas: nace asignado
-  (`courier_status = 'accepted'`) con el precio de la zona ("Envío $X"). Los anticipados y programados esperan (`waiting`) y se
-  asignan cuando el local los confirma. Sin repartidor propio activo, queda "Lo llevo yo" (`self`). Lo mismo vale para el pedido
+  (`courier_status = 'accepted'`) con el precio de la zona ("Envío $X"). Como todo pedido con envío, espera (`waiting`) a que el
+  local lo confirme y recién entonces se asigna (también si se paga con Mercado Pago, cuando se acredita). Sin repartidor propio activo, queda "Lo llevo yo" (`self`). Lo mismo vale para el pedido
   manual (`create_manual_order`), que además acepta "Lo llevo yo".
 - **ENVIO-251** Aislamiento: ningún repartidor libre ve, ofrece, toma ni recibe por asignación un pedido de un negocio `own`; uno
   `own` no ve los de otro negocio ni los de la red libre. Vale en `courier_sees_order`, `courier_blocked_by_car`,
@@ -2424,10 +2424,10 @@ Un local que no está en el centro tiene su delivery, sus zonas, sus precios y s
   vuelve a buscar y solo lo asigna el local (su propio repartidor otra vez, o "Lo llevo yo").
 - **ENVIO-252** Sin zonas con precio el envío se ofrece "a coordinar": `create_public_order` y `create_manual_order` reciben el
   barrio en texto (`p_delivery_zone_text`, de 1 a 80 caracteres) y la dirección, y el pedido queda con
-  `orders.delivery_fee_pending = true` y sin precio. En el envío libre sin zonas tildadas, y en "Mi barrio no está" del propio, el
+  `orders.delivery_fee_coordinated = true` y sin precio (pendiente mientras `delivery_fee` esté vacío). En el envío libre sin zonas tildadas, y en "Mi barrio no está" del propio, el
   pedido queda "Lo llevo yo" o con el repartidor propio, según el negocio.
 - **ENVIO-253** `set_delivery_fee(pedido, precio)` carga el precio de un envío a coordinar: solo miembros del negocio, solo en
-  pedidos sin precio de lista que no terminaron, de 0 a menos de 100.000.000. Apaga `delivery_fee_pending`, deja un evento en la
+  pedidos sin precio de lista que no terminaron, de 0 a menos de 100.000.000. Guarda el precio también como precio de lista (si el repartidor lo devuelve no se pierde), deja un evento en la
   línea de tiempo y se puede volver a editar mientras el pedido siga abierto.
 - **ENVIO-254** `effective_favorite_courier(negocio)` devuelve solo el favorito que eligió el negocio; sin elegido, no hay
   favorito. Repartos al Toque deja de ser el favorito por defecto y `default_courier_id()` desaparece. El repartidor favorito de un

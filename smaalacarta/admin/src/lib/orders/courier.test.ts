@@ -8,6 +8,7 @@ import {
   couriersForOrder,
   deliveryContext,
   feeSummary,
+  isFeePending,
   formatCountdown,
   hasCourier,
   hasDelivery,
@@ -216,6 +217,13 @@ describe("estado y precio del envío — ENVIO-80", () => {
   it("muestra el precio; si cambió, el de lista y el motivo", () => {
     expect(feeSummary(order())).toEqual({ price: expect.stringMatching(/\$\s?5\.000/) });
 
+    // Un envío a coordinar sin precio todavía dice "A confirmar" (ENVIO-262); cargado, el precio.
+    const pending = order({ delivery_fee: null, delivery_fee_list: null, delivery_fee_coordinated: true });
+    expect(isFeePending(pending)).toBe(true);
+    expect(feeSummary(pending)).toEqual({ price: "A confirmar", pending: true });
+    expect(isFeePending(order({ delivery_fee: 1800, delivery_fee_list: 1800, delivery_fee_coordinated: true }))).toBe(false);
+    expect(isFeePending(order({ delivery_fee: null }))).toBe(false);
+
     const changed = feeSummary(order({ delivery_fee: 6500, delivery_fee_reason: "Fuera de zona" }));
     expect(changed.price).toMatch(/\$\s?6\.500/);
     expect(changed.list).toMatch(/\$\s?5\.000/);
@@ -241,16 +249,14 @@ describe("repartidores que se pueden asignar a mano — ENVIO-81", () => {
     expect(couriersForOrder(list, order()).map((c) => c.name)).toEqual(["Álvaro", "Zeta"]);
   });
 
-  it("un pedido con zona propia se asigna a quien la tiene activa, no por cobertura — ENVIO-231", () => {
+  it("un pedido sin zona común (envío propio o a coordinar) solo se asigna al repartidor propio — ENVIO-251", () => {
     const list = [
-      { ...courier("1", "Dueño", []), own_zone_ids: ["z-propia"] },
-      { ...courier("2", "Cubre la común", [ZONA]), own_zone_ids: [] },
-      { ...courier("3", "Otra propia", []), own_zone_ids: ["z-otra"] },
+      { ...courier("1", "Dueño", []), own: true },
+      { ...courier("2", "Cubre la común", [ZONA]) },
     ];
 
-    const propio = couriersForOrder(list, order({ delivery_zone_id: null, courier_zone_id: "z-propia" }));
-    expect(propio.map((c) => c.name)).toEqual(["Dueño"]);
-    // Uno con zona común sigue por cobertura.
+    expect(couriersForOrder(list, order({ delivery_zone_id: null })).map((c) => c.name)).toEqual(["Dueño"]);
+    // Uno con zona común sigue por cobertura, y el propio no entra.
     expect(couriersForOrder(list, order()).map((c) => c.name)).toEqual(["Cubre la común"]);
   });
 

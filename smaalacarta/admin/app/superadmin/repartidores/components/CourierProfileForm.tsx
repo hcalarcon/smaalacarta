@@ -4,9 +4,11 @@ import { useActionState } from "react";
 
 import { updateCourierAction } from "../actions";
 import type { SuperAdminFormState } from "../../actions";
+import CourierTypeFields from "./CourierTypeFields";
 import Field from "@/components/ui/Field";
 import FormAlert from "@/components/ui/FormAlert";
 import SubmitButton from "@/components/ui/SubmitButton";
+import type { BusinessChoice } from "@/lib/db/couriers";
 
 const initialState: SuperAdminFormState = {};
 
@@ -17,11 +19,17 @@ export default function CourierProfileForm({
   name,
   whatsapp,
   active,
+  courierType,
+  ownBusinessId,
+  businesses,
 }: {
   courierId: string;
   name: string;
   whatsapp: string;
   active: boolean;
+  courierType: "free" | "own";
+  ownBusinessId: string | null;
+  businesses: BusinessChoice[];
 }) {
   const [state, formAction] = useActionState(updateCourierAction, initialState);
 
@@ -49,6 +57,14 @@ export default function CourierProfileForm({
         hint="Con el código de área. Lo ven los clientes del local."
         error={state.fieldErrors?.whatsapp}
         required
+      />
+
+      <CourierTypeFields
+        businesses={businesses}
+        courierId={courierId}
+        defaultType={courierType}
+        defaultBusinessId={ownBusinessId}
+        error={state.fieldErrors?.ownBusinessId}
       />
 
       <label className="flex items-center gap-2 text-sm">

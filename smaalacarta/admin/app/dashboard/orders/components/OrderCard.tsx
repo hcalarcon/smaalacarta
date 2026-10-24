@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Order } from "@/lib/db/orders";
 import { timeAgo } from "@/lib/orders/format";
 import CustomerPhone from "./CustomerPhone";
+import DeliveryFeeEditor from "./DeliveryFeeEditor";
 import PaymentBadge from "./PaymentBadge";
 import SettlementStatus from "./SettlementStatus";
 import { itemOptionLines } from "@/lib/orders/item-options";
@@ -12,6 +13,7 @@ import {
   courierStatusLabel,
   deliveryContext,
   feeSummary,
+  isFeePending,
   hasDelivery,
   acceptsOffers,
   offersLabel,
@@ -56,6 +58,7 @@ export default function OrderCard({
   assignMinutes,
   onSetPrep,
   onAdjust,
+  onSetFee,
   vehicleEnabled = false,
   noCouriers = false,
 }: {
@@ -80,6 +83,8 @@ export default function OrderCard({
   // bajarlo `delta` minutos con un motivo opcional (nulo = sin motivo).
   onSetPrep?: () => void;
   onAdjust?: (delta: number, reason: string | null) => void | Promise<void>;
+  // Cargar el costo de un envío a coordinar con el cliente (ENVIO-262). Devuelve un mensaje si falló.
+  onSetFee?: (fee: string) => Promise<string | void>;
 }) {
   const [adjusting, setAdjusting] = useState(false);
   const [reason, setReason] = useState<PrepReason | null>(null);
@@ -294,7 +299,7 @@ export default function OrderCard({
       {withDelivery && fee ? (
         <div className="mt-2 rounded-lg bg-sky-50 px-2 py-1.5 text-[11px] text-sky-900">
           <p className="font-semibold">
-            🛵 {order.delivery_zone_name ?? "Envío"} · {fee.price}
+            🛵 {order.delivery_zone_name ?? "Envío"} · {fee.pending ? "costo a confirmar" : fee.price}
           </p>
           <p>
             {courierStatusLabel(order, courierName)}
@@ -341,6 +346,15 @@ export default function OrderCard({
             <p role="alert" className="mt-1 font-semibold text-red-700">
               {warning}
             </p>
+          ) : null}
+          {order.delivery_fee_coordinated && onSetFee && !isFinal(order.status) ? (
+            <DeliveryFeeEditor
+              compact
+              pending={isFeePending(order)}
+              current={fee.price}
+              busy={busy}
+              onSave={onSetFee}
+            />
           ) : null}
         </div>
       ) : null}

@@ -39,6 +39,9 @@ const STEP_OF_FIELD: Record<string, number> = {
   payment: 3,
 };
 
+// El valor del select de barrios para "otro barrio": se escribe a mano y el costo se coordina (ENVIO-252).
+const OTHER_ZONE = "__otro";
+
 type Created = { code: string; number: number; total: number };
 
 function FieldError({ message }: { message?: string }) {
@@ -113,7 +116,9 @@ function Confirmation({
 
   const courierNote =
     input.delivery === "delivery" && setup.courier
-      ? input.courierMode === "favorite"
+      ? input.courierMode === "own"
+        ? "El envío quedó asignado a tu repartidor propio."
+        : input.courierMode === "favorite"
         ? "El envío quedó asignado a tu favorito."
         : input.courierMode === "offers"
           ? "Se está ofreciendo a los repartidores: el cliente elige desde el seguimiento."
@@ -192,6 +197,7 @@ function Form({
   const [items, setItems] = useState<ManualOrderItem[]>([]);
   const [delivery, setDelivery] = useState("");
   const [zoneId, setZoneId] = useState("");
+  const [zoneText, setZoneText] = useState("");
   const [courierMode, setCourierMode] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [phone, setPhone] = useState("");
@@ -225,6 +231,15 @@ function Form({
   const zone = setup.delivery.zones.find((z) => z.id === zoneId) ?? null;
   const favoriteAvailable = !!zone?.favoriteCovers && !!setup.delivery.favorite;
 
+  // Envío propio (ENVIO-250): va a su repartidor propio, sin ofertas ni favorito. Sin zonas con precio, o con "otro
+  // barrio", el barrio se escribe y el costo se coordina (ENVIO-252).
+  const ownKind = setup.delivery.kind === "own";
+  const ownCourier = setup.delivery.ownCourier ?? null;
+  const canCoordinate = setup.delivery.coordinate === true;
+  const coordinating = canCoordinate && (zoneId === OTHER_ZONE || setup.delivery.zones.length === 0);
+  // Cuando no hay nada para elegir, el modo queda fijo: lo lleva el local (o su repartidor propio, que se ofrece abajo).
+  const forcedMode = withCourier && !ownKind && coordinating ? "self" : withCourier && ownKind && !ownCourier ? "self" : "";
+
   const input: ManualOrderInput = {
     customerName,
     delivery,
@@ -233,13 +248,14 @@ function Form({
     items,
     scheduledFor,
     phone,
-    zoneId: withCourier ? zoneId : "",
+    zoneId: withCourier && !coordinating ? zoneId : "",
+    zoneText: withCourier && coordinating ? zoneText : "",
     address,
-    courierMode: withCourier ? courierMode : "",
+    courierMode: withCourier ? forcedMode || courierMode : "",
   };
 
   const subtotal = orderTotal(items);
-  const shipping = withCourier && zone ? zone.price : null;
+  const shipping = withCourier && !coordinating && zone ? zone.price : null;
 
   // Los errores de los campos del paso actual (o de todos, al guardar).
   function stepErrors(upTo: number) {
@@ -255,6 +271,7 @@ function Form({
     setDelivery(value);
     if (value !== "delivery") {
       setZoneId("");
+      setZoneText("");
       setCourierMode("");
     }
   }
@@ -396,21 +413,41 @@ function Form({
                     <>
                       <div>
                         <label htmlFor="mo-zone" className="mb-1.5 block text-sm font-semibold text-brand">Barrio</label>
-                        <select id="mo-zone" value={zoneId} onChange={(e) => selectZone(e.target.value)} className={inputClass}>
-                          <option value="">Elegí el barrio…</option>
-                          {setup.delivery.zones.map((z) => (
-                            <option key={z.id} value={z.id}>
-                              {z.name} · {formatMoney(z.price)}
-                            </option>
-                          ))}
-                        </select>
-                        {zone ? (
+                        {setup.delivery.zones.length > 0 || !canCoordinate ? (
+                          <select id="mo-zone" value={zoneId} onChange={(e) => selectZone(e.target.value)} className={inputClass}>
+                            <option value="">Elegí el barrio…</option>
+                            {setup.delivery.zones.map((z) => (
+                              <option key={z.id} value={z.id}>
+                                {z.name} · {formatMoney(z.price)}
+                              </option>
+                            ))}
+                            {canCoordinate ? <option value={OTHER_ZONE}>Otro barrio (costo a coordinar)</option> : null}
+                          </select>
+                        ) : null}
+                        {coordinating ? (
+                          <div className={setup.delivery.zones.length > 0 ? "mt-2" : ""}>
+                            <input
+                              id="mo-zone-text"
+                              value={zoneText}
+                              onChange={(e) => setZoneText(e.target.value)}
+                              maxLength={80}
+                              placeholder="Escribí el barrio"
+                              aria-label="Barrio"
+                              className={inputClass}
+                            />
+                            <p className="mt-1 text-xs text-stone-500">
+                              El costo del envío se coordina con el cliente: lo cargás después desde el pedido.
+                            </p>
+                          </div>
+                        ) : zone ? (
                           <p className="mt-1 text-xs text-stone-500">
-                            Precio de referencia del envío: {formatMoney(zone.price)}. El repartidor puede cambiarlo al ofertar.
+                            {ownKind || setup.delivery.kind === undefined
+                              ? `Envío: ${formatMoney(zone.price)}.`
+                              : `Precio de referencia del envío: ${formatMoney(zone.price)}. El repartidor puede cambiarlo al ofertar.`}
                           </p>
                         ) : null}
                         <FieldError message={fieldErrors.zoneId} />
-                        {setup.delivery.zones.length === 0 ? (
+                        {setup.delivery.zones.length === 0 && !canCoordinate ? (
                           <p className="mt-1 text-sm text-red-600">
                             No hay barrios disponibles: revisá Configuración → Envíos.
                           </p>
@@ -419,29 +456,56 @@ function Form({
 
                       <fieldset className="space-y-2">
                         <legend className="mb-1 text-sm font-semibold text-brand">¿Quién lo lleva?</legend>
-                        {favoriteAvailable && setup.delivery.favorite ? (
-                          <Choice
-                            name="mo-mode"
-                            checked={courierMode === "favorite"}
-                            onSelect={() => setCourierMode("favorite" satisfies ManualCourierMode)}
-                            title={`Asignar a ${setup.delivery.favorite.name}`}
-                            hint="Va directo a tu favorito, sin ofertas."
-                          />
-                        ) : null}
-                        <Choice
-                          name="mo-mode"
-                          checked={courierMode === "offers"}
-                          onSelect={() => setCourierMode("offers" satisfies ManualCourierMode)}
-                          title="Buscar repartidor"
-                          hint="Les llega a los repartidores y el cliente elige desde el seguimiento; si no elige, se elige sola."
-                        />
-                        <Choice
-                          name="mo-mode"
-                          checked={courierMode === "self"}
-                          onSelect={() => setCourierMode("self" satisfies ManualCourierMode)}
-                          title="Lo llevo yo"
-                          hint="El envío queda a tu cargo, sin repartidor."
-                        />
+                        {forcedMode ? (
+                          <p className="text-sm text-stone-600">
+                            {ownKind
+                              ? "Todavía no tenés repartidor asignado: el envío lo llevás vos."
+                              : "El envío queda a tu cargo, sin repartidor."}
+                          </p>
+                        ) : ownKind ? (
+                          <>
+                            <Choice
+                              name="mo-mode"
+                              checked={courierMode === "own"}
+                              onSelect={() => setCourierMode("own" satisfies ManualCourierMode)}
+                              title={`Asignar a ${ownCourier?.name ?? "tu repartidor"}`}
+                              hint="Va directo a tu repartidor propio, sin ofertas."
+                            />
+                            <Choice
+                              name="mo-mode"
+                              checked={courierMode === "self"}
+                              onSelect={() => setCourierMode("self" satisfies ManualCourierMode)}
+                              title="Lo llevo yo"
+                              hint="El envío queda a tu cargo, sin repartidor."
+                            />
+                          </>
+                        ) : (
+                          <>
+                            {favoriteAvailable && setup.delivery.favorite ? (
+                              <Choice
+                                name="mo-mode"
+                                checked={courierMode === "favorite"}
+                                onSelect={() => setCourierMode("favorite" satisfies ManualCourierMode)}
+                                title={`Asignar a ${setup.delivery.favorite.name}`}
+                                hint="Va directo a tu favorito, sin ofertas."
+                              />
+                            ) : null}
+                            <Choice
+                              name="mo-mode"
+                              checked={courierMode === "offers"}
+                              onSelect={() => setCourierMode("offers" satisfies ManualCourierMode)}
+                              title="Buscar repartidor"
+                              hint="Les llega a los repartidores y el cliente elige desde el seguimiento; si no elige, se elige sola."
+                            />
+                            <Choice
+                              name="mo-mode"
+                              checked={courierMode === "self"}
+                              onSelect={() => setCourierMode("self" satisfies ManualCourierMode)}
+                              title="Lo llevo yo"
+                              hint="El envío queda a tu cargo, sin repartidor."
+                            />
+                          </>
+                        )}
                         <FieldError message={fieldErrors.courierMode} />
                       </fieldset>
                     </>
@@ -550,13 +614,16 @@ function Form({
                     <p className="font-semibold text-brand">Resumen</p>
                     <p>
                       {items.length} {items.length === 1 ? "producto" : "productos"} · {deliveryLabel(delivery)}
-                      {zone ? ` · ${zone.name}` : ""}
+                      {coordinating ? ` · ${zoneText.trim() || "barrio a coordinar"}` : zone ? ` · ${zone.name}` : ""}
                     </p>
                     <p>{customerName.trim() || "Sin nombre"}</p>
                     {shipping !== null ? (
                       <p className="text-xs text-stone-500">
-                        Envío (precio de referencia): {formatMoney(shipping)}, aparte del total.
+                        {ownKind ? "Envío" : "Envío (precio de referencia)"}: {formatMoney(shipping)}, aparte del total.
                       </p>
+                    ) : null}
+                    {withCourier && coordinating ? (
+                      <p className="text-xs text-stone-500">Envío: el costo se coordina con el cliente.</p>
                     ) : null}
                   </div>
                 </div>

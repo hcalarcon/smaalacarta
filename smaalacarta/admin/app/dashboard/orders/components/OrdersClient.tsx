@@ -21,6 +21,7 @@ import {
   confirmSettlementAction,
   adjustPrepAction,
   selfDeliveryAction,
+  setDeliveryFeeAction,
   setNeedsCarAction,
   setOrderStatusAction,
   setPrepAction,
@@ -575,6 +576,18 @@ export default function OrdersClient({
     }
   }
 
+  // Cargar el costo de un envío a coordinar con el cliente (ENVIO-262). Devuelve el error para mostrarlo en el campo.
+  async function saveDeliveryFee(orderId: string, fee: string): Promise<string | void> {
+    try {
+      const result = await setDeliveryFeeAction(orderId, fee);
+      if (!result.ok) return result.error;
+      held.hold(orderId);
+      refresh();
+    } catch {
+      return "No pudimos guardar el cambio. Probá de nuevo.";
+    }
+  }
+
   async function confirmReceived() {
     if (!receivingId) return;
 
@@ -794,6 +807,7 @@ export default function OrdersClient({
                           offers={offersByOrder.get(order.id)}
                           assignMinutes={assignMinutes}
                           vehicleEnabled={vehicleEnabled}
+                          onSetFee={(fee) => saveDeliveryFee(order.id, fee)}
                         />
                         </div>
                       ))
@@ -829,6 +843,7 @@ export default function OrdersClient({
           selected && resolveDelivery(selected.id, () => assignCourierAction(selected.id, courierId, note))
         }
         onSelfDelivery={() => selected && resolveDelivery(selected.id, () => selfDeliveryAction(selected.id))}
+        onSetFee={selected ? (fee) => saveDeliveryFee(selected.id, fee) : undefined}
         vehicleEnabled={vehicleEnabled}
         onNeedsCar={
           canAskForCar

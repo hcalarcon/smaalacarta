@@ -1,18 +1,20 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const { requireSuperAdmin, db } = vi.hoisted(() => ({
+const { requireSuperAdmin, db, ownDelivery } = vi.hoisted(() => ({
   requireSuperAdmin: vi.fn(),
   db: { updateBusinessPlan: vi.fn(), updateCourierDelivery: vi.fn(), removeMember: vi.fn() },
+  ownDelivery: { updateDeliveryType: vi.fn(), parseDeliveryType: (value: unknown) => (value === "free" || value === "own" ? value : null) },
 }));
 
 vi.mock("@/lib/auth/superadmin", () => ({ requireSuperAdmin: () => requireSuperAdmin() }));
 vi.mock("@/lib/db/superadmin", () => db);
+vi.mock("@/lib/db/own-delivery", () => ownDelivery);
 vi.mock("@/lib/superadmin/accounts", () => ({}));
 vi.mock("@/lib/superadmin/deps", () => ({ buildAccountDeps: vi.fn() }));
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
-import { updateCourierDeliveryAction } from "./actions";
+import { updateCourierDeliveryAction, updateDeliveryTypeAction } from "./actions";
 
 const ID = "11111111-1111-1111-1111-111111111111";
 
@@ -26,6 +28,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   requireSuperAdmin.mockResolvedValue({ id: "super" });
   db.updateCourierDelivery.mockResolvedValue({ ok: true });
+  ownDelivery.updateDeliveryType.mockResolvedValue({ ok: true });
 });
 
 describe("envío con repartidores por negocio — ENVIO-18", () => {
@@ -58,5 +61,42 @@ describe("envío con repartidores por negocio — ENVIO-18", () => {
 
     const result = await updateCourierDeliveryAction({}, form({ businessId: ID, courierDelivery: "on" }));
     expect(result.error).toBe("No se pudo.");
+  });
+});
+
+describe("envío libre o propio del negocio — ENVIO-245 y 259", () => {
+  it("quien no es superadmin no llega a la base", async () => {
+    requireSuperAdmin.mockRejectedValue(new Error("NEXT_REDIRECT"));
+
+    await expect(updateDeliveryTypeAction({}, form({ businessId: ID, deliveryType: "own" }))).rejects.toThrow(
+      "NEXT_REDIRECT",
+    );
+    expect(ownDelivery.updateDeliveryType).not.toHaveBeenCalled();
+  });
+
+  it("guarda el tipo elegido", async () => {
+    const own = await updateDeliveryTypeAction({}, form({ businessId: ID, deliveryType: "own" }));
+    expect(ownDelivery.updateDeliveryType).toHaveBeenCalledWith(ID, "own");
+    expect(own.message).toBe("Envío propio activado.");
+
+    const free = await updateDeliveryTypeAction({}, form({ businessId: ID, deliveryType: "free" }));
+    expect(ownDelivery.updateDeliveryType).toHaveBeenLastCalledWith(ID, "free");
+    expect(free.message).toBe("Envío libre activado.");
+  });
+
+  it("un tipo desconocido o vacío no llega a la base", async () => {
+    for (const deliveryType of ["", "courier", "OWN"]) {
+      const result = await updateDeliveryTypeAction({}, form({ businessId: ID, deliveryType }));
+      expect(result.error).toBe("Elegí el tipo de envío.");
+    }
+    expect(ownDelivery.updateDeliveryType).not.toHaveBeenCalled();
+  });
+
+  it("si la base falla, devuelve un mensaje sin texto técnico", async () => {
+    ownDelivery.updateDeliveryType.mockResolvedValue({ error: { code: "42501", message: "permission denied" } });
+
+    const result = await updateDeliveryTypeAction({}, form({ businessId: ID, deliveryType: "own" }));
+    expect(result.error).toMatch(/No pudimos guardar/);
+    expect(result.error).not.toMatch(/permission/);
   });
 });

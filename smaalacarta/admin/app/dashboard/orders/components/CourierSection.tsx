@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import DeliveryFeeEditor from "./DeliveryFeeEditor";
 import VehicleIcons from "@/components/ui/VehicleIcon";
 import { chatLink } from "@/lib/courier/panel";
 import type { Order } from "@/lib/db/orders";
@@ -10,6 +11,7 @@ import {
   courierStatusLabel,
   couriersForOrder,
   feeSummary,
+  isFeePending,
   acceptsOffers,
   offersLabel,
   pickupEtaNotice,
@@ -38,7 +40,10 @@ export default function CourierSection({
   onSelf,
   vehicleEnabled = false,
   onNeedsCar,
+  onSetFee,
 }: {
+  // Cargar el costo de un envío a coordinar con el cliente (ENVIO-262). Devuelve un mensaje si falló.
+  onSetFee?: (fee: string) => Promise<string | void>;
   // El interruptor del vehículo (ENVIO-175) y cómo prender o apagar "Necesita auto" (ENVIO-176).
   vehicleEnabled?: boolean;
   onNeedsCar?: (needsCar: boolean) => void;
@@ -122,7 +127,9 @@ export default function CourierSection({
         </div>
         <div className="flex gap-2">
           <dt className="text-stone-400">Precio del envío:</dt>
-          <dd className="font-medium">{summary.price}</dd>
+          <dd className={summary.pending ? "font-semibold text-amber-800" : "font-medium"}>
+            {summary.pending ? "Costo de envío a confirmar" : summary.price}
+          </dd>
         </div>
         {summary.list ? (
           <div className="flex gap-2">
@@ -152,6 +159,10 @@ export default function CourierSection({
           </div>
         ) : null}
       </dl>
+
+      {order.delivery_fee_coordinated && onSetFee && !isFinal(order.status) ? (
+        <DeliveryFeeEditor pending={isFeePending(order)} current={summary.price} busy={busy} onSave={onSetFee} />
+      ) : null}
 
       {canToggleCar ? (
         <label className="mt-3 flex min-h-11 cursor-pointer items-start gap-3 rounded-xl bg-white px-3 py-2">

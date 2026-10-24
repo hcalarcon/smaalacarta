@@ -5,31 +5,40 @@ import { useState } from "react";
 
 import ConfirmDeleteDialog from "../../../app/dashboard/components/ConfirmDeleteDialog";
 import { SortableItem, SortableList } from "@/components/menu/Sortable";
-import type { OwnZoneResult } from "@/lib/courier/own-zones";
-import type { OwnZone } from "@/lib/db/courier-own-zones";
+import type { ZoneResult } from "@/lib/delivery/business-zones";
+import type { BusinessZone } from "@/lib/db/business-zones";
 import { formatMoney } from "@/lib/promotions/pricing";
 import { ZONE_NAME_MAX, validateZone } from "@/lib/superadmin/zones";
 
 type Errors = Partial<Record<"name" | "price", string>>;
 
-export type OwnZonesApi = {
-  create: (input: { name: string; price: string }) => Promise<OwnZoneResult>;
-  update: (zoneId: string, input: { name: string; price: string }) => Promise<OwnZoneResult>;
-  setActive: (zoneId: string, active: boolean) => Promise<OwnZoneResult>;
-  remove: (zoneId: string) => Promise<OwnZoneResult>;
-  reorder: (orderedIds: string[]) => Promise<OwnZoneResult>;
+export type BusinessZonesApi = {
+  create: (input: { name: string; price: string }) => Promise<ZoneResult>;
+  update: (zoneId: string, input: { name: string; price: string }) => Promise<ZoneResult>;
+  setActive: (zoneId: string, active: boolean) => Promise<ZoneResult>;
+  remove: (zoneId: string) => Promise<ZoneResult>;
+  reorder: (orderedIds: string[]) => Promise<ZoneResult>;
 };
 
-// Zonas y precios propios de un repartidor (ENVIO-221 y 227): alta, edición de nombre y precio, activar, borrar
-// y ordenar. Sin permiso (`readOnly`) solo se ve la lista. Lo usan el superadmin (detalle del repartidor) y el
-// propio repartidor ("Mis zonas y precios"): cada uno pasa sus acciones, que comprueban quién es.
-export default function OwnZonesEditor({
+// Con `readOnly` no se llama a ninguna acción: se pasa esto para no pedir las funciones al servidor.
+const NO_API: BusinessZonesApi = {
+  create: async () => ({ ok: false, error: "Solo lectura" }),
+  update: async () => ({ ok: false, error: "Solo lectura" }),
+  setActive: async () => ({ ok: false, error: "Solo lectura" }),
+  remove: async () => ({ ok: false, error: "Solo lectura" }),
+  reorder: async () => ({ ok: false, error: "Solo lectura" }),
+};
+
+// Zonas y precios propios de un negocio con envío propio (ENVIO-247 y 260): alta, edición de nombre y precio, activar,
+// borrar y ordenar. Con `readOnly` solo se ve la lista (el repartidor propio). Lo usan el local (Configuración →
+// Envíos) y el superadmin (detalle del negocio): cada uno pasa sus acciones, que comprueban quién es.
+export default function BusinessZonesEditor({
   zones,
-  api,
+  api = NO_API,
   readOnly,
 }: {
-  zones: OwnZone[];
-  api: OwnZonesApi;
+  zones: BusinessZone[];
+  api?: BusinessZonesApi;
   readOnly: boolean;
 }) {
   const router = useRouter();
@@ -53,9 +62,9 @@ export default function OwnZonesEditor({
   const [editPrice, setEditPrice] = useState("");
   const [editErrors, setEditErrors] = useState<Errors>({});
 
-  const [deleting, setDeleting] = useState<OwnZone | null>(null);
+  const [deleting, setDeleting] = useState<BusinessZone | null>(null);
 
-  async function run(call: () => Promise<OwnZoneResult>): Promise<OwnZoneResult | null> {
+  async function run(call: () => Promise<ZoneResult>): Promise<ZoneResult | null> {
     setError(null);
     setBusy(true);
 
@@ -90,15 +99,15 @@ export default function OwnZonesEditor({
     }
   }
 
-  function startEdit(zone: OwnZone) {
+  function startEdit(zone: BusinessZone) {
     setEditingId(zone.id);
     setEditName(zone.name);
     // Con coma decimal: `parsePrice` lee el punto como separador de miles.
-    setEditPrice(String(zone.price).replace(".", ","));
+    setEditPrice(zone.price === null ? "" : String(zone.price).replace(".", ","));
     setEditErrors({});
   }
 
-  async function saveEdit(zone: OwnZone) {
+  async function saveEdit(zone: BusinessZone) {
     const validation = validateZone({ name: editName, price: editPrice }, items, zone.id);
     if (!validation.ok) {
       setEditErrors(validation.errors);
@@ -171,7 +180,7 @@ export default function OwnZonesEditor({
       )}
 
       {items.length === 0 ? (
-        <p className="text-sm text-stone-400">Todavía no hay zonas propias cargadas.</p>
+        <p className="text-sm text-stone-400">Todavía no hay zonas cargadas.</p>
       ) : readOnly ? (
         <ul className="divide-y divide-line rounded-2xl border border-line">
           {items.map((zone) => (
@@ -180,7 +189,7 @@ export default function OwnZonesEditor({
                 {zone.name}
                 {zone.active ? "" : " (no se ofrece)"}
               </span>
-              <span className="text-sm text-stone-700">{formatMoney(zone.price)}</span>
+              <span className="text-sm text-stone-700">{zone.price === null ? "Sin precio" : formatMoney(zone.price)}</span>
             </li>
           ))}
         </ul>
@@ -240,7 +249,9 @@ export default function OwnZonesEditor({
                           <p className={`truncate font-medium ${zone.active ? "text-stone-900" : "text-stone-400"}`}>
                             {zone.name}
                           </p>
-                          <p className="text-sm text-stone-600">{formatMoney(zone.price)}</p>
+                          <p className="text-sm text-stone-600">
+                            {zone.price === null ? "Sin precio: no se ofrece" : formatMoney(zone.price)}
+                          </p>
                         </div>
 
                         <label className="flex items-center gap-2 text-sm text-stone-700">

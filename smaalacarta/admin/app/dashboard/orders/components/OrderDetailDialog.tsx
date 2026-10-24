@@ -32,6 +32,7 @@ export default function OrderDetailDialog({
   error = null,
   onAssignCourier,
   onSelfDelivery,
+  onSetFee,
   onConfirmSettlement,
   vehicleEnabled = false,
   onNeedsCar,
@@ -54,6 +55,7 @@ export default function OrderDetailDialog({
   error?: string | null;
   onAssignCourier?: (courierId: string, note: string) => void;
   onSelfDelivery?: () => void;
+  onSetFee?: (fee: string) => Promise<string | void>;
   // Rendición del efectivo (ENVIO-43): pide confirmar que se recibió.
   onConfirmSettlement?: () => void;
 }) {
@@ -195,6 +197,7 @@ export default function OrderDetailDialog({
             error={error}
             onAssign={onAssignCourier}
             onSelf={onSelfDelivery}
+            onSetFee={onSetFee}
             vehicleEnabled={vehicleEnabled}
             onNeedsCar={onNeedsCar}
           />

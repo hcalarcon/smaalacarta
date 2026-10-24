@@ -43,10 +43,6 @@ export default function DeliverySection({ options }: { options: DeliveryOptions 
 
   const candidates = favoriteCandidates(options, input.zoneIds);
   const marked = new Set(input.zoneIds);
-  // Sin favorito elegido, la base recomienda a Repartos al Toque (ENVIO-130): el nombre sale del dato.
-  const defaultName = options.default_courier?.name;
-  const unsetLabel = defaultName ? `Sin elegir: se recomienda ${defaultName}` : "Sin elegir";
-
   function toggleZone(id: string, checked: boolean) {
     const next = checked ? [...input.zoneIds, id] : input.zoneIds.filter((zoneId) => zoneId !== id);
     // Si el favorito deja de cubrir las zonas marcadas, vuelve a "Sin elegir".
@@ -127,18 +123,6 @@ export default function DeliverySection({ options }: { options: DeliveryOptions 
         </fieldset>
       ) : null}
 
-      {options.favorite_locked ? (
-        <div>
-          <p className="mb-1.5 block text-sm font-medium text-brand">Repartidor favorito</p>
-          <p className="rounded-xl border border-line bg-cream px-4 py-3 text-base text-stone-900">
-            {options.couriers.find((courier) => courier.id === options.favorite_id)?.name ?? "Sin elegir"}
-          </p>
-          <p className="mt-1.5 text-sm text-stone-500">
-            Tus precios de envío son los del repartidor, así que él es tu repartidor favorito. Lo define el equipo de SMA a la
-            Carta.
-          </p>
-        </div>
-      ) : (
       <div>
         <label htmlFor="envios-favorito" className="mb-1.5 block text-sm font-medium text-brand">
           Repartidor favorito
@@ -149,7 +133,7 @@ export default function DeliverySection({ options }: { options: DeliveryOptions 
           onChange={(event) => setInput({ ...input, favoriteId: event.target.value || null })}
           className="w-full rounded-xl border border-line-strong bg-white px-4 py-3 text-base text-stone-900 focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
         >
-          <option value="">{unsetLabel}</option>
+          <option value="">Sin favorito</option>
           {candidates.map((courier) => (
             <option key={courier.id} value={courier.id}>
               {courier.name}
@@ -163,7 +147,6 @@ export default function DeliverySection({ options }: { options: DeliveryOptions 
         </p>
         {deliveryErrors.favorite ? <p className="mt-1.5 text-sm text-red-600">{deliveryErrors.favorite}</p> : null}
       </div>
-      )}
 
     </Section>
   );
