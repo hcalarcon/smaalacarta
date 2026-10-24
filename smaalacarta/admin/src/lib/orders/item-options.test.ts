@@ -54,3 +54,26 @@ describe("itemTitle — MP-8", () => {
     expect(itemTitle(name, null)).toBe(name);
   });
 });
+
+describe("promociones con componentes — ADMIN-PROMOS-9", () => {
+  const emp = (gusto: string) => ({ producto: "Empanada clásica", opciones: [option(gusto, 1, { grupo: "Gusto" })] });
+  const comps = [emp("Carne"), emp("Carne"), emp("Pollo"), { producto: "Gaseosas" }];
+
+  it("una línea por unidad distinta, juntando las iguales", () => {
+    expect(itemOptionLines(comps)).toEqual([
+      "2× Empanada clásica: Carne",
+      "Empanada clásica: Pollo",
+      "Gaseosas",
+    ]);
+  });
+
+  it("el título de Mercado Pago lleva lo elegido en cada unidad", () => {
+    expect(itemTitle("Combo", comps)).toBe(
+      "Combo (2× Empanada clásica: Carne, Empanada clásica: Pollo, Gaseosas)",
+    );
+  });
+
+  it("ignora los componentes sin nombre de producto", () => {
+    expect(itemOptionLines([emp("Carne"), { producto: "" }, null])).toEqual(["Empanada clásica: Carne"]);
+  });
+});

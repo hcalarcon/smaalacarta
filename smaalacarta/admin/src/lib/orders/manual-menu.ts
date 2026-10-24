@@ -14,6 +14,15 @@ export type ManualOptionGroup = {
   options: ManualOption[];
 };
 
+// Un producto de una promoción, con cuántas unidades lleva y los grupos que el cliente elige en cada una
+// (ADMIN-PROMOS-8).
+export type ManualComponent = {
+  productId: string;
+  name: string;
+  quantity: number;
+  groups: ManualOptionGroup[];
+};
+
 export type ManualMenuItem = {
   id: string;
   kind: "product" | "promo";
@@ -22,6 +31,8 @@ export type ManualMenuItem = {
   category: string;
   soldOut: boolean;
   groups: ManualOptionGroup[];
+  // Solo en las promociones.
+  components: ManualComponent[];
 };
 
 export type ManualMenu = {
@@ -60,6 +71,37 @@ function parseGroups(raw: unknown): ManualOptionGroup[] {
     .filter((group) => group.id !== "" && group.options.length > 0);
 }
 
+function parseComponents(raw: unknown): ManualComponent[] {
+  return list(raw)
+    .filter(isRecord)
+    .map((component) => ({
+      productId: text(component.id),
+      name: text(component.nombre),
+      quantity: Math.min(20, Math.max(1, Math.floor(num(component.cantidad)) || 1)),
+      groups: parseGroups(component.opciones),
+    }))
+    .filter((component) => component.productId !== "");
+}
+
+// Una unidad de una promoción, con el título de su bloque: "Empanada clásica 1 de 3" (o solo el nombre si lleva una).
+export type PromoUnit = { productId: string; name: string; title: string; groups: ManualOptionGroup[] };
+
+export function promoUnits(components: ManualComponent[]): PromoUnit[] {
+  return components.flatMap((component) =>
+    Array.from({ length: component.quantity }, (_, index) => ({
+      productId: component.productId,
+      name: component.name,
+      title: component.quantity > 1 ? `${component.name} ${index + 1} de ${component.quantity}` : component.name,
+      groups: component.groups,
+    })),
+  );
+}
+
+// ¿Hay algo que elegir en la promoción? Si ningún producto tiene grupos, se agrega directo (sin componentes).
+export function promoHasChoices(item: Pick<ManualMenuItem, "kind" | "components">): boolean {
+  return item.kind === "promo" && item.components.some((component) => component.groups.length > 0);
+}
+
 // Del JSON de `menu_preview` al menú del pedido manual. Nunca lanza: lo que no tiene forma de menú da vacío.
 // Mercado Pago no se ofrece (el pedido manual no pasa por el cobro en línea).
 export function parseManualMenu(raw: unknown): ManualMenu {
@@ -88,6 +130,7 @@ export function parseManualMenu(raw: unknown): ManualMenu {
         category: categoryName,
         soldOut: item.agotado === true,
         groups: promo ? [] : parseGroups(item.opciones),
+        components: promo ? parseComponents(item.componentes) : [],
       });
     }
   }

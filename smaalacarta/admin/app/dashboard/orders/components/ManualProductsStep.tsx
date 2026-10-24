@@ -6,9 +6,12 @@ import {
   chosenOptions,
   describeChosen,
   groupCount,
+  promoHasChoices,
+  promoUnits,
   searchMenu,
   selectionProblems,
   unitPriceWith,
+  type ChosenOption,
   type ManualMenu,
   type ManualMenuItem,
   type ManualOptionGroup,
@@ -65,7 +68,122 @@ function Stepper({
   );
 }
 
-// La hoja de un producto del menú: opciones, nota y cantidad (la misma idea que la hoja del menú).
+// Los grupos de opciones de un producto (o de una unidad de una promoción): radio o casillas, y un contador donde se
+// puede repetir. La elección vive en el padre, que es quien arma el precio y valida.
+function GroupsFields({
+  groups,
+  selection,
+  onSelection,
+  tried,
+  scope,
+}: {
+  groups: ManualOptionGroup[];
+  selection: Selection;
+  onSelection: (selection: Selection) => void;
+  tried: boolean;
+  // Distingue los radios de unidades distintas de una misma promoción.
+  scope: string;
+}) {
+  const problems = selectionProblems(groups, selection);
+
+  function toggle(group: ManualOptionGroup, optionId: string) {
+    const next = { ...selection };
+
+    if ((next[optionId] ?? 0) > 0) {
+      delete next[optionId];
+      onSelection(next);
+      return;
+    }
+
+    // Grupo de una sola opción (radio): elegir una saca la anterior.
+    if (group.max === 1) {
+      for (const option of group.options) delete next[option.id];
+    }
+
+    next[optionId] = 1;
+    onSelection(next);
+  }
+
+  function change(optionId: string, value: number) {
+    const next = { ...selection };
+    if (value <= 0) delete next[optionId];
+    else next[optionId] = value;
+    onSelection(next);
+  }
+
+  return (
+    <>
+      {groups.map((group) => {
+        const problem = problems[group.id];
+        const count = groupCount(group, selection);
+        const single = group.max === 1;
+
+        return (
+          <fieldset key={group.id} className="space-y-2">
+            <legend className="flex w-full items-baseline justify-between gap-2 text-sm font-semibold text-brand">
+              <span>{group.name}</span>
+              <span className="text-xs font-normal text-stone-500">
+                {group.min >= 1 ? "Obligatorio" : "Opcional"} · {count}/{group.max}
+              </span>
+            </legend>
+
+            {group.options.map((option) => {
+              const quantityChosen = selection[option.id] ?? 0;
+
+              return (
+                <div
+                  key={option.id}
+                  className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2 ${
+                    quantityChosen > 0 ? "border-accent bg-accent/5" : "border-line"
+                  } ${option.soldOut ? "opacity-50" : ""}`}
+                >
+                  <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 py-1">
+                    <input
+                      type={single ? "radio" : "checkbox"}
+                      name={`group-${scope}-${group.id}`}
+                      checked={quantityChosen > 0}
+                      disabled={option.soldOut}
+                      onChange={() => toggle(group, option.id)}
+                      className="h-5 w-5 accent-[var(--color-accent,#c2410c)]"
+                    />
+                    <span className="min-w-0 truncate text-base sm:text-sm">
+                      {option.name}
+                      {option.soldOut ? <span className="ml-2 text-xs text-red-600">Agotado</span> : null}
+                    </span>
+                  </label>
+
+                  <div className="flex items-center gap-3">
+                    {option.price !== 0 ? (
+                      <span className="text-sm text-stone-600">+{formatMoney(option.price)}</span>
+                    ) : null}
+                    {group.repeat && quantityChosen > 0 ? (
+                      <Stepper
+                        value={quantityChosen}
+                        min={0}
+                        max={group.max}
+                        label={`Cantidad de ${option.name}`}
+                        onChange={(value) => change(option.id, value)}
+                      />
+                    ) : null}
+                  </div>
+                </div>
+              );
+            })}
+
+            {tried && problem ? (
+              <p role="alert" className="text-sm text-red-600">
+                {PROBLEM_TEXT[problem].replace("{n}", String(problem === "min" ? group.min : group.max))}
+              </p>
+            ) : null}
+          </fieldset>
+        );
+      })}
+    </>
+  );
+}
+
+// La hoja de un producto del menú: opciones, nota y cantidad (la misma idea que la hoja del menú). En una promoción
+// con opciones hay un bloque por unidad: "Empanada clásica 1 de 3", "Empanada clásica 2 de 3"… (ADMIN-PROMOS-8).
 function ProductSheet({
   item,
   onAdd,
@@ -75,49 +193,40 @@ function ProductSheet({
   onAdd: (line: ManualOrderItem) => void;
   onClose: () => void;
 }) {
-  const [selection, setSelection] = useState<Selection>({});
+  // Una "unidad" es un bloque de grupos con su propia elección. Un producto suelto es una sola, sin título.
+  const perUnit = promoHasChoices(item);
+  const units = useMemo(
+    () =>
+      perUnit
+        ? promoUnits(item.components)
+        : [{ productId: item.id, name: item.name, title: "", groups: item.groups }],
+    [item, perUnit],
+  );
+
+  const [selections, setSelections] = useState<Selection[]>(() => units.map(() => ({})));
   const [note, setNote] = useState("");
   const [quantity, setQuantity] = useState(1);
   const [tried, setTried] = useState(false);
 
-  const problems = selectionProblems(item.groups, selection);
-  const chosen = chosenOptions(item.groups, selection);
-  const unit = unitPriceWith(item.price, chosen);
-
-  function toggle(group: ManualOptionGroup, optionId: string) {
-    setSelection((prev) => {
-      const next = { ...prev };
-      const current = next[optionId] ?? 0;
-
-      if (current > 0) {
-        delete next[optionId];
-        return next;
-      }
-
-      // Grupo de una sola opción (radio): elegir una saca la anterior.
-      if (group.max === 1) {
-        for (const option of group.options) delete next[option.id];
-      }
-
-      next[optionId] = 1;
-      return next;
-    });
-  }
-
-  function change(optionId: string, value: number) {
-    setSelection((prev) => {
-      const next = { ...prev };
-      if (value <= 0) delete next[optionId];
-      else next[optionId] = value;
-      return next;
-    });
-  }
+  const chosenByUnit = units.map((u, index) => chosenOptions(u.groups, selections[index] ?? {}));
+  const invalid = units.some(
+    (u, index) => Object.keys(selectionProblems(u.groups, selections[index] ?? {})).length > 0,
+  );
+  const unit = unitPriceWith(item.price, chosenByUnit.flat());
 
   function handleAdd() {
-    if (Object.keys(problems).length > 0) {
+    if (invalid) {
       setTried(true);
       return;
     }
+
+    const asOptions = (chosen: ChosenOption[]) =>
+      chosen.map((option) => ({
+        id: option.id,
+        name: option.name,
+        quantity: option.quantity,
+        price: option.price,
+      }));
 
     onAdd({
       kind: item.kind,
@@ -126,12 +235,16 @@ function ProductSheet({
       unitPrice: unit,
       quantity,
       note: note.trim() || undefined,
-      options: chosen.map((option) => ({
-        id: option.id,
-        name: option.name,
-        quantity: option.quantity,
-        price: option.price,
-      })),
+      options: perUnit ? [] : asOptions(chosenByUnit[0] ?? []),
+      ...(perUnit
+        ? {
+            components: units.map((u, index) => ({
+              productId: u.productId,
+              name: u.name,
+              options: asOptions(chosenByUnit[index] ?? []),
+            })),
+          }
+        : {}),
     });
   }
 
@@ -148,71 +261,24 @@ function ProductSheet({
       </div>
 
       <div className="flex-1 space-y-5 overflow-y-auto px-4 py-4 sm:px-6">
-        {item.groups.map((group) => {
-          const problem = problems[group.id];
-          const count = groupCount(group, selection);
-          const single = group.max === 1;
-
-          return (
-            <fieldset key={group.id} className="space-y-2">
-              <legend className="flex w-full items-baseline justify-between gap-2 text-sm font-semibold text-brand">
-                <span>{group.name}</span>
-                <span className="text-xs font-normal text-stone-500">
-                  {group.min >= 1 ? "Obligatorio" : "Opcional"} · {count}/{group.max}
-                </span>
-              </legend>
-
-              {group.options.map((option) => {
-                const quantityChosen = selection[option.id] ?? 0;
-
-                return (
-                  <div
-                    key={option.id}
-                    className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2 ${
-                      quantityChosen > 0 ? "border-accent bg-accent/5" : "border-line"
-                    } ${option.soldOut ? "opacity-50" : ""}`}
-                  >
-                    <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 py-1">
-                      <input
-                        type={single ? "radio" : "checkbox"}
-                        name={`group-${group.id}`}
-                        checked={quantityChosen > 0}
-                        disabled={option.soldOut}
-                        onChange={() => toggle(group, option.id)}
-                        className="h-5 w-5 accent-[var(--color-accent,#c2410c)]"
-                      />
-                      <span className="min-w-0 truncate text-base sm:text-sm">
-                        {option.name}
-                        {option.soldOut ? <span className="ml-2 text-xs text-red-600">Agotado</span> : null}
-                      </span>
-                    </label>
-
-                    <div className="flex items-center gap-3">
-                      {option.price !== 0 ? (
-                        <span className="text-sm text-stone-600">+{formatMoney(option.price)}</span>
-                      ) : null}
-                      {group.repeat && quantityChosen > 0 ? (
-                        <Stepper
-                          value={quantityChosen}
-                          min={0}
-                          max={group.max}
-                          label={`Cantidad de ${option.name}`}
-                          onChange={(value) => change(option.id, value)}
-                        />
-                      ) : null}
-                    </div>
-                  </div>
-                );
-              })}
-
-              {tried && problem ? (
-                <p role="alert" className="text-sm text-red-600">
-                  {PROBLEM_TEXT[problem].replace("{n}", String(problem === "min" ? group.min : group.max))}
-                </p>
-              ) : null}
-            </fieldset>
-          );
-        })}
+        {units.map((u, index) =>
+          u.groups.length === 0 ? null : (
+            <section
+              key={index}
+              aria-label={u.title || undefined}
+              className={perUnit ? "space-y-3 rounded-2xl border border-line p-3" : "space-y-5"}
+            >
+              {perUnit ? <h4 className="text-sm font-bold text-brand">{u.title}</h4> : null}
+              <GroupsFields
+                groups={u.groups}
+                selection={selections[index] ?? {}}
+                onSelection={(next) => setSelections((prev) => prev.map((s, i) => (i === index ? next : s)))}
+                tried={tried}
+                scope={String(index)}
+              />
+            </section>
+          ),
+        )}
 
         <div>
           <label htmlFor="mo-item-note" className="mb-1.5 block text-sm font-medium text-brand">
@@ -390,7 +456,7 @@ export default function ManualProductsStep({
                   <span className="block truncate text-base font-medium text-brand sm:text-sm">{item.name}</span>
                   <span className="block truncate text-xs text-stone-500">
                     {item.category}
-                    {item.groups.length > 0 ? " · con opciones" : ""}
+                    {item.groups.length > 0 || promoHasChoices(item) ? " · con opciones" : ""}
                     {item.soldOut ? " · agotado" : ""}
                   </span>
                 </span>
@@ -417,18 +483,20 @@ export default function ManualProductsStep({
         ) : (
           <ul className="space-y-2">
             {items.map((item, index) => {
+              const asChosen = (options: { id: string; name: string; quantity: number; price: number }[]) =>
+                describeChosen(options.map((option) => ({ ...option, group: "" })));
+
               const detail =
                 item.kind === "free"
                   ? "Producto libre"
-                  : describeChosen(
-                      (item.options ?? []).map((option) => ({
-                        id: option.id,
-                        group: "",
-                        name: option.name,
-                        quantity: option.quantity,
-                        price: option.price,
-                      })),
-                    );
+                  : item.components?.length
+                    ? item.components
+                        .map((component) => {
+                          const chosen = asChosen(component.options);
+                          return chosen ? `${component.name}: ${chosen}` : component.name;
+                        })
+                        .join(" · ")
+                    : asChosen(item.options ?? []);
 
               return (
                 <li key={index} className="rounded-xl border border-line px-3 py-2">

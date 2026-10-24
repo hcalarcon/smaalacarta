@@ -4,6 +4,8 @@ import {
   chosenOptions,
   describeChosen,
   parseManualMenu,
+  promoHasChoices,
+  promoUnits,
   searchMenu,
   selectionProblems,
   unitPriceWith,
@@ -138,5 +140,71 @@ describe("elección de opciones — ADMIN-PEDIDOS-40", () => {
     ]);
     expect(unitPriceWith(5000, chosen)).toBe(6000);
     expect(describeChosen(chosen)).toBe("Jugoso, Queso ×2");
+  });
+});
+
+describe("promociones con componentes — ADMIN-PROMOS-8", () => {
+  const withComponents = parseManualMenu({
+    menu: {
+      categorias: [
+        {
+          nombre: "Ofertas",
+          tipo: "ofertas",
+          items: [
+            {
+              id: "promo-1",
+              esPromo: true,
+              nombre: "3 empanadas + gaseosa",
+              precio: 3000,
+              componentes: [
+                {
+                  id: "p-emp",
+                  nombre: "Empanada clásica",
+                  cantidad: 3,
+                  opciones: [
+                    {
+                      id: "g-gusto",
+                      nombre: "Gusto",
+                      min: 1,
+                      max: 1,
+                      repetir: false,
+                      opciones: [{ id: "o-carne", nombre: "Carne", precio: 0 }],
+                    },
+                  ],
+                },
+                { id: "p-gas", nombre: "Gaseosas", cantidad: 1 },
+              ],
+            },
+            { id: "promo-2", esPromo: true, nombre: "Vieja", precio: 900 },
+          ],
+        },
+      ],
+    },
+  }).items;
+
+  it("lee los componentes con su cantidad y sus grupos", () => {
+    expect(withComponents[0].components.map((c) => [c.name, c.quantity, c.groups.length])).toEqual([
+      ["Empanada clásica", 3, 1],
+      ["Gaseosas", 1, 0],
+    ]);
+  });
+
+  it("una promo sin componentes (o un producto) no pide nada", () => {
+    expect(withComponents[1].components).toEqual([]);
+    expect(promoHasChoices(withComponents[1])).toBe(false);
+    expect(promoHasChoices(parseManualMenu(raw).items.find((i) => i.id === "p-1")!)).toBe(false);
+  });
+
+  it("pide elegir si algún producto tiene grupos", () => {
+    expect(promoHasChoices(withComponents[0])).toBe(true);
+  });
+
+  it("arma una unidad por cada unidad de cada producto, con su título", () => {
+    expect(promoUnits(withComponents[0].components).map((u) => u.title)).toEqual([
+      "Empanada clásica 1 de 3",
+      "Empanada clásica 2 de 3",
+      "Empanada clásica 3 de 3",
+      "Gaseosas",
+    ]);
   });
 });

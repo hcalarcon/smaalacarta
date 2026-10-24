@@ -47,8 +47,39 @@ const setup: ManualOrderSetup = {
             options: [{ id: "o-queso", name: "Queso", price: 500, soldOut: false }],
           },
         ],
+        components: [],
       },
-      { id: "p-cafe", kind: "product", name: "Café", price: 1000, category: "Bebidas", soldOut: false, groups: [] },
+      { id: "p-cafe", kind: "product", name: "Café", price: 1000, category: "Bebidas", soldOut: false, groups: [], components: [] },
+      {
+        id: "promo-emp",
+        kind: "promo",
+        name: "Combo empanadas",
+        price: 3000,
+        category: "Ofertas",
+        soldOut: false,
+        groups: [],
+        components: [
+          {
+            productId: "p-emp",
+            name: "Empanada clásica",
+            quantity: 2,
+            groups: [
+              {
+                id: "g-gusto",
+                name: "Gusto",
+                min: 1,
+                max: 1,
+                repeat: false,
+                options: [
+                  { id: "o-carne", name: "Carne", price: 0, soldOut: false },
+                  { id: "o-jyq", name: "Jamón y queso", price: 200, soldOut: false },
+                ],
+              },
+            ],
+          },
+          { productId: "p-gas", name: "Gaseosas", quantity: 1, groups: [] },
+        ],
+      },
     ],
   },
   delivery: {
@@ -444,5 +475,56 @@ describe("pedido manual con envío propio y a coordinar — ENVIO-250 y 252", ()
     next();
 
     expect(screen.getByText("Elegí el barrio del envío.")).toBeTruthy();
+  });
+});
+
+describe("pedido manual — promociones con opciones (ADMIN-PROMOS-8)", () => {
+  it("pide lo de cada unidad, con un bloque por unidad, y no deja agregar sin elegir", () => {
+    open();
+
+    fireEvent.click(screen.getByText("Combo empanadas"));
+    expect(screen.getByRole("region", { name: "Empanada clásica 1 de 2" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Empanada clásica 2 de 2" })).toBeTruthy();
+    // La gaseosa no tiene grupos: no hay bloque.
+    expect(screen.queryByRole("region", { name: "Gaseosas" })).toBeNull();
+
+    click(/^Agregar/);
+    expect(screen.getAllByText("Elegí al menos 1.")).toHaveLength(2);
+  });
+
+  it("suma los extras de cada unidad y manda un componente por unidad", async () => {
+    open();
+
+    fireEvent.click(screen.getByText("Combo empanadas"));
+    const first = within(screen.getByRole("region", { name: "Empanada clásica 1 de 2" }));
+    const second = within(screen.getByRole("region", { name: "Empanada clásica 2 de 2" }));
+    fireEvent.click(first.getByLabelText("Carne"));
+    fireEvent.click(second.getByLabelText(/Jamón y queso/));
+    click(/^Agregar \$\s?3\.200/);
+
+    expect(screen.getByText(/Empanada clásica: Carne · Empanada clásica: Jamón y queso · Gaseosas/)).toBeTruthy();
+
+    next();
+    fireEvent.click(screen.getByLabelText(/Retiro en el local/));
+    next();
+    fireEvent.change(screen.getByLabelText("Cliente"), { target: { value: "Ana" } });
+    next();
+    fireEvent.click(screen.getByLabelText(/Efectivo/));
+    createManualOrderAction.mockResolvedValue({ ok: true, code: "0123456789abcdef0123", number: 1, total: 3200 });
+    click("Crear pedido");
+
+    await waitFor(() => expect(createManualOrderAction).toHaveBeenCalled());
+    const sent = createManualOrderAction.mock.calls[0][0];
+    expect(sent.items).toEqual([
+      expect.objectContaining({
+        kind: "promo",
+        id: "promo-emp",
+        components: [
+          { productId: "p-emp", name: "Empanada clásica", options: [expect.objectContaining({ id: "o-carne" })] },
+          { productId: "p-emp", name: "Empanada clásica", options: [expect.objectContaining({ id: "o-jyq" })] },
+          { productId: "p-gas", name: "Gaseosas", options: [] },
+        ],
+      }),
+    ]);
   });
 });

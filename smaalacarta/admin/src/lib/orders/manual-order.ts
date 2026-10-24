@@ -13,6 +13,14 @@ export type ManualMenuLine = {
   quantity: number;
   note?: string;
   options?: { id: string; name: string; quantity: number; price: number }[];
+  // Solo en las promociones con opciones (ADMIN-PROMOS-8): lo elegido en cada unidad de cada producto.
+  components?: ManualLineComponent[];
+};
+
+export type ManualLineComponent = {
+  productId: string;
+  name: string;
+  options: { id: string; name: string; quantity: number; price: number }[];
 };
 
 // Un producto libre (ADMIN-PEDIDOS-42): nombre y precio a mano, para los casos raros.
@@ -183,11 +191,18 @@ function isValidItem(item: ManualOrderItem) {
     (item.kind === "product" || item.kind === "promo") &&
     typeof item.id === "string" &&
     item.id.trim() !== "" &&
-    (item.options ?? []).every(
-      (option) => typeof option.id === "string" && Number.isInteger(option.quantity) && option.quantity >= 1,
+    (item.options ?? []).every(isValidOption) &&
+    (item.components ?? []).every(
+      (component) =>
+        typeof component.productId === "string" &&
+        component.productId.trim() !== "" &&
+        component.options.every(isValidOption),
     )
   );
 }
+
+const isValidOption = (option: { id: string; quantity: number }) =>
+  typeof option.id === "string" && Number.isInteger(option.quantity) && option.quantity >= 1;
 
 // Lo único que viaja a la base (ADMIN-PEDIDOS-40 y 42): los del menú, ids, opciones y cantidades, nunca
 // precios; los libres, nombre y precio.
@@ -205,6 +220,14 @@ export function toRpcItems(items: ManualOrderItem[]) {
       kind: item.kind,
       quantity: item.quantity,
       options: (item.options ?? []).map((option) => ({ id: option.id, quantity: option.quantity })),
+      ...(item.components?.length
+        ? {
+            components: item.components.map((component) => ({
+              product_id: component.productId,
+              options: component.options.map((option) => ({ id: option.id, quantity: option.quantity })),
+            })),
+          }
+        : {}),
       ...withNote,
     };
   });
@@ -232,7 +255,19 @@ function lineKey(item: ManualOrderItem): string | null {
     .map((option) => `${option.id}x${option.quantity}`)
     .join(",");
 
-  return `${item.kind}:${item.id}|${options}|${(item.note ?? "").trim()}`;
+  // En una promoción también cuenta lo elegido en cada unidad, sin importar el orden de las unidades.
+  const components = (item.components ?? [])
+    .map(
+      (component) =>
+        `${component.productId}=${[...component.options]
+          .sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0))
+          .map((option) => `${option.id}x${option.quantity}`)
+          .join(",")}`,
+    )
+    .sort()
+    .join(";");
+
+  return `${item.kind}:${item.id}|${options}|${components}|${(item.note ?? "").trim()}`;
 }
 
 // Agrega una línea al pedido: si ya hay una igual, suma la cantidad (hasta el máximo).

@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase-server";
 import type { OrderOffers } from "@/lib/orders/courier";
-import type { OrderItemOption } from "@/lib/orders/item-options";
+import type { OrderItemComponent, OrderItemOption } from "@/lib/orders/item-options";
 import { parseManualMenu, type ManualMenu } from "@/lib/orders/manual-menu";
 import { phoneDigits, toRpcItems, type ManualOrderInput } from "@/lib/orders/manual-order";
 import { todayAtIso } from "@/lib/orders/scheduled";
@@ -10,8 +10,9 @@ export type OrderItem = {
   quantity: number;
   unit_price: number;
   sort_order: number;
-  // Lo que el cliente eligió (grupo, nombre, cantidad y precio del momento); nulo sin opciones.
-  options: OrderItemOption[] | null;
+  // Lo que el cliente eligió (grupo, nombre, cantidad y precio del momento); nulo sin opciones. En una promoción,
+  // una entrada por unidad: `{ producto, opciones }` (ADMIN-PROMOS-9).
+  options: OrderItemOption[] | OrderItemComponent[] | null;
   // Lo que el cliente pidió para este producto (ADMIN-PEDIDOS-22); nulo si no dejó nota.
   note?: string | null;
 };

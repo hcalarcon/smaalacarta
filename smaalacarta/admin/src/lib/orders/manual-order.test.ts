@@ -279,3 +279,48 @@ describe("addLine y setLineQuantity — ADMIN-PEDIDOS-40", () => {
     expect(setLineQuantity([cafe], 0, 7)[0].quantity).toBe(7);
   });
 });
+
+describe("promociones con componentes — ADMIN-PROMOS-8", () => {
+  const unit = (id: string) => ({
+    productId: "p-emp",
+    name: "Empanada clásica",
+    options: [{ id, name: id, quantity: 1, price: id === "o-jyq" ? 200 : 0 }],
+  });
+  const promo = (ids: string[]) => ({
+    kind: "promo" as const,
+    id: "promo-1",
+    name: "Combo",
+    unitPrice: 3000,
+    quantity: 1,
+    components: ids.map(unit),
+  });
+
+  it("manda un componente por unidad con ids y cantidades, nunca precios", () => {
+    expect(toRpcItems([promo(["o-carne", "o-jyq"])])).toEqual([
+      {
+        id: "promo-1",
+        kind: "promo",
+        quantity: 1,
+        options: [],
+        components: [
+          { product_id: "p-emp", options: [{ id: "o-carne", quantity: 1 }] },
+          { product_id: "p-emp", options: [{ id: "o-jyq", quantity: 1 }] },
+        ],
+      },
+    ]);
+  });
+
+  it("la misma elección en otro orden es una sola línea; otra elección, otra línea", () => {
+    const lines = addLine(addLine([], promo(["o-carne", "o-jyq"])), promo(["o-jyq", "o-carne"]));
+    expect(lines).toHaveLength(1);
+    expect(lines[0].quantity).toBe(2);
+
+    expect(addLine(lines, promo(["o-carne", "o-carne"]))).toHaveLength(2);
+  });
+
+  it("rechaza un componente sin producto", () => {
+    const bad = { ...promo(["o-carne"]), components: [{ productId: "", name: "x", options: [] }] };
+    const r = validateManualOrder({ ...valid, items: [bad] });
+    expect(r.ok).toBe(false);
+  });
+});
