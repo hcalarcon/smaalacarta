@@ -1159,7 +1159,8 @@ Cubierto por: `src/lib/menu/product-fields.test.ts` (ADMIN-MENU-1 y 2),
 por: `src/lib/db/settings.test.ts` (ADMIN-CONFIG-1 a 6 y 9, contra Postgres real),
 `src/lib/db/storage.test.ts` (ADMIN-CONFIG-7), `src/lib/settings/*.test.ts` (formatos
 y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-CONFIG-10),
-`src/lib/settings/section-order.test.ts` (ADMIN-CONFIG-51) y
+`src/lib/settings/section-order.test.ts` y `src/components/ui/Section.test.tsx`
+(ADMIN-CONFIG-51 y 53) y
 `app/dashboard/settings/components/SettingsTutorial.test.tsx` (ADMIN-CONFIG-52).*
 
 - **ADMIN-CONFIG-1** Cada negocio tiene una configuración propia (plantilla, colores,
@@ -1345,6 +1346,10 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
 - **ADMIN-CONFIG-52** El botón "Ver guía" inicia voluntariamente un recorrido de Driver.js con una explicación para
   cada sección disponible de Configuración, sin alterar sus valores ni guardarlos. Respeta la preferencia de
   movimiento reducido del sistema.
+- **ADMIN-CONFIG-53** Las secciones extensas de Configuración se presentan como paneles plegables nativos con título
+  y descripción siempre visibles; Datos del negocio y Publicación empiezan abiertas, el resto cerrado. Abrirlas
+  conserva sus controles, el único guardado existente y el acceso por índice y tutorial, que expande el panel
+  correspondiente antes de enfocarlo.
 
 ## ADMIN-PEDIDOS — Pedidos
 

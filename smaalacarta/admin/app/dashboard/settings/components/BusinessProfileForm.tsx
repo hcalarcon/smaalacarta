@@ -22,6 +22,8 @@ export default function BusinessProfileForm() {
         id="datos"
         title="Datos del negocio"
         description="El nombre y la URL de tu menú público."
+        collapsible
+        defaultOpen
       >
         <Field
           label="Nombre del negocio"

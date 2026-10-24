@@ -68,6 +68,8 @@ export default function AnimationsSection({
       id="animaciones"
       title="Animaciones"
       description="Cómo se mueve tu menú al abrir, qué ve tu cliente mientras carga y una imagen de fondo. Disponible en todos los planes."
+      collapsible
+      className="lg:col-span-1"
     >
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
         <div className="min-w-0 space-y-6 lg:col-start-1 lg:row-start-1">

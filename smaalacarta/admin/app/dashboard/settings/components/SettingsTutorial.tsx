@@ -27,8 +27,23 @@ const explanations: Record<string, string> = {
 export default function SettingsTutorial({ sections }: { sections: SettingsSection[] }) {
   function startTour() {
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const initialDisclosure = new Map<string, boolean>();
     const steps = sections.map(({ id, label }, index) => ({
       element: `#${id}`,
+      onHighlightStarted: (element: Element | undefined) => {
+        if (element instanceof HTMLDetailsElement) {
+          initialDisclosure.set(element.id, element.open);
+          element.open = true;
+        }
+      },
+      onDeselected: (element: Element | undefined) => {
+        if (
+          element instanceof HTMLDetailsElement &&
+          initialDisclosure.get(element.id) === false
+        ) {
+          element.open = false;
+        }
+      },
       popover: {
         title: label,
         description: explanations[id] ?? `En esta sección podés configurar ${label.toLowerCase()}.`,

@@ -75,15 +75,16 @@ export default async function SettingsPage({
 
       <SettingsSaveProvider initialName={business.name} initialSlug={business.slug}>
         <SettingsLayout sections={sections} businessId={business.id}>
-          <BusinessProfileForm />
-
-          <ShareSection
-            name={business.name}
-            slug={business.slug}
-            planPdf={business.plan_pdf}
-            planWeb={business.plan_web}
-            planCompleto={business.plan_completo}
-          />
+          <div className="grid items-start gap-4 lg:grid-cols-2">
+            <BusinessProfileForm />
+            <ShareSection
+              name={business.name}
+              slug={business.slug}
+              planPdf={business.plan_pdf}
+              planWeb={business.plan_web}
+              planCompleto={business.plan_completo}
+            />
+          </div>
 
           <SettingsForm
             businessId={business.id}
@@ -93,22 +94,25 @@ export default async function SettingsPage({
             mercadoPagoReady={mercadoPagoReady}
           />
 
-          {deliveryOptions ? <DeliverySection options={deliveryOptions} /> : null}
+          <div className="grid items-start gap-4 lg:grid-cols-2">
+            {deliveryOptions ? <DeliverySection options={deliveryOptions} /> : null}
 
-          {own ? <OwnDeliverySection delivery={own} zones={ownZones} /> : null}
+            {own ? <OwnDeliverySection delivery={own} zones={ownZones} /> : null}
 
-          {mercadoPago ? (
-            <MercadoPagoSection
-              status={mpStatus}
-              isOwner={role === "owner"}
-              result={mp === "connected" || mp === "error" ? mp : null}
-            />
-          ) : null}
+            {mercadoPago ? (
+              <MercadoPagoSection
+                status={mpStatus}
+                isOwner={role === "owner"}
+                result={mp === "connected" || mp === "error" ? mp : null}
+              />
+            ) : null}
+          </div>
 
           <Section
             id="contrasena"
             title="Contraseña"
             description="Cambiá la contraseña de tu cuenta."
+            collapsible
           >
             <ResetPasswordForm />
           </Section>

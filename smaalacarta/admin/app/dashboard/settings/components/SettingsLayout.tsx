@@ -21,7 +21,7 @@ export default function SettingsLayout({
   return (
     <div
       className={`items-start lg:grid lg:gap-4 ${
-        navOpen ? "lg:grid-cols-[10rem_minmax(0,1fr)]" : "lg:grid-cols-[2.5rem_minmax(0,1fr)]"
+        navOpen ? "lg:grid-cols-[13rem_minmax(0,1fr)]" : "lg:grid-cols-[2.5rem_minmax(0,1fr)]"
       }`}
     >
       <SectionNav

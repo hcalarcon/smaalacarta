@@ -82,6 +82,7 @@ export default function ShareSection({
       id="compartir"
       title="Compartir"
       description="El código QR de tu menú, para imprimir o pegar en el local."
+      collapsible
     >
       <div>
         <span className="mb-1.5 block text-sm font-medium text-brand">Tu plan</span>

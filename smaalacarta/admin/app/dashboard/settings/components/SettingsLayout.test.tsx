@@ -29,7 +29,7 @@ const layout = () =>
 describe("SettingsLayout — ADMIN-CONFIG-38", () => {
   it("el índice arranca abierto y se oculta con el botón, dejando el control para volver a abrirlo", () => {
     const { container } = layout();
-    expect(container.firstElementChild!.className).toContain("lg:grid-cols-[10rem_");
+    expect(container.firstElementChild!.className).toContain("lg:grid-cols-[13rem_");
 
     fireEvent.click(screen.getByRole("button", { name: "Ocultar el índice de secciones" }));
     expect(container.firstElementChild!.className).toContain("lg:grid-cols-[2.5rem_");

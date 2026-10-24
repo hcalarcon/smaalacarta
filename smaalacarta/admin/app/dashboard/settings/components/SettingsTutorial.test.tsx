@@ -38,6 +38,11 @@ describe("SettingsTutorial — ADMIN-CONFIG-52", () => {
     expect(options.steps.every((step: { popover: { description: string } }) =>
       step.popover.description.length > 0,
     )).toBe(true);
+    const expandableSection = document.createElement("details");
+    options.steps[0].onHighlightStarted(expandableSection);
+    expect(expandableSection.open).toBe(true);
+    options.steps[0].onDeselected(expandableSection);
+    expect(expandableSection.open).toBe(false);
     expect(mocks.drive).toHaveBeenCalledOnce();
   });
 

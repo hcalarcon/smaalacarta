@@ -644,6 +644,8 @@ van en la parte B. Requisitos en `docs/SPEC.md` (ADMIN-OPCIONES-1 a 16). Migraci
       sticky en Apariencia con "Ampliar" a la vista completa en un modal
 - [x] [herni] Configuración: índice compacto y reordenable por negocio (orden guardado en este navegador)
       y guía voluntaria con Driver.js para todas las secciones disponibles (ADMIN-CONFIG-51 y 52)
+- [x] [herni] Configuración: tarjetas plegables, distribución en dos columnas y apertura desde el índice o la guía,
+      conservando todas las opciones y el guardado existente (ADMIN-CONFIG-53)
 - [x] [herni] Vista previa de Apariencia con el menú real (PUBLICO-58 a 61, ADMIN-CONFIG-43 a 47):
       - [x] `web/`: modo `?preview=1` que dibuja la configuración que le manda el panel por `postMessage`
       - [x] migración `20261017000000_vista_previa_menu.sql`: `build_public_menu` + `menu_preview(p_business_id)`

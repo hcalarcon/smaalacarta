@@ -305,13 +305,15 @@ export default function SettingsForm({
         save();
       }}
       noValidate
-      className="space-y-5"
+      className="grid items-start gap-4 lg:grid-cols-2"
     >
       {digitalMenu ? <>
       <Section
         id="publicacion"
         title="Publicación"
         description="Mientras esté apagado, tu menú no se muestra al público."
+        collapsible
+        defaultOpen
       >
         <label className="flex items-start gap-3">
           <input
@@ -324,7 +326,13 @@ export default function SettingsForm({
         </label>
       </Section>
 
-      <Section id="apariencia" title="Apariencia" description="Cómo ven tus clientes el menú.">
+      <Section
+        id="apariencia"
+        title="Apariencia"
+        description="Cómo ven tus clientes el menú."
+        collapsible
+        className="lg:col-span-2"
+      >
       {/* Controles a la izquierda y vista previa compacta fija a la derecha (ADMIN-CONFIG-40); en
           celular la vista previa va arriba de la sección. */}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_21rem]">
@@ -525,6 +533,7 @@ export default function SettingsForm({
         id="pdf"
         title="Menú en PDF"
         description="Para el plan QR + PDF: un archivo que se linkea aparte del menú digital, no hace falta publicar este último."
+        collapsible
       >
         <PdfUploader
           businessId={businessId}
@@ -543,6 +552,8 @@ export default function SettingsForm({
         id="horarios"
         title="Horarios"
         description="Con horarios cargados, el menú muestra si estás abierto o cerrado. Un horario puede pasar la medianoche (20:00 a 02:00)."
+        collapsible
+        className="lg:col-span-2"
       >
         <label className="flex items-center gap-3">
           <input
@@ -682,6 +693,7 @@ export default function SettingsForm({
         id="anticipados"
         title="Pedidos anticipados"
         description="Si vendés solo ciertos días, tus clientes pueden dejar el pedido mientras estás cerrado, para tu próxima apertura, hasta un corte que elegís para cada día."
+        collapsible
       >
         <label className="flex items-center gap-3">
           <input
@@ -745,6 +757,7 @@ export default function SettingsForm({
         id="cierre"
         title="Cierre temporal"
         description="Para vacaciones u otros cierres: el menú muestra que estás cerrado y no deja enviar pedidos."
+        collapsible
       >
         <label className="flex items-center gap-3">
           <input
@@ -799,6 +812,7 @@ export default function SettingsForm({
         id="entrega-pago"
         title="Entrega y pago"
         description="Qué ofrecés en el checkout del menú. Si dejás una sola opción en un grupo, tus clientes no tienen que elegir."
+        collapsible
       >
         <fieldset>
           <legend className="mb-1.5 text-sm font-medium text-brand">Tipos de entrega</legend>
@@ -895,6 +909,7 @@ export default function SettingsForm({
         id="programados"
         title="Pedidos programados"
         description="Dejá que tus clientes elijan para qué hora de hoy es el pedido, dentro de tus horarios de atención."
+        collapsible
       >
         <label className="flex items-center gap-3">
           <input
@@ -928,6 +943,7 @@ export default function SettingsForm({
         id="preparacion"
         title="Tiempos de preparación"
         description="Cuánto tarda tu cocina. Lo cargás al aceptar cada pedido y lo podés demorar si hace falta."
+        collapsible
       >
         <label className="flex items-start gap-3">
           <input
@@ -960,6 +976,7 @@ export default function SettingsForm({
         id="contacto"
         title="Contacto"
         description="Los pedidos, el envío y el retiro se arreglan con tus clientes por WhatsApp."
+        collapsible
       >
         <Field
           label="WhatsApp"

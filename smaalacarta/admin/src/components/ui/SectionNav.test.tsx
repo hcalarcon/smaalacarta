@@ -54,6 +54,7 @@ describe("SectionNav", () => {
       sections.map((section) => section.label),
     );
     expect(screen.queryByText("Menú en PDF")).toBeNull();
+    expect(screen.getByRole("link", { name: "Datos del negocio" })).toBeInTheDocument();
   });
 
   it("resalta la sección visible con aria-current (ADMIN-CONFIG-23)", () => {
@@ -62,7 +63,7 @@ describe("SectionNav", () => {
       observed([{ target: horarios, isIntersecting: true, intersectionRatio: 1 }]),
     );
     expect(screen.getByRole("combobox", { name: "Ir a sección" })).toHaveValue("horarios");
-    expect(screen.getByRole("option", { name: "Horarios" })).toHaveAttribute("aria-current", "location");
+    expect(screen.getByRole("link", { name: "Horarios" })).toHaveAttribute("aria-current", "location");
   });
 
   it("al elegir una sección salta, pone el hash y da el foco (ADMIN-CONFIG-23, 51)", () => {
@@ -76,6 +77,21 @@ describe("SectionNav", () => {
     });
     expect(window.location.hash).toBe("#horarios");
     expect(document.activeElement).toBe(horarios);
+  });
+
+  it("abre una sección plegada antes de saltar a ella (ADMIN-CONFIG-53)", () => {
+    const details = document.createElement("details");
+    details.id = "horarios";
+    details.scrollIntoView = vi.fn();
+    document.body.appendChild(details);
+    render(<SectionNav sections={[{ id: "horarios", label: "Horarios" }]} />);
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Ir a sección" }), {
+      target: { value: "horarios" },
+    });
+
+    expect(details.open).toBe(true);
+    expect(details.scrollIntoView).toHaveBeenCalled();
   });
 
   it("sin animación si el usuario prefiere menos movimiento", () => {

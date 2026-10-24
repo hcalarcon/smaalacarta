@@ -53,6 +53,7 @@ export default function SectionNav({
     const target = document.getElementById(id);
     if (!target) return;
 
+    if (target instanceof HTMLDetailsElement) target.open = true;
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
     history.replaceState(null, "", `#${id}`);
@@ -78,7 +79,7 @@ export default function SectionNav({
       style={{ "--nav-top": "72px" } as React.CSSProperties}
       className="sticky top-[var(--nav-top)] z-20 -mx-4 max-h-[calc(100vh-var(--nav-top)-1rem)] overflow-y-auto border-b border-line bg-cream/95 px-4 py-2 shadow-sm backdrop-blur md:-mx-6 md:px-6 lg:top-24 lg:mx-0 lg:border-0 lg:bg-transparent lg:px-0 lg:shadow-none lg:backdrop-blur-none"
     >
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap">
         {onToggle ? (
           <button
             type="button"
@@ -86,12 +87,22 @@ export default function SectionNav({
             aria-expanded={open}
             aria-label={open ? "Ocultar el índice de secciones" : "Mostrar el índice de secciones"}
             title={open ? "Ocultar el índice" : "Mostrar el índice"}
-            className="hidden h-11 items-center rounded-xl px-2 text-sm font-medium text-stone-500 transition hover:bg-brand-soft hover:text-brand focus-visible:outline-2 focus-visible:outline-accent lg:flex"
+            className="hidden h-9 shrink-0 items-center rounded-xl px-2 text-sm font-medium text-stone-500 transition hover:bg-brand-soft hover:text-brand focus-visible:outline-2 focus-visible:outline-accent lg:flex"
           >
             <span aria-hidden>{open ? "‹" : "›"}</span>
           </button>
         ) : null}
-        <div className={`flex min-w-0 flex-1 flex-wrap items-center gap-2 ${open ? "" : "lg:hidden"}`}>
+        <button
+          type="button"
+          onClick={() => setReordering((value) => !value)}
+          aria-expanded={reordering}
+          aria-label={reordering ? "Terminar de reordenar el índice" : "Reordenar índice"}
+          title="Reordenar índice"
+          className="min-h-9 rounded-xl border border-line-strong bg-white px-2.5 text-xs font-medium text-brand transition hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-accent"
+        >
+          {reordering ? "Listo" : "Ordenar"}
+        </button>
+        <div className={`flex min-w-0 flex-1 items-center gap-2 lg:hidden ${open ? "" : "hidden"}`}>
           <label className="sr-only" htmlFor="settings-section-nav">
             Ir a sección
           </label>
@@ -103,21 +114,36 @@ export default function SectionNav({
             className="min-h-11 min-w-0 flex-1 rounded-xl border border-line-strong bg-white px-3 py-2 text-sm font-medium text-brand focus:border-accent focus:outline-none focus:ring-2 focus:ring-accent/30"
           >
             {orderedSections.map(({ id, label }) => (
-              <option key={id} value={id} aria-current={active === id ? "location" : undefined}>
+              <option key={id} value={id}>
                 {label}
               </option>
             ))}
           </select>
-          <button
-            type="button"
-            onClick={() => setReordering((value) => !value)}
-            aria-expanded={reordering}
-            className="min-h-11 whitespace-nowrap rounded-xl border border-line-strong bg-white px-3 text-sm font-medium text-brand transition hover:bg-brand-soft focus-visible:outline-2 focus-visible:outline-accent"
-          >
-            {reordering ? "Listo" : "Reordenar índice"}
-          </button>
         </div>
       </div>
+
+      {open ? (
+        <div className="mt-2 hidden space-y-0.5 lg:block">
+          {orderedSections.map(({ id, label }) => (
+            <a
+              key={id}
+              href={`#${id}`}
+              onClick={(event) => {
+                event.preventDefault();
+                jump(id);
+              }}
+              aria-current={active === id ? "location" : undefined}
+              className={`block rounded-xl px-3 py-2 text-sm leading-snug transition ${
+                active === id
+                  ? "bg-brand-soft font-semibold text-brand"
+                  : "text-stone-600 hover:bg-white hover:text-brand"
+              }`}
+            >
+              {label}
+            </a>
+          ))}
+        </div>
+      ) : null}
 
       {reordering && open ? (
         <div
@@ -126,7 +152,7 @@ export default function SectionNav({
           className="mt-2 space-y-1 rounded-2xl border border-line bg-white p-2 shadow-sm lg:max-h-[60vh] lg:overflow-y-auto"
         >
           <p className="px-2 pb-1 text-xs text-stone-500">
-            Usá las flechas para cambiar el orden. Se guarda para este negocio en este navegador.
+            Usá las flechas. Se guarda para este negocio en este navegador.
           </p>
           {orderedSections.map(({ id, label }, index) => (
             <div

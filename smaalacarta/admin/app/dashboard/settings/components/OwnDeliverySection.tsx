@@ -33,6 +33,7 @@ export default function OwnDeliverySection({
       id="envios"
       title="Envíos"
       description="Tus zonas y precios de envío, y tu repartidor propio."
+      collapsible
     >
       <label className="flex min-h-11 cursor-pointer items-center gap-3 py-1.5">
         <input

@@ -70,6 +70,7 @@ export default function MercadoPagoSection({ status, isOwner, result }: Props) {
       id="mercadopago"
       title="Mercado Pago"
       description="Conectá tu cuenta de Mercado Pago para que tus clientes te paguen online."
+      collapsible
     >
       {result === "connected" ? (
         <p role="status" className="rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-800">
