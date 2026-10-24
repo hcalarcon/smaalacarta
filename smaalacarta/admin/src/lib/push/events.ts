@@ -141,6 +141,17 @@ export function detectEvents(payload: WebhookPayload): PushEvent[] {
     }
   }
 
+  // Envío propio (ENVIO-250): al confirmar el local, el pedido pasa de esperando a asignado a su repartidor propio, sin
+  // búsqueda ni ofertas: solo se le avisa a él.
+  if (
+    before.courier_status === "waiting" &&
+    order.courier_status === "accepted" &&
+    order.courier_id &&
+    before.courier_id === null
+  ) {
+    add("courier_chosen");
+  }
+
   if (order.status === "cancelled" && before.status !== "cancelled") add("order_cancelled");
 
   // Avisos al repartidor que ya tiene el pedido (ENVIO-158 a 160). Un pedido cerrado no avisa más.

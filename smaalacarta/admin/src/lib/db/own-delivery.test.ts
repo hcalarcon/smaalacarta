@@ -860,3 +860,29 @@ describe("la migración pasa los negocios de la tarea 47 a envío propio — ENV
     }
   }, 120_000);
 });
+
+describe("ajustes de la revisión — ENVIO-250 y 251", () => {
+  it("un pedido de zona propia que esperaba cuando el negocio pasó a libre queda 'Lo llevo yo' al confirmarlo", async () => {
+    await ownZone(NEG_P, "Barrio Norte", 1500);
+    const zone = (await db.query<{ id: string }>("select id from business_own_zones limit 1")).rows[0].id;
+    const o = await placed("propio", { zone });
+
+    await db.exec(`update businesses set delivery_type = 'free' where id = '${NEG_P}'`);
+    await confirm(PRO, o.id);
+
+    expect(await row(o.id)).toMatchObject({ courier_id: null, courier_status: "self" });
+    await db.exec(`update businesses set delivery_type = 'own' where id = '${NEG_P}'`);
+  });
+
+  it("un repartidor que pasa a ser propio pierde sus ofertas abiertas", async () => {
+    const z = await orderLibre({ zone: cantera });
+    if (!z.ok) throw new Error(z.error);
+    await confirm(LIB, z.id);
+    expect((await offer(db, REPA_L_USER, z.id)).ok).toBe(true);
+    expect(await count(`select count(*) as n from courier_offers where order_id = '${z.id}'`)).toBe(1);
+
+    await db.exec(`update couriers set courier_type = 'own', own_business_id = '${NEG_Q}' where id = '${REPA_L}'`);
+    expect(await count(`select count(*) as n from courier_offers where order_id = '${z.id}'`)).toBe(0);
+    await db.exec(`update couriers set courier_type = 'free', own_business_id = null where id = '${REPA_L}'`);
+  });
+});
