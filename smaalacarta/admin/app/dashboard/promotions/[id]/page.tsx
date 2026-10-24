@@ -61,7 +61,7 @@ export default async function EditPromotionPage({
           discountPercent: Number(promotion.discount_percent),
           price: promotion.price == null ? null : Number(promotion.price),
           active: promotion.active,
-          productIds: promotion.promotion_items.map((item) => item.product_id),
+          items: promotion.promotion_items.map((item) => ({ productId: item.product_id, quantity: item.quantity })),
           imageUrl: promotion.image_url,
           imageProductId: promotion.image_product_id,
           validUntil: promotion.valid_until,

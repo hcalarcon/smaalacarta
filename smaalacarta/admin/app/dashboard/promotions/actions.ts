@@ -12,6 +12,7 @@ import { promotionErrorMessage } from "@/lib/promotions/messages";
 import {
   normalizePromotion,
   validatePromotion,
+  type PromotionItemInput,
   type PromotionType,
 } from "@/lib/promotions/validation";
 
@@ -33,7 +34,7 @@ export async function savePromotionAction(input: {
   discountPercent: number;
   price: number | null;
   active: boolean;
-  productIds: string[];
+  items: PromotionItemInput[];
   imageUrl?: string | null;
   imageProductId?: string | null;
   // Instante ISO en que termina (el panel lo arma con la hora de Argentina), o nulo.

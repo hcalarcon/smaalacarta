@@ -80,9 +80,10 @@ export default function PromotionsClient({
 
       <ul className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {promotions.map((promotion) => {
-          const products = promotion.promotion_items
-            .map((item) => item.products)
-            .filter((p): p is NonNullable<typeof p> => !!p);
+          const lines = promotion.promotion_items.flatMap((item) =>
+            item.products ? [{ product: item.products, quantity: item.quantity ?? 1 }] : [],
+          );
+          const products = lines.map((line) => line.product);
 
           const pricing = promotionPricing(
             {
@@ -90,7 +91,7 @@ export default function PromotionsClient({
               discountPercent: Number(promotion.discount_percent),
               price: promotion.price == null ? null : Number(promotion.price),
             },
-            products.map((p) => Number(p.price)),
+            lines.map((line) => ({ price: Number(line.product.price), quantity: line.quantity })),
           );
 
           const image = promotionImage({
@@ -166,9 +167,10 @@ export default function PromotionsClient({
                 {products.length === 0 ? (
                   <li className="text-stone-400">Sin productos</li>
                 ) : (
-                  products.map((product) => (
+                  lines.map(({ product, quantity }) => (
                     <li key={product.id} className="truncate">
-                      • {product.name}
+                      • {quantity > 1 ? `${quantity}× ` : ""}
+                      {product.name}
                     </li>
                   ))
                 )}

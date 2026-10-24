@@ -29,8 +29,7 @@ import FormAlert from "@/components/ui/FormAlert";
 import ImageUploader from "@/components/ui/ImageUploader";
 import { moveItem } from "@/lib/menu/ordering";
 import { formatMoney, promotionPricing } from "@/lib/promotions/pricing";
-import { REQUIRED_GROUP_PROMO_REASON } from "@/lib/menu/options";
-import type { PromotionType } from "@/lib/promotions/validation";
+import { PROMOTION_QUANTITY, type PromotionItemInput, type PromotionType } from "@/lib/promotions/validation";
 import { argentinaDate, endShortcuts, endsAtIso, splitEnd } from "@/lib/promotions/validity";
 
 export type ProductOption = {
@@ -39,8 +38,6 @@ export type ProductOption = {
   price: number;
   active: boolean;
   categoryName: string;
-  // Tiene un grupo de opciones obligatorio: no se puede agregar a una promoción.
-  hasRequiredGroup?: boolean;
   // Su foto, para elegirla como imagen de la promoción (ADMIN-PROMO-3).
   imageUrl?: string | null;
 };
@@ -53,7 +50,7 @@ export type PromotionInitial = {
   discountPercent: number;
   price: number | null;
   active: boolean;
-  productIds: string[];
+  items: PromotionItemInput[];
   imageUrl: string | null;
   imageProductId: string | null;
   validUntil: string | null;
@@ -97,21 +94,19 @@ function PaletteItem({
   added: boolean;
   onAdd: () => void;
 }) {
-  const blocked = !!product.hasRequiredGroup;
-
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: PALETTE + product.id,
-    disabled: added || blocked,
+    disabled: added,
   });
 
   return (
     <li
       ref={setNodeRef}
       className={`flex items-center gap-2 rounded-xl border border-line bg-white px-2 py-2 ${
-        added || blocked ? "opacity-50" : ""
+        added ? "opacity-50" : ""
       } ${isDragging ? "opacity-40" : ""}`}
     >
-      {added || blocked ? (
+      {added ? (
         <span className="w-8" />
       ) : (
         <DragHandle {...attributes} {...listeners} />
@@ -125,17 +120,13 @@ function PaletteItem({
           )}
         </p>
         <p className="text-xs text-stone-500">{formatMoney(product.price)}</p>
-        {blocked ? (
-          <p className="text-xs text-amber-700">{REQUIRED_GROUP_PROMO_REASON}</p>
-        ) : null}
       </div>
 
       <button
         type="button"
         onClick={onAdd}
-        disabled={added || blocked}
+        disabled={added}
         aria-label={`Agregar ${product.name}`}
-        title={blocked ? REQUIRED_GROUP_PROMO_REASON : undefined}
         className="rounded-lg bg-brand-soft px-2.5 py-1 text-sm font-semibold text-brand transition hover:bg-line disabled:cursor-default disabled:opacity-40"
       >
         {added ? "✓" : "+"}
@@ -146,9 +137,13 @@ function PaletteItem({
 
 function SelectedItem({
   product,
+  quantity,
+  onQuantity,
   onRemove,
 }: {
   product: ProductOption;
+  quantity: number;
+  onQuantity: (quantity: number) => void;
   onRemove: () => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -168,7 +163,35 @@ function SelectedItem({
 
       <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-stone-900">{product.name}</p>
-        <p className="text-xs text-stone-500">{formatMoney(product.price)}</p>
+        <p className="text-xs text-stone-500">
+          {quantity > 1
+            ? `${formatMoney(product.price)} × ${quantity} = ${formatMoney(product.price * quantity)}`
+            : formatMoney(product.price)}
+        </p>
+      </div>
+
+      <div className="flex items-center gap-1" role="group" aria-label={`Cantidad de ${product.name}`}>
+        <button
+          type="button"
+          onClick={() => onQuantity(quantity - 1)}
+          disabled={quantity <= PROMOTION_QUANTITY.min}
+          aria-label={`Menos ${product.name}`}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-line-strong bg-white font-semibold text-brand transition hover:bg-brand-soft disabled:opacity-40"
+        >
+          −
+        </button>
+        <span className="w-6 text-center text-sm font-semibold tabular-nums" aria-live="polite">
+          {quantity}
+        </span>
+        <button
+          type="button"
+          onClick={() => onQuantity(quantity + 1)}
+          disabled={quantity >= PROMOTION_QUANTITY.max}
+          aria-label={`Más ${product.name}`}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-line-strong bg-white font-semibold text-brand transition hover:bg-brand-soft disabled:opacity-40"
+        >
+          +
+        </button>
       </div>
 
       <button
@@ -221,7 +244,11 @@ export default function PromotionEditor({
   const [discount, setDiscount] = useState(String(initial?.discountPercent ?? 10));
   const [price, setPrice] = useState(initial?.price != null ? String(initial.price) : "");
   const [active, setActive] = useState(initial?.active ?? true);
-  const [selectedIds, setSelectedIds] = useState<string[]>(initial?.productIds ?? []);
+  const [selectedIds, setSelectedIds] = useState<string[]>(initial?.items.map((item) => item.productId) ?? []);
+  // Cuántas unidades de cada producto lleva (1 si no se tocó).
+  const [quantities, setQuantities] = useState<Record<string, number>>(
+    Object.fromEntries((initial?.items ?? []).map((item) => [item.productId, item.quantity])),
+  );
   const [search, setSearch] = useState("");
   const [imageUrl, setImageUrl] = useState(initial?.imageUrl ?? "");
   const [imageProductId, setImageProductId] = useState<string | null>(initial?.imageProductId ?? null);
@@ -272,13 +299,10 @@ export default function PromotionEditor({
       discountPercent: Number.isFinite(numericDiscount) ? numericDiscount : 0,
       price: numericPrice != null && Number.isFinite(numericPrice) ? numericPrice : null,
     },
-    selected.map((p) => p.price),
+    selected.map((p) => ({ price: p.price, quantity: quantities[p.id] ?? 1 })),
   );
 
   function addProduct(productId: string, index?: number) {
-    // También por si se suelta o se agrega por otro camino: la base lo rechazaría igual.
-    if (byId.get(productId)?.hasRequiredGroup) return;
-
     setSelectedIds((prev) => {
       if (prev.includes(productId)) return prev;
       const next = [...prev];
@@ -341,7 +365,7 @@ export default function PromotionEditor({
         discountPercent: numericDiscount,
         price: numericPrice,
         active,
-        productIds: selectedIds,
+        items: selectedIds.map((id) => ({ productId: id, quantity: quantities[id] ?? 1 })),
         imageUrl: imageUrl.trim() === "" ? null : imageUrl,
         // Si el producto elegido salió de la promoción, ya no vale como imagen.
         imageProductId: imageProductId && selectedIds.includes(imageProductId) ? imageProductId : null,
@@ -508,6 +532,13 @@ export default function PromotionEditor({
                       <SelectedItem
                         key={product.id}
                         product={product}
+                        quantity={quantities[product.id] ?? 1}
+                        onQuantity={(quantity) =>
+                          setQuantities((prev) => ({
+                            ...prev,
+                            [product.id]: Math.min(PROMOTION_QUANTITY.max, Math.max(PROMOTION_QUANTITY.min, quantity)),
+                          }))
+                        }
                         onRemove={() =>
                           setSelectedIds((prev) => prev.filter((id) => id !== product.id))
                         }

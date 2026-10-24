@@ -15,8 +15,6 @@ type ProductOptionGroupsPickerProps = {
   // Los grupos elegidos, en su orden.
   value: string[];
   onChange: (ids: string[]) => void;
-  // El producto está en una promoción: no admite grupos obligatorios (ADMIN-OPCIONES-10).
-  inPromotion: boolean;
 };
 
 // Selector múltiple "Opciones y extras" del producto, con el orden de los grupos (ADMIN-OPCIONES-13).
@@ -24,7 +22,6 @@ export default function ProductOptionGroupsPicker({
   groups,
   value,
   onChange,
-  inPromotion,
 }: ProductOptionGroupsPickerProps) {
   const byId = new Map(groups.map((group) => [group.id, group]));
   const selected = value
@@ -102,8 +99,7 @@ export default function ProductOptionGroupsPicker({
       {available.length > 0 ? (
         <ul className="space-y-1.5">
           {available.map((group) => {
-            const blocked = inPromotion && group.min_select >= 1;
-            const disabled = full || blocked;
+            const disabled = full;
 
             return (
               <li key={group.id} className="flex items-center gap-2 text-sm">
@@ -120,11 +116,6 @@ export default function ProductOptionGroupsPicker({
                   {group.name}{" "}
                   <span className="text-xs text-stone-500">· {describeGroupRule(group)}</span>
                 </span>
-                {blocked ? (
-                  <span className="text-xs text-amber-700">
-                    El producto está en una promoción: no admite grupos obligatorios.
-                  </span>
-                ) : null}
               </li>
             );
           })}

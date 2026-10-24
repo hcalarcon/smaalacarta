@@ -7,7 +7,10 @@ const base = {
   type: "percent",
   discountPercent: 20,
   price: null as number | null,
-  productIds: ["p1", "p2"],
+  items: [
+    { productId: "p1", quantity: 1 },
+    { productId: "p2", quantity: 1 },
+  ],
 };
 
 describe("validatePromotion — ADMIN-PROMOS-1", () => {
@@ -53,13 +56,28 @@ describe("validatePromotion — ADMIN-PROMOS-1", () => {
   });
 
   it("exige al menos un producto", () => {
-    const r = validatePromotion({ ...base, productIds: [] });
+    const r = validatePromotion({ ...base, items: [] });
     expect(r.ok === false && r.errors.products).toBeTruthy();
   });
 
   it("no acepta el mismo producto dos veces", () => {
-    const r = validatePromotion({ ...base, productIds: ["p1", "p1"] });
+    const r = validatePromotion({
+      ...base,
+      items: [
+        { productId: "p1", quantity: 1 },
+        { productId: "p1", quantity: 2 },
+      ],
+    });
     expect(r.ok === false && r.errors.products).toBeTruthy();
+  });
+
+  it.each([0, 21, 1.5, -1, Number.NaN])("rechaza la cantidad %j", (quantity) => {
+    const r = validatePromotion({ ...base, items: [{ productId: "p1", quantity }] });
+    expect(r.ok === false && r.errors.products).toMatch(/1 a 20/);
+  });
+
+  it.each([1, 3, 20])("acepta la cantidad %j", (quantity) => {
+    expect(validatePromotion({ ...base, items: [{ productId: "p1", quantity }] })).toEqual({ ok: true });
   });
 });
 
@@ -70,7 +88,7 @@ describe("normalizePromotion", () => {
     type: "percent" as const,
     discountPercent: 20,
     price: 999,
-    productIds: ["p1"],
+    items: [{ productId: "p1", quantity: 3 }],
     active: true,
   };
 
@@ -147,7 +165,7 @@ describe("normalizePromotion con imagen y vigencia — ADMIN-PROMO-2", () => {
     type: "percent" as const,
     discountPercent: 10,
     price: null,
-    productIds: ["p1"],
+    items: [{ productId: "p1", quantity: 3 }],
     active: true,
   };
 

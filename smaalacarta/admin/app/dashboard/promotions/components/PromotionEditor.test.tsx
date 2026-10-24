@@ -28,7 +28,10 @@ const initial: PromotionInitial = {
   discountPercent: 20,
   price: null,
   active: true,
-  productIds: ["p1", "p2"],
+  items: [
+    { productId: "p1", quantity: 1 },
+    { productId: "p2", quantity: 1 },
+  ],
   imageUrl: null,
   imageProductId: null,
   validUntil: null,
@@ -174,5 +177,33 @@ describe("editor de promoción — vigencia y stock (ADMIN-PROMO-5, 7 y 10)", ()
 
     expect(await screen.findByText(/número entero de 1 en adelante/)).toBeTruthy();
     expect(push).not.toHaveBeenCalled();
+  });
+});
+
+describe("editor de promoción — cantidad por producto (ADMIN-PROMOS-1)", () => {
+  it("guarda la cantidad de cada producto en el orden elegido", async () => {
+    open({ items: [{ productId: "p1", quantity: 3 }, { productId: "p2", quantity: 1 }] });
+    fireEvent.click(screen.getByLabelText("Más Medialuna"));
+    save();
+
+    await waitFor(() => expect(savePromotionAction).toHaveBeenCalled());
+    expect(lastCall().items).toEqual([
+      { productId: "p1", quantity: 3 },
+      { productId: "p2", quantity: 2 },
+    ]);
+  });
+
+  it("un producto recién agregado lleva 1 y no baja de 1 ni pasa de 20", () => {
+    open({ items: [{ productId: "p1", quantity: 20 }, { productId: "p2", quantity: 1 }] });
+
+    expect(screen.getByLabelText("Menos Medialuna")).toBeDisabled();
+    expect(screen.getByLabelText("Más Café")).toBeDisabled();
+    expect(screen.getByLabelText("Menos Café")).toBeEnabled();
+  });
+
+  it("muestra el subtotal del producto con su cantidad", () => {
+    open({ items: [{ productId: "p1", quantity: 3 }, { productId: "p2", quantity: 1 }] });
+
+    expect(screen.getByText(/× 3 =/)).toBeTruthy();
   });
 });

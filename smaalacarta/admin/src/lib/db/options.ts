@@ -53,43 +53,6 @@ export async function listProductGroupLinks(businessId: string) {
   return links;
 }
 
-// Los productos que forman parte de alguna promoción: no pueden tener un grupo obligatorio.
-export async function listProductIdsInPromotions(businessId: string) {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("promotion_items")
-    .select("product_id")
-    .eq("business_id", businessId);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return [...new Set((data ?? []).map((row) => row.product_id))];
-}
-
-// Los productos con algún grupo obligatorio (ADMIN-OPCIONES-14).
-export async function listRequiredGroupProductIds(businessId: string) {
-  const supabase = await createClient();
-
-  const { data, error } = await supabase
-    .from("option_groups")
-    .select("id, product_option_groups(product_id)")
-    .eq("business_id", businessId)
-    .gte("min_select", 1);
-
-  if (error) {
-    throw new Error(error.message);
-  }
-
-  return new Set(
-    (data ?? []).flatMap((group) =>
-      (group.product_option_groups ?? []).map((link) => link.product_id),
-    ),
-  );
-}
-
 // Guarda el grupo con sus opciones en un solo paso (ADMIN-OPCIONES-3). Los errores de la
 // base vuelven como `{ error }` para poder traducirlos.
 export async function saveOptionGroup(

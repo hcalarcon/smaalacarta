@@ -86,11 +86,6 @@ export function validateProductGroupIds(ids: string[]): ValidationResult<"groups
   return { ok: true };
 }
 
-// Un producto con algún grupo obligatorio no puede estar en promociones (ADMIN-OPCIONES-10).
-export function hasRequiredGroup(groups: { min_select: number }[]) {
-  return groups.some((g) => g.min_select >= 1);
-}
-
 // La regla de un grupo, en una línea para la lista del panel (ADMIN-OPCIONES-12).
 export function describeGroupRule(group: {
   min_select: number;
@@ -108,8 +103,6 @@ export function describeGroupRule(group: {
 // Errores de Postgres (por SQLSTATE) al guardar grupos, opciones y asociaciones, en español.
 export function optionGroupErrorMessage(error: DbError) {
   switch (error.code) {
-    case "P0014":
-      return "Un producto con opciones obligatorias no puede estar en una promoción. Sacalo de la promoción primero.";
     case "P0015":
       return `Superaste el máximo: ${MAX_OPTIONS_PER_GROUP} opciones por grupo y ${MAX_GROUPS_PER_PRODUCT} grupos por producto.`;
     case "23514":
@@ -127,8 +120,3 @@ export function optionGroupErrorMessage(error: DbError) {
       return "No pudimos guardar el grupo. Probá de nuevo.";
   }
 }
-
-// Por qué un producto con grupo obligatorio no aparece disponible en el editor de promociones
-// (ADMIN-OPCIONES-14).
-export const REQUIRED_GROUP_PROMO_REASON =
-  "Tiene opciones obligatorias: no puede estar en una promoción.";

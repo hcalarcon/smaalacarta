@@ -22,7 +22,6 @@ const group = (id: string, name: string, min = 0, max = 2): PickerGroup => ({
 function Picker(props: {
   groups: PickerGroup[];
   initial?: string[];
-  inPromotion?: boolean;
   onChange?: (ids: string[]) => void;
 }) {
   const [value, setValue] = useState(props.initial ?? []);
@@ -30,7 +29,6 @@ function Picker(props: {
     <ProductOptionGroupsPicker
       groups={props.groups}
       value={value}
-      inPromotion={props.inPromotion ?? false}
       onChange={(ids) => {
         setValue(ids);
         props.onChange?.(ids);
@@ -73,13 +71,13 @@ describe("selector de opciones y extras del producto — ADMIN-OPCIONES-13", () 
     expect(screen.getByText(/hasta 6 grupos/i)).toBeInTheDocument();
   });
 
-  // ADMIN-OPCIONES-10: la base lo rechazaría; acá se explica antes de intentarlo.
-  it("en un producto con promoción, deshabilita los obligatorios con el motivo", () => {
-    render(<Picker groups={groups} inPromotion />);
+  // ADMIN-PROMOS-7: un grupo obligatorio se puede agregar aunque el producto esté en una promoción.
+  it("deja agregar los grupos obligatorios y los opcionales", () => {
+    render(<Picker groups={groups} />);
 
-    expect(screen.getByLabelText("Agregar Sabores")).toBeDisabled();
+    expect(screen.getByLabelText("Agregar Sabores")).toBeEnabled();
     expect(screen.getByLabelText("Agregar Extras")).toBeEnabled();
-    expect(screen.getByText(/está en una promoción/i)).toBeInTheDocument();
+    expect(screen.queryByText(/está en una promoción/i)).not.toBeInTheDocument();
   });
 
   it("sin grupos creados, lo dice en vez de mostrar un selector vacío", () => {
@@ -133,7 +131,7 @@ describe("chip 'Con opciones' — ADMIN-OPCIONES-13", () => {
   });
 });
 
-describe("editor de promociones — ADMIN-OPCIONES-14", () => {
+describe("editor de promociones — ADMIN-PROMOS-7", () => {
   const products = [
     { id: "p1", name: "Café", price: 1000, active: true, categoryName: "Bebidas" },
     {
@@ -142,25 +140,16 @@ describe("editor de promociones — ADMIN-OPCIONES-14", () => {
       price: 3000,
       active: true,
       categoryName: "Postres",
-      hasRequiredGroup: true,
     },
   ];
 
-  it("deshabilita el producto con grupo obligatorio y dice por qué", () => {
-    render(<PromotionEditor products={products} />);
+  it("deja agregar productos con opciones obligatorias, sin avisos", () => {
+    render(<PromotionEditor businessId="b1" products={products} />);
 
-    expect(screen.getByLabelText("Agregar Helado")).toBeDisabled();
-    expect(screen.getByText(/opciones obligatorias/i)).toBeInTheDocument();
-    expect(screen.getByLabelText("Agregar Café")).toBeEnabled();
-  });
-
-  it("no lo agrega aunque se haga clic", () => {
-    render(<PromotionEditor products={products} />);
+    expect(screen.getByLabelText("Agregar Helado")).toBeEnabled();
+    expect(screen.queryByText(/opciones obligatorias/i)).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByLabelText("Agregar Helado"));
-    expect(screen.queryByLabelText("Quitar Helado")).not.toBeInTheDocument();
-
-    fireEvent.click(screen.getByLabelText("Agregar Café"));
-    expect(screen.getByLabelText("Quitar Café")).toBeInTheDocument();
+    expect(screen.getByLabelText("Quitar Helado")).toBeInTheDocument();
   });
 });

@@ -8,7 +8,6 @@ import { getDefaultImageSettings } from "@/lib/db/settings";
 import {
   listOptionGroups,
   listProductGroupLinks,
-  listProductIdsInPromotions,
 } from "@/lib/db/options";
 import type { Product } from "@/lib/db/products";
 import { hasDigitalMenu } from "@/lib/plan-access";
@@ -28,14 +27,12 @@ export default async function MenuPage() {
     redirect("/dashboard");
   }
 
-  const [categories, optionGroups, productGroupLinks, productIdsInPromotions, defaultImages] =
-    await Promise.all([
-      getCategoriesWithProducts(current.business.id),
-      listOptionGroups(current.business.id),
-      listProductGroupLinks(current.business.id),
-      listProductIdsInPromotions(current.business.id),
-      getDefaultImageSettings(current.business.id),
-    ]);
+  const [categories, optionGroups, productGroupLinks, defaultImages] = await Promise.all([
+    getCategoriesWithProducts(current.business.id),
+    listOptionGroups(current.business.id),
+    listProductGroupLinks(current.business.id),
+    getDefaultImageSettings(current.business.id),
+  ]);
 
   // Cuántos productos usa cada grupo.
   const groupUsage: Record<string, number> = {};
@@ -59,7 +56,6 @@ export default async function MenuPage() {
       optionGroups={optionGroups}
       productGroupLinks={productGroupLinks}
       groupUsage={groupUsage}
-      productIdsInPromotions={productIdsInPromotions}
       defaultImages={defaultImages}
     />
   );

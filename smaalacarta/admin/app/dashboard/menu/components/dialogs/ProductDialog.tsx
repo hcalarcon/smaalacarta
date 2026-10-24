@@ -23,7 +23,6 @@ type ProductDialogProps = {
   // en alguna promoción (ADMIN-OPCIONES-13).
   optionGroups: PickerGroup[];
   initialGroupIds: string[];
-  inPromotion: boolean;
   // Imágenes de muestra (ADMIN-CONFIG-32): nombre de la categoría del producto, si el negocio las tiene
   // prendidas y si cargó su logo.
   categoryName: string | null;
@@ -52,7 +51,6 @@ function ProductDialogForm({
   categoryId,
   optionGroups,
   initialGroupIds,
-  inPromotion,
   categoryName,
   defaultImages,
   onSubmit,
@@ -225,7 +223,6 @@ function ProductDialogForm({
               groups={optionGroups}
               value={groupIds}
               onChange={setGroupIds}
-              inPromotion={inPromotion}
             />
 
             <TranslationsFields

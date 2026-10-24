@@ -1,12 +1,13 @@
-import { listRequiredGroupProductIds } from "@/lib/db/options";
 import { deleteRecord, updateRecord } from "@/lib/db/resources";
 import { sortByOrder } from "@/lib/menu/ordering";
-import type { PromotionType } from "@/lib/promotions/validation";
+import type { PromotionItemInput, PromotionType } from "@/lib/promotions/validation";
 import { createClient } from "@/lib/supabase-server";
 
 export type PromotionItem = {
   product_id: string;
   sort_order: number;
+  // Cuántas unidades de este producto lleva la promoción (ADMIN-PROMOS-1).
+  quantity: number;
   products: {
     id: string;
     name: string;
@@ -41,7 +42,7 @@ export type PromotionStock = { sold: number; remaining: number | null };
 export type PromotionWithStock = Promotion & { stats: PromotionStock };
 
 const SELECT =
-  "*, promotion_items(product_id, sort_order, products(id, name, price, active, image_url))";
+  "*, promotion_items(product_id, sort_order, quantity, products(id, name, price, active, image_url))";
 
 function withOrderedItems(promotion: Promotion): Promotion {
   return {
@@ -122,15 +123,12 @@ export async function getPromotion(businessId: string, id: string) {
 export async function listProductsForPromotions(businessId: string) {
   const supabase = await createClient();
 
-  const [{ data, error }, requiredGroupProducts] = await Promise.all([
-    supabase
-      .from("categories")
-      .select(
-        "id, name, sort_order, created_at, products(id, name, price, active, sort_order, created_at, image_url)",
-      )
-      .eq("business_id", businessId),
-    listRequiredGroupProductIds(businessId),
-  ]);
+  const { data, error } = await supabase
+    .from("categories")
+    .select(
+      "id, name, sort_order, created_at, products(id, name, price, active, sort_order, created_at, image_url)",
+    )
+    .eq("business_id", businessId);
 
   if (error) {
     throw new Error(error.message);
@@ -145,8 +143,6 @@ export async function listProductsForPromotions(businessId: string) {
       // Para elegir la foto de la promoción (ADMIN-PROMO-3).
       imageUrl: (product.image_url as string | null) ?? null,
       categoryName: category.name as string,
-      // Un producto con opciones obligatorias no puede estar en una promoción (ADMIN-OPCIONES-14).
-      hasRequiredGroup: requiredGroupProducts.has(product.id as string),
     })),
   );
 }
@@ -159,7 +155,7 @@ export type SavePromotionInput = {
   discountPercent: number;
   price: number | null;
   active: boolean;
-  productIds: string[];
+  items: PromotionItemInput[];
   imageUrl: string | null;
   imageProductId: string | null;
   validUntil: string | null;
@@ -183,7 +179,7 @@ export async function savePromotion(
     p_discount_percent: input.discountPercent,
     p_price: input.price,
     p_active: input.active,
-    p_product_ids: input.productIds,
+    p_items: input.items.map((item) => ({ product_id: item.productId, quantity: item.quantity })),
     // Las funciones aceptan nulo ("sin imagen", "sin fin", "sin tope"); los tipos generados no lo reflejan.
     p_image_url: input.imageUrl as string,
     p_image_product_id: input.imageProductId as string,

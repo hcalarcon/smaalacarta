@@ -1532,18 +1532,21 @@ export type Database = {
           business_id: string
           product_id: string
           promotion_id: string
+          quantity: number
           sort_order: number
         }
         Insert: {
           business_id: string
           product_id: string
           promotion_id: string
+          quantity?: number
           sort_order?: number
         }
         Update: {
           business_id?: string
           product_id?: string
           promotion_id?: string
+          quantity?: number
           sort_order?: number
         }
         Relationships: [
@@ -1978,11 +1981,6 @@ export type Database = {
           opens_at: string
         }[]
       }
-      product_has_required_group: {
-        Args: { p_product_id: string }
-        Returns: boolean
-      }
-      product_in_promotion: { Args: { p_product_id: string }; Returns: boolean }
       promotion_remaining: { Args: { p_promotion_id: string }; Returns: number }
       promotion_sold: { Args: { p_promotion_id: string }; Returns: number }
       promotion_stock_stats: {
@@ -2109,9 +2107,9 @@ export type Database = {
           p_id: string
           p_image_product_id?: string
           p_image_url?: string
+          p_items: Json
           p_name: string
           p_price: number
-          p_product_ids: string[]
           p_stock?: number
           p_type: string
           p_valid_until?: string

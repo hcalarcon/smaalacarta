@@ -110,11 +110,11 @@ describe("las acciones de opciones — ADMIN-OPCIONES-16", () => {
   });
 
   it("traduce el error de la base a un mensaje en español", async () => {
-    db.saveOptionGroup.mockResolvedValue({ error: { code: "P0014", message: "interno" } });
+    db.saveOptionGroup.mockResolvedValue({ error: { code: "P0015", message: "interno" } });
 
     const r = await saveOptionGroupAction(MIO, { ...group, id: "g1", minSelect: 1 });
 
-    expect(!r.ok && r.error).toMatch(/promoci/i);
+    expect(!r.ok && r.error).toMatch(/máximo/i);
     expect(!r.ok && r.error).not.toMatch(/interno/);
   });
 

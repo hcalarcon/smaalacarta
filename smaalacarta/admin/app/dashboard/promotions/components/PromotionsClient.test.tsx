@@ -26,10 +26,11 @@ function promo(extra: Partial<PromotionWithStock> = {}): PromotionWithStock {
     created_at: "2026-10-01T00:00:00Z",
     updated_at: "2026-10-01T00:00:00Z",
     promotion_items: [
-      { product_id: "p1", sort_order: 0, products: { id: "p1", name: "Café", price: 1000, active: true, image_url: null } },
+      { product_id: "p1", sort_order: 0, quantity: 1, products: { id: "p1", name: "Café", price: 1000, active: true, image_url: null } },
       {
         product_id: "p2",
         sort_order: 1,
+        quantity: 1,
         products: { id: "p2", name: "Medialuna", price: 500, active: true, image_url: "https://x/medialuna.jpg" },
       },
     ],
@@ -96,7 +97,7 @@ describe("lista de promociones — ADMIN-PROMO-11", () => {
   it("sin ninguna foto, dice 'Sin foto'", () => {
     const sinFotos = promo({
       promotion_items: [
-        { product_id: "p1", sort_order: 0, products: { id: "p1", name: "Café", price: 1000, active: true, image_url: null } },
+        { product_id: "p1", sort_order: 0, quantity: 1, products: { id: "p1", name: "Café", price: 1000, active: true, image_url: null } },
       ],
     });
     const { container } = render(<PromotionsClient promotions={[sinFotos]} />);

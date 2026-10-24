@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 
 import {
   describeGroupRule,
-  hasRequiredGroup,
   MAX_GROUPS_PER_PRODUCT,
   MAX_OPTIONS_PER_GROUP,
   optionGroupErrorMessage,
@@ -98,13 +97,7 @@ describe("validateProductGroupIds — ADMIN-OPCIONES-6", () => {
   });
 });
 
-describe("hasRequiredGroup y describeGroupRule — ADMIN-OPCIONES-10 y 12", () => {
-  it("un producto es 'con grupo obligatorio' si algún grupo pide al menos 1", () => {
-    expect(hasRequiredGroup([{ min_select: 0 }, { min_select: 1 }])).toBe(true);
-    expect(hasRequiredGroup([{ min_select: 0 }])).toBe(false);
-    expect(hasRequiredGroup([])).toBe(false);
-  });
-
+describe("describeGroupRule — ADMIN-OPCIONES-12", () => {
   it.each([
     [{ min_select: 0, max_select: 1, allow_repeat: false }, "Opcional, hasta 1"],
     [{ min_select: 0, max_select: 3, allow_repeat: false }, "Opcional, hasta 3"],
@@ -117,13 +110,7 @@ describe("hasRequiredGroup y describeGroupRule — ADMIN-OPCIONES-10 y 12", () =
   });
 });
 
-describe("optionGroupErrorMessage — ADMIN-OPCIONES-10", () => {
-  it("explica el choque con una promoción y no muestra el texto técnico", () => {
-    const msg = optionGroupErrorMessage({ code: "P0014", message: "interno xyz" });
-    expect(msg).toMatch(/promoci/i);
-    expect(msg).not.toMatch(/xyz/);
-  });
-
+describe("optionGroupErrorMessage", () => {
   it("traduce límites, suspensión y errores desconocidos", () => {
     expect(optionGroupErrorMessage({ code: "P0015" })).toMatch(/máximo|límite/i);
     expect(optionGroupErrorMessage({ code: "P0010" })).toMatch(/suspendida/i);

@@ -55,7 +55,6 @@ type MenuClientProps = {
   optionGroups: OptionGroup[];
   productGroupLinks: Record<string, string[]>;
   groupUsage: Record<string, number>;
-  productIdsInPromotions: string[];
   // Imágenes de muestra de los productos sin foto (ADMIN-CONFIG-32).
   defaultImages: { enabled: boolean; hasLogo: boolean };
 };
@@ -74,7 +73,6 @@ export default function MenuClient({
   optionGroups,
   productGroupLinks,
   groupUsage,
-  productIdsInPromotions,
   defaultImages,
 }: MenuClientProps) {
   const router = useRouter();
@@ -562,9 +560,6 @@ export default function MenuClient({
         optionGroups={optionGroups}
         initialGroupIds={
           editingProduct ? (productGroupLinks[editingProduct.id] ?? []) : []
-        }
-        inPromotion={
-          !!editingProduct && productIdsInPromotions.includes(editingProduct.id)
         }
         categoryName={
           categories.find(

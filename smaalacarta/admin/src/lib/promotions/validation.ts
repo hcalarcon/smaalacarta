@@ -3,6 +3,11 @@ import type { ValidationResult } from "@/lib/auth/validation";
 export const PROMOTION_TYPES = ["percent", "combo"] as const;
 export type PromotionType = (typeof PROMOTION_TYPES)[number];
 
+// Cuántas unidades de cada producto lleva una promoción (ADMIN-PROMOS-1).
+export const PROMOTION_QUANTITY = { min: 1, max: 20 } as const;
+
+export type PromotionItemInput = { productId: string; quantity: number };
+
 type Field = "name" | "type" | "discountPercent" | "price" | "products" | "image" | "validUntil" | "stock";
 
 export function validatePromotion(input: {
@@ -10,7 +15,7 @@ export function validatePromotion(input: {
   type: string;
   discountPercent: number;
   price: number | null;
-  productIds: string[];
+  items: PromotionItemInput[];
   // Imagen y vigencia (ADMIN-PROMO-2, 5 y 7). Todo opcional: una promoción sin ellos no cambia.
   imageUrl?: string | null;
   imageProductId?: string | null;
@@ -47,10 +52,21 @@ export function validatePromotion(input: {
     }
   }
 
-  if (input.productIds.length === 0) {
+  const productIds = input.items.map((item) => item.productId);
+
+  if (productIds.length === 0) {
     errors.products = "Agregá al menos un producto.";
-  } else if (new Set(input.productIds).size !== input.productIds.length) {
+  } else if (new Set(productIds).size !== productIds.length) {
     errors.products = "Un producto no puede estar dos veces en la promoción.";
+  } else if (
+    input.items.some(
+      (item) =>
+        !Number.isInteger(item.quantity) ||
+        item.quantity < PROMOTION_QUANTITY.min ||
+        item.quantity > PROMOTION_QUANTITY.max,
+    )
+  ) {
+    errors.products = `La cantidad de cada producto tiene que ser de ${PROMOTION_QUANTITY.min} a ${PROMOTION_QUANTITY.max}.`;
   }
 
   // Imagen propia o la de un producto de la promoción, no las dos.
@@ -59,7 +75,7 @@ export function validatePromotion(input: {
 
   if (imageUrl && imageProductId) {
     errors.image = "Elegí una imagen propia o la foto de un producto, no las dos.";
-  } else if (imageProductId && !input.productIds.includes(imageProductId)) {
+  } else if (imageProductId && !productIds.includes(imageProductId)) {
     errors.image = "La foto tiene que ser de un producto de la promoción.";
   }
 
@@ -92,7 +108,7 @@ export function normalizePromotion(input: {
   type: PromotionType;
   discountPercent: number;
   price: number | null;
-  productIds: string[];
+  items: PromotionItemInput[];
   active: boolean;
   imageUrl?: string | null;
   imageProductId?: string | null;
@@ -107,7 +123,7 @@ export function normalizePromotion(input: {
     type: input.type,
     discountPercent: input.type === "percent" ? input.discountPercent : 0,
     price: input.type === "combo" ? input.price : null,
-    productIds: input.productIds,
+    items: input.items.map((item) => ({ productId: item.productId, quantity: item.quantity })),
     active: input.active,
     // La imagen propia y la de un producto son excluyentes: la propia, si hay, es la que queda.
     imageUrl: imageUrl || null,
