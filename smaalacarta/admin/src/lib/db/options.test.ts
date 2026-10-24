@@ -2,6 +2,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { asUser, createTestDb, createUser, type TestDb } from "@/test/db";
+import { promotionItems } from "@/test/promotion-items";
 
 // ADMIN-OPCIONES-1 a 11 contra Postgres real.
 const SUPER = "5a5a5a5a-0000-0000-0000-000000000001";
@@ -443,7 +444,7 @@ describe("reordenar grupos — ADMIN-OPCIONES-9", () => {
   });
 });
 
-describe("grupos obligatorios y promociones — ADMIN-OPCIONES-10", () => {
+describe("grupos obligatorios y promociones — ADMIN-PROMOS-7", () => {
   const PROMO = "e1000000-0000-0000-0000-000000000001";
   const PRO_P = "d1d1d1d1-0000-0000-0000-0000000000a1";
   const FREE_P = "d1d1d1d1-0000-0000-0000-0000000000a2";
@@ -461,82 +462,46 @@ describe("grupos obligatorios y promociones — ADMIN-OPCIONES-10", () => {
   });
 
   function savePromo(products: string[]) {
-    const ids = `ARRAY[${products.map((id) => `'${id}'`).join(",")}]::uuid[]`;
     return asUser(
       db, ANA,
-      `select public.save_promotion('${PROMO}'::uuid, '${NEG_ANA}'::uuid, 'Oferta', '', 'percent', 10, null, true, ${ids})`,
+      `select public.save_promotion('${PROMO}'::uuid, '${NEG_ANA}'::uuid, 'Oferta', '', 'percent', 10, null, true, ${promotionItems(products)})`,
     );
   }
 
-  it("no asocia un grupo obligatorio a un producto que está en una promoción", async () => {
+  it("asocia un grupo obligatorio a un producto que está en una promoción", async () => {
     const g = await mustSave({ name: "Oblig 1", min: 1, max: 1 });
-    const r = await setGroups(ANA, PRO_P, [g]);
 
-    expect(r.ok).toBe(false);
-    expect(!r.ok && r.code).toBe("P0014");
-    expect(!r.ok && r.error).toMatch(/promoci/i);
-    expect(await groupsOf(PRO_P)).toEqual([]);
-  });
-
-  it("sí asocia un grupo opcional a un producto en una promoción", async () => {
-    const g = await mustSave({ name: "Opcional 1", min: 0, max: 2 });
     expect((await setGroups(ANA, PRO_P, [g])).ok).toBe(true);
+    expect(await groupsOf(PRO_P)).toEqual([g]);
     await setGroups(ANA, PRO_P, []);
   });
 
-  it("sí asocia un grupo obligatorio a un producto que no está en promociones", async () => {
+  it("agrega a una promoción un producto con grupo obligatorio (save_promotion y INSERT directo)", async () => {
     const g = await mustSave({ name: "Oblig 2", min: 1, max: 1 });
-    expect((await setGroups(ANA, FREE_P, [g])).ok).toBe(true);
-  });
+    await setGroups(ANA, FREE_P, [g]);
 
-  it("no agrega a una promoción un producto con grupo obligatorio (save_promotion)", async () => {
-    const r = await savePromo([PRO_P, FREE_P]);
+    expect((await savePromo([PRO_P, FREE_P])).ok).toBe(true);
+    expect(await count("promotion_items", `promotion_id = '${PROMO}'`)).toBe(2);
 
-    expect(r.ok).toBe(false);
-    expect(!r.ok && r.code).toBe("P0014");
-    expect(!r.ok && r.error).toMatch(/Libre/);
-    // Atómico: la promoción sigue con su producto de antes.
-    expect(await count("promotion_items", `promotion_id = '${PROMO}'`)).toBe(1);
-  });
-
-  it("no agrega con un INSERT directo a promotion_items", async () => {
+    await savePromo([PRO_P]);
     const r = await asUser(
       db, ANA,
       `insert into promotion_items (promotion_id, product_id, business_id)
        values ('${PROMO}', '${FREE_P}', '${NEG_ANA}')`,
     );
-    expect(r.ok).toBe(false);
-    expect(!r.ok && r.code).toBe("P0014");
-  });
-
-  it("agrega a la promoción un producto cuyo grupo es opcional", async () => {
-    await setGroups(ANA, FREE_P, []);
-    const g = await mustSave({ name: "Opcional 2", min: 0, max: 3 });
-    await setGroups(ANA, FREE_P, [g]);
-
-    expect((await savePromo([PRO_P, FREE_P])).ok).toBe(true);
+    expect(r.ok).toBe(true);
     await savePromo([PRO_P]);
     await setGroups(ANA, FREE_P, []);
   });
 
-  it("no vuelve obligatorio un grupo asociado a un producto que está en una promoción", async () => {
+  it("vuelve obligatorio un grupo asociado a un producto que está en una promoción", async () => {
     const g = await mustSave({ name: "Por endurecer", min: 0, max: 2 });
     await setGroups(ANA, PRO_P, [g]);
 
-    const r = await saveGroup(ANA, { id: g, name: "Por endurecer", min: 1, max: 2 });
-    expect(r.ok).toBe(false);
-    expect(!r.ok && r.code).toBe("P0014");
-    expect((await db.query<{ min_select: number }>(`select min_select from option_groups where id = '${g}'`)).rows[0].min_select).toBe(0);
+    expect((await saveGroup(ANA, { id: g, name: "Por endurecer", min: 1, max: 2 })).ok).toBe(true);
+    expect((await db.query<{ min_select: number }>(`select min_select from option_groups where id = '${g}'`)).rows[0].min_select).toBe(1);
 
     await setGroups(ANA, PRO_P, []);
-  });
-
-  it("vuelve obligatorio un grupo asociado solo a productos fuera de promociones", async () => {
-    const g = await mustSave({ name: "Endurecible", min: 0, max: 2 });
-    await setGroups(ANA, FREE_P, [g]);
-
-    expect((await saveGroup(ANA, { id: g, name: "Endurecible", min: 1, max: 2 })).ok).toBe(true);
-    await setGroups(ANA, FREE_P, []);
   });
 });
 

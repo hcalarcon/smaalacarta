@@ -231,6 +231,11 @@ describe("promociones — PUBLICO-3", () => {
       promo: "20% OFF",
       // La imagen del primer producto de la promoción que tiene una (ADMIN-PROMO-1).
       imagen: "https://ejemplo.com/cafe.jpg",
+      // Qué lleva y cuántas unidades de cada producto (ADMIN-PROMOS-1), en el orden de la promoción.
+      componentes: [
+        { id: "d1000000-0000-0000-0000-000000000002", nombre: "Té", cantidad: 1 },
+        { id: "d1000000-0000-0000-0000-000000000001", nombre: "Café", cantidad: 1 },
+      ],
     });
   });
 
@@ -247,6 +252,10 @@ describe("promociones — PUBLICO-3", () => {
       precioAnterior: 6000,
       promo: "Combo",
       imagen: "https://ejemplo.com/cafe.jpg",
+      componentes: [
+        { id: "d1000000-0000-0000-0000-000000000001", nombre: "Café", cantidad: 1 },
+        { id: "d1000000-0000-0000-0000-000000000004", nombre: "Milanesa", cantidad: 1 },
+      ],
     });
   });
 

@@ -2,6 +2,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { asUser, createTestDb, createUser, type TestDb } from "@/test/db";
+import { promotionItems } from "@/test/promotion-items";
 
 // ADMIN-PROMO-1 a 12 contra Postgres real: imagen, vigencia y stock de las promociones.
 const ANA = "aaaaaaaa-0000-0000-0000-000000000001";
@@ -45,7 +46,7 @@ function save(user: string | null, p: Promo = {}) {
        ${p.id ? `'${p.id}'` : "null"}::uuid,
        '${p.business ?? NEG_ANA}'::uuid,
        ${sqlText(p.name ?? "Promo")}, 'desc', 'percent', 20::numeric, null::numeric, true,
-       ARRAY[${products.map((id) => `'${id}'`).join(",")}]::uuid[],
+       ${promotionItems(products)},
        ${sqlText(p.imageUrl ?? null)},
        ${p.imageProduct ? `'${p.imageProduct}'::uuid` : "null::uuid"},
        (${p.validUntil ?? "null"})::timestamptz,

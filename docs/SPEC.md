@@ -110,7 +110,10 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   en el orden que definió, sin categorías vacías y sin nada de otros negocios.
 - **PUBLICO-3** Las promociones activas, con todos sus productos activos, van en una
   categoría "Ofertas" al principio, con su precio final y el precio anterior
-  (ADMIN-PROMOS-4); el precio anterior se omite si no hay ahorro.
+  (ADMIN-PROMOS-4, que cuenta precio × cantidad); el precio anterior se omite si no hay ahorro. "Incluye"
+  lista `3× Empanada clásica, 1× Gaseosas` si algún producto lleva más de una unidad (y solo los nombres si
+  todos llevan una). Cada promoción trae `componentes`: `[{id, nombre, cantidad, opciones}]`, con los grupos
+  de opciones de cada producto en el mismo formato que los productos sueltos.
 - **PUBLICO-4** La configuración llega con el formato del menú actual (nombre,
   descripción, plantilla, teléfono, colores, cabecera y horarios); lo que el negocio
   no cargó no aparece. Sin horarios, el menú se muestra siempre abierto.
@@ -242,12 +245,13 @@ mismo formato que hoy leen los JSON (`config` y `menu`).
   `[{id, nombre, min, max, repetir, opciones: [{id, nombre, precio, agotado}]}]`, en el orden del
   panel. Solo van los grupos activos asociados a ese producto y sus opciones activas (un grupo sin
   opciones activas no se entrega). Un producto sin grupos no lleva la clave, y las promociones nunca
-  llevan `opciones`.
+  llevan `opciones` propias: sus grupos van en `componentes` (PUBLICO-3).
 - **PUBLICO-40** `create_public_order` acepta en cada ítem de producto `options: [{id, quantity}]` y
   rechaza con `P0014` (motivo `invalid_options`) una opción que no es activa, de un grupo activo
   asociado a ese producto; una elección cuya suma por grupo no está entre `min` y `max`; una opción
   elegida más de una vez en un grupo que no permite repetir; un producto con grupo obligatorio pedido
-  sin opciones; y cualquier opción en una promoción o combo. Un grupo sin opciones activas no se exige.
+  sin opciones; y una opción suelta (`options`) en una promoción o combo: las opciones de una promoción van
+  en `components` (ADMIN-PROMOS-8). Un grupo sin opciones activas no se exige.
 - **PUBLICO-41** Una opción agotada (`sold_out`) rechaza el pedido con `P0009` (`out_of_stock`), como un
   producto sin stock.
 - **PUBLICO-42** El navegador manda solo ids y cantidades de opciones; el servidor calcula todo precio:
@@ -1414,7 +1418,8 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
 - **ADMIN-PEDIDOS-20** El tablero y el detalle del pedido (que también se abre desde el historial, cuya
   tabla no lista ítems) muestran las opciones elegidas bajo cada ítem (`+ Queso`, `+ Frutilla ×2`).
 - **ADMIN-PEDIDOS-21** *Reemplazado por ADMIN-PEDIDOS-40 y 41: el pedido manual ahora elige productos del menú con
-  sus opciones, y la base las valida como en el menú.*
+  sus opciones, y la base las valida como en el menú. Las promociones también (ADMIN-PROMOS-8 y 9): se elige lo de
+  cada unidad.*
 - **ADMIN-PEDIDOS-22** El tablero, el detalle y el historial de pedidos muestran la nota de cada ítem destacada (en un
   recuadro) bajo el ítem, para que no pase desapercibida; también el panel del repartidor si lista el detalle.
 - **ADMIN-PEDIDOS-23** `create_manual_order` acepta `note` por ítem (la limpia y recorta igual, y no depende del
@@ -1480,7 +1485,8 @@ contradiga: ahora entra a los envíos, lleva opciones y nace confirmado)
 - **ADMIN-PEDIDOS-40** Los ítems del menú llegan como `{id, kind, quantity, options, note}` y el precio lo calcula la base
   con `resolve_order_lines()`, la misma que usa `create_public_order_base`: precio del producto o la promoción, extras
   de las opciones, stock (P0009), producto de otro negocio o inactivo (P0001) y opciones obligatorias (P0014). Un
-  `unit_price` que mande el navegador junto a un `id` se ignora.
+  `unit_price` que mande el navegador junto a un `id` se ignora. Una promoción lleva además `components` con lo
+  elegido en cada unidad (ADMIN-PROMOS-8), y el diálogo del pedido manual lo pide igual que el menú.
 - **ADMIN-PEDIDOS-41** La cantidad del pedido manual va de 1 a 99 (la del menú sigue de 1 a 20) y la nota por ítem la
   escribe el propio local: no depende de `allow_item_notes`.
 - **ADMIN-PEDIDOS-42** Un producto libre es `{name, unit_price, quantity, note}` sin `id` (nombre de 1 a 100
@@ -2537,18 +2543,33 @@ Cubierto por: `src/lib/db/promotions.test.ts` (ADMIN-PROMOS-2, 3, 5 y 6) y
 `src/lib/promotions/*.test.ts` (ADMIN-PROMOS-1 y 4).*
 
 - **ADMIN-PROMOS-1** Una promoción es de tipo `percent` (descuento del 1 al 100 %
-  sobre cada producto) o `combo` (precio fijo mayor a 0 por el conjunto), tiene un
-  nombre y lleva al menos un producto.
+  sobre la suma de precio × cantidad de sus productos) o `combo` (precio fijo mayor a 0 por el conjunto), tiene un
+  nombre y lleva al menos un producto. Cada producto lleva una cantidad de 1 a 20 (`promotion_items.quantity`,
+  1 en las promociones de antes); un producto no puede estar dos veces. `save_promotion` recibe
+  `p_items: [{product_id, quantity}]`.
 - **ADMIN-PROMOS-2** Los productos de una promoción se guardan en el orden elegido
   y solo pueden ser del mismo negocio que la promoción.
 - **ADMIN-PROMOS-3** Guardar una promoción con sus productos es atómico: si algo
   falla no queda una promoción a medias ni con productos de menos.
-- **ADMIN-PROMOS-4** El precio final de una promoción es la suma de sus productos
-  menos el descuento (`percent`) o el precio fijo (`combo`); el ahorro nunca es
-  negativo.
+- **ADMIN-PROMOS-4** El precio final de una promoción es la suma de precio × cantidad de sus
+  productos menos el descuento (`percent`) o el precio fijo (`combo`); el ahorro nunca es
+  negativo. El precio anterior (tachado) es esa suma. El descuento no alcanza a los extras de las opciones,
+  que se cobran enteros (ADMIN-PROMOS-8).
 - **ADMIN-PROMOS-5** Un negocio solo ve, edita y borra sus propias promociones.
 - **ADMIN-PROMOS-6** Borrar un producto lo saca de sus promociones; borrar una
   promoción no borra sus productos.
+- **ADMIN-PROMOS-7** Una promoción puede incluir productos con grupos de opciones, también obligatorios (ya no hay
+  bloqueo en la base ni en el editor). Es el cliente, no el local, quien elige las opciones de cada unidad.
+- **ADMIN-PROMOS-8** La línea `promo` de `create_public_order` y de `create_manual_order` lleva
+  `components: [{product_id, options: [{id, quantity}]}]`, una entrada por unidad de cada producto de la
+  promoción. Cada una se valida con las reglas de PUBLICO-40; la cantidad de componentes por producto tiene que ser
+  la de `promotion_items` y no puede haber de un producto que la promoción no lleva (`P0014`). Sin `components`,
+  vale solo si ningún producto exige elegir. Una opción suelta (`options`) en la línea se rechaza.
+- **ADMIN-PROMOS-9** El precio de la línea es el de la promoción (fijo, o el porcentaje sobre la suma de precio ×
+  cantidad) más los extras (`price_delta × cantidad`) de todos los componentes, sin descuento. `order_items.options`
+  guarda `[{producto, opciones: [{grupo, nombre, cantidad, precio}]}]`, una entrada por unidad. La firma de la línea
+  incluye los componentes: la misma promoción con otra elección es otra línea. El seguimiento, el tablero, el
+  detalle y el historial muestran cada unidad con lo elegido.
 
 ---
 
@@ -2624,10 +2645,8 @@ precios en 0; no existe "incluye N y el resto cuesta X".
   una opción o un producto no toca nada más.
 - **ADMIN-OPCIONES-9** Reordenar los grupos guarda la posición de cada uno (0, 1, 2…) solo dentro
   del negocio.
-- **ADMIN-OPCIONES-10** Un producto con algún grupo obligatorio no puede estar en una promoción:
-  la base rechaza (P0014, con un mensaje claro) asociar un grupo obligatorio a un producto que está
-  en una promoción, agregar a una promoción un producto con grupo obligatorio, y volver obligatorio
-  un grupo asociado a un producto que está en una promoción.
+- **ADMIN-OPCIONES-10** *Reemplazado por ADMIN-PROMOS-7: un producto con grupo obligatorio sí puede estar en una
+  promoción.*
 - **ADMIN-OPCIONES-11** Un negocio suspendido no puede crear ni editar grupos, opciones ni
   asociaciones (mismo bloqueo que el resto del panel).
 - **ADMIN-OPCIONES-12** En Menú, la sección "Opciones y extras" lista los grupos (con su regla,
@@ -2637,8 +2656,8 @@ precios en 0; no existe "incluye N y el resto cuesta X".
 - **ADMIN-OPCIONES-13** El formulario del producto tiene un selector múltiple "Opciones y extras"
   con el orden de los grupos (hasta 6), y la tarjeta del producto muestra el chip "Con opciones" si
   tiene algún grupo.
-- **ADMIN-OPCIONES-14** En el editor de promociones, un producto con grupo obligatorio aparece
-  deshabilitado y con el motivo, y no se puede agregar.
+- **ADMIN-OPCIONES-14** *Reemplazado por ADMIN-PROMOS-7: el editor de promociones ya no deshabilita los productos con
+  grupo obligatorio.*
 - **ADMIN-OPCIONES-15** Todo esto solo existe si el negocio tiene menú digital (`hasDigitalMenu()`).
 - **ADMIN-OPCIONES-16** Las acciones del servidor toman el negocio de la sesión
   (`requireBusiness()`) y rechazan un `businessId` distinto.

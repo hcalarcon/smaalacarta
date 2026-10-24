@@ -2,6 +2,7 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { asUser, createTestDb, createUser, type TestDb } from "@/test/db";
+import { promotionItems } from "@/test/promotion-items";
 
 // Regresión del 500 (57014) de `public_menu` tras la migración de promociones con imagen y stock:
 // el menú que lee `anon` con promociones (con y sin stock, con y sin imagen) y pedidos de por medio.
@@ -30,7 +31,7 @@ async function promo(name: string, products: string[], opts: { image?: string; s
     db,
     ANA,
     `select public.save_promotion(null::uuid, '${NEG}'::uuid, '${name}', 'd', 'percent', 10::numeric, null::numeric,
-       true, ARRAY[${products.map((p) => `'${p}'`).join(",")}]::uuid[],
+       true, ${promotionItems(products)},
        ${opts.image ? `'${opts.image}'` : "null"}, null::uuid, null::timestamptz,
        ${opts.stock ?? "null"}::integer) as id`,
   );

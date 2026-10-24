@@ -2,6 +2,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
 import { asUser, createTestDb, createUser, type TestDb } from "@/test/db";
+import { promotionItems } from "@/test/promotion-items";
 
 // ADMIN-PROMOS-1 a 3, 5 y 6 contra Postgres real.
 const ANA = "aaaaaaaa-0000-0000-0000-000000000001";
@@ -26,11 +27,11 @@ type Promo = {
   price?: number | null;
   active?: boolean;
   products: string[];
+  quantities?: Record<string, number>;
 };
 
 // Llama a la función que guarda una promoción, como lo haría la app.
 function save(user: string | null, p: Promo) {
-  const uuids = `ARRAY[${p.products.map((id) => `'${id}'`).join(",")}]::uuid[]`;
   return asUser(
     db,
     user,
@@ -42,7 +43,7 @@ function save(user: string | null, p: Promo) {
        ${p.discount ?? 20}::numeric,
        ${p.price ?? "null"}::numeric,
        ${p.active ?? true},
-       ${uuids}) as id`,
+       ${promotionItems(p.products, p.quantities)}) as id`,
   );
 }
 
