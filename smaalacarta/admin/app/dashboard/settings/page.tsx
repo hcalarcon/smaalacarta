@@ -7,6 +7,7 @@ import OwnDeliverySection from "./components/OwnDeliverySection";
 import SettingsForm from "./components/SettingsForm";
 import SettingsLayout from "./components/SettingsLayout";
 import SettingsSaveProvider from "./components/SettingsSaveProvider";
+import SettingsTutorial from "./components/SettingsTutorial";
 import MercadoPagoSection from "./components/MercadoPagoSection";
 import ShareSection from "./components/ShareSection";
 import Section from "@/components/ui/Section";
@@ -49,27 +50,31 @@ export default async function SettingsPage({
   const digitalMenu = hasDigitalMenu(plan);
   // "Menú en PDF" solo con plan_pdf: plan_completo solo no habilita ese servicio (ADMIN-PLAN-4).
   const pdfService = hasPdf(plan);
+  const sections = settingsSections({
+    digitalMenu,
+    pdfService,
+    courierDelivery: business.courier_delivery,
+    mercadoPago,
+  });
 
   return (
     // Un poco más ancho y con menos relleno que el resto del panel (ADMIN-CONFIG-39): los márgenes
     // negativos le devuelven ancho al contenido solo en esta pantalla.
     <div className="mx-auto max-w-6xl space-y-4 lg:-mx-3 xl:mx-auto">
-      <section>
-        <h1 className="text-2xl font-bold text-brand sm:text-3xl">Configuración</h1>
-        <p className="mt-1 text-stone-500">
-          {digitalMenu
-            ? `Apariencia, horarios y contacto del menú de ${business.name}.`
-            : `El PDF del menú de ${business.name}.`}
-        </p>
+      <section className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-brand sm:text-3xl">Configuración</h1>
+          <p className="mt-1 text-stone-500">
+            {digitalMenu
+              ? `Apariencia, horarios y contacto del menú de ${business.name}.`
+              : `El PDF del menú de ${business.name}.`}
+          </p>
+        </div>
+        <SettingsTutorial sections={sections} />
       </section>
 
       <SettingsSaveProvider initialName={business.name} initialSlug={business.slug}>
-        <SettingsLayout sections={settingsSections({
-            digitalMenu,
-            pdfService,
-            courierDelivery: business.courier_delivery,
-            mercadoPago,
-          })}>
+        <SettingsLayout sections={sections} businessId={business.id}>
           <BusinessProfileForm />
 
           <ShareSection

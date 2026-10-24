@@ -1,5 +1,5 @@
-import { act, fireEvent, render, screen } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import SectionNav from "./SectionNav";
 
@@ -27,24 +27,31 @@ beforeEach(() => {
   Element.prototype.scrollIntoView = vi.fn();
   window.matchMedia = vi.fn().mockReturnValue({ matches: false }) as never;
   document.body.innerHTML = "";
+  localStorage.clear();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 function renderNav() {
   const targets = sections.map(({ id }) => {
     const el = document.createElement("section");
     el.id = id;
+    el.scrollIntoView = vi.fn();
     document.body.appendChild(el);
     return el;
   });
-  render(<SectionNav sections={sections} />);
+  render(<SectionNav sections={sections} businessId="business-1" />);
   return targets;
 }
 
 describe("SectionNav", () => {
-  it("muestra solo las secciones que recibe (ADMIN-CONFIG-22)", () => {
+  it("muestra un selector compacto con solo las secciones que recibe (ADMIN-CONFIG-22, 51)", () => {
     renderNav();
-    expect(screen.getAllByRole("link").map((a) => a.textContent)).toEqual(
-      sections.map((s) => s.label),
+    expect(screen.getByRole("combobox", { name: "Ir a sección" })).toBeInTheDocument();
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual(
+      sections.map((section) => section.label),
     );
     expect(screen.queryByText("Menú en PDF")).toBeNull();
   });
@@ -54,16 +61,15 @@ describe("SectionNav", () => {
     act(() =>
       observed([{ target: horarios, isIntersecting: true, intersectionRatio: 1 }]),
     );
-    const current = screen
-      .getAllByRole("link")
-      .filter((a) => a.getAttribute("aria-current") === "true");
-    expect(current).toHaveLength(1);
-    expect(current[0]).toHaveTextContent("Horarios");
+    expect(screen.getByRole("combobox", { name: "Ir a sección" })).toHaveValue("horarios");
+    expect(screen.getByRole("option", { name: "Horarios" })).toHaveAttribute("aria-current", "location");
   });
 
-  it("al tocar salta, pone el hash y da el foco (ADMIN-CONFIG-23)", () => {
+  it("al elegir una sección salta, pone el hash y da el foco (ADMIN-CONFIG-23, 51)", () => {
     const [, horarios] = renderNav();
-    fireEvent.click(screen.getAllByRole("link", { name: "Horarios" })[0]);
+    fireEvent.change(screen.getByRole("combobox", { name: "Ir a sección" }), {
+      target: { value: "horarios" },
+    });
     expect(horarios.scrollIntoView).toHaveBeenCalledWith({
       behavior: "smooth",
       block: "start",
@@ -75,7 +81,9 @@ describe("SectionNav", () => {
   it("sin animación si el usuario prefiere menos movimiento", () => {
     window.matchMedia = vi.fn().mockReturnValue({ matches: true }) as never;
     const [, horarios] = renderNav();
-    fireEvent.click(screen.getAllByRole("link", { name: "Horarios" })[0]);
+    fireEvent.change(screen.getByRole("combobox", { name: "Ir a sección" }), {
+      target: { value: "horarios" },
+    });
     expect(horarios.scrollIntoView).toHaveBeenCalledWith({
       behavior: "auto",
       block: "start",
@@ -100,16 +108,98 @@ describe("SectionNav plegable — ADMIN-CONFIG-38", () => {
     );
   });
 
-  it("oculto, los enlaces se esconden en escritorio pero el botón sigue ahí", () => {
-    render(<SectionNav sections={sections} open={false} onToggle={() => {}} />);
-    for (const link of screen.getAllByRole("link", { hidden: true })) {
-      expect(link.className).toContain("lg:hidden");
-    }
-    expect(screen.getByRole("button")).toBeInTheDocument();
+  it("oculto, el índice se esconde en escritorio pero el botón sigue ahí", () => {
+    const onToggle = vi.fn();
+    render(<SectionNav sections={sections} open={false} onToggle={onToggle} />);
+    expect(screen.getByRole("combobox").parentElement?.className).toContain("lg:hidden");
+    fireEvent.click(screen.getByRole("button", { name: "Mostrar el índice de secciones" }));
+    expect(onToggle).toHaveBeenCalledOnce();
   });
 
-  it("sin onToggle (como antes) no hay botón", () => {
+  it("sin onToggle no hay control para ocultar el índice", () => {
     render(<SectionNav sections={sections} />);
-    expect(screen.queryByRole("button")).toBeNull();
+    expect(screen.queryByRole("button", { name: /índice de secciones/ })).toBeNull();
+  });
+});
+
+describe("SectionNav reordenable — ADMIN-CONFIG-51", () => {
+  it("guarda el orden personalizado por negocio y conserva las opciones al navegar", () => {
+    const [datos, horarios] = renderNav();
+    fireEvent.click(screen.getByRole("button", { name: "Reordenar índice" }));
+    fireEvent.click(screen.getByRole("button", { name: "Subir Horarios" }));
+
+    expect(JSON.parse(localStorage.getItem("sma:settings-section-order:business-1")!)).toEqual([
+      "horarios",
+      "datos",
+      "contrasena",
+    ]);
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "Horarios",
+      "Datos del negocio",
+      "Contraseña",
+    ]);
+
+    fireEvent.change(screen.getByRole("combobox", { name: "Ir a sección" }), {
+      target: { value: "horarios" },
+    });
+    expect(horarios.scrollIntoView).toHaveBeenCalled();
+    expect(datos.scrollIntoView).not.toHaveBeenCalled();
+  });
+
+  it("recupera el orden guardado y agrega al final las secciones nuevas del plan", async () => {
+    localStorage.setItem(
+      "sma:settings-section-order:business-1",
+      JSON.stringify(["horarios", "desaparecida", "horarios"]),
+    );
+    render(
+      <SectionNav
+        sections={[...sections, { id: "contacto", label: "Contacto" }]}
+        businessId="business-1"
+      />,
+    );
+
+    await waitFor(() => {
+      expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+        "Horarios",
+        "Datos del negocio",
+        "Contraseña",
+        "Contacto",
+      ]);
+    });
+  });
+
+  it("mantiene las preferencias separadas por negocio", () => {
+    const firstBusiness = render(
+      <SectionNav sections={sections} businessId="business-1" />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Reordenar índice" }));
+    fireEvent.click(screen.getByRole("button", { name: "Subir Horarios" }));
+    firstBusiness.unmount();
+
+    render(<SectionNav sections={sections} businessId="business-2" />);
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "Datos del negocio",
+      "Horarios",
+      "Contraseña",
+    ]);
+  });
+
+  it("sigue permitiendo reordenar durante la sesión si el navegador bloquea localStorage", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new Error("bloqueado");
+    });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new Error("bloqueado");
+    });
+    render(<SectionNav sections={sections} businessId="business-1" />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Reordenar índice" }));
+    fireEvent.click(screen.getByRole("button", { name: "Subir Horarios" }));
+
+    expect(screen.getAllByRole("option").map((option) => option.textContent)).toEqual([
+      "Horarios",
+      "Datos del negocio",
+      "Contraseña",
+    ]);
   });
 });

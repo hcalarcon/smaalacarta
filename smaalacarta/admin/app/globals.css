@@ -119,8 +119,69 @@ h3 {
   cursor: pointer;
 }
 
+.driver-popover.sma-settings-tour {
+  max-width: min(360px, calc(100vw - 32px));
+  padding: 18px;
+  border-radius: 18px;
+  font-family: var(--font-sans);
+  color: var(--foreground);
+}
+
+.driver-popover.sma-settings-tour .driver-popover-title {
+  margin-bottom: 8px;
+  font-family: var(--font-display);
+  font-size: 18px;
+  color: var(--color-brand);
+}
+
+.driver-popover.sma-settings-tour .driver-popover-description {
+  margin: 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--foreground);
+}
+
+.driver-popover.sma-settings-tour .driver-popover-footer {
+  margin-top: 14px;
+  align-items: center;
+  gap: 8px;
+}
+
+.driver-popover.sma-settings-tour .driver-popover-progress-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #57534e;
+}
+
+.driver-popover.sma-settings-tour .driver-popover-next-btn,
+.driver-popover.sma-settings-tour .driver-popover-prev-btn {
+  min-height: 44px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 12px;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  font-weight: 600;
+  text-shadow: none;
+}
+
+.driver-popover.sma-settings-tour .driver-popover-next-btn {
+  background: var(--color-action);
+  color: white;
+}
+
+.driver-popover.sma-settings-tour .driver-popover-next-btn:hover {
+  background: var(--color-action-hover);
+}
+
+.driver-popover.sma-settings-tour .driver-popover-prev-btn {
+  background: var(--color-brand-soft);
+  color: var(--color-brand);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .driver-popover.sma-tour,
+  .driver-popover.sma-settings-tour,
   .driver-overlay,
   .driver-active-element {
     transition: none !important;

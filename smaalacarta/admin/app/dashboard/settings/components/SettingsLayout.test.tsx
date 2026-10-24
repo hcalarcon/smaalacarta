@@ -21,7 +21,7 @@ beforeEach(() => {
 
 const layout = () =>
   render(
-    <SettingsLayout sections={sections}>
+    <SettingsLayout sections={sections} businessId="business-1">
       <p>contenido</p>
     </SettingsLayout>,
   );

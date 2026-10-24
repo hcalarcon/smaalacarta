@@ -9,9 +9,11 @@ import { useStoredFlag } from "@/lib/use-stored-flag";
 // a abrirlo y el contenido ocupa todo el ancho.
 export default function SettingsLayout({
   sections,
+  businessId,
   children,
 }: {
   sections: SettingsSection[];
+  businessId: string;
   children: React.ReactNode;
 }) {
   const [navOpen, setNavOpen] = useStoredFlag("sma:settings-nav-open", true);
@@ -22,7 +24,12 @@ export default function SettingsLayout({
         navOpen ? "lg:grid-cols-[10rem_minmax(0,1fr)]" : "lg:grid-cols-[2.5rem_minmax(0,1fr)]"
       }`}
     >
-      <SectionNav sections={sections} open={navOpen} onToggle={() => setNavOpen(!navOpen)} />
+      <SectionNav
+        sections={sections}
+        businessId={businessId}
+        open={navOpen}
+        onToggle={() => setNavOpen(!navOpen)}
+      />
       <div className="mt-3 min-w-0 space-y-5 lg:mt-0">{children}</div>
     </div>
   );

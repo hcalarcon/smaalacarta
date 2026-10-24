@@ -1158,7 +1158,9 @@ Cubierto por: `src/lib/menu/product-fields.test.ts` (ADMIN-MENU-1 y 2),
 `src/lib/settings/`, `src/lib/db/settings.ts` y `app/dashboard/settings`. Cubierto
 por: `src/lib/db/settings.test.ts` (ADMIN-CONFIG-1 a 6 y 9, contra Postgres real),
 `src/lib/db/storage.test.ts` (ADMIN-CONFIG-7), `src/lib/settings/*.test.ts` (formatos
-y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-CONFIG-10).*
+y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-CONFIG-10),
+`src/lib/settings/section-order.test.ts` (ADMIN-CONFIG-51) y
+`app/dashboard/settings/components/SettingsTutorial.test.tsx` (ADMIN-CONFIG-52).*
 
 - **ADMIN-CONFIG-1** Cada negocio tiene una configuración propia (plantilla, colores,
   imagen de cabecera, descripción, horarios y si el menú es público); solo sus
@@ -1336,6 +1338,13 @@ y redes), `src/lib/storage/images.test.ts` y `src/lib/menu-url.test.ts` (ADMIN-C
 - **ADMIN-CONFIG-50** La misma sección tiene "Tiempo de preparación por defecto" (`default_prep_minutes`, 20 por
   defecto): un entero de 5 a 180, validado en `validateSettings` y en la base; es lo que el selector de Aceptar
   ofrece si no hay sugerencia.
+- **ADMIN-CONFIG-51** El índice de Configuración ocupa poco espacio con una sección actual seleccionable; cambiarla
+  salta a esa sección, actualiza el hash y el foco. "Reordenar índice" permite ordenar las secciones disponibles
+  con mouse o teclado; el orden se guarda en `localStorage` por negocio, conserva las secciones nuevas al final y
+  descarta las que el plan ya no permite.
+- **ADMIN-CONFIG-52** El botón "Ver guía" inicia voluntariamente un recorrido de Driver.js con una explicación para
+  cada sección disponible de Configuración, sin alterar sus valores ni guardarlos. Respeta la preferencia de
+  movimiento reducido del sistema.
 
 ## ADMIN-PEDIDOS — Pedidos
 
