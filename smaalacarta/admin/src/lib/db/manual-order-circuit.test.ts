@@ -402,9 +402,9 @@ describe("envío con repartidor — ENVIO-137 a 141", () => {
     expect(note.rows[0].note).toMatch(/^Envío asignado a Moto Express, \d\d:\d\d$/);
   });
 
-  it("sin favorito elegido, el favorito efectivo es Repartos al Toque (tarea 17)", async () => {
-    const c = createdOf(await envio("favorite"));
-    expect(await row(c.id)).toMatchObject({ courier_id: TOQUE, courier_status: "accepted" });
+  it("sin favorito elegido no hay a quién asignar: falla (P0016), sin repartidor por defecto (ENVIO-254)", async () => {
+    const r = await envio("favorite");
+    expect(!r.ok && r.code).toBe("P0016");
   });
 
   it("'asignar a mi favorito' falla si el favorito no cubre el barrio (P0016)", async () => {

@@ -3,9 +3,7 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from "vitest";
 
 import { applyMigration, asUser, createTestDb, createUser, type TestDb } from "@/test/db";
 import { offer } from "@/test/offers";
-
-// ENVIO-128 a 134 contra Postgres real: el envío queda listo al activarlo y Repartos al Toque es el
-// favorito por defecto.
+// ENVIO-128 a 134 y 254 contra Postgres real: el envío queda listo al activarlo y el favorito es solo el que elige el local.
 const OZ = "aaaaaaaa-0000-0000-0000-000000000001"; // dueña de un negocio al que se le activa el envío después
 const TOQUE_USER = "cccccccc-0000-0000-0000-000000000003";
 const MOTO_USER = "cccccccc-0000-0000-0000-000000000006";
@@ -204,52 +202,34 @@ describe("corrección de los que ya estaban mal — ENVIO-129", () => {
   }, 60_000);
 });
 
-describe("favorito por defecto — ENVIO-130 a 133", () => {
-  it("el id de Repartos al Toque vive en un solo lugar", async () => {
-    const r = await db.query<{ id: string }>("select public.default_courier_id() as id");
-    expect(r.rows[0].id).toBe(TOQUE);
-  });
-
-  it("sin favorito elegido, el efectivo es Repartos al Toque; no se escribe en la configuración", async () => {
-    expect(await effective(NEG_OZ)).toBe(TOQUE);
-
-    const saved = await db.query<{ f: string | null }>(
-      `select favorite_courier_id as f from business_settings where business_id = '${NEG_OZ}'`,
+describe("sin favorito por defecto — ENVIO-254", () => {
+  it("default_courier_id() ya no existe", async () => {
+    const r = await db.query<{ n: string }>(
+      "select count(*) as n from pg_proc where proname = 'default_courier_id'",
     );
-    expect(saved.rows[0].f).toBeNull();
+    expect(Number(r.rows[0].n)).toBe(0);
   });
 
-  it("un negocio sin fila en business_settings también cae en Repartos al Toque", async () => {
-    expect(await effective(NEG_SIN_AJUSTES)).toBe(TOQUE);
-  });
-
-  it("con otro favorito elegido, vale el del local", async () => {
-    await setFavorite(MOTO);
-    expect(await effective(NEG_OZ)).toBe(MOTO);
-    await setFavorite(null);
-  });
-
-  it("con Repartos al Toque inactivo y sin favorito elegido, no hay favorito", async () => {
-    await db.exec(`update couriers set active = false where id = '${TOQUE}'`);
+  it("sin favorito elegido no hay favorito, aunque Repartos al Toque esté activo", async () => {
     expect(await effective(NEG_OZ)).toBeNull();
+    expect(await effective(NEG_SIN_AJUSTES)).toBeNull();
+  });
 
-    // El favorito elegido por el local sigue valiendo.
+  it("con un favorito elegido, vale el del local", async () => {
     await setFavorite(MOTO);
     expect(await effective(NEG_OZ)).toBe(MOTO);
     await setFavorite(null);
-
-    await db.exec(`update couriers set active = true where id = '${TOQUE}'`);
   });
 
-  it("sin favorito, la oferta de Repartos al Toque sale primera y marcada", async () => {
+  it("sin favorito, ninguna oferta sale marcada y se ordenan por precio", async () => {
     const o = await searching();
     expect((await offer(db, MOTO_USER, o.id, 4000, "Cerca")).ok).toBe(true);
     expect((await offer(db, TOQUE_USER, o.id)).ok).toBe(true);
 
     const ofertas = (await delivery(o.code)).ofertas!;
     expect(ofertas.map((f) => [f.repartidor, f.favorito])).toEqual([
-      ["Repartos al Toque", true],
       ["Moto Express", false],
+      ["Repartos al Toque", false],
     ]);
 
     // El local ve lo mismo en su panel.
@@ -259,13 +239,13 @@ describe("favorito por defecto — ENVIO-130 a 133", () => {
       const lista = panel.rows[0].l as { order_id: string; ofertas: { repartidor: string; favorito: boolean }[] }[];
       const mia = lista.find((p) => p.order_id === o.id)!;
       expect(mia.ofertas.map((f) => [f.repartidor, f.favorito])).toEqual([
-        ["Repartos al Toque", true],
         ["Moto Express", false],
+        ["Repartos al Toque", false],
       ]);
     }
   });
 
-  it("a igual precio, gana Repartos al Toque aunque la otra oferta sea más vieja", async () => {
+  it("a igual precio y sin favorito, gana la oferta más vieja", async () => {
     const o = await searching();
     await offer(db, MOTO_USER, o.id);
     await db.exec(
@@ -275,10 +255,10 @@ describe("favorito por defecto — ENVIO-130 a 133", () => {
     await age(o.id);
 
     await delivery(o.code);
-    expect(await winner(o.id)).toBe(TOQUE);
+    expect(await winner(o.id)).toBe(MOTO);
   });
 
-  it("con otro favorito elegido, vale ese: orden, marca y desempate", async () => {
+  it("con un favorito elegido, vale ese: orden, marca y desempate", async () => {
     await setFavorite(MOTO);
     const o = await searching();
     await offer(db, TOQUE_USER, o.id);
@@ -295,36 +275,16 @@ describe("favorito por defecto — ENVIO-130 a 133", () => {
     expect(await winner(o.id)).toBe(MOTO);
     await setFavorite(null);
   });
-
-  it("con Repartos al Toque inactivo y sin favorito, ninguna oferta sale marcada", async () => {
-    const o = await searching();
-    await offer(db, MOTO_USER, o.id);
-    await db.exec(`update couriers set active = false where id = '${TOQUE}'`);
-
-    const ofertas = (await delivery(o.code)).ofertas!;
-    expect(ofertas.map((f) => f.favorito)).toEqual([false]);
-
-    await db.exec(`update couriers set active = true where id = '${TOQUE}'`);
-  });
 });
 
-describe("business_delivery_options — ENVIO-134", () => {
-  it("entrega el repartidor por defecto con su nombre; sin elegir, favorite_id es nulo", async () => {
+describe("business_delivery_options — ENVIO-134 y 254", () => {
+  it("entrega solo el favorito elegido: sin elegir, favorite_id es nulo y no hay repartidor por defecto", async () => {
     const r = await call(OZ, "select public.business_delivery_options() as o");
     expect(r.ok).toBe(true);
     if (!r.ok) return;
 
-    const o = r.rows[0].o as { favorite_id: string | null; default_courier: { id: string; name: string } | null };
+    const o = r.rows[0].o as Record<string, unknown>;
     expect(o.favorite_id).toBeNull();
-    expect(o.default_courier).toEqual({ id: TOQUE, name: "Repartos al Toque" });
-  });
-
-  it("con Repartos al Toque inactivo no hay repartidor por defecto", async () => {
-    await db.exec(`update couriers set active = false where id = '${TOQUE}'`);
-
-    const r = await call(OZ, "select public.business_delivery_options() as o");
-    expect(r.ok && (r.rows[0].o as { default_courier: unknown }).default_courier).toBeNull();
-
-    await db.exec(`update couriers set active = true where id = '${TOQUE}'`);
+    expect("default_courier" in o).toBe(false);
   });
 });
